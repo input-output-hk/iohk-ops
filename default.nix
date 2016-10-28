@@ -1,6 +1,6 @@
-# nix-build -E 'with import ../nixpkgs {}; callPackage ./defaultRscoin.nix { }'
+# nix-build -E 'with import ~/nixpkgs {}; callPackage ./default.nix { }'
 
 {pkgs, ...}:
 
-(import ./srk-pkgs.nix { inherit pkgs; }).cardanod;
+(import ./srk-pkgs.nix { inherit pkgs; }).cardano
 
