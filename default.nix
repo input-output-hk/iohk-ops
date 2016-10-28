@@ -2,5 +2,5 @@
 
 {pkgs, ...}:
 
-(import ./srk-pkgs.nix { inherit pkgs; }).cardano
+(import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; }).cardano
 
