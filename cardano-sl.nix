@@ -6,7 +6,7 @@ let
   cfg = config.services.cardanod;
   name = "cardanod";
   stateDir = "/var/lib/cardanod/";
-  srk-pkgs = import ./srk-pkgs.nix { inherit pkgs; };
+  srk-pkgs = import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; };
   enableIf = cond: flag: if cond then flag else "";
 in
 {
