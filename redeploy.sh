@@ -1,1 +1,1 @@
-nixops deploy -I nixpkgs=~/nixpkgs --show-trace
+nixops deploy -d cardano -I nixpkgs=~/nixpkgs --show-trace

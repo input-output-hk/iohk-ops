@@ -14,7 +14,7 @@ let
     services.openssh.passwordAuthentication = false;
     services.openssh.enable = true;
 
-    imports = [ ./cardano.nix ];
+    imports = [ ./cardano-node.nix ];
 
     # EC2 stuff
     deployment.targetEnv = "ec2";
@@ -28,16 +28,15 @@ let
   cardano-node = {resources, pkgs, lib, ...}: {
     imports = [ defaultConfig ];
 
-    deployment.ec2.elasticIPv4 = vendingServicesHost;
-
-    services.routingd = {
+    services.cardano-node = {
       enable = true;
+      timeLord = true;
     };
   };
 
 in {
   leader-node = cardano-node;
-  node1 = cardano-node;
+#  node1 = cardano-node;
 
   resources.ec2KeyPairs.my-key-pair =
     { inherit region accessKeyId; };
