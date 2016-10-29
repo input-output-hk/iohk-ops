@@ -5,5 +5,12 @@ then
     exit 1
 fi
 
+read -p "LIKE REALLY EVERYTHING!!!" -n 1 -r
+echo    
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    exit 1
+fi
+
 nixops destroy --all --confirm
 nixops delete --all --confirm
