@@ -56,7 +56,7 @@ in
         WorkingDirectory = stateDir;
         PrivateTmp = true;
         ExecStart = toString [ 
-	  "${cardano}/bin/cardano-node"
+	  "${cardano}/bin/pos-node"
           "--port ${toString cfg.port}"
 #          "--peer ${discoveryPeer}"
           (enableIf cfg.supporter "--supporter")
