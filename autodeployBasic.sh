@@ -5,4 +5,4 @@ echo "Cleaning up previous deployment"
 
 echo "Creating a deployment..."
 nixops create nixops.nix -d cardano
-nixops deploy -d cardano -I nixpkgs=~/nixpkgs/
+nixops deploy -d cardano -I nixpkgs=../nixpkgs/
