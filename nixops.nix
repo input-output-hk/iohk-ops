@@ -36,7 +36,7 @@ let
     };
   };
 
-  cardano-node-coordnator = {resources, pkgs, ...}: {
+  cardano-node-coordinator = {resources, pkgs, ...}: {
     imports = [ nodeGenericConfig ];
 
     deployment.ec2.elasticIPv4 = coordinatorHost;
@@ -54,7 +54,7 @@ let
 
 
 in {
-  node0-coordnator = cardano-node-coordnator;
+  node0-coordinator = cardano-node-coordinator;
   node1 = cardano-node;
   node2 = cardano-node;
   node3 = cardano-node;
