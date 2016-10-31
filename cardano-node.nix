@@ -8,7 +8,7 @@ let
   stateDir = "/var/lib/cardano-node/";
   srk-pkgs = import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; };
   cardano = srk-pkgs.cardano;
-  discoveryPeer = "${peerHost}:${toString peerPort}/${peerDHTKey}";
+  discoveryPeer = "${cfg.peerHost}:${toString cfg.peerPort}/${cfg.peerDhtKey}";
   enableIf = cond: flag: if cond then flag else "";
 in
 {
@@ -18,13 +18,15 @@ in
       port = mkOption { type = types.int; default = 3000; };
       supporter = mkOption { type = types.bool; default = false; };
       timeLord = mkOption { type = types.bool; default = false; };   
-#      dhtKey = mkOption { 
-#        type = types.string; 
-#        description = "base64-url string describing dht key"; 
-#      };
-#      peerHost = mkOption { type = types.string; };
-#      peerPort = mkOption { type = types.int; };
-#      peerDHTKey = mkOption { type = types.string; };
+      dhtKey = mkOption { 
+        type = types.string; 
+        description = "base64-url string describing dht key"; 
+      };
+
+      peerEnable = mkOption { type = types.bool; default = true;};
+      peerHost = mkOption { type = types.string; };
+      peerPort = mkOption { type = types.int; default = cfg.port; };
+      peerDhtKey = mkOption { type = types.string; };
     };
   };
 
@@ -58,7 +60,8 @@ in
         ExecStart = toString [ 
 	  "${cardano}/bin/pos-node"
           "--port ${toString cfg.port}"
-#          "--peer ${discoveryPeer}"
+          (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
+          (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
           (enableIf cfg.supporter "--supporter")
           (enableIf cfg.timeLord "--time-lord")
         ]; 
