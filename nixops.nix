@@ -30,16 +30,19 @@ let
     deployment.ec2.securityGroups = [securityGroup];
   };
 
-  nodeGenericConfig = {resources, pkgs, ...}: {
+  nodeGenericConfig = testIndex: {resources, pkgs, ...}: {
     imports = [ defaultConfig ];
 
     services.cardano-node = {
       enable = true;
+      testIndex = testIndex;
     };
+ 
+    networking.firewall.enable = false;
   };
 
-  cardano-node-coordinator = {resources, pkgs, ...}: {
-    imports = [ nodeGenericConfig ];
+  cardano-node-coordinator = testIndex: {resources, pkgs, ...}: {
+    imports = [ (nodeGenericConfig testIndex) ];
 
     deployment.ec2.elasticIPv4 = coordinatorHost;
     services.cardano-node.timeLord = true;
@@ -47,8 +50,8 @@ let
     services.cardano-node.dhtKey = coordinatorDhtKey;
   };
 
-  cardano-node = {resources, pkgs, ...}: {
-    imports = [ nodeGenericConfig ];
+  cardano-node = testIndex: {resources, pkgs, ...}: {
+    imports = [ (nodeGenericConfig testIndex) ];
 
     services.cardano-node.peerHost = coordinatorHost;
     services.cardano-node.peerDhtKey = coordinatorDhtKey;
@@ -56,10 +59,10 @@ let
 
 
 in {
-  node0-coordinator = cardano-node-coordinator;
-  node1 = cardano-node;
-  node2 = cardano-node;
-  node3 = cardano-node;
+  node0-coordinator = cardano-node-coordinator 0;
+  node1 = cardano-node 1;
+  node2 = cardano-node 2;
+  node3 = cardano-node 3;
 
   resources.ec2KeyPairs.my-key-pair =
     { inherit region accessKeyId; };

@@ -23,6 +23,8 @@ in
         description = "base64-url string describing dht key"; 
       };
 
+      testIndex = mkOption { type = types.int; };
+
       peerEnable = mkOption { type = types.bool; default = true;};
       peerHost = mkOption { type = types.string; };
       peerPort = mkOption { type = types.int; default = cfg.port; };
@@ -60,6 +62,8 @@ in
         ExecStart = toString [ 
 	  "${cardano}/bin/pos-node"
           "--port ${toString cfg.port}"
+          "--spending-genesis ${toString cfg.testIndex}"
+          "--vss-genesis ${toString cfg.testIndex}"
           (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
           (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
           (enableIf cfg.supporter "--supporter")
