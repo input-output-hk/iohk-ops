@@ -1,7 +1,7 @@
 let
   region = "eu-central-1";
-  accessKeyId = "rscoin-guest-user";         # Doesn't depend on a region
-  securityGroup = "rscoin-deploy-sec-group"; # Does depend on a region
+  accessKeyId = "cardano-deployer";          # Doesn't depend on a region
+  securityGroup = "cardano-deployment"; # Does depend on a region
 
   coordinatorHost = "52.59.93.58"; # Elastic
   coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
