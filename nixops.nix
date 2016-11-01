@@ -64,6 +64,44 @@ in {
   node2 = cardano-node 2;
   node3 = cardano-node 3;
 
+#  node4 = cardano-node 4;
+#  node5 = cardano-node 5;
+#  node6 = cardano-node 6;
+#  node7 = cardano-node 7;
+#  node8 = cardano-node 8;
+#  node9 = cardano-node 9;
+#  node10 = cardano-node 10;
+#  node11 = cardano-node 11;
+#  node12 = cardano-node 12;
+#  node13 = cardano-node 13;
+#  node14 = cardano-node 14;
+#  node15 = cardano-node 15;
+#  node16 = cardano-node 16;
+#  node17 = cardano-node 17;
+#  node18 = cardano-node 18;
+#  node19 = cardano-node 19;
+#  node20 = cardano-node 20;
+#  node21 = cardano-node 21;
+#  node22 = cardano-node 22;
+#  node23 = cardano-node 23;
+#  node24 = cardano-node 24;
+#  node25 = cardano-node 25;
+#  node26 = cardano-node 26;
+#  node27 = cardano-node 27;
+#  node28 = cardano-node 28;
+#  node29 = cardano-node 29;
+#  node30 = cardano-node 30;
+#  node31 = cardano-node 31;
+#  node32 = cardano-node 32;
+#  node33 = cardano-node 33;
+#  node34 = cardano-node 34;
+#  node35 = cardano-node 35;
+#  node36 = cardano-node 36;
+#  node37 = cardano-node 37;
+#  node38 = cardano-node 38;
+#  node39 = cardano-node 39;
+#  node40 = cardano-node 40;
+
   resources.ec2KeyPairs.my-key-pair =
     { inherit region accessKeyId; };
 }
