@@ -34,6 +34,7 @@ let
     services.cardano-node = {
       enable = true;
       testIndex = testIndex;
+      genesisHoldersN = 6;
     };
  
     networking.firewall.enable = false;
