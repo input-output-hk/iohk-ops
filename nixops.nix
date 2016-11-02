@@ -67,8 +67,8 @@ in {
   node0-coordinator = cardano-node-coordinator 0;
   node1 = cardano-node 1;
   node2 = cardano-node 2;
-  node3 = cardano-node 3;
-  node4 = cardano-node 4;
+#  node3 = cardano-node 3;
+#  node4 = cardano-node 4;
 #  node5 = cardano-node 5;
 #  node6 = cardano-node 6;
 #  node7 = cardano-node 7;
