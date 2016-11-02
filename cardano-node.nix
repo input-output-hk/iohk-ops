@@ -49,7 +49,7 @@ in
     networking.firewall.allowedTCPPorts = [ cfg.port ];
 
     systemd.services.cardano-node = {
-      description   = "routing daemon service";
+      description   = "cardano node service";
       wantedBy      = [ "multi-user.target" ];
       after         = [ "network.target" ];
       serviceConfig = {
