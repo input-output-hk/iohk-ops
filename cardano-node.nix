@@ -62,6 +62,7 @@ in
           "/bin/sh -c '"
 	  "${cardano}/bin/pos-node"
           "--port ${toString cfg.port}"
+          "--rebuild-db"
           "--spending-genesis ${toString cfg.testIndex}"
           "--vss-genesis ${toString cfg.testIndex}"
           (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
