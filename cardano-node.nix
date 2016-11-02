@@ -6,8 +6,7 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
-  srk-pkgs = import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; };
-  cardano = srk-pkgs.cardano { genesisN = cfg.stakeHoldersN; };
+  cardano = (import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; }).cardano;
   discoveryPeer = "${cfg.peerHost}:${toString cfg.peerPort}/${cfg.peerDhtKey}";
   enableIf = cond: flag: if cond then flag else "";
 in
@@ -24,7 +23,6 @@ in
       };
 
       testIndex = mkOption { type = types.int; };
-      stakeHoldersN = mkOption { type = types.int; };
 
       peerEnable = mkOption { type = types.bool; default = true;};
       peerHost = mkOption { type = types.string; };
