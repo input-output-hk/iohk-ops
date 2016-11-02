@@ -15,6 +15,8 @@ let
     services.openssh.passwordAuthentication = false;
     services.openssh.enable = true;
 
+    environment.variables.TERM = "xterm-256color";
+
     imports = [ ./cardano-node.nix ];
 
     # EC2 stuff
@@ -64,10 +66,9 @@ let
 in {
   node0-coordinator = cardano-node-coordinator 0;
   node1 = cardano-node 1;
-#  node2 = cardano-node 2;
-#  node3 = cardano-node 3;
-
-#  node4 = cardano-node 4;
+  node2 = cardano-node 2;
+  node3 = cardano-node 3;
+  node4 = cardano-node 4;
 #  node5 = cardano-node 5;
 #  node6 = cardano-node 6;
 #  node7 = cardano-node 7;

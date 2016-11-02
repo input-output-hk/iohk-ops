@@ -60,6 +60,7 @@ in
         WorkingDirectory = stateDir;
         PrivateTmp = true;
         ExecStart = toString [ 
+          "/bin/sh -c '"
 	  "${cardano}/bin/pos-node"
           "--port ${toString cfg.port}"
           "--spending-genesis ${toString cfg.testIndex}"
@@ -68,6 +69,7 @@ in
           (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
           (enableIf cfg.supporter "--supporter")
           (enableIf cfg.timeLord "--time-lord")
+          " > ${stateDir}/cardano-node.log 2>&1'"
         ]; 
       };
     };
