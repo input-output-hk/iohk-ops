@@ -10,7 +10,7 @@ let
     environment.systemPackages =
       let
         srk-pkgs = import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; };
-      in with pkgs; [ git tmux vim nixops srk-pkgs.cardano lsof ];
+      in with pkgs; [ git tmux vim sysstat nixops srk-pkgs.cardano lsof ];
     users.extraUsers.root.openssh.authorizedKeys.keys = secret.devKeys;
     services.openssh.passwordAuthentication = false;
     services.openssh.enable = true;
