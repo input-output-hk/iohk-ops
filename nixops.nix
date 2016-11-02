@@ -3,6 +3,7 @@ let
   secret = import ./secret.nix;
 
   coordinatorHost = "52.59.93.58"; # Elastic
+  coordinatorPort = 2000;
   coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
 
   defaultConfig = { resources, pkgs, ... }: {
@@ -40,24 +41,31 @@ let
     imports = [ (nodeGenericConfig testIndex) ];
 
     deployment.ec2.elasticIPv4 = coordinatorHost;
-    services.cardano-node.timeLord = true;
-    services.cardano-node.peerEnable = false;
-    services.cardano-node.dhtKey = coordinatorDhtKey;
+    services.cardano-node = {
+      port = coordinatorPort;
+      timeLord = true;
+      #supporter = false;
+      peerEnable = false;
+      dhtKey = coordinatorDhtKey;
+    };
   };
 
   cardano-node = testIndex: {resources, pkgs, ...}: {
     imports = [ (nodeGenericConfig testIndex) ];
 
-    services.cardano-node.peerHost = coordinatorHost;
-    services.cardano-node.peerDhtKey = coordinatorDhtKey;
+    services.cardano-node = {
+      peerHost = coordinatorHost;
+      peerPort = coordinatorPort;
+      peerDhtKey = coordinatorDhtKey;
+    };
   };
 
 
 in {
   node0-coordinator = cardano-node-coordinator 0;
   node1 = cardano-node 1;
-  node2 = cardano-node 2;
-  node3 = cardano-node 3;
+#  node2 = cardano-node 2;
+#  node3 = cardano-node 3;
 
 #  node4 = cardano-node 4;
 #  node5 = cardano-node 5;
