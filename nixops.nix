@@ -9,8 +9,8 @@ let
   defaultConfig = { resources, pkgs, ... }: {
     environment.systemPackages =
       let
-        srk-pkgs = import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; };
-      in with pkgs; [ git tmux vim sysstat nixops srk-pkgs.cardano lsof ];
+        srk-nixpkgs = import ./srk-nixpkgs/default.nix { inherit pkgs; };
+      in with pkgs; [ git tmux vim sysstat nixops srk-nixpkgs.cardano-sl lsof ];
     users.extraUsers.root.openssh.authorizedKeys.keys = secret.devKeys;
     services.openssh.passwordAuthentication = false;
     services.openssh.enable = true;
