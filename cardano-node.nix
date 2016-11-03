@@ -6,7 +6,7 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
-  cardano = (import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; }).cardano;
+  cardano = (import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; }).cardano-sl;
   discoveryPeer = "${cfg.peerHost}:${toString cfg.peerPort}/${cfg.peerDhtKey}";
   enableIf = cond: flag: if cond then flag else "";
 in
@@ -60,7 +60,7 @@ in
         PrivateTmp = true;
         ExecStart = toString [ 
           "/bin/sh -c '"
-	  "${cardano}/bin/pos-node"
+	  "${cardano}/bin/cardano-node"
           "--port ${toString cfg.port}"
           "--rebuild-db"
           "--spending-genesis ${toString cfg.testIndex}"

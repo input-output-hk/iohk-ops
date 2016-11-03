@@ -1,6 +1,6 @@
-# nix-build -E 'with import ~/nixpkgs {}; callPackage ./default.nix { }'
+# ./build.sh
 
 {pkgs, ...}:
 
-(import ./srk-nixpkgs/srk-pkgs.nix { inherit pkgs; }).cardano
+(import ./srk-nixpkgs/default.nix { inherit pkgs; }).cardano-sl
 
