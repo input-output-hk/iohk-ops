@@ -18,6 +18,12 @@ let
 
     environment.variables.TERM = "xterm-256color";
 
+
+    services.cron.enable = true;
+    services.cron.systemCronJobs = [
+      "*/1 * * * *  root /run/current-system/sw/lib/sa/sa1 1 59"
+    ];
+
     imports = [ ./cardano-node.nix ];
 
     # EC2 stuff
@@ -25,7 +31,7 @@ let
     deployment.ec2.accessKeyId = secret.accessKeyId;
     deployment.ec2.region = secret.region;
     deployment.ec2.keyPair = resources.ec2KeyPairs.my-key-pair;
-    deployment.ec2.instanceType = "t2.micro";
+    deployment.ec2.instanceType = "t2.small";
     deployment.ec2.securityGroups = [secret.securityGroup];
   };
 
