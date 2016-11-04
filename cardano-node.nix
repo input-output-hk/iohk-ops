@@ -6,7 +6,7 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
-  cardano = (import ./srk-nixpkgs/default.nix { inherit pkgs; }).cardano-sl;
+  cardano = (import ./srk-nixpkgs/default.nix { inherit pkgs; inherit (cfg) genesisN; }).cardano-sl;
   discoveryPeer = "${cfg.peerHost}:${toString cfg.peerPort}/${cfg.peerDhtKey}";
   enableIf = cond: flag: if cond then flag else "";
 in
@@ -21,8 +21,9 @@ in
         type = types.string; 
         description = "base64-url string describing dht key"; 
       };
-
+      genesisN = mkOption { type = types.int; };
       testIndex = mkOption { type = types.int; };
+      pettyUtxo = mkOption { type = types.bool; default = false; };
 
       peerEnable = mkOption { type = types.bool; default = true;};
       peerHost = mkOption { type = types.string; };
@@ -65,6 +66,7 @@ in
           "--rebuild-db"
           "--spending-genesis ${toString cfg.testIndex}"
           "--vss-genesis ${toString cfg.testIndex}"
+          (enableIf cfg.pettyUtxo "--petty-utxo")
           (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
           (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
           (enableIf cfg.supporter "--supporter")

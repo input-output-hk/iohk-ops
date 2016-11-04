@@ -1,6 +1,7 @@
 let
   # See secretExample.nix
   secret = import ./secret.nix;
+  genesisN = 5;
 
   coordinatorHost = "52.59.93.58"; # Elastic
   coordinatorPort = 2000;
@@ -9,7 +10,7 @@ let
   defaultConfig = { resources, pkgs, ... }: {
     environment.systemPackages =
       let
-        srk-nixpkgs = import ./srk-nixpkgs/default.nix { inherit pkgs; };
+        srk-nixpkgs = import ./srk-nixpkgs/default.nix { inherit pkgs genesisN; };
       in with pkgs; [ git tmux vim sysstat nixops srk-nixpkgs.cardano-sl lsof ];
     users.extraUsers.root.openssh.authorizedKeys.keys = secret.devKeys;
     services.openssh.passwordAuthentication = false;
@@ -34,6 +35,8 @@ let
     services.cardano-node = {
       enable = true;
       testIndex = testIndex;
+      pettyUtxo = true;
+      inherit genesisN;
     };
  
     networking.firewall.enable = false;
@@ -67,8 +70,8 @@ in {
   node0-coordinator = cardano-node-coordinator 0;
   node1 = cardano-node 1;
   node2 = cardano-node 2;
-#  node3 = cardano-node 3;
-#  node4 = cardano-node 4;
+  node3 = cardano-node 3;
+  node4 = cardano-node 4;
 #  node5 = cardano-node 5;
 #  node6 = cardano-node 6;
 #  node7 = cardano-node 7;
