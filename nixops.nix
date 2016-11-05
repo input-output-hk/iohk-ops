@@ -1,7 +1,7 @@
 let
   # See secretExample.nix
   secret = import ./secret.nix;
-  genesisN = 5;
+  genesisN = 30;
 
   coordinatorHost = "52.59.93.58"; # Elastic
   coordinatorPort = 2000;
@@ -12,16 +12,22 @@ let
       let
         srk-nixpkgs = import ./srk-nixpkgs/default.nix { inherit pkgs genesisN; };
       in with pkgs; [ git tmux vim sysstat nixops srk-nixpkgs.cardano-sl lsof ];
-    users.extraUsers.root.openssh.authorizedKeys.keys = secret.devKeys;
-    services.openssh.passwordAuthentication = false;
+
+    users.mutableUsers = false;
+    users.users.root.openssh.authorizedKeys.keys = secret.devKeys;
+    services.openssh.passwordAuthentication = true;
     services.openssh.enable = true;
+
+    users.users.statReader = {
+      isNormalUser = true;
+      password = secret.rootPassword;
+    };
 
     environment.variables.TERM = "xterm-256color";
 
-
     services.cron.enable = true;
     services.cron.systemCronJobs = [
-      "*/1 * * * *  root /run/current-system/sw/lib/sa/sa1 1 59"
+      "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 1 59 /var/log/saALL"
     ];
 
     imports = [ ./cardano-node.nix ];
@@ -78,31 +84,31 @@ in {
   node2 = cardano-node 2;
   node3 = cardano-node 3;
   node4 = cardano-node 4;
-#  node5 = cardano-node 5;
-#  node6 = cardano-node 6;
-#  node7 = cardano-node 7;
-#  node8 = cardano-node 8;
-#  node9 = cardano-node 9;
-#  node10 = cardano-node 10;
-#  node11 = cardano-node 11;
-#  node12 = cardano-node 12;
-#  node13 = cardano-node 13;
-#  node14 = cardano-node 14;
-#  node15 = cardano-node 15;
-#  node16 = cardano-node 16;
-#  node17 = cardano-node 17;
-#  node18 = cardano-node 18;
-#  node19 = cardano-node 19;
-#  node20 = cardano-node 20;
-#  node21 = cardano-node 21;
-#  node22 = cardano-node 22;
-#  node23 = cardano-node 23;
-#  node24 = cardano-node 24;
-#  node25 = cardano-node 25;
-#  node26 = cardano-node 26;
-#  node27 = cardano-node 27;
-#  node28 = cardano-node 28;
-#  node29 = cardano-node 29;
+  node5 = cardano-node 5;
+  node6 = cardano-node 6;
+  node7 = cardano-node 7;
+  node8 = cardano-node 8;
+  node9 = cardano-node 9;
+  node10 = cardano-node 10;
+  node11 = cardano-node 11;
+  node12 = cardano-node 12;
+  node13 = cardano-node 13;
+  node14 = cardano-node 14;
+  node15 = cardano-node 15;
+  node16 = cardano-node 16;
+  node17 = cardano-node 17;
+  node18 = cardano-node 18;
+  node19 = cardano-node 19;
+  node20 = cardano-node 20;
+  node21 = cardano-node 21;
+  node22 = cardano-node 22;
+  node23 = cardano-node 23;
+  node24 = cardano-node 24;
+  node25 = cardano-node 25;
+  node26 = cardano-node 26;
+  node27 = cardano-node 27;
+  node28 = cardano-node 28;
+  node29 = cardano-node 29;
 #  node30 = cardano-node 30;
 #  node31 = cardano-node 31;
 #  node32 = cardano-node 32;
