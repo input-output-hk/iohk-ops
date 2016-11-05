@@ -15,8 +15,12 @@ done
 
 nixops info > layout.txt
 
+cd ..
+
+rm latest
+ln -s `pwd`/$d latest
+
 wait
 
-cd ..
 tar -czf $d.tgz $d
 
