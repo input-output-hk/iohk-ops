@@ -48,6 +48,7 @@ let
       enable = true;
       testIndex = testIndex;
       pettyUtxo = false;
+      isDebug = false;
       inherit genesisN;
     };
  
