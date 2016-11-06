@@ -52,6 +52,9 @@ function runBatched {
      #wait
      echo $1 `node_list $i`
      yes | $1 `node_list $i`
+     if [[ $i == 0 ]]; then
+       break;
+     fi
      echo "Pausing for $pause_ sec"
      sleep ${pause_}s
      i=$((i-1))

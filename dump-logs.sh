@@ -15,12 +15,14 @@ done
 
 nixops info > layout.txt
 
+wait
+
+../../logs-analyze/blocks.sh > blocks.log
+
 cd ..
 
 rm latest
 ln -s `pwd`/$d latest
-
-wait
 
 tar -czf $d.tgz $d
 
