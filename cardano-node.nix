@@ -15,7 +15,7 @@ in
     services.cardano-node = {
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };
-      isDebug = mkOption { type = types.int; default = false; };
+      isDebug = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
       timeLord = mkOption { type = types.bool; default = false; };   
       dhtKey = mkOption { 
