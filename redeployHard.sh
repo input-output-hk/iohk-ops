@@ -14,13 +14,21 @@ fi
 
 deploy_args=$2
 
-batch=50
-pause=600
+shift
+shift
+
+batch=34
+pause=450
 node_count=`nixops info --plain | grep node | wc -l`
+batch_cnt=$((node_count/batch))
+
+if [[ $((batch_cnt*batch)) -gt $node_count ]]; then
+   batch_cnt=$((batch_cnt+1))
+fi
 
 function node_list {
-  i=$1
-  j=$((i*batch))
+  local i=$1
+  local j=$((i*batch))
   while [[ $j -lt $((i*batch+batch)) ]]; do
    echo -n "node$j "
    j=$((j+1))
@@ -28,26 +36,28 @@ function node_list {
 }
 
 function runBatched {
-pause_=$3
-for i in {0..20}; do
-  echo "$2 nodes $((i*batch))..$((i*batch+batch-1))"
-  #j=$((i*batch))
-  #pids=''
-  #while [[ $j -lt $((i*batch+batch)) ]]; do
-  #  $1 $j 1>&2 <$yes_file &
-  #  pids="$pids $!"
-  #  j=$((j+1))
-  #done
-  #echo "Pids: $pids"
-  #wait
-  echo $1 `node_list $i`
-  yes | $1 `node_list $i`
-  if [[ $((i*batch+batch)) -gt $node_count ]]; then
-    break;
-  fi
-  echo "Pausing for $pause_ sec"
-  sleep ${pause_}s
-done
+   local pause_=$3
+   local i=$batch_cnt
+   while [[ $i -gt 0 ]]; do
+     echo "$2 nodes $((i*batch))..$((i*batch+batch-1))"
+     #j=$((i*batch))
+     #pids=''
+     #while [[ $j -lt $((i*batch+batch)) ]]; do
+     #  $1 $j 1>&2 <$yes_file &
+     #  pids="$pids $!"
+     #  j=$((j+1))
+     #done
+     #echo "Pids: $pids"
+     #wait
+     echo $1 `node_list $i`
+     yes | $1 `node_list $i`
+     if [[ $((i*batch+batch)) -gt $node_count ]]; then
+       break;
+     fi
+     echo "Pausing for $pause_ sec"
+     sleep ${pause_}s
+     i=$((i-1))
+   done
 
 }
 
@@ -61,7 +71,7 @@ function deploy_node {
 
 case "$cmd" in
    stop | redeploy )
-     runBatched stop_node "Stopping" $((pause/2))
+     runBatched stop_node "Stopping" $pause
      ;;
 esac
 if [[ "$cmd" == "redeploy" ]]; then
@@ -69,7 +79,7 @@ if [[ "$cmd" == "redeploy" ]]; then
      sleep ${pause}s
 fi
 case "$cmd" in
-   redeploy | start )
+   redeploy | deploy )
      runBatched deploy_node "Deploying" $pause
      ;;
 esac
