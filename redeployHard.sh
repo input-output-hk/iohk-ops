@@ -6,10 +6,16 @@
 #yes_file=/tmp/pos-prototype-deployment-yes-file.txt
 #yes | head -100 > $yes_file
 
-deploy_args=$1
+cmd=$1
+
+if [[ "$cmd" == "" ]]; then
+  cmd=redeploy
+fi
+
+deploy_args=$2
 
 batch=50
-pause=5
+pause=600
 node_count=`nixops info --plain | grep node | wc -l`
 
 function node_list {
@@ -22,7 +28,7 @@ function node_list {
 }
 
 function runBatched {
-
+pause_=$3
 for i in {0..20}; do
   echo "$2 nodes $((i*batch))..$((i*batch+batch-1))"
   #j=$((i*batch))
@@ -36,11 +42,11 @@ for i in {0..20}; do
   #wait
   echo $1 `node_list $i`
   yes | $1 `node_list $i`
-  if [[ $((i*batch+batch-1)) -gt $node_count ]]; then
+  if [[ $((i*batch+batch)) -gt $node_count ]]; then
     break;
   fi
-  echo "Pausing for $pause sec"
-  sleep ${pause}s
+  echo "Pausing for $pause_ sec"
+  sleep ${pause_}s
 done
 
 }
@@ -53,5 +59,17 @@ function deploy_node {
   nixops deploy -d cardano -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@
 }
 
-runBatched stop_node "Stopping"
-runBatched deploy_node "Deploying"
+case "$cmd" in
+   stop | redeploy )
+     runBatched stop_node "Stopping" $((pause/2))
+     ;;
+esac
+if [[ "$cmd" == "redeploy" ]]; then
+     echo "Pausing for $pause sec"
+     sleep ${pause}s
+fi
+case "$cmd" in
+   redeploy | start )
+     runBatched deploy_node "Deploying" $pause
+     ;;
+esac
