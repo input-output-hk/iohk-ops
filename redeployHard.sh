@@ -71,7 +71,14 @@ function deploy_node {
 
 case "$cmd" in
    stop | redeploy )
-     runBatched stop_node "Stopping" $pause
+     echo "Stopping via SSH"
+     k=0
+     while [[ $k -lt $node_count ]]; do
+        nixops ssh node$k systemctl stop cardano-node &
+	k=$((k+1))
+     done
+     wait
+     #runBatched stop_node "Stopping" $pause
      ;;
 esac
 if [[ "$cmd" == "redeploy" ]]; then
@@ -79,7 +86,7 @@ if [[ "$cmd" == "redeploy" ]]; then
      sleep ${pause}s
 fi
 case "$cmd" in
-   redeploy | deploy )
+   redeploy | deploy | start )
      runBatched deploy_node "Deploying" $pause
      ;;
 esac
