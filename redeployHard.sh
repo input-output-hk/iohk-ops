@@ -38,7 +38,7 @@ function node_list {
 
 function runBatched {
    local pause_=$3
-   local i=$((batch_cnt-2))
+   local i=$((batch_cnt-1))
    while [[ $i -gt -1 ]]; do
      echo "$2 nodes $((i*batch))..$((i*batch+batch-1))"
      #j=$((i*batch))
@@ -67,6 +67,7 @@ function stop_node {
 
 function deploy_node {
   nixops deploy -d cardano -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@
+  echo nixops deploy -d cardano -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@ >&2
 }
 
 case "$cmd" in
