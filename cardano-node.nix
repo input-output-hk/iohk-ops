@@ -15,6 +15,7 @@ in
     services.cardano-node = {
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };
+      stats = mkOption { type = types.bool; default = false; };
       isDebug = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
       timeLord = mkOption { type = types.bool; default = false; };   
@@ -65,6 +66,7 @@ in
 	  "${cardano}/bin/cardano-node"
           "--port ${toString cfg.port}"
           "--rebuild-db"
+          (enableIf cfg.stats "--stats")
           "--spending-genesis ${toString cfg.testIndex}"
           "--vss-genesis ${toString cfg.testIndex}"
           (enableIf cfg.pettyUtxo "--petty-utxo")
