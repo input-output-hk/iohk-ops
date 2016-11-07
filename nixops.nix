@@ -2,6 +2,7 @@ let
   # See secretExample.nix
   secret = import ./secret.nix;
   genesisN = 20;
+  slotDuration = 20;
 
   coordinatorHost = "52.59.93.58"; # Elastic
   coordinatorPort = 3000;
@@ -50,8 +51,8 @@ let
       testIndex = testIndex;
       stats = true;
       pettyUtxo = true;
-      isDebug = false;
-      inherit genesisN;
+      isInfo = true;
+      inherit genesisN slotDuration;
     };
  
     networking.firewall.enable = false;
@@ -63,7 +64,6 @@ let
     deployment.ec2.elasticIPv4 = coordinatorHost;
     services.cardano-node = {
       timeLord = true;
-      #supporter = false;
       peerEnable = false;
       dhtKey = coordinatorDhtKey;
     };

@@ -16,7 +16,12 @@ in
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };
       stats = mkOption { type = types.bool; default = false; };
+
+      # such a shame
       isDebug = mkOption { type = types.bool; default = false; };
+      isInfo = mkOption { type = types.bool; default = false; };
+      isError = mkOption { type = types.bool; default = false; };
+
       supporter = mkOption { type = types.bool; default = false; };
       timeLord = mkOption { type = types.bool; default = false; };   
       dhtKey = mkOption { 
@@ -73,9 +78,9 @@ in
           (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
           (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
           (enableIf cfg.supporter "--supporter")
-          (if cfg.isDebug 
-           then "--main-log Debug"
-           else "--main-log Info")
+          (enableIf cfg.isDebug "--main-log Debug")
+          (enableIf cfg.isInfo "--main-log Info")
+          (enableIf cfg.isError "--main-log Error")
           (enableIf cfg.timeLord "--time-lord")
           " > ${stateDir}/cardano-node.log 2>&1'"
         ]; 
