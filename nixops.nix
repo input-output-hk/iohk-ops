@@ -1,10 +1,10 @@
 let
   # See secretExample.nix
   secret = import ./secret.nix;
-  genesisN = 20;
+  genesisN = 30;
   slotDuration = 20;
   bitcoinOverFlat = false;
-  totalMoneyAmount = 1000000;
+  totalMoneyAmount = 600000;
 
   coordinatorHost = "52.59.93.58"; # Elastic
   coordinatorPort = 3000;
@@ -40,7 +40,7 @@ let
     deployment.ec2.accessKeyId = secret.accessKeyId;
     deployment.ec2.region = secret.region;
     deployment.ec2.keyPair = resources.ec2KeyPairs.my-key-pair;
-    deployment.ec2.instanceType = "t2.medium";
+    deployment.ec2.instanceType = "t2.large";
     deployment.ec2.securityGroups = [secret.securityGroup];
   };
 
@@ -52,9 +52,10 @@ let
       port = coordinatorPort;
       testIndex = testIndex;
       stats = true;
+      jsonLog = true;
       distribution = true;
       pettyUtxo = true;
-      isInfo = true;
+      isError = true;
       inherit genesisN slotDuration totalMoneyAmount bitcoinOverFlat;
     };
  
@@ -104,16 +105,16 @@ in {
   node17 = cardano-node 17;
   node18 = cardano-node 18;
   node19 = cardano-node 19;
-#  node20 = cardano-node 20;
-#  node21 = cardano-node 21;
-#  node22 = cardano-node 22;
-#  node23 = cardano-node 23;
-#  node24 = cardano-node 24;
-#  node25 = cardano-node 25;
-#  node26 = cardano-node 26;
-#  node27 = cardano-node 27;
-#  node28 = cardano-node 28;
-#  node29 = cardano-node 29;
+  node20 = cardano-node 20;
+  node21 = cardano-node 21;
+  node22 = cardano-node 22;
+  node23 = cardano-node 23;
+  node24 = cardano-node 24;
+  node25 = cardano-node 25;
+  node26 = cardano-node 26;
+  node27 = cardano-node 27;
+  node28 = cardano-node 28;
+  node29 = cardano-node 29;
 #  node30 = cardano-node 30;
 #  node31 = cardano-node 31;
 #  node32 = cardano-node 32;

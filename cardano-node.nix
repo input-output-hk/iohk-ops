@@ -16,7 +16,6 @@ in
     services.cardano-node = {
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };
-      stats = mkOption { type = types.bool; default = false; };
 
       # such a shame
       isDebug = mkOption { type = types.bool; default = false; };
@@ -32,6 +31,9 @@ in
 
       genesisN = mkOption { type = types.int; };
       slotDuration = mkOption { type = types.int; };
+
+      stats = mkOption { type = types.bool; default = false; };
+      jsonLog = mkOption { type = types.bool; default = false; };
       pettyUtxo = mkOption { type = types.bool; default = false; };
       totalMoneyAmount = mkOption { type = types.int; default = 100000; };
       distribution = mkOption { 
@@ -95,6 +97,7 @@ in
              else "--flat-distr \"${distributionParam}\""))
           (enableIf cfg.pettyUtxo "--petty-utxo")
           (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
+          (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
           (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
           (enableIf cfg.supporter "--supporter")
           (enableIf cfg.isDebug "--main-log Debug")
