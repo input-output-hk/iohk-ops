@@ -3,6 +3,8 @@ let
   secret = import ./secret.nix;
   genesisN = 20;
   slotDuration = 20;
+  bitcoinOverFlat = false;
+  totalMoneyAmount = 1000000;
 
   coordinatorHost = "52.59.93.58"; # Elastic
   coordinatorPort = 3000;
@@ -50,9 +52,10 @@ let
       port = coordinatorPort;
       testIndex = testIndex;
       stats = true;
+      distribution = true;
       pettyUtxo = true;
       isInfo = true;
-      inherit genesisN slotDuration;
+      inherit genesisN slotDuration totalMoneyAmount bitcoinOverFlat;
     };
  
     networking.firewall.enable = false;
