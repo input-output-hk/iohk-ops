@@ -12,7 +12,13 @@ if [[ "$cmd" == "" ]]; then
   cmd=redeploy
 fi
 
-deploy_args=$2
+deployment_name=$2
+
+if [[ "$deployment_name" == "" ]]; then
+  deployment_name=cardano
+fi
+
+deploy_args=$3
 
 shift
 shift
@@ -20,7 +26,7 @@ shift
 batch=34
 pause=450
 pause2=100
-node_count=`nixops info --plain | grep node | wc -l`
+node_count=`nixops info -d $deployment_name --plain | grep node | wc -l`
 batch_cnt=$((node_count/batch))
 
 if [[ $((batch_cnt*batch)) -lt $node_count ]]; then
@@ -62,12 +68,18 @@ function runBatched {
 }
 
 function stop_node {
-  nixops stop --include $@
+  echo nixops stop -d $deployment_name --include $@ >&2
+  nixops stop -d $deployment_name --include $@
+}
+
+function stop_node_light {
+  echo nixops ssh -d $deployment_name node$1 systemctl stop cardano-node >&2
+  nixops ssh -d $deployment_name node$1 systemctl stop cardano-node
 }
 
 function deploy_node {
-  nixops deploy -d cardano -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@
-  echo nixops deploy -d cardano -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@ >&2
+  echo nixops deploy -d $deployment_name -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@ >&2
+  nixops deploy -d $deployment_name -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@
 }
 
 case "$cmd" in
@@ -75,7 +87,7 @@ case "$cmd" in
      echo "Stopping via SSH"
      k=0
      while [[ $k -lt $node_count ]]; do
-        nixops ssh node$k systemctl stop cardano-node &
+	stop_node_light $k &
 	k=$((k+1))
      done
      wait
