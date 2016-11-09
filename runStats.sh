@@ -40,6 +40,9 @@ mkdir "$rundir"
 exit_ $?
 
 if ! $noRedeploy; then
+   echo "Checking nodes..."
+   ./checkStatus.sh --reboot
+   exit_ $?
    ./redeployHard.sh
    ./update-result-dir.sh
    echo "Pausing for 5 mins"
@@ -59,6 +62,10 @@ exit_ $?
 echo "Pausing for 100s"
 sleep 100s
 
+echo "Checking status..."
+$dir/checkStatus.sh --reboot
+exit_ $?
+  
 echo "Running stats collector..."
 
 # Generate collector.yaml

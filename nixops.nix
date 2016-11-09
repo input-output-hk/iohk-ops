@@ -1,7 +1,7 @@
 let
   # See secretExample.nix
   secret = import ./secret.nix;
-  genesisN = 30;
+  genesisN = 40;
   slotDuration = 20;
   bitcoinOverFlat = false;
   totalMoneyAmount = 600000;
@@ -115,16 +115,16 @@ in {
   node27 = cardano-node 27;
   node28 = cardano-node 28;
   node29 = cardano-node 29;
-#  node30 = cardano-node 30;
-#  node31 = cardano-node 31;
-#  node32 = cardano-node 32;
-#  node33 = cardano-node 33;
-#  node34 = cardano-node 34;
-#  node35 = cardano-node 35;
-#  node36 = cardano-node 36;
-#  node37 = cardano-node 37;
-#  node38 = cardano-node 38;
-#  node39 = cardano-node 39;
+  node30 = cardano-node 30;
+  node31 = cardano-node 31;
+  node32 = cardano-node 32;
+  node33 = cardano-node 33;
+  node34 = cardano-node 34;
+  node35 = cardano-node 35;
+  node36 = cardano-node 36;
+  node37 = cardano-node 37;
+  node38 = cardano-node 38;
+  node39 = cardano-node 39;
 #  node40 = cardano-node 40;
 #  node41 = cardano-node 41;
 #  node42 = cardano-node 42;
