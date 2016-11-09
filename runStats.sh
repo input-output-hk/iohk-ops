@@ -44,6 +44,7 @@ if ! $noRedeploy; then
    ./checkStatus.sh --reboot
    exit_ $?
    ./redeployHard.sh
+   exit_ $?
    ./update-result-dir.sh
    echo "Pausing for 5 mins"
    sleep 300s

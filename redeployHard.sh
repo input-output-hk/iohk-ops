@@ -6,6 +6,14 @@
 #yes_file=/tmp/pos-prototype-deployment-yes-file.txt
 #yes | head -100 > $yes_file
 
+function exit_ {
+   e=$1
+   if [[ $e -ne 0 ]]; then
+     echo ".. failed with code $e"
+     exit $e
+   fi
+}
+
 cmd=$1
 
 if [[ "$cmd" == "" ]]; then
@@ -23,8 +31,8 @@ deploy_args=$3
 shift
 shift
 
-batch=34
-pause=450
+batch=40
+pause=500
 pause2=100
 node_count=`nixops info -d $deployment_name --plain | grep node | wc -l`
 batch_cnt=$((node_count/batch))
@@ -70,16 +78,26 @@ function runBatched {
 function stop_node {
   echo nixops stop -d $deployment_name --include $@ >&2
   nixops stop -d $deployment_name --include $@
+  exit_ $?
 }
 
 function stop_node_light {
   echo nixops ssh -d $deployment_name node$1 systemctl stop cardano-node >&2
   nixops ssh -d $deployment_name node$1 systemctl stop cardano-node
+  exit_ $?
 }
 
 function deploy_node {
   echo nixops deploy -d $deployment_name -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@ >&2
-  nixops deploy -d $deployment_name -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@
+  local tmp_file=/tmp/tmp_file_`date +%F%H%M%S`.txt
+  local e=1
+  while [[ $e -ne 0 ]]; do
+     nixops deploy -d $deployment_name -I nixpkgs=~/nixpkgs --show-trace $deploy_args --include $@ > $tmp_file
+     e=$?
+     if [[ $e -eq 0 ]]; then
+        e=`grep "error" $tmp_file|wc -l`
+     fi
+  done
 }
 
 case "$cmd" in

@@ -53,9 +53,9 @@ if $reboot && [[ "$failed_names" != "" ]]; then
    nixops reboot --include $failed_names
    #echo "Nodes $failed_names are dead. @georgeee do smth"
    #exit 1
-fi
-failed_names=`check_status`
-echo "Failed names: $failed_names"
-if [[ "$failed_names" != "" ]]; then
-   exit 1
+   failed_names=`check_status`
+   echo "Failed names: $failed_names"
+   if [[ "$failed_names" != "" ]]; then
+      exit 1
+   fi
 fi
