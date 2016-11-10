@@ -81,8 +81,12 @@ function stop_node {
   exit_ $?
 }
 
+function start_node_light {
+  nixops ssh -d $deployment_name node$1 systemctl start cardano-node
+  exit_ $?
+}
+
 function stop_node_light {
-  echo nixops ssh -d $deployment_name node$1 systemctl stop cardano-node >&2
   nixops ssh -d $deployment_name node$1 systemctl stop cardano-node
   exit_ $?
 }
@@ -101,8 +105,9 @@ function deploy_node {
 }
 
 case "$cmd" in
-   stop | redeploy )
+   stop | redeploy | restart )
      echo "Stopping via SSH"
+     echo nixops ssh -d $deployment_name node\$i systemctl stop cardano-node >&2
      k=0
      while [[ $k -lt $node_count ]]; do
 	stop_node_light $k &
@@ -117,7 +122,17 @@ if [[ "$cmd" == "redeploy" ]]; then
      sleep ${pause2}s
 fi
 case "$cmd" in
-   redeploy | deploy | start )
+   redeploy | deploy )
      runBatched deploy_node "Deploying" $pause
+     ;;
+   restart | start )
+     echo "Starting via SSH"
+     echo nixops ssh -d $deployment_name node\$i systemctl start cardano-node >&2
+     k=0
+     while [[ $k -lt $node_count ]]; do
+	start_node_light $k &
+	k=$((k+1))
+     done
+     wait
      ;;
 esac
