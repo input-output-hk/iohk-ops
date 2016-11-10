@@ -14,9 +14,13 @@ cd "$dir"
 
 
 noRedeploy=false
+noTxgen=false
 
 while [[ "$#" -ne 0 ]]; do
   case "$1" in
+    --no-txgen)
+       noTxgen=true
+       ;;
     --no-redeploy)
        noRedeploy=true
        ;;
@@ -56,27 +60,32 @@ mkdir conf
 cp -R "$dir/nixops.nix" "$dir/srk-nixpkgs" conf
 
 echo "Running txgen..."
-cardano-tx-generator -d 10 -t 1 -t 5 -t 10 -t 20 -t 30 -t 50 -t 60 -t 70 -t 80 -t 90 -t 100 -t 110 -t 120 -t 130 \
+cardano-tx-generator -d 750 -t 40 \
        	-k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=
 exit_ $?
 
-echo "Pausing for 100s"
-sleep 100s
-
-echo "Checking status..."
-$dir/checkStatus.sh --reboot
-exit_ $?
+failed=`$dir/checkStatus.sh`
+failedE=`echo "$failed" | sed 's/^\s*//' | sed 's/\s*$//' | sed 's/\s\s*/\|/g'`
+if [[ "$failedE" == "" ]]; then
+   failedE="abracadabrablabla"
+fi
   
 echo "Running stats collector..."
 
 # Generate collector.yaml
 {
   echo "nodes:"
+  n=`nixops info -d cardano --plain | wc -l`
+  th2=12
+  if [[ $th -lt $th2 ]]; then
+     th=$th2
+  fi
   nixops info -d cardano --plain \
+    | grep -vE "$failedE" \
     | awk '{ print $7 }' | grep -vE '^\s*$' \
     | while read l; do
          echo "- [$l, 3000]"
-      done
+      done | shuf | head -"$th"
 } > collector.yaml
 mkdir stats
 
