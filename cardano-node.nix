@@ -6,7 +6,7 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
-  cardano = (import ./srk-nixpkgs/default.nix { inherit pkgs; inherit (cfg) genesisN slotDuration; }).cardano-sl;
+  cardano = (import ./srk-nixpkgs/default.nix { inherit pkgs; inherit (cfg) genesisN slotDuration networkDiameter mpcRelayInterval; }).cardano-sl;
   discoveryPeer = "${cfg.peerHost}:${toString cfg.peerPort}/${cfg.peerDhtKey}";
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   enableIf = cond: flag: if cond then flag else "";
@@ -31,6 +31,8 @@ in
 
       genesisN = mkOption { type = types.int; };
       slotDuration = mkOption { type = types.int; };
+      networkDiameter = mkOption { type = types.int; };
+      mpcRelayInterval = mkOption { type = types.int; };
 
       stats = mkOption { type = types.bool; default = false; };
       jsonLog = mkOption { type = types.bool; default = false; };
@@ -88,6 +90,7 @@ in
 	  "${cardano}/bin/cardano-node"
           "--port ${toString cfg.port}"
           "--rebuild-db"
+	  "+RTS -N -RTS"
           (enableIf cfg.stats "--stats")
           "--spending-genesis ${toString cfg.testIndex}"
           "--vss-genesis ${toString cfg.testIndex}"
