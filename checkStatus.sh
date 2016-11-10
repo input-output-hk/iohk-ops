@@ -47,15 +47,16 @@ done; wait; }
 }
 
 failed_names=`check_status`
-echo "Failed names: $failed_names"
+echo "Failed names: $failed_names" >&2
 if $reboot && [[ "$failed_names" != "" ]]; then
-   echo "Rebooting $failed_names..."
+   echo "Rebooting $failed_names..." >&2
    nixops reboot --include $failed_names
    #echo "Nodes $failed_names are dead. @georgeee do smth"
    #exit 1
    failed_names=`check_status`
-   echo "Failed names: $failed_names"
-   if [[ "$failed_names" != "" ]]; then
-      exit 1
-   fi
+   echo "Failed names: $failed_names" >&2
+fi
+echo $failed_names
+if [[ "$failed_names" != "" ]]; then
+   exit 1
 fi
