@@ -32,7 +32,7 @@ done
 
 function check_status {
 
-nixops info --plain | awk '{print $1" "$7}' | grep node | { while read -a r; do
+nixops info --plain | grep -v obsolete | awk '{print $1" "$7}' | grep node | { while read -a r; do
    ip=${r[1]}
    name=${r[0]}
    { nixops ssh $name -o ConnectTimeout=2 echo -n ''

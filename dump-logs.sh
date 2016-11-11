@@ -12,7 +12,7 @@ mkdir -p "$logs_dir"
 cd "$logs_dir"
 
 function get_names {
-  nixops info -d $deployment_name --plain | awk '{print $1}' | grep node
+  nixops info -d $deployment_name --plain | grep -v obsolete | awk '{print $1}' | grep node
 }
 
 for n in `get_names`; do

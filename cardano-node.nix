@@ -10,6 +10,35 @@ let
   discoveryPeer = "${cfg.peerHost}:${toString cfg.peerPort}/${cfg.peerDhtKey}";
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   enableIf = cond: flag: if cond then flag else "";
+  command = toString [
+    "${cardano}/bin/cardano-node"
+    "--port ${toString cfg.port}"
+    "--rebuild-db"
+    "+RTS -N -RTS"
+    (enableIf cfg.stats "--stats")
+    "--spending-genesis ${toString cfg.testIndex}"
+    "--vss-genesis ${toString cfg.testIndex}"
+    (enableIf cfg.distribution (
+       if cfg.bitcoinOverFlat
+       then "--bitcoin-distr \"${distributionParam}\""
+       else "--flat-distr \"${distributionParam}\""))
+    (enableIf cfg.pettyUtxo "--petty-utxo")
+    (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
+    (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
+    (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
+
+    #Hack for testing, to be removed
+    "`cat /var/lib/cardano-node/nodht_params.txt`"
+    "--explicit-initial "
+
+    (enableIf cfg.supporter "--supporter")
+    (enableIf cfg.isDebug "--main-log Debug")
+    (enableIf cfg.isInfo "--main-log Info")
+    (enableIf cfg.isError "--main-log Error")
+    (enableIf cfg.timeLord "--time-lord")
+    " > ${stateDir}/cardano-node.log 2>&1"
+  ];
+  # io = (import ./unsafeIO.nix) { text = command; destination = "./launchCardano.sh"; };
 in
 {
   options = {
@@ -85,30 +114,7 @@ in
         KillSignal = "SIGINT";
         WorkingDirectory = stateDir;
         PrivateTmp = true;
-        ExecStart = toString [ 
-          "/bin/sh -c '"
-	  "${cardano}/bin/cardano-node"
-          "--port ${toString cfg.port}"
-          "--rebuild-db"
-	  "+RTS -N -RTS"
-          (enableIf cfg.stats "--stats")
-          "--spending-genesis ${toString cfg.testIndex}"
-          "--vss-genesis ${toString cfg.testIndex}"
-          (enableIf cfg.distribution (
-             if cfg.bitcoinOverFlat
-             then "--bitcoin-distr \"${distributionParam}\""
-             else "--flat-distr \"${distributionParam}\""))
-          (enableIf cfg.pettyUtxo "--petty-utxo")
-          (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
-          (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
-          (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
-          (enableIf cfg.supporter "--supporter")
-          (enableIf cfg.isDebug "--main-log Debug")
-          (enableIf cfg.isInfo "--main-log Info")
-          (enableIf cfg.isError "--main-log Error")
-          (enableIf cfg.timeLord "--time-lord")
-          " > ${stateDir}/cardano-node.log 2>&1'"
-        ]; 
+        ExecStart = "/bin/sh -c '${command}'";
       };
     };
   };
