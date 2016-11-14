@@ -1,6 +1,5 @@
 #echo "stopping 0"
 #nixops ssh node0-coordinator -- systemctl kill cardano-node
-#for i in {1..100}; do echo "stopping $i"; nixops ssh node$i -- systemctl kill cardano-node; done
 
 #Hack, but can't imagine better
 #yes_file=/tmp/pos-prototype-deployment-yes-file.txt
@@ -33,24 +32,44 @@ deploy_args=$3
 shift
 shift
 
+function nodes {
+  nixops info -d $deployment_name --plain | grep node | grep -v obsolete | awk '{ print $1 }'
+}
+
+function all_nodes {
+  nixops info -d $deployment_name --plain | grep node | awk '{ print $1 }'
+}
+
 batch=40
 pause=500
 pause2=100
-node_count=`nixops info -d $deployment_name --plain | grep -v obsolete | grep node | wc -l`
-all_node_count=`nixops info -d $deployment_name --plain | grep node | wc -l`
+node_count=`nodes | wc -l`
 batch_cnt=$((node_count/batch))
 
 if [[ $((batch_cnt*batch)) -lt $node_count ]]; then
    batch_cnt=$((batch_cnt+1))
 fi
 
+function runEach {
+  nodes    | { while read n; do
+                 $1 $n &
+               done
+               wait
+             }
+}
+function runEachAll {
+  all_nodes | { while read n; do
+                 $1 $n &
+               done
+               wait
+             }
+}
+
+
 function node_list {
   local i=$1
-  local j=$((i*batch))
-  while [[ $j -lt $node_count ]] && [[ $j -lt $((i*batch+batch)) ]]; do
-   echo -n "node$j "
-   j=$((j+1))
-  done
+  local j=$((i*batch+1))
+  nodes | tail -n +$j | head -$batch
 }
 
 function runBatched {
@@ -85,22 +104,22 @@ function stop_node {
 }
 
 function start_node_light {
-  nixops ssh -d $deployment_name node$1 systemctl start cardano-node
+  nixops ssh -d $deployment_name $1 systemctl start cardano-node
   exit_ $?
 }
 
 function rm_jsonLog {
-  nixops ssh -d $deployment_name node$1 rm /var/lib/cardano-node/jsonLog.json
+  nixops ssh -d $deployment_name $1 rm /var/lib/cardano-node/jsonLog.json
   exit_ $?
 }
 
 function restart_node_light {
-  nixops ssh -d $deployment_name node$1 systemctl restart cardano-node
+  nixops ssh -d $deployment_name $1 systemctl restart cardano-node
   exit_ $?
 }
 
 function stop_node_light {
-  nixops ssh -d $deployment_name node$1 systemctl stop cardano-node
+  nixops ssh -d $deployment_name $1 systemctl stop cardano-node
   exit_ $?
 }
 
@@ -117,25 +136,15 @@ function deploy_node {
   done
 }
 function upload_nodht {
-  nixops scp -d $deployment_name --to node$1 /tmp/nodht_params.txt /var/lib/cardano-node/nodht_params.txt
+  nixops scp -d $deployment_name --to $1 /tmp/nodht_params.txt /var/lib/cardano-node/nodht_params.txt
   exit_ $?
-}
-
-function runEach {
-  local k=0
-  # We need to stop all nodes, inc. obsolete
-  while [[ $k -lt $all_node_count ]]; do
-     $1 $k &
-     k=$((k+1))
-  done
-  wait
 }
 
 case "$cmd" in
    stop | redeploy | restart )
      echo "Stopping via SSH"
      echo nixops ssh -d $deployment_name node\$i systemctl stop cardano-node >&2
-     runEach stop_node_light
+     runEachAll stop_node_light
      #runBatched stop_node "Stopping" $pause
      ;;
 esac
@@ -144,20 +153,17 @@ if [[ "$cmd" == "redeploy" ]]; then
      sleep ${pause2}s
 fi
 case "$cmd" in
-   redeploy | restart | start | deploy )
-     runEach rm_jsonLog
-     ;;
-esac
-case "$cmd" in
    redeploy | deploy )
      runBatched deploy_node "Deploying" $pause
      "$dir/genParamsNoDht.sh" | tr "\n" " " > /tmp/nodht_params.txt
      runEach upload_nodht
+     runEach rm_jsonLog
      runEach restart_node_light
      ;;
    restart | start )
      echo "Starting via SSH"
      echo nixops ssh -d $deployment_name node\$i systemctl start cardano-node >&2
+     runEach rm_jsonLog
      runEach start_node_light
      ;;
 esac
