@@ -147,107 +147,24 @@ let
   cardano-node-asia = regionIndex "ap-southeast-1" (pairs: pairs.cardano-test-asia);
   cardano-node-sydney = regionIndex "ap-southeast-2" (pairs: pairs.cardano-test-sydney);
   cardano-node-sa = regionIndex "sa-east-1" (pairs: pairs.cardano-test-sa);
-in {
-  node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
-  node1 = cardano-node-eu_old 1; 
-  node2 = cardano-node-eu_old 2; 
-  node3 = cardano-node-eu_old 3; 
-  node4 = cardano-node-eu_old 4; 
-  node5 = cardano-node-eu_old 5; 
-  node6 = cardano-node-eu_old 6; 
-  node7 = cardano-node-eu_old 7; 
-  node8 = cardano-node-eu_old 8; 
-  node9 = cardano-node-eu_old 9; 
-  node10 = cardano-node-eu_old 10; 
-  node11 = cardano-node-eu_old 11; 
-  node12 = cardano-node-eu_old 12; 
-  node13 = cardano-node-eu_old 13; 
-# node14 = cardano-node-eu_old 14; 
-# node15 = cardano-node-eu_old 15; 
-# node16 = cardano-node-eu_old 16; 
-# node17 = cardano-node-eu_old 17; 
-# node18 = cardano-node-eu_old 18; 
-# node19 = cardano-node-eu_old 19; 
-# node20 = cardano-node-eu_old 20; 
-  node21 = cardano-node-us 14; 
-  node22 = cardano-node-us 15; 
-  node23 = cardano-node-us 16; 
-  node24 = cardano-node-us 17; 
-  node25 = cardano-node-us 18; 
-  node26 = cardano-node-us 19; 
-  node27 = cardano-node-us 20; 
-  node28 = cardano-node-us 21; 
-  node29 = cardano-node-us 22; 
-  node30 = cardano-node-us 23; 
-  node31 = cardano-node-us 24; 
-  node32 = cardano-node-us 25; 
-# node33 = cardano-node-us 33; 
-# node34 = cardano-node-us 34; 
-# node35 = cardano-node-us 35; 
-# node36 = cardano-node-us 36; 
-# node37 = cardano-node-us 37; 
-# node38 = cardano-node-us 38; 
-  node39 = cardano-node-asia 26; 
-  node40 = cardano-node-asia 27; 
-  node41 = cardano-node-asia 28; 
-  node42 = cardano-node-asia 29; 
-  node43 = cardano-node-asia 30; 
-  node44 = cardano-node-asia 31; 
-  node45 = cardano-node-asia 32; 
-  node46 = cardano-node-asia 33; 
-  node47 = cardano-node-asia 34; 
-  node48 = cardano-node-us 35; 
-  node49 = cardano-node-asia 36; 
-  node50 = cardano-node-asia 37; 
-  node51 = cardano-node-asia 38; 
-  node52 = cardano-node-asia 39; 
- node53 = cardano-node-asia 53; 
- node54 = cardano-node-asia 54; 
- node55 = cardano-node-asia 55; 
- node56 = cardano-node-asia 56; 
- node57 = cardano-node-asia 57; 
- node58 = cardano-node-asia 58; 
- node59 = cardano-node-asia 59;
- node60 = cardano-node-sydney 60;
- node61 = cardano-node-sydney 61;
- node62 = cardano-node-sydney 62;
- node63 = cardano-node-sydney 63;
- node64 = cardano-node-sydney 64;
- node65 = cardano-node-sydney 65;
- node66 = cardano-node-sydney 66;
- node67 = cardano-node-sydney 67;
- node68 = cardano-node-sydney 68;
- node69 = cardano-node-sydney 69;
- node70 = cardano-node-sydney 70;
- node71 = cardano-node-sydney 71;
- node72 = cardano-node-sydney 72;
- node73 = cardano-node-eu 73;
- node74 = cardano-node-eu 74;
- node75 = cardano-node-eu 75;
- node76 = cardano-node-eu 76;
- node77 = cardano-node-eu 77;
- node78 = cardano-node-eu 78;
- node79 = cardano-node-eu 79;
- node80 = cardano-node-eu 80;
- node81 = cardano-node-eu 81;
- node82 = cardano-node-eu 82;
- node83 = cardano-node-eu 83;
- node84 = cardano-node-eu 84;
- node85 = cardano-node-eu 85;
- node86 = cardano-node-sa 86;
- node87 = cardano-node-sa 87;
- node88 = cardano-node-sa 88;
- node89 = cardano-node-sa 89;
- node90 = cardano-node-sa 90;
- node91 = cardano-node-sa 91;
- node92 = cardano-node-sa 92;
- node93 = cardano-node-sa 93;
- node94 = cardano-node-sa 94;
- node95 = cardano-node-sa 95;
- node96 = cardano-node-sa 96;
- node97 = cardano-node-sa 97;
- node98 = cardano-node-sa 98;
- node99 = cardano-node-sa 99;
+
+  genAttrs' = names: fkey: fname:
+    lib.listToAttrs (map (n: lib.nameValuePair (fkey n) (fname n)) names);
+in 
+  #(genAttrs' (lib.range 1 20) (key: "node${toString key}") (name: cardano-node-sa name)) //
+  #(genAttrs' (lib.range 21 40) (key: "node${toString key}") (name: cardano-node-us name)) //
+  #(genAttrs' (lib.range 41 60) (key: "node${toString key}") (name: cardano-node-asia name)) //
+  #(genAttrs' (lib.range 61 80) (key: "node${toString key}") (name: cardano-node-sydney name)) //
+  #(genAttrs' (lib.range 81 100) (key: "node${toString key}") (name: cardano-node-eu name)) // 
+{
+  #node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
+
+  node0 = timeWarpNode { sender = true; };
+  node1 = timeWarpNode {};
+  node2 = timeWarpNode {};
+  node3 = timeWarpNode {};
+  node4 = timeWarpNode {};
+  node5 = timeWarpNode {};
 
   resources.ec2KeyPairs.my-key-pair = 
     { inherit (secret) accessKeyId; region = "eu-central-1"; };
