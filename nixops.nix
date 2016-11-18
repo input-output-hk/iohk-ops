@@ -1,4 +1,6 @@
 let
+  lib = (import <nixpkgs> {}).lib;
+  generatingAMI = builtins.getEnv "GENERATING_AMI";
   # See secretExample.nix
   secret = import ./secret.nix;
   genesisN = 40;
@@ -44,12 +46,53 @@ let
 
     imports = [ ./cardano-node.nix ];
     networking.firewall.enable = false;
-
-    # EC2 stuff
+  } // lib.optionalAttrs (generatingAMI != "1") {
     deployment.targetEnv = "ec2";
     deployment.ec2.accessKeyId = secret.accessKeyId;
     deployment.ec2.instanceType = "t2.large";
     deployment.ec2.securityGroups = [secret.securityGroup];
+    deployment.ec2.ebsBoot = true;
+    deployment.ec2.ebsInitialRootDiskSize = 8;
+  };
+
+  timeWarpNode = { sender ? false }:
+   { resources, pkgs, ...}: 
+  let
+    time-warp = (import ./srk-nixpkgs/default.nix { inherit pkgs; }).time-warp;
+  in {
+    imports = [ defaultConfig ];
+
+    users = {
+      users.timewarp = {
+        description     = "";
+        group           = "timewarp";
+        createHome      = true;
+        isNormalUser = true;
+      };
+      groups.timewarp = { };
+    };
+
+    networking.firewall.allowedTCPPorts = [ 3055 ];
+
+    systemd.services.timewarp = {
+      description   = "";
+      wantedBy      = [ "multi-user.target" ];
+      after         = [ "network.target" ];
+      serviceConfig = {
+        User = "timewarp";
+        Group = "timewarp";
+        Restart = "always";
+        KillSignal = "SIGINT";
+        PrivateTmp = true;
+        ExecStart =
+         if sender
+         then "${time-warp}/bin/bench-sender"
+         else "${time-warp}/bin/bench-reciever";
+      };
+    };
+  } // lib.optionalAttrs (generatingAMI != "1") {
+    deployment.ec2.region = "eu-central-1";
+    deployment.ec2.keyPair = resources.ec2KeyPairs.cardano-test-eu;
   };
 
   nodeGenericConfig = testIndex: region: keypair: {resources, pkgs, ...}: {
@@ -67,7 +110,7 @@ let
 
       inherit genesisN slotDuration totalMoneyAmount bitcoinOverFlat networkDiameter mpcRelayInterval;
     };
- 
+  } // lib.optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = region;
     deployment.ec2.keyPair = keypair resources.ec2KeyPairs;
   };
@@ -75,13 +118,14 @@ let
   cardano-node-coordinator = {testIndex, region, keypair}: {resources, pkgs, ...}: {
     imports = [ (nodeGenericConfig testIndex region keypair) ];
 
-    deployment.ec2.elasticIPv4 = coordinatorHost;
     services.cardano-node = {
       timeLord = true;
       peerEnable = false;
       dhtKey = genDhtKey { i = testIndex; };
 #      dhtKey = coordinatorDhtKey;
     };
+  } // lib.optionalAttrs (generatingAMI != "1") {
+    deployment.ec2.elasticIPv4 = coordinatorHost;
   };
 
   cardano-node = {testIndex, region, keypair}: {resources, pkgs, ...}: {
