@@ -22,21 +22,13 @@ let
        if cfg.bitcoinOverFlat
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
-    (enableIf cfg.pettyUtxo "--petty-utxo")
     (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
     (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
-
-    #Hack for testing, to be removed
-    "`cat /var/lib/cardano-node/nodht_params.txt`"
-    "--explicit-initial "
-
     (enableIf cfg.supporter "--supporter")
-    (enableIf cfg.isDebug "--main-log Debug")
-    (enableIf cfg.isInfo "--main-log Info")
-    (enableIf cfg.isError "--main-log Error")
     (enableIf cfg.timeLord "--time-lord")
-    " > ${stateDir}/cardano-node.log 2>&1"
+    "--log-config /var/lib/cardano-node/logging.yaml"
+    "--logs-prefix /var/lib/cardano-node"
   ];
   # io = (import ./unsafeIO.nix) { text = command; destination = "./launchCardano.sh"; };
 in

@@ -1,0 +1,15 @@
+severity: Debug
+node:
+    severity: Debug
+    file: node.log
+    comm:
+        severity: Debug
+    dht:
+        severity: Debug
+time-slave:
+    severity: Debug
+    file: time-slave.log
+    comm:
+        severity: Debug
+    dht:
+        severity: Debug
