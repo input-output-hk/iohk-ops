@@ -143,8 +143,10 @@ fi
 
 echo $ami > $stateDir/$region.ami
 
-echo "{" > modules/amis.nix
-echo "  $region = \"$ami\";" >> modules/amis.nix
+
+amisFile = ../modules/amis.nix
+echo "{" > $amisFile
+echo "  $region = \"$ami\";" >> $amisFile
 
 for newregion in $newregions; do
     echo	
@@ -154,10 +156,10 @@ for newregion in $newregions; do
 	    --source-region "$region" --source-image-id $ami \
 	    --name "$name" --description "$description" | jq --raw-output '.ImageId')
     echo $newami > $stateDir/$newregion.ami
-    echo "  $newregion = \"$newami\";" >> modules/amis.nix
+    echo "  $newregion = \"$newami\";" >> $amisFile
 done
 
-echo "}" >> modules/amis.nix
+echo "}" >> $amisFile
 
 echo -n "waiting for AMI to be available in EC2..."
 

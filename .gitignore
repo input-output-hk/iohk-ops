@@ -1,6 +1,6 @@
 *~
 *#
 result
-secret.nix
+modules/secret.nix
 logs/
 logs-analyze/

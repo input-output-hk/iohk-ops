@@ -1,8 +1,8 @@
 let
   lib = (import <nixpkgs> {}).lib;
   generatingAMI = builtins.getEnv "GENERATING_AMI";
-  # See secretExample.nix
-  secret = import ./secret.nix;
+  # See modules/secretExample.nix
+  secret = import ./modules/secret.nix;
   genesisN = 20;
   slotDuration = 20;
   bitcoinOverFlat = false;
@@ -41,7 +41,7 @@ let
   } // lib.optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = region;
     deployment.ec2.keyPair = keypair resources.ec2KeyPairs;
-    deployment.ec2.ami = (import ./amis.nix).${region};
+    deployment.ec2.ami = (import ./modules/amis.nix).${region};
   };
 
   cardano-node-coordinator = {testIndex, region, keypair}: {resources, pkgs, ...}: {

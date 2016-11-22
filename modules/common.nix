@@ -1,11 +1,11 @@
-{ resources, pkgs, ... }:
+{ resources, pkgs, lib, ... }:
 
 let
   secret = import ./secret.nix;
-  cardano-sl = import ./../default.nix { inherit pkgs };
+  cardano-sl = import ./../default.nix { inherit pkgs; };
   generatingAMI = builtins.getEnv "GENERATING_AMI";
 in {
-  imports = [ ./modules/cardano-node.nix ];
+  imports = [ ./cardano-node.nix ];
 
   environment.systemPackages = with pkgs;
     [ git tmux vim sysstat nixops srk-nixpkgs.cardano-sl lsof ];
