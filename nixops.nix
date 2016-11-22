@@ -44,7 +44,7 @@ let
       "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 2 29 /var/log/saALL"
     ];
 
-    imports = [ ./cardano-node.nix ];
+    imports = [ ./modules/cardano-node.nix ];
     networking.firewall.enable = false;
   } // lib.optionalAttrs (generatingAMI != "1") {
     deployment.targetEnv = "ec2";
