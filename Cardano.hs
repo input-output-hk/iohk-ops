@@ -17,8 +17,6 @@ add deploy --from-scratch
 TODO:
  
 - turn on the disable flag for asserts
-- AMI
-- Generate S3 backed AMI with 8GB of space
 
 -}
 
