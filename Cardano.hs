@@ -29,7 +29,7 @@ data Command =
   | Build
   deriving (Show)
 
--- TODO https://github.com/Gabriel439/Haskell-Turtle-Library/issues/193
+
 parser :: Parser Command
 parser =
       subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
