@@ -30,7 +30,6 @@ let
     "--log-config /var/lib/cardano-node/logging.yaml"
     "--logs-prefix /var/lib/cardano-node"
   ];
-  # io = (import ./unsafeIO.nix) { text = command; destination = "./launchCardano.sh"; };
 in
 {
   options = {
