@@ -24,7 +24,7 @@ nixops info -d $deployment_name > layout.txt
 
 wait
 
-../../logs-analyze/blocks.sh > blocks.log
+../../scripts/blocks.sh > blocks.log
 
 cd ..
 
