@@ -52,7 +52,7 @@ let
     deployment.ec2.instanceType = "t2.large";
     deployment.ec2.securityGroups = [secret.securityGroup];
     deployment.ec2.ebsBoot = true;
-    deployment.ec2.ebsInitialRootDiskSize = 8;
+    deployment.ec2.ebsInitialRootDiskSize = 6;
   };
 
   # Move to separate timewarp-node.nix
@@ -127,6 +127,7 @@ let
   } // lib.optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = region;
     deployment.ec2.keyPair = keypair resources.ec2KeyPairs;
+    deployment.ec2.ami = (import ./amis.nix).${region};
   };
 
   cardano-node-coordinator = {testIndex, region, keypair}: {resources, pkgs, ...}: {

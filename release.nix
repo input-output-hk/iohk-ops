@@ -7,7 +7,8 @@ rec {
     system = "x86_64-linux";
     modules = [
       (import ./nixops.nix).node1
-      <nixpkgs/nixos/maintainers/scripts/ec2/amazon-image.nix>
+      (import ./modules/amazon-image.nix)
+      ({ ec2.hvm = true; })
     ];
   }).config.system.build.amazonImage;
 
