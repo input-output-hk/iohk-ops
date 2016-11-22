@@ -21,96 +21,10 @@ let
   coordinatorPort = 3000;
   coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
 
-  defaultConfig = { resources, pkgs, ... }: {
-    environment.systemPackages =
-      let
-        srk-nixpkgs = import ./srk-nixpkgs/default.nix { inherit pkgs genesisN; };
-      in with pkgs; [ git tmux vim sysstat nixops srk-nixpkgs.cardano-sl lsof ];
-
-    users.mutableUsers = false;
-    users.users.root.openssh.authorizedKeys.keys = secret.devKeys;
-    services.openssh.passwordAuthentication = true;
-    services.openssh.enable = true;
-
-    users.users.statReader = {
-      isNormalUser = true;
-      password = secret.rootPassword;
-    };
-
-    environment.variables.TERM = "xterm-256color";
-
-    services.cron.enable = true;
-    services.cron.systemCronJobs = [
-      "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 2 29 /var/log/saALL"
-    ];
-
-    imports = [ ./modules/cardano-node.nix ];
-    networking.firewall.enable = false;
-  } // lib.optionalAttrs (generatingAMI != "1") {
-    deployment.targetEnv = "ec2";
-    deployment.ec2.accessKeyId = secret.accessKeyId;
-    deployment.ec2.instanceType = "t2.large";
-    deployment.ec2.securityGroups = [secret.securityGroup];
-    deployment.ec2.ebsBoot = true;
-    deployment.ec2.ebsInitialRootDiskSize = 6;
-  };
-
-  # Move to separate timewarp-node.nix
-  timeWarpNode = { sender ? false }:
-   { resources, pkgs, ...}: 
-  let
-    time-warp = (import ./srk-nixpkgs/default.nix { inherit pkgs; }).time-warp;
-  in {
-    imports = [ defaultConfig ];
-
-    users = {
-      users.timewarp = {
-        description     = "";
-        group           = "timewarp";
-        createHome      = true;
-        isNormalUser = true;
-      };
-      groups.timewarp = { };
-    };
-
-    networking.firewall.allowedTCPPorts = [ 3055 ];
-
-    systemd.services.timewarp = {
-      description   = "";
-      wantedBy      = [ "multi-user.target" ];
-      after         = [ "network.target" ];
-      serviceConfig = {
-        User = "timewarp";
-        Group = "timewarp";
-        Restart = "always";
-        KillSignal = "SIGINT";
-        PrivateTmp = true;
-        ExecStart =
-         if sender
-         then toString [
-                "/bin/sh -c \"${time-warp}/bin/bench-sender "
-                "+RTS -N -RTS "
-                "--log-config /home/timewarp/sender-logging.yaml "
-                "--logs-prefix /home/timewarp "
-                "`cat /home/timewarp/peers.txt` "
-                "-r 90 -m 10800 -d 130 \""
-              ]
-         else toString [
-                "${time-warp}/bin/bench-receiver "
-                "+RTS -N -RTS "
-                "--log-config /home/timewarp/receiver-logging.yaml "
-                "--logs-prefix /home/timewarp "
-                "-p 3055 -d 150 "
-              ];
-      };
-    };
-  } // lib.optionalAttrs (generatingAMI != "1") {
-    deployment.ec2.region = "eu-central-1";
-    deployment.ec2.keyPair = resources.ec2KeyPairs.cardano-test-eu;
-  };
+  timeWarpNode = import ./modules/timewarp-node.nix;
 
   nodeGenericConfig = testIndex: region: keypair: {resources, pkgs, ...}: {
-    imports = [ defaultConfig ];
+    imports = [ (import ./modules/common.nix) ];
 
     services.cardano-node = {
       enable = true;
