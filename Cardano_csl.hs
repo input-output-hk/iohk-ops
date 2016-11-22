@@ -116,7 +116,7 @@ runexperiment = do
   threadDelay (30*1000000)
   echo "Launching txgen"
   -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
-  shells("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 240 -t 65 -P 4 --init-money 600000  --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8= --log-config txgen-logging.yaml") empty
+  shells("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 240 -t 65 -P 4 --init-money 600000  --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8= --log-config static/txgen-logging.yaml") empty
   echo "Delaying... (150s)"
   threadDelay (150*1000000)
   echo "Retreive logs..."
@@ -161,7 +161,7 @@ startCardanoNodes nodes = do
 
 scpToAllNodes :: Text -> IO ()
 scpToAllNodes node = do
-  (exitcode, output) <- shellStrict (scpToNode node "csl-logging.yaml" "/var/lib/cardano-node/logging.yaml") empty
+  (exitcode, output) <- shellStrict (scpToNode node "static/csl-logging.yaml" "/var/lib/cardano-node/logging.yaml") empty
   case exitcode of
     ExitSuccess -> return ()
     ExitFailure code -> echo $ "Scp to " <> node <> " failed with " <> (T.pack $ show code)
