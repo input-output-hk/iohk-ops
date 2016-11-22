@@ -112,17 +112,18 @@ runexperiment = do
   stopCardanoNodes nodes
   echo "Starting nodes..."
   startCardanoNodes nodes
+  echo "Delaying... (30s)"
+  threadDelay (30*1000000)
+  echo "Launching txgen"
+  -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
+  shells("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 240 -t 65 -P 4 --init-money 600000  --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8= --log-config txgen-logging.yaml") empty
   echo "Delaying... (150s)"
   threadDelay (150*1000000)
-  echo "Launching txgen"
-  shells ("./result/bin/cardano-tx-generator -d 60 -t 30 -k 6000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
-  echo "Delaying... (20s)"
-  threadDelay (20*1000000)
   echo "Retreive logs..."
-  workDir <- dumpLogs nodes
-  shells ("mv timestampsTxSender.json " <> workDir) empty
+  dt <- dumpLogs nodes
+  shells ("mv timestampsTxSender.json txgen.log txgen.json experiments/" <> dt) empty
   --shells (foldl (\s n -> s <> " --file " <> n <> ".json") ("sh -c 'cd " <> workDir <> "; ./result/bin/cardano-analyzer --tx-file timestampsTxSender.json") nodes <> "'") empty
-  
+  shells ("tar -czf experiments/" <> dt <> ".tgz experiments/" <> dt) empty
   
 logs =
     [ ("/var/lib/cardano-node/node.log", (<> ".log"))
@@ -132,12 +133,12 @@ logs =
     ]
 
 dumpLogs nodes = do
-    (_, dt) <- shellStrict "date +%F_%H%M%S" empty
-    let workDir = "experiments/" <> T.strip dt
+    (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
+    let workDir = "experiments/" <> dt
     echo workDir
     shell ("mkdir -p " <> workDir) empty
     sh . using $ parallel nodes (dump workDir)
-    return workDir
+    return dt
   where
     dump workDir node = do
         forM_ logs $ \(rpath, fname) -> do

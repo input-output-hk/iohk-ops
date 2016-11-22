@@ -1,0 +1,8 @@
+severity: Warning
+smart-gen:
+    severity: Info
+    file: txgen.log
+    comm:
+        severity: Info
+    dht:
+        severity: Info
