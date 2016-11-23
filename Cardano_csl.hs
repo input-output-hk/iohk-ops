@@ -153,19 +153,11 @@ stopCardanoNodes = sh . using . flip parallel (ssh cmd)
   where
     cmd = "systemctl stop cardano-node"
 startCardanoNodes nodes = do
-    sh . using $ parallel nodes scpToAllNodes
     sh . using $ parallel nodes (ssh $ "'" <> rmCmd <> ";" <> startCmd <> "'")
     --sh . using $ parallel nodes (ssh startCmd)
   where
     rmCmd = foldl (\s (f, _) -> s <> " " <> f) "rm -f" logs
     startCmd = "systemctl start cardano-node"
-
-scpToAllNodes :: Text -> IO ()
-scpToAllNodes node = do
-  (exitcode, output) <- shellStrict (scpToNode node "static/csl-logging.yaml" "/var/lib/cardano-node/logging.yaml") empty
-  case exitcode of
-    ExitSuccess -> return ()
-    ExitFailure code -> echo $ "Scp to " <> node <> " failed with " <> (T.pack $ show code)
 
 -- Helpers
 

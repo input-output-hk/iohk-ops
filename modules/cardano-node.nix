@@ -27,7 +27,7 @@ let
     (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
     (enableIf cfg.supporter "--supporter")
     (enableIf cfg.timeLord "--time-lord")
-    "--log-config /var/lib/cardano-node/logging.yaml"
+    "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
   ];
 in
