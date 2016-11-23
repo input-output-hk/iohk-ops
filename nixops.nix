@@ -2,12 +2,9 @@ let
   lib = (import <nixpkgs> {}).lib;
   generatingAMI = builtins.getEnv "GENERATING_AMI";
   accessKeyId = "cardano-deployer";
-  genesisN = 40;
-  slotDuration = 20;
+  cconf = import ./compileconfig.nix;
   bitcoinOverFlat = false;
   totalMoneyAmount = 600000;
-  networkDiameter = 7;
-  mpcRelayInterval = 10;
   genDhtKey = { i
               , dhtKeyPrefix  ? "MHdrsP-oPf7UWly"
               , dhtKeyPostfix ? "7QuXnLK5RD=" }:
@@ -33,7 +30,8 @@ let
       jsonLog = true;
       distribution = true;
 
-      inherit genesisN slotDuration totalMoneyAmount bitcoinOverFlat networkDiameter mpcRelayInterval;
+      inherit (cconf) genesisN slotDuration networkDiameter mpcRelayInterval;
+      inherit totalMoneyAmount bitcoinOverFlat ;
     };
   } // lib.optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = region;
@@ -79,8 +77,8 @@ let
 in 
   (genAttrs' (lib.range 1 9) (key: "node${toString key}") (name: cardano-node-eu name)) // 
   (genAttrs' (lib.range 10 19) (key: "node${toString key}") (name: cardano-node-us name)) // 
-  (genAttrs' (lib.range 20 29) (key: "node${toString key}") (name: cardano-node-asia name)) //
-  (genAttrs' (lib.range 30 39) (key: "node${toString key}") (name: cardano-node-sydney name)) //
+  #(genAttrs' (lib.range 20 29) (key: "node${toString key}") (name: cardano-node-asia name)) //
+  #(genAttrs' (lib.range 30 39) (key: "node${toString key}") (name: cardano-node-sydney name)) //
   #(genAttrs' (lib.range 40 49) (key: "node${toString key}") (name: cardano-node-sa name)) //
   #(genAttrs' (lib.range 50 59) (key: "node${toString key}") (name: cardano-node-eu name)) // 
   #(genAttrs' (lib.range 60 69) (key: "node${toString key}") (name: cardano-node-us name)) // 
