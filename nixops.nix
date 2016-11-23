@@ -32,8 +32,6 @@ let
       stats = true;
       jsonLog = true;
       distribution = true;
-      pettyUtxo = true;
-      isInfo = true;
 
       inherit genesisN slotDuration totalMoneyAmount bitcoinOverFlat networkDiameter mpcRelayInterval;
     };
