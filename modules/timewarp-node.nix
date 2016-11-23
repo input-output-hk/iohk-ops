@@ -34,7 +34,7 @@ in {
        then toString [
               "/bin/sh -c \"${time-warp}/bin/bench-sender "
               "+RTS -N -RTS "
-              "--log-config /home/timewarp/sender-logging.yaml "
+              "--log-config ${./../static/sender-logging.yaml} "
               "--logs-prefix /home/timewarp "
               "`cat /home/timewarp/peers.txt` "
               "-r 90 -m 10800 -d 130 \""
@@ -42,7 +42,7 @@ in {
        else toString [
               "${time-warp}/bin/bench-receiver "
               "+RTS -N -RTS "
-              "--log-config /home/timewarp/receiver-logging.yaml "
+              "--log-config ${./../static/receiver-logging.yaml} "
               "--logs-prefix /home/timewarp "
               "-p 3055 -d 150 "
             ];

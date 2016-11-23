@@ -128,14 +128,6 @@ rebootIfDown node = do
 
 scpToAllNodes :: Text -> IO ()
 scpToAllNodes node = do
-  (exitcode, output) <- shellStrict (scpToNode node "static/receiver-logging.yaml" "/home/timewarp/receiver-logging.yaml") empty
-  case exitcode of
-    ExitSuccess -> return ()
-    ExitFailure code -> echo $ "Scp to " <> node <> " failed with " <> (T.pack $ show code)
-  (exitcode, output) <- shellStrict (scpToNode node "static/sender-logging.yaml" "/home/timewarp/sender-logging.yaml") empty
-  case exitcode of
-    ExitSuccess -> return ()
-    ExitFailure code -> echo $ "Scp to " <> node <> " failed with " <> (T.pack $ show code)
   (exitcode, output) <- shellStrict (scpToNode node "/static/peers_tw.txt" "/home/timewarp/peers.txt") empty
   case exitcode of
     ExitSuccess -> return ()
