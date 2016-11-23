@@ -1,14 +1,14 @@
-severity: Debug
+severity: Info
 file: txgen.log
 smart-gen:
     severity: Debug
     comm:
         severity: Debug
     dht:
-        severity: Debug
+        severity: Info
 time-slave:
     severity: Debug
     comm:
         severity: Debug
     dht:
-        severity: Debug
+        severity: Info
