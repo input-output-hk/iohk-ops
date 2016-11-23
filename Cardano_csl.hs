@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#! nix-shell -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle ])'
+#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle ])'
 
 {-# LANGUAGE OverloadedStrings #-}
 

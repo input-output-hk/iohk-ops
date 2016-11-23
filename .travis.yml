@@ -1,9 +1,5 @@
 language: nix
 
-cache:
-  directories:
-    - "/nix/store"
-
 script:
   - ./Cardano.hs --help
   - ./Cardano_csl.hs --help
