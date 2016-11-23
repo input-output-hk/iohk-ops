@@ -6,7 +6,7 @@ script:
   - ./Cardano_tw.hs --help
   - nix-instantiate default.nix  
   - nix-instantiate nixops.nix
-  - nix-instantiate release.nix
+  - GENERATING_AMI=1 nix-instantiate release.nix
 
 notifications:
   email: false
