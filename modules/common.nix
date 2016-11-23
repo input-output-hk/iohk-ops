@@ -15,10 +15,6 @@ in {
 
   users.mutableUsers = false;
   users.users.root.openssh.authorizedKeys.keys = secret.devKeys;
-  users.users.statReader = {
-    isNormalUser = true;
-    password = secret.rootPassword;
-  };
 
   environment.variables.TERM = "xterm-256color";
 
