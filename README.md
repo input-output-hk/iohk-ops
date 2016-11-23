@@ -33,7 +33,7 @@ Replace `machine-name` with the machine you want to connect to (from `info` call
 
 ### Destroy everything
 
-./Cardano.hs deploy
+./Cardano.hs destroy
 
 ### Building AMIs
 
