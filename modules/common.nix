@@ -29,5 +29,6 @@ in {
   deployment.ec2.instanceType = "t2.large";
   deployment.ec2.securityGroups = [secret.securityGroup];
   deployment.ec2.ebsBoot = true;
+  deployment.ec2.accessKeyId = "cardano-deployer";
   deployment.ec2.ebsInitialRootDiskSize = 6;
 }

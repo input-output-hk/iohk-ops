@@ -95,7 +95,6 @@ in
   # node0 = timeWarpNode { sender = true; };
   # node1 = timeWarpNode { };
 
-  deployment.ec2.accessKeyId = accessKeyId;
   resources.ec2KeyPairs.my-key-pair = 
     { inherit accessKeyId; region = "eu-central-1"; };
   resources.ec2KeyPairs.cardano-test-eu = 
