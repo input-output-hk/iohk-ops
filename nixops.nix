@@ -16,7 +16,6 @@ let
                   then "0" + toString i
                   else toString i
               ; in dhtKeyPrefix + padded + dhtKeyPostfix;
-  coordinatorHost = "52.59.93.58"; # Elastic
   coordinatorPort = 3000;
   coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
 
@@ -43,7 +42,7 @@ let
     deployment.ec2.ami = (import ./modules/amis.nix).${region};
   };
 
-  cardano-node-coordinator = {testIndex, region, keypair}: {resources, pkgs, ...}: {
+  cardano-node-coordinator = {testIndex, region, keypair}: {pkgs, ...}: {
     imports = [ (nodeGenericConfig testIndex region keypair) ];
 
     services.cardano-node = {
@@ -52,15 +51,13 @@ let
 #      dhtKey = genDhtKey { i = testIndex; };
       dhtKey = coordinatorDhtKey;
     };
-  } // lib.optionalAttrs (generatingAMI != "1") {
-    deployment.ec2.elasticIPv4 = coordinatorHost;
   };
 
-  cardano-node = {testIndex, region, keypair}: {resources, pkgs, ...}: {
+  cardano-node = {testIndex, region, keypair}: {pkgs, nodes, ...}: {
     imports = [ (nodeGenericConfig testIndex region keypair) ];
 
     services.cardano-node = {
-      peerHost = coordinatorHost;
+      peerHost = nodes.node0.config.deployment.ec2.elasticIPv4;
       peerPort = coordinatorPort;
       peerDhtKey = coordinatorDhtKey;
       peerEnable = true;
