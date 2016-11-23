@@ -91,7 +91,7 @@ in
   #(genAttrs' (lib.range 80 89) (key: "node${toString key}") (name: cardano-node-sydney name)) //
   #(genAttrs' (lib.range 90 99) (key: "node${toString key}") (name: cardano-node-sa name)) //
 {
-  #node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
+  node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
 
   # node0 = timeWarpNode { sender = true; };
   # node1 = timeWarpNode { };

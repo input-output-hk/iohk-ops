@@ -8,7 +8,7 @@ in {
   imports = [ ./cardano-node.nix ];
 
   environment.systemPackages = with pkgs;
-    [ git tmux vim sysstat nixops srk-nixpkgs.cardano-sl lsof ];
+    [ git tmux vim sysstat nixops cardano-sl lsof ];
 
   services.openssh.passwordAuthentication = true;
   services.openssh.enable = true;
