@@ -3,3 +3,8 @@
 result
 logs/
 logs-analyze/
+image/
+image
+ec2-image/
+smart-gen.log
+experiments/
