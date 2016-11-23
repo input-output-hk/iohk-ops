@@ -1,8 +1,7 @@
 let
   lib = (import <nixpkgs> {}).lib;
   generatingAMI = builtins.getEnv "GENERATING_AMI";
-  # See modules/secretExample.nix
-  secret = import ./modules/secret.nix;
+  accessKeyId = "cardano-deployer";
   genesisN = 20;
   slotDuration = 20;
   bitcoinOverFlat = false;
@@ -96,17 +95,17 @@ in
   # node0 = timeWarpNode { sender = true; };
   # node1 = timeWarpNode { };
 
-
+  deployment.ec2.accessKeyId = accessKeyId;
   resources.ec2KeyPairs.my-key-pair = 
-    { inherit (secret) accessKeyId; region = "eu-central-1"; };
+    { inherit accessKeyId; region = "eu-central-1"; };
   resources.ec2KeyPairs.cardano-test-eu = 
-    { inherit (secret) accessKeyId; region = "eu-central-1"; };
+    { inherit accessKeyId; region = "eu-central-1"; };
   resources.ec2KeyPairs.cardano-test-us = 
-    { inherit (secret) accessKeyId; region = "us-west-1"; };
+    { inherit accessKeyId; region = "us-west-1"; };
   resources.ec2KeyPairs.cardano-test-asia = 
-    { inherit (secret) accessKeyId; region = "ap-southeast-1"; };
+    { inherit accessKeyId; region = "ap-southeast-1"; };
   resources.ec2KeyPairs.cardano-test-sydney = 
-    { inherit (secret) accessKeyId; region = "ap-southeast-2"; };
+    { inherit accessKeyId; region = "ap-southeast-2"; };
   resources.ec2KeyPairs.cardano-test-sa = 
-    { inherit (secret) accessKeyId; region = "sa-east-1"; };
+    { inherit accessKeyId; region = "sa-east-1"; };
 }
