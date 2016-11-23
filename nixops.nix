@@ -1,5 +1,6 @@
+with (import ./lib.nix);
+
 let
-  lib = (import <nixpkgs> {}).lib;
   generatingAMI = builtins.getEnv "GENERATING_AMI";
   accessKeyId = "cardano-deployer";
   genesisN = 40;
@@ -19,8 +20,6 @@ let
   coordinatorPort = 3000;
   coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
 
-  timeWarpNode = import ./modules/timewarp-node.nix;
-
   nodeGenericConfig = testIndex: region: keypair: {resources, pkgs, ...}: {
     imports = [ (import ./modules/common.nix) ];
 
@@ -36,7 +35,7 @@ let
 
       inherit genesisN slotDuration totalMoneyAmount bitcoinOverFlat networkDiameter mpcRelayInterval;
     };
-  } // lib.optionalAttrs (generatingAMI != "1") {
+  } // optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = region;
     deployment.ec2.keyPair = keypair resources.ec2KeyPairs;
     deployment.ec2.ami = (import ./modules/amis.nix).${region};
@@ -72,25 +71,19 @@ let
   cardano-node-asia = regionIndex "ap-southeast-1" (pairs: pairs.cardano-test-asia);
   cardano-node-sydney = regionIndex "ap-southeast-2" (pairs: pairs.cardano-test-sydney);
   cardano-node-sa = regionIndex "sa-east-1" (pairs: pairs.cardano-test-sa);
-
-  genAttrs' = names: fkey: fname:
-    lib.listToAttrs (map (n: lib.nameValuePair (fkey n) (fname n)) names);
 in 
-  (genAttrs' (lib.range 1 9) (key: "node${toString key}") (name: cardano-node-eu name)) // 
-  (genAttrs' (lib.range 10 19) (key: "node${toString key}") (name: cardano-node-us name)) // 
-  (genAttrs' (lib.range 20 29) (key: "node${toString key}") (name: cardano-node-asia name)) //
-  (genAttrs' (lib.range 30 39) (key: "node${toString key}") (name: cardano-node-sydney name)) //
-  #(genAttrs' (lib.range 40 49) (key: "node${toString key}") (name: cardano-node-sa name)) //
-  #(genAttrs' (lib.range 50 59) (key: "node${toString key}") (name: cardano-node-eu name)) // 
-  #(genAttrs' (lib.range 60 69) (key: "node${toString key}") (name: cardano-node-us name)) // 
-  #(genAttrs' (lib.range 70 79) (key: "node${toString key}") (name: cardano-node-asia name)) //
-  #(genAttrs' (lib.range 80 89) (key: "node${toString key}") (name: cardano-node-sydney name)) //
-  #(genAttrs' (lib.range 90 99) (key: "node${toString key}") (name: cardano-node-sa name)) //
+  (genAttrs' (range 1 9) (key: "node${toString key}") (name: cardano-node-eu name)) // 
+  (genAttrs' (range 10 19) (key: "node${toString key}") (name: cardano-node-us name)) // 
+  (genAttrs' (range 20 29) (key: "node${toString key}") (name: cardano-node-asia name)) //
+  (genAttrs' (range 30 39) (key: "node${toString key}") (name: cardano-node-sydney name)) //
+  #(genAttrs' (range 40 49) (key: "node${toString key}") (name: cardano-node-sa name)) //
+  #(genAttrs' (range 50 59) (key: "node${toString key}") (name: cardano-node-eu name)) // 
+  #(genAttrs' (range 60 69) (key: "node${toString key}") (name: cardano-node-us name)) // 
+  #(genAttrs' (range 70 79) (key: "node${toString key}") (name: cardano-node-asia name)) //
+  #(genAttrs' (range 80 89) (key: "node${toString key}") (name: cardano-node-sydney name)) //
+  #(genAttrs' (range 90 99) (key: "node${toString key}") (name: cardano-node-sa name)) //
 {
   node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
-
-  # node0 = timeWarpNode { sender = true; };
-  # node1 = timeWarpNode { };
 
   resources.ec2KeyPairs.my-key-pair = 
     { inherit accessKeyId; region = "eu-central-1"; };
