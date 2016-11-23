@@ -117,7 +117,7 @@ runexperiment = do
   echo "Launching txgen"
   shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications.csv smart-gen-tps.csv") empty
   -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
-  shells("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 240 -t 65 -P 4 --init-money 600000 --flat-distr '(20,600000)' --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8= --log-config static/txgen-logging.yaml") empty
+  shells("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 240 -t 65 -P 4 --init-money 600000 --flat-distr '(40,600000)' --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8= --log-config static/txgen-logging.yaml") empty
   echo "Delaying... (150s)"
   threadDelay (150*1000000)
   echo "Retreive logs..."
