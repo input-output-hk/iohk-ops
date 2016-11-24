@@ -1,22 +1,22 @@
 with (import ./../lib.nix);
 
 let
-  timeWarpReceiver = {
+  timeWarpReceiver = { pkgs, resources, ... }: ({
     imports = [ ./../modules/timewarp-node.nix ];
-    services.timewarp-node = {
-      enable = true;
-    };
+    services.timewarp-node.enable = true;
   } // optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = "eu-central-1";
     deployment.ec2.keyPair = resources.ec2KeyPairs.cardano-test-eu;
-  };
-  timeWarpSender = timeWarpReceiver // {
+    deployment.ec2.ami = (import ./../modules/amis.nix)."eu-central-1";
+  });
+  timeWarpSender = {
+    imports = [ timeWarpReceiver ];
     services.timewarp-node.sender = true;
   };
 in 
-  (genAttrs' (range 1 5) (key: "node${toString key}") (name: timeWarpReceiver)) // 
+  (genAttrs' (range 1 5) (key: "timewarp${toString key}") (name: timeWarpReceiver)) // 
 {
-  node0 = timeWarpSender;
+  timewarp0 = timeWarpSender;
 
   resources.ec2KeyPairs.cardano-test-eu = {
     accessKeyId = "cardano-deployer";
