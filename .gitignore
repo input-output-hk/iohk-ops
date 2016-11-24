@@ -10,3 +10,4 @@ smart-gen.log
 experiments/
 txgen.log
 txgen.json
+smart-gen-*
