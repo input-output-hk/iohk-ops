@@ -34,6 +34,7 @@ data Command =
   | DumpLogs
   | Start
   | Stop
+  | PrintDate
   deriving (Show)
 
 -- TODO https://github.com/Gabriel439/Haskell-Turtle-Library/issues/193
@@ -48,6 +49,7 @@ parser =
   <|> subcommand "dumplogs" "Dump logs" (pure DumpLogs)
   <|> subcommand "stop" "Stop cardano-node service" (pure Stop)
   <|> subcommand "start" "Start cardano-node service" (pure Start)
+  <|> subcommand "date" "Print date/time" (pure PrintDate)
 
 
 main :: IO ()
@@ -63,6 +65,7 @@ main = do
     DumpLogs -> getNodes >>= void . dumpLogs
     Start -> getNodes >>= startCardanoNodes
     Stop -> getNodes >>= stopCardanoNodes
+    PrintDate -> getNodes >>= printDate
     -- TODO: invoke nixops with passed parameters
 
 
@@ -119,7 +122,7 @@ runexperiment = do
   echo "Launching txgen"
   shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications.csv smart-gen-tps.csv") empty
   -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
-  shells("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 60 -t 40 -t 50 -t 60 -P 4 --init-money 600000 --flat-distr '(20,600000)' --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8= --log-config static/txgen-logging.yaml") empty
+  shells("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 1000 -t 2000 -t 3000 -t 4000 -P 4 --init-money 60000000 --flat-distr '(40,60000000)' --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8= --log-config static/txgen-logging.yaml") empty
   echo "Delaying... (150s)"
   threadDelay (150*1000000)
   echo "Retreive logs..."
@@ -150,6 +153,8 @@ dumpLogs nodes = do
                 ExitSuccess -> return ()
                 ExitFailure code -> echo $ "Scp from " <> node <> " failed with " <> (T.pack $ show code)
 
+printDate nodes = do
+    sh . using $ parallel nodes (\n -> ssh' (\s -> echo $ "Date on " <> n <> ": " <> s) "date" n)
 
 stopCardanoNodes = sh . using . flip parallel (ssh cmd)
   where
@@ -183,8 +188,11 @@ rebootIfDown node = do
 scpToNode :: Text -> Text -> Text -> Text
 scpToNode node from to = nixops <> "scp" <> args <> "--to " <> node <> " " <> from <> " " <> to
 
-ssh cmd' node = do
-    (exitcode, _) <- shellStrict cmd empty
+ssh = ssh' $ const $ return ()
+
+ssh' f cmd' node = do
+    (exitcode, output) <- shellStrict cmd empty
+    f output
     case exitcode of
         ExitSuccess -> return ()
         ExitFailure code -> echo $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
