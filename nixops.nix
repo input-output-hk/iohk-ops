@@ -56,7 +56,7 @@ let
     imports = [ (nodeGenericConfig testIndex region keypair) ];
 
     services.cardano-node = {
-      peerHost = nodes.node0.config.deployment.ec2.elasticIPv4;
+      peerHost = nodes.node0.config.networking.privateIPv4;
       peerPort = coordinatorPort;
       peerDhtKey = coordinatorDhtKey;
       peerEnable = true;
