@@ -101,7 +101,6 @@ runexperiment = do
   shells (sshForEach "systemctl stop timewarp") empty
   shells (sshForEach "rm -f /home/timewarp/node.log") empty
   nodes <- getNodes
-  sh $ using $ parallel nodes scpToAllNodes
   shells (sshForEach "systemctl start timewarp") empty
   threadDelay (150*1000000)
   sh $ using $ parallel nodes scpFromAllNodes
@@ -125,13 +124,6 @@ rebootIfDown node = do
     ExitFailure _ -> do
       echo $ "Rebooting " <> node
       shells (nixops <> "reboot " <> args <> "--include " <> node) empty
-
-scpToAllNodes :: Text -> IO ()
-scpToAllNodes node = do
-  (exitcode, output) <- shellStrict (scpToNode node "/static/peers_tw.txt" "/home/timewarp/peers.txt") empty
-  case exitcode of
-    ExitSuccess -> return ()
-    ExitFailure code -> echo $ "Scp to " <> node <> " failed with " <> (T.pack $ show code)
 
 scpToNode :: Text -> Text -> Text -> Text
 scpToNode node from to = nixops <> "scp" <> args <> "--to " <> node <> " " <> from <> " " <> to
