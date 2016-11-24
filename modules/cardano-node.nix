@@ -27,6 +27,7 @@ let
     (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
     (enableIf cfg.supporter "--supporter")
     (enableIf cfg.timeLord "--time-lord")
+    "--memory-mode" #add option to nixops.nix
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
   ];
