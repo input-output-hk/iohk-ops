@@ -9,3 +9,4 @@ ec2-image/
 smart-gen.log
 experiments/
 txgen.log
+txgen.json
