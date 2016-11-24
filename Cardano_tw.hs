@@ -58,7 +58,7 @@ main = do
 
 -- Custom build with https://github.com/NixOS/nixops/pull/550
 nixops = "~/nixops/result/bin/nixops "
-args = " -d cardano2" <> nixpath
+args = " -d time-warp" <> nixpath
 nixpath = " -I ~/ "
 
 deploy :: IO ()
@@ -82,7 +82,7 @@ fromscratch :: IO ()
 fromscratch = do
   destroy
   shells (nixops <> "delete" <> args <> " --confirm") empty
-  shells (nixops <> "create nixops.nix" <> args) empty
+  shells (nixops <> "create deployments/timewarp.nix" <> args) empty
   deploy
 
 
