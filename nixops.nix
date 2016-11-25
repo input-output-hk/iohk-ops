@@ -3,12 +3,9 @@ with (import ./lib.nix);
 let
   generatingAMI = builtins.getEnv "GENERATING_AMI";
   accessKeyId = "cardano-deployer";
-  genesisN = 40;
-  slotDuration = 20;
+  cconf = import ./compileconfig.nix;
   bitcoinOverFlat = false;
-  totalMoneyAmount = 600000;
-  networkDiameter = 7;
-  mpcRelayInterval = 10;
+  totalMoneyAmount = 60000000;
   genDhtKey = { i
               , dhtKeyPrefix  ? "MHdrsP-oPf7UWly"
               , dhtKeyPostfix ? "7QuXnLK5RD=" }:
@@ -17,6 +14,7 @@ let
                   then "0" + toString i
                   else toString i
               ; in dhtKeyPrefix + padded + dhtKeyPostfix;
+  coordinatorHost = "52.59.93.58"; # Elastic
   coordinatorPort = 3000;
   coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
 
@@ -30,10 +28,9 @@ let
       stats = true;
       jsonLog = true;
       distribution = true;
-      pettyUtxo = true;
-      isInfo = true;
 
-      inherit genesisN slotDuration totalMoneyAmount bitcoinOverFlat networkDiameter mpcRelayInterval;
+      inherit (cconf) genesisN slotDuration networkDiameter mpcRelayInterval;
+      inherit totalMoneyAmount bitcoinOverFlat ;
     };
   } // optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = region;
@@ -41,7 +38,7 @@ let
     deployment.ec2.ami = (import ./modules/amis.nix).${region};
   };
 
-  cardano-node-coordinator = {testIndex, region, keypair}: {pkgs, ...}: {
+  cardano-node-coordinator = {testIndex, region, keypair}: {resources, pkgs, ...}: {
     imports = [ (nodeGenericConfig testIndex region keypair) ];
 
     services.cardano-node = {
@@ -50,6 +47,8 @@ let
 #      dhtKey = genDhtKey { i = testIndex; };
       dhtKey = coordinatorDhtKey;
     };
+  } // optionalAttrs (generatingAMI != "1") {
+    deployment.ec2.elasticIPv4 = coordinatorHost;
   };
 
   cardano-node = {testIndex, region, keypair}: {pkgs, ...}@args: {

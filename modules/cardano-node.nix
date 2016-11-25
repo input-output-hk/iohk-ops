@@ -27,6 +27,7 @@ let
     (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
     (enableIf cfg.supporter "--supporter")
     (enableIf cfg.timeLord "--time-lord")
+    "--memory-mode" #add option to nixops.nix
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
   ];
@@ -36,11 +37,6 @@ in
     services.cardano-node = {
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };
-
-      # such a shame
-      isDebug = mkOption { type = types.bool; default = false; };
-      isInfo = mkOption { type = types.bool; default = false; };
-      isError = mkOption { type = types.bool; default = false; };
 
       supporter = mkOption { type = types.bool; default = false; };
       timeLord = mkOption { type = types.bool; default = false; };   
@@ -56,7 +52,6 @@ in
 
       stats = mkOption { type = types.bool; default = false; };
       jsonLog = mkOption { type = types.bool; default = false; };
-      pettyUtxo = mkOption { type = types.bool; default = false; };
       totalMoneyAmount = mkOption { type = types.int; default = 100000; };
       distribution = mkOption { 
         type = types.bool; 
