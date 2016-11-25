@@ -1,3 +1,18 @@
+Collection of tools to deploy Serokell infrastructure.
+
+File structure
+
+- `deployments` includes all NixOps deployments controlled via `Cardano*.hs` scripts
+- `modules` has NixOS modules
+- `lib.nix` warps upstream `<nixpkgs/lib.nix>` with our common functions
+- `scripts` has bash scripts not converted to Haskell/Turtle into Cardano.hs yet
+- `srk-nixpkgs` is a collection of upstream Serokell packages
+- `static` includes files being static, not generated
+- `release.nix` is used by Hydra CI
+
+
+### Getting started
+
 Check out nixpkgs repository to the root (~/nixpkgs) using branch `release-16.09`.
 
 ### Compiling localy 
