@@ -1,4 +1,4 @@
-{ resources, pkgs, lib, ... }:
+{ config, resources, pkgs, lib, ... }:
 
 let
   secret = import ./secret.nix;
@@ -27,8 +27,10 @@ in {
 } // lib.optionalAttrs (generatingAMI != "1") {
   deployment.targetEnv = "ec2";
   deployment.ec2.instanceType = "t2.large";
+  deployment.ec2.region = "eu-central-1";
+  deployment.ec2.keyPair = resources.ec2KeyPairs.cardano-test-eu;
   deployment.ec2.securityGroups = [secret.securityGroup];
-  deployment.ec2.ebsBoot = true;
+  deployment.ec2.ami = (import ./../modules/amis.nix).${config.deployment.ec2.region};
   deployment.ec2.accessKeyId = "cardano-deployer";
   deployment.ec2.ebsInitialRootDiskSize = 6;
 }

@@ -1,6 +1,6 @@
 let
   lib = (import <nixpkgs> {}).lib;
-in lib // {
+in lib // (rec {
   # Allows to also generate the key compared to upstream genAttrs
   genAttrs' = names: fkey: fname:
     lib.listToAttrs (map (n: lib.nameValuePair (fkey n) (fname n)) names);
@@ -17,4 +17,21 @@ in lib // {
                   then "0" + toString i
                   else toString i
               ; in dhtKeyPrefix + padded + dhtKeyPostfix;
-}
+
+  accessKeyId = "cardano-deployer";
+  
+  ec2Keys = {
+    resources.ec2KeyPairs.my-key-pair = 
+      { inherit accessKeyId; region = "eu-central-1"; };
+    resources.ec2KeyPairs.cardano-test-eu = 
+      { inherit accessKeyId; region = "eu-central-1"; };
+    resources.ec2KeyPairs.cardano-test-us = 
+      { inherit accessKeyId; region = "us-west-1"; };
+    resources.ec2KeyPairs.cardano-test-asia = 
+      { inherit accessKeyId; region = "ap-southeast-1"; };
+    resources.ec2KeyPairs.cardano-test-sydney = 
+      { inherit accessKeyId; region = "ap-southeast-2"; };
+    resources.ec2KeyPairs.cardano-test-sa = 
+      { inherit accessKeyId; region = "sa-east-1"; };
+  };
+})

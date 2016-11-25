@@ -1,7 +1,6 @@
 with (import ./../lib.nix);
 
 let
-  accessKeyId = "cardano-deployer";
   cconf = import ./../config.nix;
 
   nodeGenericConfig = testIndex: region: keypair: {resources, pkgs, ...}: {
@@ -18,9 +17,8 @@ let
       inherit (cconf) genesisN slotDuration networkDiameter mpcRelayInterval totalMoneyAmount bitcoinOverFlat;
     };
   } // optionalAttrs (generatingAMI != "1") {
-    deployment.ec2.region = region;
-    deployment.ec2.keyPair = keypair resources.ec2KeyPairs;
-    deployment.ec2.ami = (import ./../modules/amis.nix).${region};
+    deployment.ec2.region = mkForce region;
+    deployment.ec2.keyPair = mkForce (keypair resources.ec2KeyPairs);
   };
 
   cardano-node-coordinator = {testIndex, region, keypair}: {resources, pkgs, ...}: {
@@ -66,17 +64,4 @@ in
   #(genAttrs' (range 90 99) (key: "node${toString key}") (name: cardano-node-sa name)) //
 {
   node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
-
-  resources.ec2KeyPairs.my-key-pair = 
-    { inherit accessKeyId; region = "eu-central-1"; };
-  resources.ec2KeyPairs.cardano-test-eu = 
-    { inherit accessKeyId; region = "eu-central-1"; };
-  resources.ec2KeyPairs.cardano-test-us = 
-    { inherit accessKeyId; region = "us-west-1"; };
-  resources.ec2KeyPairs.cardano-test-asia = 
-    { inherit accessKeyId; region = "ap-southeast-1"; };
-  resources.ec2KeyPairs.cardano-test-sydney = 
-    { inherit accessKeyId; region = "ap-southeast-2"; };
-  resources.ec2KeyPairs.cardano-test-sa = 
-    { inherit accessKeyId; region = "sa-east-1"; };
-}
+} // ec2Keys
