@@ -14,7 +14,6 @@ let
                   then "0" + toString i
                   else toString i
               ; in dhtKeyPrefix + padded + dhtKeyPostfix;
-  coordinatorHost = "52.59.93.58"; # Elastic
   coordinatorPort = 3000;
   coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
 
@@ -47,8 +46,6 @@ let
 #      dhtKey = genDhtKey { i = testIndex; };
       dhtKey = coordinatorDhtKey;
     };
-  } // optionalAttrs (generatingAMI != "1") {
-    deployment.ec2.elasticIPv4 = coordinatorHost;
   };
 
   cardano-node = {testIndex, region, keypair}: {pkgs, ...}@args: {
