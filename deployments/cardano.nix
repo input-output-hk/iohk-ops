@@ -1,19 +1,12 @@
 with (import ./../lib.nix);
 
 let
-  generatingAMI = builtins.getEnv "GENERATING_AMI";
   accessKeyId = "cardano-deployer";
   cconf = import ./../compileconfig.nix;
+
   bitcoinOverFlat = false;
   totalMoneyAmount = 60000000;
-  genDhtKey = { i
-              , dhtKeyPrefix  ? "MHdrsP-oPf7UWly"
-              , dhtKeyPostfix ? "7QuXnLK5RD=" }:
-              let padded =
-                  if i < 10
-                  then "0" + toString i
-                  else toString i
-              ; in dhtKeyPrefix + padded + dhtKeyPostfix;
+
   coordinatorPort = 3000;
   coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
 

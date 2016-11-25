@@ -7,4 +7,14 @@ in lib // {
 
   # If we're generating an AMI, don't set nixops deployment attributes
   generatingAMI = builtins.getEnv "GENERATING_AMI";
+
+  # Function to generate DHT key
+  genDhtKey = { i
+              , dhtKeyPrefix  ? "MHdrsP-oPf7UWly"
+              , dhtKeyPostfix ? "7QuXnLK5RD=" }:
+              let padded =
+                  if i < 10
+                  then "0" + toString i
+                  else toString i
+              ; in dhtKeyPrefix + padded + dhtKeyPostfix;
 }
