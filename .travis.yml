@@ -1,11 +1,15 @@
 language: nix
 
+install:
+  - nix-env -iA nixpkgs.nixopsUnstable
+  - nixops create nixops.nix -d csl
+  - nixops create deployments/timewarp.nix -d tw
 script:
   - ./Cardano_csl.hs --help
   - ./CardanoTW.hs --help
   - nix-instantiate default.nix  
-  - GENERATING_AMI=1 nix-instantiate deployments/timewarp.nix
-  - GENERATING_AMI=1 nix-instantiate nixops.nix
+  - nixops deploy -d csl --evaluate-only
+  - nixops deploy -d tw --evaluate-only
   - GENERATING_AMI=1 nix-instantiate release.nix
 
 notifications:
