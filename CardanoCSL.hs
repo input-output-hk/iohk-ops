@@ -112,10 +112,7 @@ dumpLogs nodes = do
   where
     dump workDir node = do
         forM_ logs $ \(rpath, fname) -> do
-            (exitcode, _) <- shellStrict (scpPerNode node rpath (workDir <> "/" <> fname node)) empty
-            case exitcode of
-                ExitSuccess -> return ()
-                ExitFailure code -> echo $ "Scp from " <> node <> " failed with " <> (T.pack $ show code)
+          scpFromNode args node rpath (workDir <> "/" <> fname node)
 
 printDate nodes = do
     sh . using $ parallel nodes (\n -> ssh' (\s -> echo $ "Date on " <> n <> ": " <> s) "date" n)
@@ -123,6 +120,7 @@ printDate nodes = do
 stopCardanoNodes = sh . using . flip parallel (ssh cmd)
   where
     cmd = "systemctl stop cardano-node"
+
 startCardanoNodes nodes = do
     sh . using $ parallel nodes (ssh $ "'" <> rmCmd <> ";" <> startCmd <> "'")
     --sh . using $ parallel nodes (ssh startCmd)
@@ -140,6 +138,3 @@ ssh' f cmd' node = do
         ExitFailure code -> echo $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
   where
     cmd = nixops <> "ssh " <> args <> node <> " -- " <> cmd'
-
-scpPerNode :: Text -> Text -> Text -> Text
-scpPerNode node from to = nixops <> "scp" <> args <> "--from " <> node <> " " <> from <> " " <> to
