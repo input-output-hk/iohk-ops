@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Turtle
+import CardanoLib
 import Control.Monad (forM_, void)
 import Data.Monoid ((<>))
 import qualified Data.Text as T
@@ -11,16 +12,9 @@ import GHC.Conc (threadDelay)
 
 {-
 
-Notice that most of this could be submitted upstream to nixops:
-
-have a configuration file (NIX_PATH, deployment name, --confirm)
-add deploy --from-scratch
-
 TODO:
  
 - turn on the disable flag for asserts
-- AMI
-- Generate S3 backed AMI with 8GB of space
 
 -}
 
@@ -37,7 +31,6 @@ data Command =
   | PrintDate
   deriving (Show)
 
--- TODO https://github.com/Gabriel439/Haskell-Turtle-Library/issues/193
 parser :: Parser Command
 parser =
       subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
@@ -52,64 +45,35 @@ parser =
   <|> subcommand "date" "Print date/time" (pure PrintDate)
 
 
+args = " -d cardano" <> nixpath
+nixpath = " -I ~/ "
+deployment = " deployments/cardano.nix "
+
 main :: IO ()
 main = do
   command <- options "Helper CLI around NixOps to run experiments" parser
   case command of
-    Deploy -> deploy
-    Destroy -> destroy
-    FromScratch -> fromscratch
-    CheckStatus -> checkstatus
+    Deploy -> deploy args
+    Destroy -> destroy args
+    FromScratch -> fromscratch args deployment
+    CheckStatus -> checkstatus args
     RunExperiment -> runexperiment
     Build -> build
-    DumpLogs -> getNodes >>= void . dumpLogs
-    Start -> getNodes >>= startCardanoNodes
-    Stop -> getNodes >>= stopCardanoNodes
-    PrintDate -> getNodes >>= printDate
+    DumpLogs -> getNodes args >>= void . dumpLogs
+    Start -> getNodes args >>= startCardanoNodes
+    Stop -> getNodes args >>= stopCardanoNodes
+    PrintDate -> getNodes args >>= printDate
     -- TODO: invoke nixops with passed parameters
 
-
--- Custom build with https://github.com/NixOS/nixops/pull/550
-nixops = "~/nixops/result/bin/nixops "
-args = " -d cardano" <> nixpath
-nixpath = " -I ~/ "
-
-deploy :: IO ()
-deploy = do
-  build
-  echo "Deploying cluster..."
-  -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
-  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) " <> nixops <> "deploy" <> args <> "--max-concurrent-copy 20") empty
-  echo "Done."
-
-destroy :: IO ()
-destroy = do
-  echo "Destroying cluster..."
-  shells (nixops <> "destroy" <> args <> " --confirm") empty
-  echo "Done."
 
 build :: IO ()
 build = do
   echo "Building derivation..."
   shells ("nix-build default.nix" <> nixpath) empty
 
-fromscratch :: IO ()
-fromscratch = do
-  destroy
-  shells (nixops <> "delete" <> args <> " --confirm") empty
-  shells (nixops <> "create nixops.nix" <> args) empty
-  deploy
-
-
--- Check if nodes are online and reboots them if they timeout
-checkstatus :: IO ()
-checkstatus = do
-  nodes <- getNodes
-  sh $ using $ parallel nodes rebootIfDown
-
 runexperiment :: IO ()
 runexperiment = do
-  nodes <- getNodes
+  nodes <- getNodes args
   -- build
   --checkstatus
   --deploy
@@ -166,28 +130,6 @@ startCardanoNodes nodes = do
     rmCmd = foldl (\s (f, _) -> s <> " " <> f) "rm -f" logs
     startCmd = "systemctl start cardano-node"
 
--- Helpers
-
--- Tricky helper to run commands in parallel and wait for all results
-parallel :: [a] -> (a -> IO ()) -> Managed ()
-parallel (first:rest) action = do
-  async <- using $ fork $ action first
-  parallel rest action
-  liftIO (wait async)
-parallel [] _ = return ()
-
-rebootIfDown :: Text -> IO ()
-rebootIfDown node = do
-  x <- shell (nixops <> "ssh " <> args <> node <> " -o ConnectTimeout=5 echo -n") empty
-  case x of
-    ExitSuccess -> return ()
-    ExitFailure _ -> do
-      echo $ "Rebooting " <> node
-      shells (nixops <> "reboot " <> args <> "--include " <> node) empty
-
-scpToNode :: Text -> Text -> Text -> Text
-scpToNode node from to = nixops <> "scp" <> args <> "--to " <> node <> " " <> from <> " " <> to
-
 ssh = ssh' $ const $ return ()
 
 ssh' f cmd' node = do
@@ -201,7 +143,3 @@ ssh' f cmd' node = do
 
 scpPerNode :: Text -> Text -> Text -> Text
 scpPerNode node from to = nixops <> "scp" <> args <> "--from " <> node <> " " <> from <> " " <> to
-
-getNodes = do
-  (exitcode, nodes) <- shellStrict (nixops <> "info --no-eval --plain " <> args <> " | grep -vE 'keypair|obsolete' | awk '{ print $1 }'") empty
-  return $ fmap T.pack $ words $ T.unpack nodes

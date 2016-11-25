@@ -1,9 +1,9 @@
-with (import ./lib.nix);
+with (import ./../lib.nix);
 
 let
   generatingAMI = builtins.getEnv "GENERATING_AMI";
   accessKeyId = "cardano-deployer";
-  cconf = import ./compileconfig.nix;
+  cconf = import ./../compileconfig.nix;
   bitcoinOverFlat = false;
   totalMoneyAmount = 60000000;
   genDhtKey = { i
@@ -19,7 +19,7 @@ let
   coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
 
   nodeGenericConfig = testIndex: region: keypair: {resources, pkgs, ...}: {
-    imports = [ (import ./modules/common.nix) ];
+    imports = [ ./../modules/common.nix ];
 
     services.cardano-node = {
       enable = true;
@@ -35,7 +35,7 @@ let
   } // optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = region;
     deployment.ec2.keyPair = keypair resources.ec2KeyPairs;
-    deployment.ec2.ami = (import ./modules/amis.nix).${region};
+    deployment.ec2.ami = (import ./../modules/amis.nix).${region};
   };
 
   cardano-node-coordinator = {testIndex, region, keypair}: {resources, pkgs, ...}: {

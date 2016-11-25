@@ -16,7 +16,7 @@ deploy :: NixOpsArgs -> IO ()
 deploy args = do
   echo "Deploying cluster..."
   -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
-  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) " <> nixops <> "deploy" <> args <> "--max-concurrent-copy 20") empty
+  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) " <> nixops <> "deploy" <> args <> "--max-concurrent-copy 50") empty
   echo "Done."
 
 destroy :: NixOpsArgs -> IO ()
