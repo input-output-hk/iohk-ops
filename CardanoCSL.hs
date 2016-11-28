@@ -12,7 +12,6 @@ import Data.Aeson
 import Data.Text.Lazy (fromStrict)
 import Data.Text.Lazy.Encoding (encodeUtf8)
 import qualified Data.Text as T
-import GHC.Conc (threadDelay)
 import GHC.Generics
 
 {-
@@ -88,7 +87,7 @@ runexperiment = do
   echo "Starting nodes..."
   startCardanoNodes nodes
   echo "Delaying... (30s)"
-  threadDelay (30*1000000)
+  sleep 30
   echo "Launching txgen"
   shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications.csv smart-gen-tps.csv") empty
   -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
