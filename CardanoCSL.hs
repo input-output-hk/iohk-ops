@@ -1,14 +1,18 @@
 #!/usr/bin/env nix-shell
-#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle ])'
+#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle cassava vector safe aeson ])'
 
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 import Turtle
 import CardanoLib
 import Control.Monad (forM_, void)
 import Data.Monoid ((<>))
+import Data.Aeson
+import Data.Text.Lazy (fromStrict)
+import Data.Text.Lazy.Encoding (encodeUtf8)
 import qualified Data.Text as T
-import GHC.Conc (threadDelay)
+import GHC.Generics
 
 {-
 
@@ -73,6 +77,7 @@ build = do
 
 runexperiment :: IO ()
 runexperiment = do
+  -- TODO: use info to avoid shell call
   nodes <- getNodes args
   -- build
   --checkstatus
@@ -82,14 +87,29 @@ runexperiment = do
   echo "Starting nodes..."
   startCardanoNodes nodes
   echo "Delaying... (30s)"
-  threadDelay (30*1000000)
+  sleep 30
   echo "Launching txgen"
   shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications.csv smart-gen-tps.csv") empty
   -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
-  shells("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 100 -N 8 -t 500 -S 20 -P 4 --init-money 60000000 --flat-distr '(40,60000000)' --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8= --log-config static/txgen-logging.yaml") empty
-  --shells("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 100 -t 1000 -P 4 --init-money 60000000 --flat-distr '(40,60000000)' --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8= --log-config static/txgen-logging.yaml") empty
+  result <- (fmap . fmap) (getNodePublicIP "node0") $ info args
+  case result of
+    Left err -> echo $ T.pack err
+    Right ma ->
+      case ma of
+        Nothing -> echo "No node0 found"
+        Just node0ip -> do
+          config <- getConfig
+          case config of
+            Left err -> echo $ T.pack err
+            Right c ->
+              let
+                tmc = T.pack $ show (totalMoneyAmount c)
+                bot = (if bitcoinOverFlat c then "bitcoin" else "flat")
+                gn = T.pack $ show (genesisN c)
+                cp = T.pack $ show (coordinatorPort c)
+              in shells ("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 100 -N 8 -t 500 -S 20 -P 4 --init-money " <> tmc <> " --" <> bot <> "-distr '(" <> gn <> "," <> tmc <> ")' --peer " <> node0ip <> ":" <> cp <> "/" <> coordinatorDhtKey c <> " --log-config static/txgen-logging.yaml") empty
   echo "Delaying... (150s)"
-  threadDelay (150*1000000)
+  sleep 150
   echo "Retreive logs..."
   dt <- dumpLogs nodes
   shells ("mv txgen.log txgen.json smart-gen-verifications.csv smart-gen-tps.csv experiments/" <> dt) empty
@@ -139,3 +159,21 @@ ssh' f cmd' node = do
         ExitFailure code -> echo $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
   where
     cmd = nixops <> "ssh " <> args <> node <> " -- " <> cmd'
+
+data Config = Config
+  { bitcoinOverFlat :: Bool
+  , totalMoneyAmount :: Int
+  , coordinatorDhtKey :: Text
+  , coordinatorPort :: Int
+  , genesisN :: Int
+  , mpcRelayInterval :: Int
+  , networkDiameter :: Int
+  , slotDuration :: Int
+  } deriving (Generic, Show)
+
+instance FromJSON Config
+
+getConfig :: IO (Either String Config)
+getConfig = do
+  (exitcode, output) <- shellStrict "nix-instantiate --eval --strict --json config.nix" empty
+  return $ eitherDecode (encodeUtf8 $ fromStrict output)

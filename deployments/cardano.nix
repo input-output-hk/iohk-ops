@@ -2,27 +2,20 @@ with (import ./../lib.nix);
 
 let
   accessKeyId = "cardano-deployer";
-  cconf = import ./../compileconfig.nix;
-
-  bitcoinOverFlat = false;
-  totalMoneyAmount = 60000000;
-
-  coordinatorPort = 3000;
-  coordinatorDhtKey = "MHdtsP-oPf7UWly7QuXnLK5RDB8=";
+  cconf = import ./../config.nix;
 
   nodeGenericConfig = testIndex: region: keypair: {resources, pkgs, ...}: {
     imports = [ ./../modules/common.nix ];
 
     services.cardano-node = {
       enable = true;
-      port = coordinatorPort;
+      port = cconf.coordinatorPort;
       testIndex = testIndex;
       stats = true;
       jsonLog = true;
       distribution = true;
 
-      inherit (cconf) genesisN slotDuration networkDiameter mpcRelayInterval;
-      inherit totalMoneyAmount bitcoinOverFlat ;
+      inherit (cconf) genesisN slotDuration networkDiameter mpcRelayInterval totalMoneyAmount bitcoinOverFlat;
     };
   } // optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = region;
@@ -37,7 +30,7 @@ let
       timeLord = true;
       peerEnable = false;
 #      dhtKey = genDhtKey { i = testIndex; };
-      dhtKey = coordinatorDhtKey;
+      dhtKey = cconf.coordinatorDhtKey;
     };
   };
 
@@ -46,8 +39,8 @@ let
 
     services.cardano-node = {
       peerHost = args.nodes.node0.config.networking.privateIPv4 or "NOT SET";
-      peerPort = coordinatorPort;
-      peerDhtKey = coordinatorDhtKey;
+      peerPort = cconf.coordinatorPort;
+      peerDhtKey = cconf.coordinatorDhtKey;
       peerEnable = true;
 #      dhtKey = genDhtKey { i = testIndex; };
     };
