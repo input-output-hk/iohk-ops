@@ -1,9 +1,19 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 module CardanoLib where
 
 import Turtle
+import Data.Char (ord)
 import Data.Monoid ((<>))
 import qualified Data.Text as T
+import Data.Text.Lazy (fromStrict)
+import Data.Text.Lazy.Encoding (encodeUtf8)
+import Data.Csv (decodeWith, FromRecord, HasHeader(..), defaultDecodeOptions, decDelimiter)
+import qualified Data.Vector as V
+import Data.ByteString.Lazy.Char8 (ByteString, pack)
+import GHC.Generics
+import Safe (headMay)
 
 -- Custom build with https://github.com/NixOS/nixops/pull/550
 nixops = "~/nixops/result/bin/nixops "
@@ -69,7 +79,50 @@ scpFromNode args node from to = do
 
 sshForEach args cmd = nixops <> "ssh-for-each" <> args <> " -- " <> cmd
 
+-- Functions for extracting information out of nixops info command
+
 -- | Get all node IPs in EC2 cluster
+getNodes :: NixOpsArgs -> IO [Text]
 getNodes args = do
-  (exitcode, nodes) <- shellStrict (nixops <> "info --no-eval" <> args <> " | grep ' ec2 ' | awk '{ print $2 }'") empty
-  return $ fmap T.pack $ words $ T.unpack nodes
+  result <- (fmap . fmap) getPublicIPs $ info args
+  case result of
+    Left s -> do
+        echo $ T.pack s
+        return []
+    Right vector -> return vector
+
+data DeploymentInfo = DeploymentInfo
+    { diName :: !Text
+    , diStatus :: !Text
+    , diLocation :: !Text
+    , diResourceID :: !Text
+    , diPublicIP :: !Text
+    , diPrivateIP :: !Text
+    } deriving (Show, Generic)
+
+instance FromRecord DeploymentInfo
+
+nixopsDecodeOptions = defaultDecodeOptions {
+    decDelimiter = fromIntegral (ord '\t')
+  }
+
+info :: NixOpsArgs -> IO (Either String (V.Vector DeploymentInfo))
+info args = do
+  (exitcode, nodes) <- shellStrict (nixops <> "info --no-eval --plain" <> args) empty
+  case exitcode of
+    ExitFailure code -> return $ Left ("Parsing info failed with exit code " <> show code)
+    ExitSuccess -> return $ decodeWith nixopsDecodeOptions NoHeader (encodeUtf8 $ fromStrict nodes)
+
+
+getPublicIPs :: V.Vector DeploymentInfo -> [Text]
+getPublicIPs vector = 
+  V.toList $ fmap diPublicIP $ V.filter filterEC2 vector
+    where
+      filterEC2 di = T.take 4 (diLocation di) == "ec2 "
+
+
+getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
+getNodePublicIP name vector =
+    headMay $ V.toList $ fmap diPublicIP $ V.filter (\di -> diName di == name) vector
+
+
