@@ -95,9 +95,9 @@ data DeploymentStatus = UpToDate | Obsolete | Outdated
   deriving (Show, Eq)
 
 instance FromField DeploymentStatus where
-  parseField "Up / Up-to-date" = pure UpToDate
-  parseField "Up / Obsolete" = pure Obsolete
-  parseField "Up / Outdated" = pure Outdated
+  parseField "up-to-date" = pure UpToDate
+  parseField "obsolete" = pure Obsolete
+  parseField "outdated" = pure Outdated
   parseField _ = mzero
 
 data DeploymentInfo = DeploymentInfo

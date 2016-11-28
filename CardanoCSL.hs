@@ -166,7 +166,7 @@ data Config = Config
   , coordinatorDhtKey :: Text
   , coordinatorPort :: Int
   , genesisN :: Int
-  , mpcRelayInteval :: Int
+  , mpcRelayInterval :: Int
   , networkDiameter :: Int
   , slotDuration :: Int
   } deriving (Generic, Show)
