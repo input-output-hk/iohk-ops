@@ -9,7 +9,7 @@ import Data.Monoid ((<>))
 import qualified Data.Text as T
 import Data.Text.Lazy (fromStrict)
 import Data.Text.Lazy.Encoding (encodeUtf8)
-import Data.Csv (decodeWith, FromRecord, HasHeader(..), defaultDecodeOptions, decDelimiter)
+import Data.Csv (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
 import qualified Data.Vector as V
 import Data.ByteString.Lazy.Char8 (ByteString, pack)
 import GHC.Generics
@@ -91,9 +91,18 @@ getNodes args = do
         return []
     Right vector -> return vector
 
+data DeploymentStatus = UpToDate | Obsolete | Outdated
+  deriving (Show, Eq)
+
+instance FromField DeploymentStatus where
+  parseField "Up / Up-to-date" = pure UpToDate
+  parseField "Up / Obsolete" = pure Obsolete
+  parseField "Up / Outdated" = pure Outdated
+  parseField _ = mzero
+
 data DeploymentInfo = DeploymentInfo
     { diName :: !Text
-    , diStatus :: !Text
+    , diStatus :: !DeploymentStatus
     , diLocation :: !Text
     , diResourceID :: !Text
     , diPublicIP :: !Text
@@ -101,6 +110,7 @@ data DeploymentInfo = DeploymentInfo
     } deriving (Show, Generic)
 
 instance FromRecord DeploymentInfo
+
 
 nixopsDecodeOptions = defaultDecodeOptions {
     decDelimiter = fromIntegral (ord '\t')
@@ -118,7 +128,7 @@ getPublicIPs :: V.Vector DeploymentInfo -> [Text]
 getPublicIPs vector = 
   V.toList $ fmap diPublicIP $ V.filter filterEC2 vector
     where
-      filterEC2 di = T.take 4 (diLocation di) == "ec2 "
+      filterEC2 di = T.take 4 (diLocation di) == "ec2 " && diStatus di /= Obsolete
 
 
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
