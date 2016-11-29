@@ -28,7 +28,7 @@ arch=x86_64
 bucket=cardano-amis
 bucketDir="$version-$type-$store"
 
-name=nixos-cardano-$version-$(echo $link | cut -d '\' -f 5)-$arch-$type-$store
+name=nixos-cardano-$(git rev-parse HEAD|head -c 4)-$version-$(echo $link | cut -d '\' -f 5)-$arch
 description="NixOS $system $version ($type-$store)"
 
 amiFile=$stateDir/$region.$type.$store.ami-id
@@ -144,7 +144,7 @@ fi
 echo $ami > $stateDir/$region.ami
 
 
-amisFile = ../modules/amis.nix
+amisFile=./modules/amis.nix
 echo "{" > $amisFile
 echo "  $region = \"$ami\";" >> $amisFile
 

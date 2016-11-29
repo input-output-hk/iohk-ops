@@ -31,5 +31,5 @@ in {
   deployment.ec2.securityGroups = [secret.securityGroup];
   deployment.ec2.ami = (import ./../modules/amis.nix).${config.deployment.ec2.region};
   deployment.ec2.accessKeyId = "cardano-deployer";
-  deployment.ec2.ebsInitialRootDiskSize = 6;
+  deployment.ec2.ebsInitialRootDiskSize = 8;
 }

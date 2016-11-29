@@ -3,10 +3,11 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 import Turtle
 import CardanoLib
-import Control.Monad (forM_, void)
+import Control.Monad (forM_, void, when)
 import Data.Monoid ((<>))
 import Data.Aeson
 import Data.Text.Lazy (fromStrict)
@@ -29,7 +30,7 @@ data Command =
   | CheckStatus
   | RunExperiment
   | Build
-  | DumpLogs
+  | DumpLogs { withProf :: Bool }
   | Start
   | Stop
   | PrintDate
@@ -43,7 +44,7 @@ parser =
   <|> subcommand "fromscratch" "Destroy, Delete, Create, Deploy" (pure FromScratch)
   <|> subcommand "checkstatus" "Check if nodes are accessible via ssh and reboot if they timeout" (pure CheckStatus)
   <|> subcommand "runexperiment" "Deploy cluster and perform measurements" (pure RunExperiment)
-  <|> subcommand "dumplogs" "Dump logs" (pure DumpLogs)
+  <|> subcommand "dumplogs" "Dump logs" (DumpLogs <$> switch "prof" 'p' "Dump profiling data as well (requires service stop)")
   <|> subcommand "stop" "Stop cardano-node service" (pure Stop)
   <|> subcommand "start" "Start cardano-node service" (pure Start)
   <|> subcommand "date" "Print date/time" (pure PrintDate)
@@ -63,7 +64,7 @@ main = do
     CheckStatus -> checkstatus args
     RunExperiment -> runexperiment
     Build -> build
-    DumpLogs -> getNodes args >>= void . dumpLogs
+    DumpLogs {..} -> getNodes args >>= void . dumpLogs withProf
     Start -> getNodes args >>= startCardanoNodes
     Stop -> getNodes args >>= stopCardanoNodes
     PrintDate -> getNodes args >>= printDate
@@ -80,7 +81,8 @@ runexperiment = do
   -- TODO: use info to avoid shell call
   nodes <- getNodes args
   -- build
-  --checkstatus
+  echo "Checking nodes' status, rebooting failed"
+  checkstatus args
   --deploy
   echo "Stopping nodes..."
   stopCardanoNodes nodes
@@ -89,7 +91,7 @@ runexperiment = do
   echo "Delaying... (30s)"
   sleep 30
   echo "Launching txgen"
-  shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications.csv smart-gen-tps.csv") empty
+  shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications*.csv smart-gen-tps.csv") empty
   -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
   result <- (fmap . fmap) (getNodePublicIP "node0") $ info args
   case result of
@@ -107,23 +109,27 @@ runexperiment = do
                 bot = (if bitcoinOverFlat c then "bitcoin" else "flat")
                 gn = T.pack $ show (genesisN c)
                 cp = T.pack $ show (coordinatorPort c)
-              in shells ("./result/bin/cardano-smart-generator --json-log=txgen.json -i 0 -d 100 -N 8 -t 500 -S 20 -P 4 --init-money " <> tmc <> " --" <> bot <> "-distr '(" <> gn <> "," <> tmc <> ")' --peer " <> node0ip <> ":" <> cp <> "/" <> coordinatorDhtKey c <> " --log-config static/txgen-logging.yaml") empty
+              in shells ("./result/bin/cardano-smart-generator +RTS -N -pa -A4G -qg -RTS --json-log=txgen.json -i 2 -R 1 -p 5 -N 2 -t 45 -S 5 -P 2 --init-money " <> tmc <> " --" <> bot <> "-distr '(" <> gn <> "," <> tmc <> ")' --peer " <> node0ip <> ":" <> cp <> "/" <> coordinatorDhtKey c <> " --log-config static/txgen-logging.yaml") empty
   echo "Delaying... (150s)"
   sleep 150
+  echo "Checking nodes' status, rebooting failed"
+  checkstatus args
   echo "Retreive logs..."
-  dt <- dumpLogs nodes
-  shells ("mv txgen.log txgen.json smart-gen-verifications.csv smart-gen-tps.csv experiments/" <> dt) empty
+  dt <- dumpLogs True nodes
+  shells ("echo \"" <> runSmartGen <> "\" > experiments/" <> dt <> "/txCommandLine") empty
+  shells ("cp compileconfig.nix experiments/" <> dt) empty
+  shells ("mv txgen* smart* experiments/" <> dt) empty
   --shells (foldl (\s n -> s <> " --file " <> n <> ".json") ("sh -c 'cd " <> workDir <> "; ./result/bin/cardano-analyzer --tx-file timestampsTxSender.json") nodes <> "'") empty
   shells ("tar -czf experiments/" <> dt <> ".tgz experiments/" <> dt) empty
   
-logs =
-    [ ("/var/lib/cardano-node/node.log", (<> ".log"))
-    , ("/var/lib/cardano-node/jsonLog.json", (<> ".json"))
-    , ("/var/lib/cardano-node/time-slave.log", (<> "-ts.log"))
-    , ("/var/log/saALL", (<> ".sar"))
-    ]
 
-dumpLogs nodes = do
+dumpLogs withProf nodes = do
+    echo $ "WithProf: " <> T.pack (show withProf)
+    when withProf $ do
+        echo "Stopping nodes..."
+        stopCardanoNodes nodes
+        threadDelay (1*1000000)
+        echo "Dumping logs..."
     (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
     let workDir = "experiments/" <> dt
     echo workDir
@@ -134,6 +140,22 @@ dumpLogs nodes = do
     dump workDir node = do
         forM_ logs $ \(rpath, fname) -> do
           scpFromNode args node rpath (workDir <> "/" <> fname node)
+    logs = mconcat
+             [ if withProf
+                  then profLogs
+                  else []
+             , defLogs
+             ]
+defLogs =
+    [ ("/var/lib/cardano-node/node.log", (<> ".log"))
+    , ("/var/lib/cardano-node/jsonLog.json", (<> ".json"))
+    , ("/var/lib/cardano-node/time-slave.log", (<> "-ts.log"))
+    , ("/var/log/saALL", (<> ".sar"))
+    ]
+profLogs =
+    [ ("/var/lib/cardano-node/cardano-node.prof", (<> ".prof"))
+    ]
+   
 
 printDate nodes = do
     sh . using $ parallel nodes (\n -> ssh' (\s -> echo $ "Date on " <> n <> ": " <> s) "date" n)
@@ -148,6 +170,7 @@ startCardanoNodes nodes = do
   where
     rmCmd = foldl (\s (f, _) -> s <> " " <> f) "rm -f" logs
     startCmd = "systemctl start cardano-node"
+    logs = mconcat [ defLogs, profLogs ]
 
 ssh = ssh' $ const $ return ()
 

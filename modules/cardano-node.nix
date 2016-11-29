@@ -7,14 +7,13 @@ let
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
   cardano = (import ./../srk-nixpkgs/default.nix { inherit pkgs; inherit (cfg) genesisN slotDuration networkDiameter mpcRelayInterval; }).cardano-sl;
-  discoveryPeer = "${cfg.peerHost}:${toString cfg.peerPort}/${cfg.peerDhtKey}";
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   enableIf = cond: flag: if cond then flag else "";
   command = toString [
     "${cardano}/bin/cardano-node"
     "--port ${toString cfg.port}"
     "--rebuild-db"
-    "+RTS -N -RTS"
+    "+RTS -N -pa -A6G -qg -RTS"
     (enableIf cfg.stats "--stats")
     "--spending-genesis ${toString cfg.testIndex}"
     "--vss-genesis ${toString cfg.testIndex}"
@@ -22,7 +21,7 @@ let
        if cfg.bitcoinOverFlat
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
-    (enableIf cfg.peerEnable "--peer ${discoveryPeer}")
+    (enableIf cfg.peerEnable "--peer ${cfg.peerHost}:${toString cfg.peerPort}/${cfg.peerDhtKey}")
     (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
     (enableIf cfg.supporter "--supporter")
@@ -67,9 +66,9 @@ in
       testIndex = mkOption { type = types.int; };
 
       peerEnable = mkOption { type = types.bool; default = true;};
-      peerHost = mkOption { type = types.string; };
+      peerHost = mkOption { type = types.string; default = ""; };
       peerPort = mkOption { type = types.int; default = cfg.port; };
-      peerDhtKey = mkOption { type = types.string; };
+      peerDhtKey = mkOption { type = types.string; default = ""; };
     };
   };
 
@@ -99,10 +98,14 @@ in
         User = "cardano-node";
         Group = "cardano-node";
         Restart = "always";
+        StartLimitInterval=0;
         KillSignal = "SIGINT";
         WorkingDirectory = stateDir;
         PrivateTmp = true;
-        ExecStart = "/bin/sh -c '${command}'";
+        ExecStart = pkgs.writeScript "cardano-node.sh" ''
+          #!/bin/sh
+          exec ${command}
+        '';
       };
     };
   };

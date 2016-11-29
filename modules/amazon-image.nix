@@ -13,7 +13,7 @@ with lib;
     inherit lib config;
     pkgs = import <nixpkgs> { inherit (pkgs) system; }; # ensure we use the regular qemu-kvm package
     partitioned = config.ec2.hvm;
-    diskSize = if config.ec2.hvm then 4096 else 8192;
+    diskSize = 6144;
     format = "qcow2";
     configFile = pkgs.writeText "configuration.nix"
       ''
