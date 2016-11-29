@@ -36,7 +36,7 @@ let
     imports = [ (nodeGenericConfig testIndex region keypair) ];
 
     services.cardano-node = {
-      peerHost = args.nodes.node0.config.networking.privateIPv4 or "NOT SET";
+      peerHost = nodes.node0.config.networking.privateIPv4;
       peerPort = cconf.coordinatorPort;
       peerDhtKey = cconf.coordinatorDhtKey;
       peerEnable = true;
