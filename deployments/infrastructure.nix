@@ -3,14 +3,14 @@ with (import ./../lib.nix);
 {
   network.description = "Serokell infrastructure";
 
-  hydra = { config, pkgs, lib, ... }: {
+  hydra = { config, pkgs, resources, ... }: {
     imports = [
       ./../modules/hydra-slave.nix
       ./../modules/hydra-master.nix
       ./../modules/common.nix
     ];
 
-    networking.firewall.enable = lib.mkForce true;
+    networking.firewall.enable = mkForce true;
  
     # https://github.com/peti/hydra-tutorial
     # https://github.com/NixOS/hydra/pull/418/files
@@ -18,12 +18,16 @@ with (import ./../lib.nix);
     # TODO: https://hydra.serokell.io/jobset/rscoin/master#tabs-configuration
     # TODO: https://hydra.serokell.io/jobset/cardano/master#tabs-configuration
 
-    # 16G memory
-    deployment.ec2.instanceType = lib.mkForce "r3.large";
-    deployment.ec2.ebsInitialRootDiskSize = lib.mkForce 200;
+    deployment.ec2 = {
+      # 16G memory
+      instanceType = mkForce "r3.large";
+      ebsInitialRootDiskSize = mkForce 200;
+      elasticIPv4 = resources.elasticIPs.hydra-ip;
+      associatePublicIpAddress = true;
+    };
   };
 
-  cardano-deployer = { config, pkgs, lib, ... }: {
+  cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [ ./../modules/common.nix ];
 
     users = {
@@ -48,10 +52,21 @@ with (import ./../lib.nix);
     networking.firewall.allowedTCPPortRanges = [
       { from = 24962; to = 25062; }
     ];
-    networking.firewall.enable = lib.mkForce true;
+    networking.firewall.enable = mkForce true;
 
-    # 16G memory needed for 100 nodes evaluation
-    deployment.ec2.instanceType = lib.mkForce "r3.large";
-    deployment.ec2.ebsInitialRootDiskSize = lib.mkForce 50;
+    deployment.ec2 = {
+      # 16G memory needed for 100 nodes evaluation
+      instanceType = mkForce "r3.large";
+      ebsInitialRootDiskSize = mkForce 50;
+      elasticIPv4 = resources.elasticIPs.cardanod-ip;
+      associatePublicIpAddress = true;
+    };
   };
-} // (import ./../lib.nix).ec2Keys
+  resources = {
+    inherit (ec2Keys.resources) ec2KeyPairs;
+    elasticIPs = {
+      hydra-ip = { inherit region accessKeyId; };
+      cardanod-ip = { inherit region accessKeyId; };
+    };
+  };
+}
