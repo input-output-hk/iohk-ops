@@ -89,6 +89,8 @@ in
 
     networking.firewall.allowedTCPPorts = [ cfg.port ];
 
+    environment.systemPackages = [ cardano ];
+
     systemd.services.cardano-node = {
       description   = "cardano node service";
       wantedBy      = [ "multi-user.target" ];

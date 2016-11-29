@@ -2,13 +2,12 @@
 
 let
   secret = import ./secret.nix;
-  cardano-sl = import ./../default.nix { inherit pkgs; };
   generatingAMI = builtins.getEnv "GENERATING_AMI";
 in {
   imports = [ ./cardano-node.nix ];
 
   environment.systemPackages = with pkgs;
-    [ git tmux vim sysstat nixops cardano-sl lsof ];
+    [ git tmux vim sysstat nixops lsof ];
 
   services.openssh.passwordAuthentication = true;
   services.openssh.enable = true;
