@@ -1,9 +1,9 @@
 rec {
   # Compile time settings
-  genesisN = 40;
-  slotDuration = 20; 
-  networkDiameter = 7;    
-  mpcRelayInterval = 10;
+  genesisN = 100;
+  slotDuration = 40; 
+  networkDiameter = 30;    
+  mpcRelayInterval = 90;
 
   # Run time settings
   bitcoinOverFlat = false;
