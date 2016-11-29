@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE ViewPatterns   #-}
 
 import Turtle
 import CardanoLib
@@ -94,29 +95,30 @@ runexperiment = do
   shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications*.csv smart-gen-tps.csv") empty
   -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
   result <- (fmap . fmap) (getNodePublicIP "node0") $ info args
-  case result of
-    Left err -> echo $ T.pack err
+  smartGenCmd <- case result of
+    Left (T.pack -> err) -> echo err >> return err
     Right ma ->
       case ma of
-        Nothing -> echo "No node0 found"
+        Nothing -> echo "No node0 found" >> return "No node0 found"
         Just node0ip -> do
           config <- getConfig
           case config of
-            Left err -> echo $ T.pack err
+            Left (T.pack -> err) -> echo err >> return err
             Right c ->
               let
                 tmc = T.pack $ show (totalMoneyAmount c)
                 bot = (if bitcoinOverFlat c then "bitcoin" else "flat")
                 gn = T.pack $ show (genesisN c)
                 cp = T.pack $ show (coordinatorPort c)
-              in shells ("./result/bin/cardano-smart-generator +RTS -N -pa -A4G -qg -RTS --json-log=txgen.json -i 2 -R 1 -p 5 -N 2 -t 45 -S 5 -P 2 --init-money " <> tmc <> " --" <> bot <> "-distr '(" <> gn <> "," <> tmc <> ")' --peer " <> node0ip <> ":" <> cp <> "/" <> coordinatorDhtKey c <> " --log-config static/txgen-logging.yaml") empty
+                cliCmd = "./result/bin/cardano-smart-generator +RTS -N -pa -A4G -qg -RTS --json-log=txgen.json -i 2 -R 1 -p 5 -N 2 -t 45 -S 5 -P 2 --init-money " <> tmc <> " --" <> bot <> "-distr '(" <> gn <> "," <> tmc <> ")' --peer " <> node0ip <> ":" <> cp <> "/" <> coordinatorDhtKey c <> " --log-config static/txgen-logging.yaml"
+              in shells cliCmd empty >> return cliCmd
   echo "Delaying... (150s)"
   sleep 150
   echo "Checking nodes' status, rebooting failed"
   checkstatus args
   echo "Retreive logs..."
   dt <- dumpLogs True nodes
-  shells ("echo \"" <> runSmartGen <> "\" > experiments/" <> dt <> "/txCommandLine") empty
+  shells ("echo \"" <> smartGenCmd <> "\" > experiments/" <> dt <> "/txCommandLine") empty
   shells ("cp compileconfig.nix experiments/" <> dt) empty
   shells ("mv txgen* smart* experiments/" <> dt) empty
   --shells (foldl (\s n -> s <> " --file " <> n <> ".json") ("sh -c 'cd " <> workDir <> "; ./result/bin/cardano-analyzer --tx-file timestampsTxSender.json") nodes <> "'") empty
@@ -128,7 +130,7 @@ dumpLogs withProf nodes = do
     when withProf $ do
         echo "Stopping nodes..."
         stopCardanoNodes nodes
-        threadDelay (1*1000000)
+        sleep 2
         echo "Dumping logs..."
     (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
     let workDir = "experiments/" <> dt
