@@ -20,7 +20,7 @@ with (import ./../lib.nix);
 
     # 16G memory
     deployment.ec2.instanceType = lib.mkForce "r3.large";
-    deployment.ec2.ebsInitialRootDiskSize = lib.mkForce 500;
+    deployment.ec2.ebsInitialRootDiskSize = lib.mkForce 200;
   };
 
   cardano-deployer = { config, pkgs, lib, ... }: {
