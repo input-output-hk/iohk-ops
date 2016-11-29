@@ -4,12 +4,14 @@ install:
   - nix-env -iA nixpkgs.nixopsUnstable
   - nixops create deployments/cardano.nix -d csl
   - nixops create deployments/timewarp.nix -d tw
+  - nixops create deployments/infrastructure.nix -d inf
 script:
   - ./CardanoCSL.hs --help
   - ./CardanoTW.hs --help
   - nix-instantiate default.nix  
   - nixops deploy -d csl --evaluate-only
   - nixops deploy -d tw --evaluate-only
+  - nixops deploy -d inf --evaluate-only
   - GENERATING_AMI=1 nix-instantiate release.nix
 
 notifications:
