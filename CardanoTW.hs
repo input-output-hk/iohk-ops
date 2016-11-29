@@ -60,7 +60,7 @@ runexperiment = do
   let workDir = "experiment"
   -- TODO: mkdir `date` (CSL)
   shell ("mkdir -p " <> workDir) empty
-  sh . using $ parallel nodes $ scpFromAllNodes args "/home/timewarp/node.log" (\node -> workDir <> node <> ".log")
+  sh . using $ parallel nodes $ \node -> scpFromNode args node "/home/timewarp/node.log" (workDir <> getNodeName node <> ".log")
 
 build :: IO ()
 build = undefined

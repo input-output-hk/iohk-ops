@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module CardanoLib where
 
@@ -20,7 +22,11 @@ nixops = "~/nixops/result/bin/nixops "
 
 type NixOpsArgs = Text
 type DeploymentName = Text
-type NodeIP = Text
+
+newtype IP = IP { getIP :: Text }
+   deriving (Show, Generic, FromField)
+newtype NodeName = NodeName { getNodeName :: Text }
+   deriving (Show, Generic, FromField)
 
 deploy :: NixOpsArgs -> IO ()
 deploy args = do
@@ -58,8 +64,8 @@ parallel (first:rest) action = do
   liftIO (wait async)
 parallel [] _ = return ()
 
-rebootIfDown :: NixOpsArgs -> NodeIP -> IO ()
-rebootIfDown args node = do
+rebootIfDown :: NixOpsArgs -> NodeName -> IO ()
+rebootIfDown args (getNodeName -> node) = do
   x <- shell (nixops <> "ssh " <> args <> node <> " -o ConnectTimeout=5 echo -n") empty
   case x of
     ExitSuccess -> return ()
@@ -67,11 +73,21 @@ rebootIfDown args node = do
       echo $ "Rebooting " <> node
       shells (nixops <> "reboot " <> args <> "--include " <> node) empty
 
-scpFromAllNodes :: NixOpsArgs -> Text -> (NodeIP -> Text) -> NodeIP -> IO ()
-scpFromAllNodes args from to node = scpFromNode args node from $ to node
+ssh :: NixOpsArgs -> Text -> NodeName -> IO ()
+ssh args = ssh' args $ const $ return ()
 
-scpFromNode :: NixOpsArgs -> NodeIP -> Text -> Text -> IO ()
-scpFromNode args node from to = do
+ssh' :: NixOpsArgs -> (Text -> IO ()) -> Text -> NodeName -> IO ()
+ssh' args f cmd' (getNodeName -> node) = do
+    (exitcode, output) <- shellStrict cmd empty
+    f output
+    case exitcode of
+        ExitSuccess -> return ()
+        ExitFailure code -> echo $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
+  where
+    cmd = nixops <> "ssh " <> args <> node <> " -- " <> cmd'
+
+scpFromNode :: NixOpsArgs -> NodeName -> Text -> Text -> IO ()
+scpFromNode args (getNodeName -> node) from to = do
   (exitcode, output) <- shellStrict (nixops <> "scp" <> args <> "--from " <> node <> " " <> from <> " " <> to) empty
   case exitcode of
     ExitSuccess -> return ()
@@ -82,9 +98,9 @@ sshForEach args cmd = nixops <> "ssh-for-each" <> args <> " -- " <> cmd
 -- Functions for extracting information out of nixops info command
 
 -- | Get all node IPs in EC2 cluster
-getNodes :: NixOpsArgs -> IO [Text]
+getNodes :: NixOpsArgs -> IO [NodeName]
 getNodes args = do
-  result <- (fmap . fmap) getPublicIPs $ info args
+  result <- (fmap . fmap) (map diName . toNodesInfo) $ info args
   case result of
     Left s -> do
         echo $ T.pack s
@@ -101,12 +117,12 @@ instance FromField DeploymentStatus where
   parseField _ = mzero
 
 data DeploymentInfo = DeploymentInfo
-    { diName :: !Text
+    { diName :: !NodeName
     , diStatus :: !DeploymentStatus
     , diLocation :: !Text
     , diResourceID :: !Text
-    , diPublicIP :: !Text
-    , diPrivateIP :: !Text
+    , diPublicIP :: !IP
+    , diPrivateIP :: !IP
     } deriving (Show, Generic)
 
 instance FromRecord DeploymentInfo
@@ -124,15 +140,15 @@ info args = do
     ExitSuccess -> return $ decodeWith nixopsDecodeOptions NoHeader (encodeUtf8 $ fromStrict nodes)
 
 
-getPublicIPs :: V.Vector DeploymentInfo -> [Text]
-getPublicIPs vector = 
-  V.toList $ fmap diPublicIP $ V.filter filterEC2 vector
+toNodesInfo :: V.Vector DeploymentInfo -> [DeploymentInfo]
+toNodesInfo vector = 
+  V.toList $ V.filter filterEC2 vector
     where
       filterEC2 di = T.take 4 (diLocation di) == "ec2 " && diStatus di /= Obsolete
 
 
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
 getNodePublicIP name vector =
-    headMay $ V.toList $ fmap diPublicIP $ V.filter (\di -> diName di == name) vector
+    headMay $ V.toList $ fmap (getIP . diPublicIP) $ V.filter (\di -> getNodeName (diName di) == name) vector
 
 

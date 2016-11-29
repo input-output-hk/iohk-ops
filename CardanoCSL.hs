@@ -110,7 +110,14 @@ runexperiment = do
                 bot = (if bitcoinOverFlat c then "bitcoin" else "flat")
                 gn = T.pack $ show (genesisN c)
                 cp = T.pack $ show (coordinatorPort c)
-                cliCmd = "./result/bin/cardano-smart-generator +RTS -N -pa -A4G -qg -RTS --json-log=txgen.json -i 2 -R 1 -p 5 -N 2 -t 45 -S 5 -P 2 --init-money " <> tmc <> " --" <> bot <> "-distr '(" <> gn <> "," <> tmc <> ")' --peer " <> node0ip <> ":" <> cp <> "/" <> coordinatorDhtKey c <> " --log-config static/txgen-logging.yaml"
+                cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
+                                 , " +RTS -N -pa -A4G -qg -RTS --json-log=txgen.json"
+                                 , " -i 2 -R 1 -p 5 -N 2 -t 45 -S 5 -P 2"
+                                 , " --init-money ", tmc
+                                 , " --", bot, "-distr '(", gn, ",", tmc, ")'"
+                                 , " --peer ", node0ip, ":", cp, "/", coordinatorDhtKey c
+                                 , " --log-config static/txgen-logging.yaml"
+                                 ]
               in shells cliCmd empty >> return cliCmd
   echo "Delaying... (150s)"
   sleep 150
@@ -135,13 +142,14 @@ dumpLogs withProf nodes = do
     (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
     let workDir = "experiments/" <> dt
     echo workDir
-    shell ("mkdir -p " <> workDir) empty
-    sh . using $ parallel nodes (dump workDir)
+    echo $ T.pack $ show nodes
+    -- shell ("mkdir -p " <> workDir) empty
+    -- sh . using $ parallel nodes (dump workDir)
     return dt
   where
     dump workDir node = do
         forM_ logs $ \(rpath, fname) -> do
-          scpFromNode args node rpath (workDir <> "/" <> fname node)
+          scpFromNode args node rpath (workDir <> "/" <> fname (getNodeName node))
     logs = mconcat
              [ if withProf
                   then profLogs
@@ -160,30 +168,18 @@ profLogs =
    
 
 printDate nodes = do
-    sh . using $ parallel nodes (\n -> ssh' (\s -> echo $ "Date on " <> n <> ": " <> s) "date" n)
+    sh . using $ parallel nodes (\n -> ssh' args (\s -> echo $ "Date on " <> getNodeName n <> ": " <> s) "date" n)
 
-stopCardanoNodes = sh . using . flip parallel (ssh cmd)
+stopCardanoNodes = sh . using . flip parallel (ssh args cmd)
   where
     cmd = "systemctl stop cardano-node"
 
 startCardanoNodes nodes = do
-    sh . using $ parallel nodes (ssh $ "'" <> rmCmd <> ";" <> startCmd <> "'")
-    --sh . using $ parallel nodes (ssh startCmd)
+    sh . using $ parallel nodes (ssh args $ "'" <> rmCmd <> ";" <> startCmd <> "'")
   where
     rmCmd = foldl (\s (f, _) -> s <> " " <> f) "rm -f" logs
     startCmd = "systemctl start cardano-node"
     logs = mconcat [ defLogs, profLogs ]
-
-ssh = ssh' $ const $ return ()
-
-ssh' f cmd' node = do
-    (exitcode, output) <- shellStrict cmd empty
-    f output
-    case exitcode of
-        ExitSuccess -> return ()
-        ExitFailure code -> echo $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
-  where
-    cmd = nixops <> "ssh " <> args <> node <> " -- " <> cmd'
 
 data Config = Config
   { bitcoinOverFlat :: Bool
