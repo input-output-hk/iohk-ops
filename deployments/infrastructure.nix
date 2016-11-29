@@ -1,7 +1,7 @@
-let
-  secret = import ./../modules/secret.nix;
-in {
-  network.description = "Web server";
+with (import ./../lib.nix);
+
+{
+  network.description = "Serokell infrastructure";
 
   hydra = { config, pkgs, lib, ... }: {
     imports = [
@@ -31,7 +31,7 @@ in {
         description     = "cardano staging";
         group           = "staging";
         createHome      = true;
-        openssh.authorizedKeys.keys = secret.devKeys;
+        openssh.authorizedKeys.keys = devKeys;
       };
       groups.staging = {};
 
@@ -39,7 +39,7 @@ in {
         description     = "cardano production";
         group           = "production";
         createHome      = true;
-        openssh.authorizedKeys.keys = secret.devKeys;
+        openssh.authorizedKeys.keys = devKeys;
       };
       groups.production = {};
 

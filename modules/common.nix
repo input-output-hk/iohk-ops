@@ -1,9 +1,8 @@
-{ config, resources, pkgs, lib, ... }:
+{ config, resources, pkgs, ... }:
 
-let
-  secret = import ./secret.nix;
-  generatingAMI = builtins.getEnv "GENERATING_AMI";
-in {
+with (import ./../lib.nix);
+
+{
   imports = [ ./cardano-node.nix ];
 
   environment.systemPackages = with pkgs;
@@ -13,7 +12,7 @@ in {
   services.openssh.enable = true;
 
   users.mutableUsers = false;
-  users.users.root.openssh.authorizedKeys.keys = secret.devKeys;
+  users.users.root.openssh.authorizedKeys.keys = devKeys;
 
   environment.variables.TERM = "xterm-256color";
 
@@ -23,12 +22,12 @@ in {
   ];
 
   networking.firewall.enable = false;
-} // lib.optionalAttrs (generatingAMI != "1") {
+} // optionalAttrs (generatingAMI != "1") {
   deployment.targetEnv = "ec2";
   deployment.ec2.instanceType = "t2.large";
   deployment.ec2.region = "eu-central-1";
   deployment.ec2.keyPair = resources.ec2KeyPairs.cardano-test-eu;
-  deployment.ec2.securityGroups = [secret.securityGroup];
+  deployment.ec2.securityGroups = ["cardano-deployment"];
   deployment.ec2.ami = (import ./../modules/amis.nix).${config.deployment.ec2.region};
   deployment.ec2.accessKeyId = "cardano-deployer";
   deployment.ec2.ebsInitialRootDiskSize = 8;
