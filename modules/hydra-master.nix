@@ -86,7 +86,7 @@ in {
       email = "info@serokell.io";
       user = "nginx";
       group = "nginx";
-      webroot = "/var/www/challenges";
+      webroot = config.security.acme.directory + "/acme-challenge";
       postRun = "systemctl reload nginx.service";
     };
   };
