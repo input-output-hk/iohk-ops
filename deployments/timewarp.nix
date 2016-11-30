@@ -12,6 +12,8 @@ let
 in 
   (genAttrs' (range 1 5) (key: "timewarp${toString key}") (name: timeWarpReceiver)) // 
 {
+  network.description = "Time-warp experiments";
+
   timewarp0 = timeWarpSender;
 
   resources.ec2KeyPairs.cardano-test-eu = {

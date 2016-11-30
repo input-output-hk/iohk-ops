@@ -62,5 +62,7 @@ in
   (genAttrs' (range 80 89) (key: "node${toString key}") (name: cardano-node-sydney name)) //
   (genAttrs' (range 90 99) (key: "node${toString key}") (name: cardano-node-sa name)) //
 {
+  network.description = "Cardano SL experiments";
+
   node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
 } // ec2Keys
