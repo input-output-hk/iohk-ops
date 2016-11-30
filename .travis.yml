@@ -8,6 +8,7 @@ install:
 script:
   - ./CardanoCSL.hs --help
   - ./CardanoTW.hs --help
+  - ./Infra.hs --help
   - nix-instantiate default.nix  
   - nixops deploy -d csl --evaluate-only
   - nixops deploy -d tw --evaluate-only
