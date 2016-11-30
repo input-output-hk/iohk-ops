@@ -62,6 +62,7 @@ with (import ./../lib.nix);
       ebsInitialRootDiskSize = mkForce 50;
       elasticIPv4 = resources.elasticIPs.cardanod-ip;
       associatePublicIpAddress = true;
+      ami = mkForce "ami-01f7306e";
     };
   };
   resources = {
