@@ -57,6 +57,8 @@ deployment = " deployments/cardano.nix "
 
 main :: IO ()
 main = do
+  --dat <- fmap toNodesInfo <$> info args
+  --echo $ T.pack $ show dat
   command <- options "Helper CLI around NixOps to run experiments" parser
   case command of
     Deploy -> deploy args
@@ -126,7 +128,7 @@ runexperiment = do
   echo "Retreive logs..."
   dt <- dumpLogs True nodes
   shells ("echo \"" <> smartGenCmd <> "\" > experiments/" <> dt <> "/txCommandLine") empty
-  shells ("cp compileconfig.nix experiments/" <> dt) empty
+  shells ("cp config.nix experiments/" <> dt) empty
   shells ("mv txgen* smart* experiments/" <> dt) empty
   --shells (foldl (\s n -> s <> " --file " <> n <> ".json") ("sh -c 'cd " <> workDir <> "; ./result/bin/cardano-analyzer --tx-file timestampsTxSender.json") nodes <> "'") empty
   shells ("tar -czf experiments/" <> dt <> ".tgz experiments/" <> dt) empty
@@ -142,9 +144,8 @@ dumpLogs withProf nodes = do
     (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
     let workDir = "experiments/" <> dt
     echo workDir
-    echo $ T.pack $ show nodes
-    -- shell ("mkdir -p " <> workDir) empty
-    -- sh . using $ parallel nodes (dump workDir)
+    shell ("mkdir -p " <> workDir) empty
+    sh . using $ parallel nodes (dump workDir)
     return dt
   where
     dump workDir node = do
