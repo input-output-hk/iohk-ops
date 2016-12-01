@@ -12,3 +12,4 @@ txgen.log
 txgen.json
 smart-gen-*
 static/id_buildfarm
+*prof
