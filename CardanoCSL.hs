@@ -30,6 +30,7 @@ data Command =
   | FromScratch
   | CheckStatus
   | RunExperiment
+  | PostExperiment
   | Build
   | DumpLogs { withProf :: Bool }
   | Start
@@ -45,6 +46,7 @@ parser =
   <|> subcommand "fromscratch" "Destroy, Delete, Create, Deploy" (pure FromScratch)
   <|> subcommand "checkstatus" "Check if nodes are accessible via ssh and reboot if they timeout" (pure CheckStatus)
   <|> subcommand "runexperiment" "Deploy cluster and perform measurements" (pure RunExperiment)
+  <|> subcommand "postexperiment" "Post-experiments logs dumping (if failed)" (pure PostExperiment)
   <|> subcommand "dumplogs" "Dump logs" (DumpLogs <$> switch "prof" 'p' "Dump profiling data as well (requires service stop)")
   <|> subcommand "stop" "Stop cardano-node service" (pure Stop)
   <|> subcommand "start" "Start cardano-node service" (pure Start)
@@ -66,6 +68,7 @@ main = do
     FromScratch -> fromscratch args deployment
     CheckStatus -> checkstatus args
     RunExperiment -> runexperiment
+    PostExperiment -> postexperiment
     Build -> build
     DumpLogs {..} -> getNodes args >>= void . dumpLogs withProf
     Start -> getNodes args >>= startCardanoNodes
@@ -78,6 +81,38 @@ build :: IO ()
 build = do
   echo "Building derivation..."
   shells ("nix-build default.nix" <> nixpath) empty
+
+getSmartGenCmd :: IO Text
+getSmartGenCmd = do
+  result <- (fmap . fmap) (getNodePublicIP "node0") $ info args
+  case result of
+    Left (T.pack -> err) -> echo err >> return err
+    Right ma ->
+      case ma of
+        Nothing -> echo "No node0 found" >> return "No node0 found"
+        Just node0ip -> do
+          config <- getConfig
+          case config of
+            Left (T.pack -> err) -> echo err >> return err
+            Right c ->
+              let
+                tmc = T.pack $ show (totalMoneyAmount c)
+                bot = (if bitcoinOverFlat c then "bitcoin" else "flat")
+                gn = T.pack $ show (genesisN c)
+                cp = T.pack $ show (coordinatorPort c)
+                cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
+                                 , " +RTS -N -pa -A4G -qg -RTS"
+                                 , " -i 0 -i 1 -i 2 -i 3"
+                                 , " --peer ", node0ip, ":", cp, "/", coordinatorDhtKey c
+                                 , " -R 1 -N 3 -p 5"
+                                 , " --init-money ", tmc
+                                 , " -t 55 -S 5 -P 2"
+                                 , " --recipients-share 0.3"
+                                 , " --log-config static/txgen-logging.yaml"
+                                 , " --json-log=txgen.json"
+                                 , " --", bot, "-distr '(", gn, ",", tmc, ")'"
+                                 ]
+              in pure cliCmd
 
 runexperiment :: IO ()
 runexperiment = do
@@ -96,44 +131,30 @@ runexperiment = do
   echo "Launching txgen"
   shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications*.csv smart-gen-tps.csv") empty
   -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
-  result <- (fmap . fmap) (getNodePublicIP "node0") $ info args
-  smartGenCmd <- case result of
-    Left (T.pack -> err) -> echo err >> return err
-    Right ma ->
-      case ma of
-        Nothing -> echo "No node0 found" >> return "No node0 found"
-        Just node0ip -> do
-          config <- getConfig
-          case config of
-            Left (T.pack -> err) -> echo err >> return err
-            Right c ->
-              let
-                tmc = T.pack $ show (totalMoneyAmount c)
-                bot = (if bitcoinOverFlat c then "bitcoin" else "flat")
-                gn = T.pack $ show (genesisN c)
-                cp = T.pack $ show (coordinatorPort c)
-                cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
-                                 , " +RTS -N -pa -A4G -qg -RTS --json-log=txgen.json"
-                                 , " -i 2 -R 1 -p 5 -N 2 -t 45 -S 5 -P 2"
-                                 , " --init-money ", tmc
-                                 , " --", bot, "-distr '(", gn, ",", tmc, ")'"
-                                 , " --peer ", node0ip, ":", cp, "/", coordinatorDhtKey c
-                                 , " --log-config static/txgen-logging.yaml"
-                                 ]
-              in shells cliCmd empty >> return cliCmd
+  cliCmd <- getSmartGenCmd
+  shells cliCmd empty 
   echo "Delaying... (150s)"
   sleep 150
+  postexperiment
+
+postexperiment = do
+  nodes <- getNodes args
   echo "Checking nodes' status, rebooting failed"
   checkstatus args
   echo "Retreive logs..."
   dt <- dumpLogs True nodes
-  shells ("echo \"" <> smartGenCmd <> "\" > experiments/" <> dt <> "/txCommandLine") empty
-  shells ("cp config.nix experiments/" <> dt) empty
-  shells ("mv txgen* smart* experiments/" <> dt) empty
+  cliCmd <- getSmartGenCmd
+  let dirname = "./experiments/" <> dt
+  shells ("echo \"" <> cliCmd <> "\" > " <> dirname <> "/txCommandLine") empty
+  shells ("echo -n \"cardano-sl revision: \" > " <> dirname <> "/revisions.info") empty
+  shells ("cat srk-nixpkgs/cardano-sl.nix | grep rev >> " <> dirname <> "/revisions.info") empty
+  shells ("echo -n \"time-warp revision: \" >> " <> dirname <> "/revisions.info") empty
+  shells ("cat srk-nixpkgs/time-warp.nix | grep rev >> " <> dirname <> "/revisions.info") empty
+  shells ("cp config.nix " <> dirname) empty
+  shells ("mv txgen* smart* " <> dirname) empty
   --shells (foldl (\s n -> s <> " --file " <> n <> ".json") ("sh -c 'cd " <> workDir <> "; ./result/bin/cardano-analyzer --tx-file timestampsTxSender.json") nodes <> "'") empty
   shells ("tar -czf experiments/" <> dt <> ".tgz experiments/" <> dt) empty
   
-
 dumpLogs withProf nodes = do
     echo $ "WithProf: " <> T.pack (show withProf)
     when withProf $ do
