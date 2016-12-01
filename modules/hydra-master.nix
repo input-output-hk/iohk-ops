@@ -37,18 +37,18 @@ in {
 
   services.hydra = {
     enable = true;
-    hydraURL = "https://hydra.serokell.io";
+    hydraURL = "https://hydra.iohk.io";
     port = 8080;
     useSubstitutes = true;
     notificationSender = "hi@serokell.io";
     # max output is 4GB because of amis
     extraConfig = ''
-      binary_cache_secret_key_file = /etc/nix/hydra.serokell.io-1/secret
+      binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
       max_output_size = 4294967296
     '';
     logo = (pkgs.fetchurl {
-      url    = "https://serokell.io/Serokell.png";
-      sha256 = "0fldiw4x0qz4k7pscaxswlw6yjn1pswzy4rdi7hibzsvn1ij8k7m";
+      url    = "https://iohk.io/images/iohk-share-logo.jpg";
+      sha256 = "0pg2igski35wf1y4gn8dxw6444kx1107mg4ns5xj29ays2c1j5sl";
     });
   };
 
@@ -68,11 +68,11 @@ in {
     script = ''
       if [ ! -e ~hydra/.setup-is-complete ]; then
         # create signing keys
-        /run/current-system/sw/bin/install -d -m 551 /etc/nix/hydra.serokell.io-1
-        /run/current-system/sw/bin/nix-store --generate-binary-cache-key hydra.serokell.io-1 /etc/nix/hydra.serokell.io-1/secret /etc/nix/hydra.serokell.io-1/public
-        /run/current-system/sw/bin/chown -R hydra:hydra /etc/nix/hydra.serokell.io-1
-        /run/current-system/sw/bin/chmod 440 /etc/nix/hydra.serokell.io-1/secret
-        /run/current-system/sw/bin/chmod 444 /etc/nix/hydra.serokell.io-1/public
+        /run/current-system/sw/bin/install -d -m 551 /etc/nix/hydra.iohk.io-1
+        /run/current-system/sw/bin/nix-store --generate-binary-cache-key hydra.iohk.io-1 /etc/nix/hydra.iohk.io-1/secret /etc/nix/hydra.iohk.io-1/public
+        /run/current-system/sw/bin/chown -R hydra:hydra /etc/nix/hydra.iohk.io-1
+        /run/current-system/sw/bin/chmod 440 /etc/nix/hydra.iohk.io-1/secret
+        /run/current-system/sw/bin/chmod 444 /etc/nix/hydra.iohk.io-1/public
         # done
         touch ~hydra/.setup-is-complete
       fi
@@ -82,8 +82,8 @@ in {
   networking.firewall.allowedTCPPorts = [ 80 443 ];
 
   security.acme.certs = {
-    "hydra.serokell.io" = {
-      email = "info@serokell.io";
+    "hydra.iohk.io" = {
+      email = "info@iohk.io";
       user = "nginx";
       group = "nginx";
       webroot = config.security.acme.directory + "/acme-challenge";
@@ -107,7 +107,7 @@ in {
         listen 80;
         listen [::]:80;
         location /.well-known/acme-challenge {
-          root ${config.security.acme.certs."hydra.serokell.io".webroot};
+          root ${config.security.acme.certs."hydra.iohk.io".webroot};
         }
         location / {
           return 301 https://$host$request_uri;
@@ -116,10 +116,10 @@ in {
 
       server {
         listen 443 ssl spdy;
-        server_name hydra.serokell.io;
+        server_name hydra.iohk.io;
 
-        ssl_certificate /var/lib/acme/hydra.serokell.io/fullchain.pem;
-        ssl_certificate_key /var/lib/acme/hydra.serokell.io/key.pem;
+        ssl_certificate /var/lib/acme/hydra.iohk.io/fullchain.pem;
+        ssl_certificate_key /var/lib/acme/hydra.iohk.io/key.pem;
 
         location / {
           proxy_pass http://127.0.0.1:8080;
