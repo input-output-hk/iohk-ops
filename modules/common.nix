@@ -22,6 +22,10 @@ with (import ./../lib.nix);
   ];
 
   networking.firewall.enable = false;
+  # Mosh
+  networking.firewall.allowedUDPPortRanges = [
+    { from = 60000; to = 61000; }
+  ];
 } // optionalAttrs (generatingAMI != "1") {
   deployment.targetEnv = "ec2";
   deployment.ec2.instanceType = "t2.large";
