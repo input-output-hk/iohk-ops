@@ -37,7 +37,7 @@ in {
 
   services.hydra = {
     enable = true;
-    hydraURL = "http://hydra.serokell.io";
+    hydraURL = "https://hydra.serokell.io";
     port = 8080;
     useSubstitutes = true;
     notificationSender = "hi@serokell.io";
@@ -107,7 +107,7 @@ in {
         listen 80;
         listen [::]:80;
         location /.well-known/acme-challenge {
-          root /var/www/challenges;
+          root ${config.security.acme.certs."hydra.serokell.io".webroot};
         }
         location / {
           return 301 https://$host$request_uri;
