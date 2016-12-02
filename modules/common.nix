@@ -33,6 +33,8 @@ with (import ./../lib.nix);
       connect-timeout = 10
     '';
 
+    buildCores = 0;
+
     # use our hydra builds
     trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
     binaryCaches = trustedBinaryCaches;

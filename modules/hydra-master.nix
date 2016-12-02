@@ -43,8 +43,9 @@ in {
     notificationSender = "hi@serokell.io";
     # max output is 4GB because of amis
     extraConfig = ''
-      binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
       max_output_size = 4294967296
+      use-substitutes = 1
+      store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
     '';
     logo = (pkgs.fetchurl {
       url    = "https://iohk.io/images/iohk-share-logo.jpg";

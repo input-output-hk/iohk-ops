@@ -1,7 +1,6 @@
 { config, pkgs, ... }:
 
 {
-  nix.buildCores = 0;
   nix.gc = {
     automatic = true;
     dates = "05:15";
