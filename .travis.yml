@@ -13,7 +13,6 @@ script:
   - nixops deploy -d csl --evaluate-only
   - nixops deploy -d tw --evaluate-only
   - nixops deploy -d inf --evaluate-only
-  - GENERATING_AMI=1 nix-instantiate release.nix
 
 notifications:
   email: false

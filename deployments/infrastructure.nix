@@ -13,10 +13,7 @@ with (import ./../lib.nix);
     networking.firewall.enable = mkForce true;
  
     # https://github.com/peti/hydra-tutorial
-    # https://github.com/NixOS/hydra/pull/418/files
-    # TODO: Hydra, slack integration, declarative jobsets
-    # TODO: https://hydra.serokell.io/jobset/rscoin/master#tabs-configuration
-    # TODO: https://hydra.serokell.io/jobset/cardano/master#tabs-configuration
+    # TODO: Slack integration
 
     deployment.ec2 = {
       # 16G memory

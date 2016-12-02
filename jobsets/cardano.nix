@@ -12,10 +12,5 @@ rec {
     ];
   }).config.system.build.amazonImage;
 
-  #node-ec2-image =
-  #  runCommand "node-ec2-image" { preferLocalBuild = true; } ''
-  #     mkdir -p $out/nix-support
-  #     xz -z -c ${image}/nixos.qcow2 > $out/node.img.xz
-  #     echo "file img $out/node.img.xz" > $out/nix-support/hydra-build-products
-  #  '';
+  cardano-sl = import ./../default.nix;
 }
