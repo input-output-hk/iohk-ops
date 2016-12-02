@@ -18,7 +18,7 @@ let
       };
       jobsets = {
         type = "git";
-        value = "https://github.com/input-output-hk/pos-prototype-deployment.gitmaster 1";
+        value = "https://github.com/input-output-hk/pos-prototype-deployment.git master 1";
       };
     };
     mail = false;
