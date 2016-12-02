@@ -23,7 +23,7 @@ with (import ./../lib.nix);
 
   nix = rec {
     # use nix sandboxing for greater determinism
-    useChroot = true;
+    useSandbox = true;
 
     # make sure we have enough build users
     nrBuildUsers = 30;
