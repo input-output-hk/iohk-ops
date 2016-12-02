@@ -21,6 +21,24 @@ with (import ./../lib.nix);
     "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 2 29 /var/log/saALL"
   ];
 
+  nix = rec {
+    # use nix sandboxing for greater determinism
+    useChroot = true;
+
+    # make sure we have enough build users
+    nrBuildUsers = 30;
+
+    # if our hydra is down, don't wait forever
+    extraOptions = ''
+      connect-timeout = 10
+    '';
+
+    # use our hydra builds
+    trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
+    binaryCaches = trustedBinaryCaches;
+    binaryCachePublicKeys = [ "hydra.serokell.io-1:qayq5mjxrNSx0QTRcpfD74pmRMHSmZCHy5vOrT8eF88=" ];
+  };
+
   networking.firewall.enable = false;
   # Mosh
   networking.firewall.allowedUDPPortRanges = [
