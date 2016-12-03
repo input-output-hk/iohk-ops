@@ -92,7 +92,6 @@ in
 
     systemd.services.cardano-node = {
       description   = "cardano node service";
-      wantedBy      = [ "multi-user.target" ];
       after         = [ "network.target" ];
       serviceConfig = {
         User = "cardano-node";
