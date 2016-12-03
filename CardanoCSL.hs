@@ -122,8 +122,6 @@ runexperiment = do
   echo "Checking nodes' status, rebooting failed"
   checkstatus args
   --deploy
-  echo "Stopping nodes..."
-  stopCardanoNodes nodes
   echo "Starting nodes..."
   startCardanoNodes nodes
   echo "Delaying... (30s)"
@@ -141,6 +139,8 @@ postexperiment = do
   nodes <- getNodes args
   echo "Checking nodes' status, rebooting failed"
   checkstatus args
+  echo "Stopping nodes..."
+  stopCardanoNodes nodes
   echo "Retreive logs..."
   dt <- dumpLogs True nodes
   cliCmd <- getSmartGenCmd
