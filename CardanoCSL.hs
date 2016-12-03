@@ -124,6 +124,8 @@ runexperiment = do
   --deploy
   echo "Starting nodes..."
   startCardanoNodes nodes
+  echo "Stopping nodes..."
+  stopCardanoNodes nodes
   echo "Delaying... (40s)"
   sleep 40
   echo "Launching txgen"
@@ -139,8 +141,6 @@ postexperiment = do
   nodes <- getNodes args
   echo "Checking nodes' status, rebooting failed"
   checkstatus args
-  echo "Stopping nodes..."
-  stopCardanoNodes nodes
   echo "Retreive logs..."
   dt <- dumpLogs True nodes
   cliCmd <- getSmartGenCmd
