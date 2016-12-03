@@ -80,7 +80,7 @@ main = do
 build :: IO ()
 build = do
   echo "Building derivation..."
-  shells ("nix-build default.nix" <> nixpath) empty
+  shells ("nix-build -j 4 --cores 2 default.nix" <> nixpath) empty
 
 getSmartGenCmd :: IO Text
 getSmartGenCmd = do
@@ -102,11 +102,11 @@ getSmartGenCmd = do
                 cp = T.pack $ show (coordinatorPort c)
                 cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
                                  , " +RTS -N -pa -A4G -qg -RTS"
-                                 , " -i 0 -i 1 -i 2 -i 3"
+                                 , " -i 0"
                                  , " --peer ", node0ip, ":", cp, "/", coordinatorDhtKey c
                                  , " -R 1 -N 3 -p 5"
                                  , " --init-money ", tmc
-                                 , " -t 55 -S 5 -P 2"
+                                 , " -t 20 -S 5 -P 2"
                                  , " --recipients-share 0.3"
                                  , " --log-config static/txgen-logging.yaml"
                                  , " --json-log=txgen.json"
@@ -126,8 +126,8 @@ runexperiment = do
   stopCardanoNodes nodes
   echo "Starting nodes..."
   startCardanoNodes nodes
-  echo "Delaying... (30s)"
-  sleep 30
+  echo "Delaying... (40s)"
+  sleep 40
   echo "Launching txgen"
   shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications*.csv smart-gen-tps.csv") empty
   -- shells ("./result/bin/cardano-tx-generator -d 240 -t 65 -k 600000 -i 0 --peer 52.59.93.58:3000/MHdtsP-oPf7UWly7QuXnLK5RDB8=") empty
