@@ -8,7 +8,7 @@ File structure
 - `scripts` has bash scripts not converted to Haskell/Turtle into Cardano.hs yet
 - `srk-nixpkgs` is a collection of upstream Serokell packages
 - `static` includes files being static, not generated
-- `release.nix` is used by Hydra CI
+- `jobsets` is used by Hydra CI
 
 
 ### Getting started
@@ -54,7 +54,7 @@ Replace `machine-name` with the machine you want to connect to (from `info` call
 
 To generate the disk image:
 
-    $ GENERATING_AMI=1 nix-build release.nix -A image -o image -I ~/
+    $ GENERATING_AMI=1 nix-build jobsets/cardano.nix -A image -o image -I ~/
 
 Note that this will take more than an hour to build.
 See https://github.com/NixOS/nixpkgs/issues/20471 for more about the slowness.
