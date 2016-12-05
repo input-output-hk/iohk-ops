@@ -106,7 +106,7 @@ getSmartGenCmd = do
                                  , " --peer ", node0ip, ":", cp, "/", coordinatorDhtKey c
                                  , " -R 1 -N 3 -p 5"
                                  , " --init-money ", tmc
-                                 , " -t 20 -S 5 -P 2"
+                                 , " -t 50 -S 5 -P 2"
                                  , " --recipients-share 0.3"
                                  , " --log-config static/txgen-logging.yaml"
                                  , " --json-log=txgen.json"
@@ -122,10 +122,10 @@ runexperiment = do
   echo "Checking nodes' status, rebooting failed"
   checkstatus args
   --deploy
-  echo "Starting nodes..."
-  startCardanoNodes nodes
   echo "Stopping nodes..."
   stopCardanoNodes nodes
+  echo "Starting nodes..."
+  startCardanoNodes nodes
   echo "Delaying... (40s)"
   sleep 40
   echo "Launching txgen"

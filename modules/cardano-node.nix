@@ -13,7 +13,7 @@ let
     "${cardano}/bin/cardano-node"
     "--port ${toString cfg.port}"
     "--rebuild-db"
-    "+RTS -N -pa -A6G -qg -RTS"
+    "+RTS -N -pa -hm -A6G -qg -RTS"
     (enableIf cfg.stats "--stats")
     "--spending-genesis ${toString cfg.testIndex}"
     "--vss-genesis ${toString cfg.testIndex}"

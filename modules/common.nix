@@ -6,7 +6,7 @@ with (import ./../lib.nix);
   imports = [ ./cardano-node.nix ];
 
   environment.systemPackages = with pkgs;
-    [ git tmux vim sysstat nixops lsof ];
+    [ git tmux vim sysstat (pkgs.nixopsUnstable or nixops) lsof ncdu tree mosh tig ];
 
   services.openssh.passwordAuthentication = true;
   services.openssh.enable = true;
