@@ -7,7 +7,7 @@ install:
   - nixops create deployments/infrastructure.nix -d inf
 script:
   - ./CardanoCSL.hs --help
-  - ./CardanoTW.hs --help
+  - ./TimeWarp.hs --help
   - ./Infra.hs --help
   - nix-instantiate default.nix  
   - nixops deploy -d csl --evaluate-only
