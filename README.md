@@ -64,3 +64,7 @@ To upload and use the new disk image as AMI:
     $ ./scripts/create-amis.sh
 
 This will update `modules/amis.nix` so make sure to commit it.
+
+### Getting SSH access
+
+Append https://github.com/input-output-hk/pos-prototype-deployment/blob/master/lib.nix#L46 and submit a PR.
