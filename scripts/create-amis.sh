@@ -1,7 +1,12 @@
 #!/usr/bin/env nix-shell
 #!nix-shell -i bash -p qemu jq ec2_api_tools awscli
 
-# To start with do: nix-shell -p awscli --run aws configure
+# To start with do:
+
+# nix-shell -p awscli --run aws configure
+# mkdir -p ~/.nixpkgs
+# echo "{ allowUnfree = true; }" > ~/.nixpkgs/config.nix
+# ~/.create-amis/export
 
 source ~/.ami-creds/export
 
