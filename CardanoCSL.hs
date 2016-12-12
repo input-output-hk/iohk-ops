@@ -28,6 +28,7 @@ data Command =
   | DumpLogs { withProf :: Bool }
   | Start
   | Stop
+  | AMI
   | PrintDate
   deriving (Show)
 
@@ -44,6 +45,7 @@ parser =
   <|> subcommand "stop" "Stop cardano-node service" (pure Stop)
   <|> subcommand "start" "Start cardano-node service" (pure Start)
   <|> subcommand "date" "Print date/time" (pure PrintDate)
+  <|> subcommand "ami" "Build ami" (pure AMI)
 
 
 args = " -d cardano" <> nixpath
@@ -66,9 +68,14 @@ main = do
     DumpLogs {..} -> getNodes args >>= void . dumpLogs withProf
     Start -> getNodes args >>= startCardanoNodes
     Stop -> getNodes args >>= stopCardanoNodes
+    AMI -> buildAMI
     PrintDate -> getNodes args >>= printDate
     -- TODO: invoke nixops with passed parameters
 
+buildAMI :: IO ()
+buildAMI = do
+  shells ("GENERATING_AMI=1 nix-build jobsets/cardano.nix -A image -o image " <> nixpath) empty
+  shells "./scripts/create-amis.sh" empty
 
 build :: IO ()
 build = do

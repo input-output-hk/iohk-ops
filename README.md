@@ -52,16 +52,7 @@ Replace `machine-name` with the machine you want to connect to (from `info` call
 
 ### Building AMIs
 
-To generate the disk image:
-
-    $ GENERATING_AMI=1 nix-build jobsets/cardano.nix -A image -o image -I ~/
-
-Note that this will take more than an hour to build.
-See https://github.com/NixOS/nixpkgs/issues/20471 for more about the slowness.
-
-To upload and use the new disk image as AMI:
-
-    $ ./scripts/create-amis.sh
+./Cardano.hs ami
 
 This will update `modules/amis.nix` so make sure to commit it.
 
