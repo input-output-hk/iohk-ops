@@ -16,13 +16,6 @@ import Data.Text.Lazy.Encoding (encodeUtf8)
 import qualified Data.Text as T
 import GHC.Generics
 
-{-
-
-TODO:
- 
-- turn on the disable flag for asserts
-
--}
 
 data Command =
     Deploy
