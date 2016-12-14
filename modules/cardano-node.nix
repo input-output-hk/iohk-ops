@@ -33,8 +33,8 @@ let
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
     (if cfg.enableP2P
-       then (toString (mapAttrsToList (name: value: "--peer ${value.config.networking.privateIPv4}:${toString value.config.services.cardano-node.port}/${value.config.services.cardano-node.dhtKey}") nodes))
-       else "--peer ${node0.networking.privateIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey}"
+       then "--peer ${node0.networking.publicIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey}"
+       else (toString (mapAttrsToList (name: value: "--peer ${value.config.networking.publicIPv4}:${toString value.config.services.cardano-node.port}/${value.config.services.cardano-node.dhtKey}") nodes))
     )
   ];
 in

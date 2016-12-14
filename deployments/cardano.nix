@@ -8,7 +8,7 @@ let
 
     services.cardano-node = {
       enable = true;
-      port = cconf.coordinatorPort;
+      port = cconf.nodePort;
       testIndex = testIndex;
       dhtKey = genDhtKey { i = testIndex; };
       stats = false;

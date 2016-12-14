@@ -139,13 +139,11 @@ info args = do
     ExitFailure code -> return $ Left ("Parsing info failed with exit code " <> show code)
     ExitSuccess -> return $ decodeWith nixopsDecodeOptions NoHeader (encodeUtf8 $ fromStrict nodes)
 
-
 toNodesInfo :: V.Vector DeploymentInfo -> [DeploymentInfo]
 toNodesInfo vector = 
   V.toList $ V.filter filterEC2 vector
     where
       filterEC2 di = T.take 4 (diLocation di) == "ec2 " && diStatus di /= Obsolete
-
 
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
 getNodePublicIP name vector =

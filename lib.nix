@@ -10,12 +10,11 @@ in lib // (rec {
 
   # Function to generate DHT key
   genDhtKey = { i
-              , dhtKeyPrefix  ? "MHdrsP-oPf7UWly"
+              , dhtKeyPrefix  ? "MHdrsP-oPf7UWl"
               , dhtKeyPostfix ? "7QuXnLK5RD=" }:
               let padded =
-                  if i < 10
-                  then "0" + toString i
-                  else toString i
+                  (if i < 10 then "00" else (if i < 100 then "0" else ""))
+                  + toString i
               ; in dhtKeyPrefix + padded + dhtKeyPostfix;
 
   accessKeyId = "cardano-deployer";
