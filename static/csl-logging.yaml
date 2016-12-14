@@ -1,15 +1,15 @@
-severity: Warning
+severity: Info
 node:
-    severity: Warning
+    severity: Info
     file: node.log
     comm:
-        severity: Warning
+        severity: Info
     dht:
-        severity: Warning
+        severity: Info
 time-slave:
-    severity: Warning
+    severity: Info
     file: time-slave.log
     comm:
-        severity: Warning
+        severity: Info
     dht:
-        severity: Warning
+        severity: Info

@@ -14,7 +14,10 @@ let
     "${cardano}/bin/cardano-node"
     "--port ${toString cfg.port}"
     "--rebuild-db"
-    "+RTS -N -pa -hm -A6G -qg -RTS"
+    # Profiling
+    "+RTS -N -pa -hb -T -A6G -qg -RTS"
+    # Event logging (cannot be used with profiling)
+    #"+RTS -N -T -l -A6G -qg -RTS"
     (enableIf cfg.stats "--stats")
     "--spending-genesis ${toString cfg.testIndex}"
     "--vss-genesis ${toString cfg.testIndex}"

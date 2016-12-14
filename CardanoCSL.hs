@@ -101,7 +101,8 @@ getSmartGenCmd = do
                 gn = T.pack $ show (genesisN c)
                 cp = T.pack $ show (coordinatorPort c)
                 cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
-                                 , " +RTS -N -pa -A4G -qg -RTS"
+                                 , " +RTS -N -pa -hc -T -A4G -qg -RTS"
+                                 --, " +RTS -N -A4G -qg -RTS"
                                  , " -i 0"
                                  , " --peer ", node0ip, ":", cp, "/", coordinatorDhtKey c
                                  , " -R 1 -N 3 -p 5"
@@ -186,6 +187,10 @@ defLogs =
     ]
 profLogs =
     [ ("/var/lib/cardano-node/cardano-node.prof", (<> ".prof"))
+    , ("/var/lib/cardano-node/cardano-node.hp", (<> ".hp"))
+    -- in fact, if there's a heap profile then there's no eventlog and vice versa
+    -- but scp will just say "not found" and it's all good
+    , ("/var/lib/cardano-node/cardano-node.eventlog", (<> ".eventlog"))
     ]
    
 
