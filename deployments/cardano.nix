@@ -10,6 +10,7 @@ let
       enable = true;
       port = cconf.coordinatorPort;
       testIndex = testIndex;
+      dhtKey = genDhtKey { i = testIndex; };
       stats = false;
       jsonLog = false;
       distribution = true;
@@ -26,9 +27,6 @@ let
 
     services.cardano-node = {
       timeLord = true;
-      peerEnable = false;
-#      dhtKey = genDhtKey { i = testIndex; };
-      dhtKey = cconf.coordinatorDhtKey;
     };
   };
 
@@ -36,10 +34,7 @@ let
     imports = [ (nodeGenericConfig testIndex region keypair) ];
 
     services.cardano-node = {
-      peerHost = nodes.node0.config.networking.publicIPv4;
-      peerPort = cconf.coordinatorPort;
-      peerDhtKey = cconf.coordinatorDhtKey;
-      peerEnable = true;
+      inherit (cconf) enableP2P;
     };
   };
 

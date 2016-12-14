@@ -4,6 +4,7 @@ rec {
   slotDuration = 20; 
   networkDiameter = 15;    
   mpcRelayInterval = 45;
+  enableP2P = false;
 
   # Run time settings
   bitcoinOverFlat = true;

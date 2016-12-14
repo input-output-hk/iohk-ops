@@ -1,9 +1,10 @@
-{ config, pkgs, lib, ... } :
+{ config, pkgs, lib, nodes, ... } :
 
 with lib;
 
 let
   cfg = config.services.cardano-node;
+  node0 = nodes.node0.config;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
   cardano = (import ./../srk-nixpkgs/default.nix { inherit pkgs; inherit (cfg) genesisN slotDuration networkDiameter mpcRelayInterval; }).cardano-sl;
@@ -21,14 +22,17 @@ let
        if cfg.bitcoinOverFlat
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
-    (enableIf cfg.peerEnable "--peer ${cfg.peerHost}:${toString cfg.peerPort}/${cfg.peerDhtKey}")
     (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
-    (enableIf (! cfg.peerEnable) "--dht-key ${cfg.dhtKey}")
+    "--dht-key ${cfg.dhtKey}"
     (enableIf cfg.supporter "--supporter")
     (enableIf cfg.timeLord "--time-lord")
     "--memory-mode" #add option to nixops.nix
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
+    (if cfg.enableP2P
+       then (toString (mapAttrsToList (name: value: "--peer ${value.config.networking.privateIPv4}:${toString value.config.services.cardano-node.port}/${value.config.services.cardano-node.dhtKey}") nodes))
+       else "--peer ${node0.networking.privateIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey}"
+    )
   ];
 in
 {
@@ -37,6 +41,7 @@ in
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };
 
+      enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
       timeLord = mkOption { type = types.bool; default = false; };   
       dhtKey = mkOption { 
@@ -64,11 +69,6 @@ in
       };
 
       testIndex = mkOption { type = types.int; };
-
-      peerEnable = mkOption { type = types.bool; default = true;};
-      peerHost = mkOption { type = types.string; default = ""; };
-      peerPort = mkOption { type = types.int; default = cfg.port; };
-      peerDhtKey = mkOption { type = types.string; default = ""; };
     };
   };
 
