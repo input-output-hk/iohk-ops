@@ -23,17 +23,15 @@ let
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
     (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
-    (enableIf (!cfg.timeLord) "--dht-key ${cfg.dhtKey}")
+    "--dht-key ${cfg.dhtKey}"
     (enableIf cfg.supporter "--supporter")
     (enableIf cfg.timeLord "--time-lord")
     "--memory-mode" #add option to nixops.nix
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
-    (optionalString (!cfg.timeLord)
-      (if cfg.enableP2P
+    (if cfg.enableP2P
        then (toString (mapAttrsToList (name: value: "--peer ${value.config.networking.privateIPv4}:${toString value.config.services.cardano-node.port}/${value.config.services.cardano-node.dhtKey}") nodes))
        else "--peer ${node0.networking.privateIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey}"
-       )
     )
   ];
 in
