@@ -38,6 +38,7 @@ let
     "--memory-mode" #add option to nixops.nix
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
+    (enableIf (! cfg.enableP2P) "--explicit-initial --disable-propagation")
     (if cfg.enableP2P
        then "--peer ${node0.networking.publicIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey} ${smartGenPeer}"
        else (toString (mapAttrsToList (name: value: "--peer ${value.config.networking.publicIPv4}:${toString value.config.services.cardano-node.port}/${value.config.services.cardano-node.dhtKey}") nodes))
