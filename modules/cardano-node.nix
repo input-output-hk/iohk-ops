@@ -1,6 +1,6 @@
 { config, pkgs, lib, nodes, ... } :
 
-with lib;
+with (import ./../lib.nix);
 
 let
   cfg = config.services.cardano-node;
@@ -10,6 +10,12 @@ let
   cardano = (import ./../srk-nixpkgs/default.nix { inherit pkgs; inherit (cfg) genesisN slotDuration networkDiameter mpcRelayInterval; }).cardano-sl;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   enableIf = cond: flag: if cond then flag else "";
+  smartGenIP = builtins.getEnv "SMART_GEN_IP";
+  smartGenPeer =
+    if (smartGenIP != "")
+    then "--peer ${smartGenIP}:24962/${genDhtKey 999}"
+    else "";
+
   command = toString [
     "${cardano}/bin/cardano-node"
     "--port ${toString cfg.port}"
@@ -33,7 +39,7 @@ let
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
     (if cfg.enableP2P
-       then "--peer ${node0.networking.publicIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey}"
+       then "--peer ${node0.networking.publicIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey} ${smartGenPeer}"
        else (toString (mapAttrsToList (name: value: "--peer ${value.config.networking.publicIPv4}:${toString value.config.services.cardano-node.port}/${value.config.services.cardano-node.dhtKey}") nodes))
     )
   ];

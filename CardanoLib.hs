@@ -32,7 +32,7 @@ deploy :: NixOpsArgs -> IO ()
 deploy args = do
   echo "Deploying cluster..."
   -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
-  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) " <> nixops <> "deploy" <> args <> "--max-concurrent-copy 50 -j 4") empty
+  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) SMART_GEN_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4) " <> nixops <> "deploy" <> args <> "--max-concurrent-copy 50 -j 4") empty
   echo "Done."
 
 destroy :: NixOpsArgs -> IO ()
@@ -148,5 +148,3 @@ toNodesInfo vector =
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
 getNodePublicIP name vector =
     headMay $ V.toList $ fmap (getIP . diPublicIP) $ V.filter (\di -> getNodeName (diName di) == name) vector
-
-
