@@ -13,7 +13,7 @@ let
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
   smartGenPeer =
     if (smartGenIP != "")
-    then "--peer ${smartGenIP}:24962/${genDhtKey 999}"
+    then "--peer ${smartGenIP}:24962/${genDhtKey { i = 999; }}"
     else "";
 
   command = toString [
@@ -38,9 +38,9 @@ let
     "--memory-mode" #add option to nixops.nix
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
-    (enableIf (! cfg.enableP2P) "--explicit-initial --disable-propagation")
+    (enableIf (! cfg.enableP2P) "--explicit-initial --disable-propagation ${smartGenPeer}")
     (if cfg.enableP2P
-       then "--peer ${node0.networking.publicIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey} ${smartGenPeer}"
+       then "--peer ${node0.networking.publicIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey}"
        else (toString (mapAttrsToList (name: value: "--peer ${value.config.networking.publicIPv4}:${toString value.config.services.cardano-node.port}/${value.config.services.cardano-node.dhtKey}") nodes))
     )
   ];

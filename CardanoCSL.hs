@@ -119,10 +119,13 @@ getSmartGenCmd = do
                                  , " +RTS -N -pa -hc -T -A4G -qg -RTS"
                                  --, " +RTS -N -A4G -qg -RTS"
                                  , " -i 0"
+                                 , if enableP2P c
+                                      then " --explicit-initial --disable-propagation "
+                                      else ""
                                  , peers
-                                 , " -R 1 -N 3 -p 0"
+                                 , " -R 5 -N 3 -p 0"
                                  , " --init-money ", tmc
-                                 , " -t 30 -S 5 -P 2"
+                                 , " -t 10 -S 5 -P 2"
                                  , " --recipients-share " <> (if enableP2P c then "0.3" else "1")
                                  , " --log-config static/txgen-logging.yaml"
                                  , " --json-log=txgen.json"
