@@ -63,4 +63,6 @@ runexperiment = do
   sh . using $ parallel nodes $ \node -> scpFromNode args node "/home/timewarp/node.log" (workDir <> getNodeName node <> ".log")
 
 build :: IO ()
-build = undefined
+build = do
+  echo "Building derivation..."
+  shells ("nix-build -j 4 --cores 2 tw-sketch.nix" <> nixpath) empty
