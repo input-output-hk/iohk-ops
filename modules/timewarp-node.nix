@@ -34,7 +34,6 @@ in {
 
     systemd.services.timewarp = {
       description   = "";
-      wantedBy      = [ "multi-user.target" ];
       after         = [ "network.target" ];
       serviceConfig = {
         User = "timewarp";
@@ -48,7 +47,7 @@ in {
            generateIP = name: value:
              if (value.config.services.timewarp-node.enable &&
                 (value.config.services.timewarp-node.sender == false))
-             then "--peer ${value.config.networking.privateIPv4}:${toString cfg.port}"
+             then "--peer ${value.config.networking.publicIPv4}:${toString cfg.port}"
              else "";
          in if cfg.sender
             then pkgs.writeScript "bench-sender" ''

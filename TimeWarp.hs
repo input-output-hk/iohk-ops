@@ -9,6 +9,7 @@ import Data.Monoid ((<>))
 import qualified Data.Text as T
 import GHC.Conc (threadDelay)
 
+import Control.Monad (forM_)
 
 data Command =
     Deploy
@@ -57,12 +58,46 @@ runexperiment = do
   nodes <- getNodes args
   shells (sshForEach args "systemctl start timewarp") empty
   threadDelay (150*1000000)
-  let workDir = "experiment"
-  -- TODO: mkdir `date` (CSL)
-  shell ("mkdir -p " <> workDir) empty
-  sh . using $ parallel nodes $ \node -> scpFromNode args node "/home/timewarp/node.log" (workDir <> getNodeName node <> ".log")
+  dt <- dumpLogs False nodes
+  echo $ "Log dir: tw_experiments/" <> dt
 
 build :: IO ()
 build = do
   echo "Building derivation..."
   shells ("nix-build -j 4 --cores 2 tw-sketch.nix" <> nixpath) empty
+
+dumpLogs withProf nodes = do
+    echo $ "WithProf: " <> T.pack (show withProf)
+    when withProf $ do
+        echo "Stopping nodes..."
+        shells (sshForEach args "systemctl stop timewarp") empty
+        sleep 2
+        echo "Dumping logs..."
+    (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
+    let workDir = "tw_experiments/" <> dt
+    echo workDir
+    shell ("mkdir -p " <> workDir) empty
+    sh . using $ parallel nodes (dump workDir)
+    return dt
+  where
+    dump workDir node = do
+        forM_ logs $ \(rpath, fname) -> do
+          scpFromNode args node rpath (workDir <> "/" <> fname (getNodeName node))
+    logs = mconcat
+             [ if withProf
+                  then profLogs
+                  else []
+             , defLogs
+             ]
+defLogs =
+    [ ("/home/timewarp/node.log", (<> ".log"))
+    , ("/var/log/saALL", (<> ".sar"))
+    ]
+profLogs =
+    [ 
+    --  ("/var/lib/cardano-node/cardano-node.prof", (<> ".prof"))
+    --, ("/var/lib/cardano-node/cardano-node.hp", (<> ".hp"))
+    ---- in fact, if there's a heap profile then there's no eventlog and vice versa
+    ---- but scp will just say "not found" and it's all good
+    --, ("/var/lib/cardano-node/cardano-node.eventlog", (<> ".eventlog"))
+    ]
