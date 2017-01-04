@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module CardanoLib where
+module NixOps where
 
 import Data.Char (ord)
 import Data.Yaml (FromJSON(..))

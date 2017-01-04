@@ -9,7 +9,6 @@
 
 import Turtle
 import Prelude hiding (FilePath)
-import CardanoLib
 import Control.Monad (forM_, void, when)
 import Data.Monoid ((<>))
 import Filesystem.Path.CurrentOS (encodeString)
@@ -21,6 +20,8 @@ import qualified Data.Text as T
 import GHC.Generics
 import Data.Maybe (catMaybes)
 import qualified Data.Map as M
+
+import NixOps
 
 
 data Command =

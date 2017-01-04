@@ -12,7 +12,7 @@ import Prelude hiding (FilePath)
 import qualified Data.Text as T
 import Turtle
 
-import CardanoLib
+import NixOps
 
 
 data Command =
