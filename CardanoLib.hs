@@ -1,12 +1,12 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module CardanoLib where
 
-import Turtle
 import Data.Char (ord)
+import Data.Yaml (FromJSON(..))
 import Data.Monoid ((<>))
 import qualified Data.Text as T
 import Data.Text.Lazy (fromStrict)
@@ -16,47 +16,61 @@ import qualified Data.Vector as V
 import Data.ByteString.Lazy.Char8 (ByteString, pack)
 import GHC.Generics
 import Safe (headMay)
+import Turtle hiding (FilePath)
 
--- Custom build with https://github.com/NixOS/nixops/pull/550
-nixops = "~/nixops/result/bin/nixops "
 
-type NixOpsArgs = Text
-type DeploymentName = Text
+data NixOpsConfig = NixOpsConfig
+  { deploymentName :: Text
+  , deploymentFiles :: [Text]
+  , nixopsExecutable :: Text
+  , nixPath :: Text
+  } deriving (Generic, Show)
 
-newtype IP = IP { getIP :: Text }
-   deriving (Show, Generic, FromField)
-newtype NodeName = NodeName { getNodeName :: Text }
-   deriving (Show, Generic, FromField)
+instance FromJSON NixOpsConfig
 
-deploy :: NixOpsArgs -> IO ()
-deploy args = do
+
+-- deprecated
+getArgs :: NixOpsConfig -> Text
+getArgs c =
+  " -d " <> deploymentName c <> " -I " <> nixPath c <> " "
+
+getArgsList :: NixOpsConfig -> [Text]
+getArgsList c =
+  ["-d", deploymentName c, "-I", nixPath c]
+
+deploy :: NixOpsConfig -> IO ()
+deploy c = do
   echo "Deploying cluster..."
   -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
-  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) SMART_GEN_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4) " <> nixops <> "deploy" <> args <> "--max-concurrent-copy 50 -j 4") empty
+  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) SMART_GEN_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4) " <> nixopsExecutable c <> " deploy" <> getArgs c <> "--max-concurrent-copy 50 -j 4") empty
   echo "Done."
 
-destroy :: NixOpsArgs -> IO ()
-destroy args = do
+destroy :: NixOpsConfig -> IO ()
+destroy c = do
   echo "Destroying cluster..."
-  shells (nixops <> "destroy" <> args <> " --confirm") empty
+  procs (nixopsExecutable c) (["destroy"] ++ getArgsList c ++ ["--confirm"]) empty
   echo "Done."
 
-fromscratch :: NixOpsArgs -> DeploymentName -> IO ()
-fromscratch args deployment = do
-  destroy args
-  shells (nixops <> "delete" <> args <> " --confirm") empty
-  shells (nixops <> "create" <> deployment <> args) empty
-  deploy args
+fromscratch :: NixOpsConfig -> IO ()
+fromscratch c = do
+  destroy c
+  procs (nixopsExecutable c) (["delete"] ++ getArgsList c ++ ["--confirm"]) empty
+  create c
+  deploy c
 
+create :: NixOpsConfig -> IO ()
+create c =
+  procs (nixopsExecutable c) (["create"] ++ deploymentFiles c ++ (getArgsList c)) empty
 
 -- Check if nodes are online and reboots them if they timeout
-checkstatus :: NixOpsArgs -> IO ()
-checkstatus args = do
-  nodes <- getNodes args
-  sh . using $ parallel nodes $ rebootIfDown args
+checkstatus :: NixOpsConfig -> IO ()
+checkstatus c = do
+  nodes <- getNodes c
+  sh . using $ parallel nodes $ rebootIfDown c
 
 
 -- Helper to run commands in parallel and wait for all results
+-- TODO: use upstream parallel
 parallel :: [a] -> (a -> IO ()) -> Managed ()
 parallel (first:rest) action = do
   async <- using $ fork $ action first
@@ -64,43 +78,49 @@ parallel (first:rest) action = do
   liftIO (wait async)
 parallel [] _ = return ()
 
-rebootIfDown :: NixOpsArgs -> NodeName -> IO ()
-rebootIfDown args (getNodeName -> node) = do
-  x <- shell (nixops <> "ssh " <> args <> node <> " -o ConnectTimeout=5 echo -n") empty
+rebootIfDown :: NixOpsConfig -> NodeName -> IO ()
+rebootIfDown c (getNodeName -> node) = do
+  x <- shell (nixopsExecutable c <> " ssh " <> getArgs c <> node <> " -o ConnectTimeout=5 echo -n") empty
   case x of
     ExitSuccess -> return ()
     ExitFailure _ -> do
       echo $ "Rebooting " <> node
-      shells (nixops <> "reboot " <> args <> "--include " <> node) empty
+      procs (nixopsExecutable c) (["reboot"] ++ getArgsList c ++ ["--include", node]) empty
 
-ssh :: NixOpsArgs -> Text -> NodeName -> IO ()
-ssh args = ssh' args $ const $ return ()
+ssh :: NixOpsConfig -> Text -> NodeName -> IO ()
+ssh c = ssh' c $ const $ return ()
 
-ssh' :: NixOpsArgs -> (Text -> IO ()) -> Text -> NodeName -> IO ()
-ssh' args f cmd' (getNodeName -> node) = do
+ssh' :: NixOpsConfig -> (Text -> IO ()) -> Text -> NodeName -> IO ()
+ssh' c f cmd' (getNodeName -> node) = do
     (exitcode, output) <- shellStrict cmd empty
     f output
     case exitcode of
         ExitSuccess -> return ()
         ExitFailure code -> echo $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
   where
-    cmd = nixops <> "ssh " <> args <> node <> " -- " <> cmd'
+    cmd = nixopsExecutable c <> " ssh " <> getArgs c <> node <> " -- " <> cmd'
 
-scpFromNode :: NixOpsArgs -> NodeName -> Text -> Text -> IO ()
-scpFromNode args (getNodeName -> node) from to = do
-  (exitcode, output) <- shellStrict (nixops <> "scp" <> args <> "--from " <> node <> " " <> from <> " " <> to) empty
+scpFromNode :: NixOpsConfig -> NodeName -> Text -> Text -> IO ()
+scpFromNode c (getNodeName -> node) from to = do
+  (exitcode, output) <- shellStrict (nixopsExecutable c <> " scp" <> getArgs c <> "--from " <> node <> " " <> from <> " " <> to) empty
   case exitcode of
     ExitSuccess -> return ()
     ExitFailure code -> echo $ "Scp from " <> node <> " failed with " <> (T.pack $ show code)
 
-sshForEach args cmd = nixops <> "ssh-for-each" <> args <> " -- " <> cmd
+sshForEach :: NixOpsConfig -> Text -> Text
+sshForEach c cmd = nixopsExecutable c <> " ssh-for-each" <> getArgs c <> " -- " <> cmd
 
 -- Functions for extracting information out of nixops info command
 
+newtype IP = IP { getIP :: Text }
+   deriving (Show, Generic, FromField)
+newtype NodeName = NodeName { getNodeName :: Text }
+   deriving (Show, Generic, FromField)
+
 -- | Get all node IPs in EC2 cluster
-getNodes :: NixOpsArgs -> IO [NodeName]
-getNodes args = do
-  result <- (fmap . fmap) (map diName . toNodesInfo) $ info args
+getNodes :: NixOpsConfig -> IO [NodeName]
+getNodes c = do
+  result <- (fmap . fmap) (map diName . toNodesInfo) $ info c
   case result of
     Left s -> do
         echo $ T.pack s
@@ -132,9 +152,9 @@ nixopsDecodeOptions = defaultDecodeOptions {
     decDelimiter = fromIntegral (ord '\t')
   }
 
-info :: NixOpsArgs -> IO (Either String (V.Vector DeploymentInfo))
-info args = do
-  (exitcode, nodes) <- shellStrict (nixops <> "info --no-eval --plain" <> args) empty
+info :: NixOpsConfig -> IO (Either String (V.Vector DeploymentInfo))
+info c = do
+  (exitcode, nodes) <- shellStrict (nixopsExecutable c <> " info --no-eval --plain" <> getArgs c) empty
   case exitcode of
     ExitFailure code -> return $ Left ("Parsing info failed with exit code " <> show code)
     ExitSuccess -> return $ decodeWith nixopsDecodeOptions NoHeader (encodeUtf8 $ fromStrict nodes)

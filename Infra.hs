@@ -1,14 +1,23 @@
 #!/usr/bin/env nix-shell
-#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle cassava vector safe ])'
+#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle cassava vector safe yaml ])'
 
 {-# LANGUAGE OverloadedStrings #-}
 
 import Turtle
-import CardanoLib
 import Data.Monoid ((<>))
 import qualified Data.Text as T
 import GHC.Conc (threadDelay)
 
+import NixOps
+
+
+c :: NixOpsConfig
+c = NixOpsConfig
+  { deploymentName = "serokell-infra"
+  , deploymentFiles = ["deployments/infrastructure.nix"]
+  , nixopsExecutable = "nixops"
+  , nixPath = "nixpkgs=$HOME/nixpkgs-hydra"
+  }
 
 data Command =
     Deploy
@@ -24,18 +33,11 @@ parser =
   <|> subcommand "fromscratch" "Destroy, Delete, Create, Deploy" (pure FromScratch)
   <|> subcommand "checkstatus" "Check if nodes are accessible via ssh and reboot if they timeout" (pure CheckStatus)
 
-
-
-nixpath = " -I nixpkgs=$HOME/nixpkgs-hydra "
-args = " -d serokell-infra" <> nixpath
-deployment = " deployments/infrastructure.nix "
-
-
 main :: IO ()
 main = do
   command <- options "Helper CLI around NixOps to run experiments" parser
   case command of
-    Deploy -> deploy args
-    Destroy -> destroy args
-    FromScratch -> fromscratch args deployment
-    CheckStatus -> checkstatus args
+    Deploy -> deploy c
+    Destroy -> destroy c
+    FromScratch -> fromscratch c
+    CheckStatus -> checkstatus c

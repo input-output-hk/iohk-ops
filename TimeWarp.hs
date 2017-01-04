@@ -1,15 +1,19 @@
 #!/usr/bin/env nix-shell
-#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle cassava vector safe ])'
+#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle cassava vector safe yaml ])'
 
 {-# LANGUAGE OverloadedStrings #-}
 
-import Turtle
-import CardanoLib
-import Data.Monoid ((<>))
-import qualified Data.Text as T
-import GHC.Conc (threadDelay)
-
 import Control.Monad (forM_)
+import Data.Monoid ((<>))
+import Data.Yaml (decodeFile)
+import Filesystem.Path.CurrentOS (encodeString)
+import GHC.Conc (threadDelay)
+import Prelude hiding (FilePath)
+import qualified Data.Text as T
+import Turtle
+
+import CardanoLib
+
 
 data Command =
     Deploy
@@ -20,8 +24,8 @@ data Command =
   | Build
   deriving (Show)
 
-parser :: Parser Command
-parser =
+subparser :: Parser Command
+subparser =
       subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
   <|> subcommand "destroy" "Destroy the whole cluster" (pure Destroy)
   <|> subcommand "build" "Build the application" (pure Build)
@@ -29,6 +33,10 @@ parser =
   <|> subcommand "checkstatus" "Check if nodes are accessible via ssh and reboot if they timeout" (pure CheckStatus)
   <|> subcommand "runexperiment" "Deploy cluster and perform measurements" (pure RunExperiment)
 
+
+parser :: Parser (FilePath, Command)
+parser = (,) <$> optPath "config" 'c' "Configuration file"
+             <*> subparser
 
 
 args = " -d time-warp" <> nixpath
@@ -38,39 +46,41 @@ deployment = " deployments/timewarp.nix "
 
 main :: IO ()
 main = do
-  command <- options "Helper CLI around NixOps to run experiments" parser
+  (configFile, command) <- options "Helper CLI around NixOps to run experiments" parser
+  Just c <- decodeFile $ encodeString configFile
   case command of
-    Deploy -> deploy args
-    Destroy -> destroy args
-    FromScratch -> fromscratch args deployment
-    CheckStatus -> checkstatus args
-    RunExperiment -> runexperiment
-    Build -> build
+    Deploy -> deploy c
+    Destroy -> destroy c
+    FromScratch -> fromscratch c
+    CheckStatus -> checkstatus c
+    RunExperiment -> runexperiment c
+    Build -> build c
     -- TODO: invoke nixops with passed parameters
 
-runexperiment :: IO ()
-runexperiment = do
+runexperiment :: NixOpsConfig -> IO ()
+runexperiment c = do
   -- build
   --checkstatus
   --deploy
-  shells (sshForEach args "systemctl stop timewarp") empty
-  shells (sshForEach args "rm -f /home/timewarp/node.log") empty
-  nodes <- getNodes args
-  shells (sshForEach args "systemctl start timewarp") empty
+  shells (sshForEach c "systemctl stop timewarp") empty
+  shells (sshForEach c "rm -f /home/timewarp/node.log") empty
+  nodes <- getNodes c
+  shells (sshForEach c "systemctl start timewarp") empty
   threadDelay (150*1000000)
-  dt <- dumpLogs False nodes
+  dt <- dumpLogs c False nodes
   echo $ "Log dir: tw_experiments/" <> dt
 
-build :: IO ()
-build = do
+build :: NixOpsConfig -> IO ()
+build c = do
   echo "Building derivation..."
-  shells ("nix-build -j 4 --cores 2 tw-sketch.nix" <> nixpath) empty
+  shells ("nix-build -j 4 --cores 2 tw-sketch.nix" <> nixPath c) empty
 
-dumpLogs withProf nodes = do
+dumpLogs :: NixOpsConfig -> Bool ->  [NodeName] -> IO Text
+dumpLogs c withProf nodes = do
     echo $ "WithProf: " <> T.pack (show withProf)
     when withProf $ do
         echo "Stopping nodes..."
-        shells (sshForEach args "systemctl stop timewarp") empty
+        shells (sshForEach c "systemctl stop timewarp") empty
         sleep 2
         echo "Dumping logs..."
     (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
@@ -82,7 +92,7 @@ dumpLogs withProf nodes = do
   where
     dump workDir node = do
         forM_ logs $ \(rpath, fname) -> do
-          scpFromNode args node rpath (workDir <> "/" <> fname (getNodeName node))
+          scpFromNode c node rpath (workDir <> "/" <> fname (getNodeName node))
     logs = mconcat
              [ if withProf
                   then profLogs
