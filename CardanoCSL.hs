@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle cassava vector safe aeson ])'
+#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle cassava vector safe aeson yaml ])'
 
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -8,10 +8,12 @@
 {-# LANGUAGE ViewPatterns   #-}
 
 import Turtle
-import CardanoLib
+import Prelude hiding (FilePath)
 import Control.Monad (forM_, void, when)
 import Data.Monoid ((<>))
+import Filesystem.Path.CurrentOS (encodeString)
 import Data.Aeson
+import Data.Yaml (decodeFile)
 import Data.Text.Lazy (fromStrict)
 import Data.Text.Lazy.Encoding (encodeUtf8)
 import qualified Data.Text as T
@@ -19,9 +21,12 @@ import GHC.Generics
 import Data.Maybe (catMaybes)
 import qualified Data.Map as M
 
+import NixOps
+
 
 data Command =
     Deploy
+  | Create
   | Destroy
   | FromScratch
   | CheckStatus
@@ -35,9 +40,10 @@ data Command =
   | PrintDate
   deriving (Show)
 
-parser :: Parser Command
-parser =
+subparser :: Parser Command
+subparser =
       subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
+  <|> subcommand "create" "Create the whole cluster" (pure Create)
   <|> subcommand "destroy" "Destroy the whole cluster" (pure Destroy)
   <|> subcommand "build" "Build the application" (pure Build)
   <|> subcommand "fromscratch" "Destroy, Delete, Create, Deploy" (pure FromScratch)
@@ -50,53 +56,54 @@ parser =
   <|> subcommand "date" "Print date/time" (pure PrintDate)
   <|> subcommand "ami" "Build ami" (pure AMI)
 
-
-args = " -d cardano" <> nixpath
-nixpath = " -I ~/ "
-deployment = " deployments/cardano.nix "
+parser :: Parser (FilePath, Command)
+parser = (,) <$> optPath "config" 'c' "Configuration file"
+             <*> subparser
 
 main :: IO ()
 main = do
-  --dat <- fmap toNodesInfo <$> info args
-  dat <- getSmartGenCmd
+  (configFile, command) <- options "Helper CLI around NixOps to run experiments" parser
+  Just c <- decodeFile $ encodeString configFile
+  --dat <- fmap toNodesInfo <$> info c
+  dat <- getSmartGenCmd c
   echo $ T.pack $ show dat
-  command <- options "Helper CLI around NixOps to run experiments" parser
   case command of
-    Deploy -> deploy args
-    Destroy -> destroy args
-    FromScratch -> fromscratch args deployment
-    CheckStatus -> checkstatus args
-    RunExperiment -> runexperiment
-    PostExperiment -> postexperiment
-    Build -> build
-    DumpLogs {..} -> getNodes args >>= void . dumpLogs withProf
-    Start -> getNodes args >>= startCardanoNodes
-    Stop -> getNodes args >>= stopCardanoNodes
-    AMI -> buildAMI
-    PrintDate -> getNodes args >>= printDate
+    Deploy -> deploy c
+    Create -> create c
+    Destroy -> destroy c
+    FromScratch -> fromscratch c
+    CheckStatus -> checkstatus c
+    RunExperiment -> runexperiment c
+    PostExperiment -> postexperiment c
+    Build -> build c
+    DumpLogs {..} -> getNodes c >>= void . dumpLogs c withProf
+    Start -> getNodes c >>= startCardanoNodes c
+    Stop -> getNodes c >>= stopCardanoNodes c
+    AMI -> buildAMI c
+    PrintDate -> getNodes c >>= printDate c
     -- TODO: invoke nixops with passed parameters
 
-buildAMI :: IO ()
-buildAMI = do
-  shells ("GENERATING_AMI=1 nix-build jobsets/cardano.nix -A image -o image " <> nixpath) empty
+buildAMI :: NixOpsConfig -> IO ()
+buildAMI c = do
+  shells ("GENERATING_AMI=1 nix-build jobsets/cardano.nix -A image -o image -I " <> nixPath c) empty
   shells "./scripts/create-amis.sh" empty
 
-build :: IO ()
-build = do
+build :: NixOpsConfig -> IO ()
+build c = do
   echo "Building derivation..."
-  shells ("nix-build -j 4 --cores 2 default.nix" <> nixpath) empty
+  shells ("nix-build -j 4 --cores 2 default.nix -I " <> nixPath c) empty
 
-getNodesMap :: IO (Either String (M.Map Int DeploymentInfo))
-getNodesMap = fmap (toMap . toNodesInfo) <$> info args
+getNodesMap :: NixOpsConfig -> IO (Either String (M.Map Int DeploymentInfo))
+getNodesMap c = fmap (toMap . toNodesInfo) <$> info c
   where
     toMap :: [DeploymentInfo] -> M.Map Int DeploymentInfo
     toMap = M.fromList . catMaybes . map (\d -> (,d) <$> extractName (T.unpack . getNodeName $ diName d))
     extractName ('n':'o':'d':'e':rest) = Just $ read rest
     extractName _ = Nothing
 
-getSmartGenCmd :: IO Text
-getSmartGenCmd = do
-  result <- getNodesMap
+getSmartGenCmd :: NixOpsConfig -> IO Text
+getSmartGenCmd c = do
+  result <- getNodesMap c
   case result of
     Left (T.pack -> err) -> echo err >> return err
     Right nodes ->
@@ -133,14 +140,8 @@ getSmartGenCmd = do
                                  ]
               in pure cliCmd
 
-dhtKeyPrefix :: String
-dhtKeyPrefix = "MHdrsP-oPf7UWl"
-
-dhtKeySuffix :: String
-dhtKeySuffix = "7QuXnLK5RD="
-
 genDhtKey :: Int -> Text
-genDhtKey i = T.pack $ dhtKeyPrefix ++ padding ++ show i ++ dhtKeySuffix
+genDhtKey i = T.pack $ "MHdrsP-oPf7UWl" ++ padding ++ show i ++ "7QuXnLK5RD="
   where
     padding | i < 10    = "00"
             | i < 100   = "0"
@@ -152,35 +153,36 @@ genPeers port = mconcat . map impl
     impl (i, getIP . diPublicIP -> ip) = " --peer " <> ip <> ":" <> port' <> "/" <> genDhtKey i
     port' = T.pack $ show port
 
-runexperiment :: IO ()
-runexperiment = do
+runexperiment :: NixOpsConfig -> IO ()
+runexperiment c = do
   -- TODO: use info to avoid shell call
-  nodes <- getNodes args
+  nodes <- getNodes c
   -- build
   echo "Checking nodes' status, rebooting failed"
-  checkstatus args
+  checkstatus c
   --deploy
   echo "Stopping nodes..."
-  stopCardanoNodes nodes
+  stopCardanoNodes c nodes
   echo "Starting nodes..."
-  startCardanoNodes nodes
+  startCardanoNodes c nodes
   echo "Delaying... (40s)"
   sleep 40
   echo "Launching txgen"
   shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications*.csv smart-gen-tps.csv") empty
-  cliCmd <- getSmartGenCmd
+  cliCmd <- getSmartGenCmd c
   shells cliCmd empty 
   echo "Delaying... (150s)"
   sleep 150
-  postexperiment
+  postexperiment c
 
-postexperiment = do
-  nodes <- getNodes args
+postexperiment :: NixOpsConfig -> IO ()
+postexperiment c = do
+  nodes <- getNodes c
   echo "Checking nodes' status, rebooting failed"
-  checkstatus args
+  checkstatus c
   echo "Retreive logs..."
-  dt <- dumpLogs True nodes
-  cliCmd <- getSmartGenCmd
+  dt <- dumpLogs c True nodes
+  cliCmd <- getSmartGenCmd c
   let dirname = "./experiments/" <> dt
   shells ("echo \"" <> cliCmd <> "\" > " <> dirname <> "/txCommandLine") empty
   shells ("echo -n \"cardano-sl revision: \" > " <> dirname <> "/revisions.info") empty
@@ -192,11 +194,12 @@ postexperiment = do
   --shells (foldl (\s n -> s <> " --file " <> n <> ".json") ("sh -c 'cd " <> workDir <> "; ./result/bin/cardano-analyzer --tx-file timestampsTxSender.json") nodes <> "'") empty
   shells ("tar -czf experiments/" <> dt <> ".tgz experiments/" <> dt) empty
   
-dumpLogs withProf nodes = do
+dumpLogs :: NixOpsConfig -> Bool -> [NodeName] -> IO Text
+dumpLogs c withProf nodes = do
     echo $ "WithProf: " <> T.pack (show withProf)
     when withProf $ do
         echo "Stopping nodes..."
-        stopCardanoNodes nodes
+        stopCardanoNodes c nodes
         sleep 2
         echo "Dumping logs..."
     (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
@@ -208,7 +211,7 @@ dumpLogs withProf nodes = do
   where
     dump workDir node = do
         forM_ logs $ \(rpath, fname) -> do
-          scpFromNode args node rpath (workDir <> "/" <> fname (getNodeName node))
+          scpFromNode c node rpath (workDir <> "/" <> fname (getNodeName node))
     logs = mconcat
              [ if withProf
                   then profLogs
@@ -230,15 +233,15 @@ profLogs =
     ]
    
 
-printDate nodes = do
-    sh . using $ parallel nodes (\n -> ssh' args (\s -> echo $ "Date on " <> getNodeName n <> ": " <> s) "date" n)
+printDate c nodes = do
+    sh . using $ parallel nodes (\n -> ssh' c (\s -> echo $ "Date on " <> getNodeName n <> ": " <> s) "date" n)
 
-stopCardanoNodes = sh . using . flip parallel (ssh args cmd)
+stopCardanoNodes c = sh . using . flip parallel (ssh c cmd)
   where
     cmd = "systemctl stop cardano-node"
 
-startCardanoNodes nodes = do
-    sh . using $ parallel nodes (ssh args $ "'" <> rmCmd <> ";" <> startCmd <> "'")
+startCardanoNodes c nodes = do
+    sh . using $ parallel nodes (ssh c $ "'" <> rmCmd <> ";" <> startCmd <> "'")
   where
     rmCmd = foldl (\s (f, _) -> s <> " " <> f) "rm -f" logs
     startCmd = "systemctl start cardano-node"
