@@ -4,6 +4,7 @@ let
   timeWarpReceiver = region: keypair: testIndex: { pkgs, resources, ... }: {
     imports = [ ./../modules/timewarp-node.nix ];
     services.timewarp-node.enable = true;
+    networking.firewall.enable = mkForce false;
   } // optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = mkForce region;
     deployment.ec2.keyPair = mkForce (keypair resources.ec2KeyPairs);
@@ -20,7 +21,6 @@ let
   rcv-node-sa = timeWarpReceiver "sa-east-1" (pairs: pairs.cardano-test-sa);
 in 
   (genAttrs' (range 0 0) (key: "timewarp${toString key}") (name: snd-node-eu name)) // 
-  (genAttrs' (range 1 2) (key: "timewarp${toString key}") (name: rcv-node-eu name)) // 
   (genAttrs' (range 1 2) (key: "timewarp${toString key}") (name: rcv-node-eu name)) // 
   (genAttrs' (range 3 4) (key: "timewarp${toString key}") (name: rcv-node-eu name)) // 
 {

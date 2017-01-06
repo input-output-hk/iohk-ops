@@ -115,7 +115,7 @@ getSmartGenCmd c = do
             Left (T.pack -> err) -> echo err >> return err
             Right c ->
               let
-                tmc = T.pack $ show (totalMoneyAmount c)
+                cshow f = T.pack $ show (f c)
                 bot = (if bitcoinOverFlat c then "bitcoin" else "flat")
                 gn = T.pack $ show (genesisN c)
                 recipShare = "0.3"
@@ -125,18 +125,18 @@ getSmartGenCmd c = do
                 cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
                                  , " +RTS -N -pa -hc -T -A4G -qg -RTS"
                                  --, " +RTS -N -A4G -qg -RTS"
-                                 , " -i 0"
+                                 , (T.pack . mconcat $ map (\i -> " -i " <> show i) $ txgenAddresses c)
                                  , if enableP2P c
                                       then " --explicit-initial --disable-propagation "
                                       else ""
                                  , peers
-                                 , " -R 5 -N 3 -p 0"
-                                 , " --init-money ", tmc
-                                 , " -t 10 -S 5 -P 2"
+                                 , " -R ", cshow txgenR," -N ", cshow txgenN," -p ", cshow txgenPause
+                                 , " --init-money ", cshow totalMoneyAmount
+                                 , " -t ", cshow txgenInitTps, " -S ", cshow txgenTpsStep, " -P ", cshow txgenP
                                  , " --recipients-share " <> (if enableP2P c then "0.3" else "1")
                                  , " --log-config static/txgen-logging.yaml"
                                  , " --json-log=txgen.json"
-                                 , " --", bot, "-distr '(", gn, ",", tmc, ")'"
+                                 , " --", bot, "-distr '(", gn, ",", cshow totalMoneyAmount, ")'"
                                  ]
               in pure cliCmd
 
@@ -256,6 +256,13 @@ data Config = Config
   , networkDiameter :: Int
   , slotDuration :: Int
   , enableP2P :: Bool
+  , txgenR :: Int
+  , txgenN :: Int
+  , txgenPause :: Int
+  , txgenP :: Int
+  , txgenInitTps :: Int
+  , txgenTpsStep :: Int
+  , txgenAddresses :: [Int]
   } deriving (Generic, Show)
 
 instance FromJSON Config
