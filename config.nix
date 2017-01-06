@@ -17,5 +17,5 @@ rec {
   txgenInitTps = 10;
   txgenTpsStep = 5;
   txgenP = 2;
-  txgenAddresses = [ 1 ];
+  txgenAddresses = [ 0 ];
 } 
