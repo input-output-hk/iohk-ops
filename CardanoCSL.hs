@@ -8,7 +8,7 @@
 {-# LANGUAGE ViewPatterns   #-}
 
 import Control.Monad.Except (ExceptT (..), runExceptT)
-import Turtle
+import Turtle hiding (printf)
 import Prelude hiding (FilePath)
 import Control.Monad (forM_, void, when)
 import Data.Monoid ((<>))
@@ -20,6 +20,7 @@ import Data.Text.Lazy.Encoding (encodeUtf8)
 import qualified Data.Text as T
 import GHC.Generics
 import Data.Maybe (catMaybes)
+import Text.Printf
 import qualified Data.Map as M
 
 import NixOps
@@ -135,11 +136,7 @@ getSmartGenCmd c = runError $ do
   return cliCmd
 
 genDhtKey :: Int -> Text
-genDhtKey i = T.pack $ "MHdrsP-oPf7UWl" ++ padding ++ show i ++ "7QuXnLK5RD="
-  where
-    padding | i < 10    = "00"
-            | i < 100   = "0"
-            | otherwise = ""
+genDhtKey i = "MHdrsP-oPf7UWl" <> (T.pack $ printf "%.3d" i) <> "7QuXnLK5RD="
 
 genPeers :: Int -> [(Int, DeploymentInfo)] -> Text
 genPeers port = mconcat . map impl
