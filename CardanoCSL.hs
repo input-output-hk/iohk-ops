@@ -7,6 +7,7 @@
 {-# LANGUAGE TupleSections   #-}
 {-# LANGUAGE ViewPatterns   #-}
 
+import Control.Monad.Except (ExceptT (..), runExceptT)
 import Turtle
 import Prelude hiding (FilePath)
 import Control.Monad (forM_, void, when)
@@ -22,7 +23,6 @@ import Data.Maybe (catMaybes)
 import qualified Data.Map as M
 
 import NixOps
-
 
 data Command =
     Deploy
@@ -101,44 +101,42 @@ getNodesMap c = fmap (toMap . toNodesInfo) <$> info c
     extractName ('n':'o':'d':'e':rest) = Just $ read rest
     extractName _ = Nothing
 
+runError :: ExceptT String IO Text -> IO Text
+runError action = runExceptT action >>=
+  either (\(T.pack -> err) -> echo err >> return err) pure
+
+maybeToRight :: b -> Maybe a -> Either b a
+maybeToRight b Nothing  = Left b
+maybeToRight _ (Just a) = Right a
+
+show' :: Show a => a -> Text
+show' = T.pack . show
+
 getSmartGenCmd :: NixOpsConfig -> IO Text
-getSmartGenCmd c = do
-  result <- getNodesMap c
-  case result of
-    Left (T.pack -> err) -> echo err >> return err
-    Right nodes ->
-      case 0 `M.lookup` nodes of
-        Nothing -> echo "Node0 retrieval failed" >> return "Node0 retrieval failed"
-        Just node0 -> do
-          config <- getConfig
-          case config of
-            Left (T.pack -> err) -> echo err >> return err
-            Right c ->
-              let
-                cshow f = T.pack $ show (f c)
-                bot = (if bitcoinOverFlat c then "bitcoin" else "flat")
-                gn = T.pack $ show (genesisN c)
-                recipShare = "0.3"
-                peers = if enableP2P c
-                           then genPeers (nodePort c) [(0, node0)]
-                           else genPeers (nodePort c) $ M.toList nodes
-                cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
-                                 , " +RTS -N -pa -hc -T -A4G -qg -RTS"
-                                 --, " +RTS -N -A4G -qg -RTS"
-                                 , (T.pack . mconcat $ map (\i -> " -i " <> show i) $ txgenAddresses c)
-                                 , if enableP2P c
-                                      then " --explicit-initial --disable-propagation "
-                                      else ""
-                                 , peers
-                                 , " -R ", cshow txgenR," -N ", cshow txgenN," -p ", cshow txgenPause
-                                 , " --init-money ", cshow totalMoneyAmount
-                                 , " -t ", cshow txgenInitTps, " -S ", cshow txgenTpsStep, " -P ", cshow txgenP
-                                 , " --recipients-share " <> (if enableP2P c then "0.3" else "1")
-                                 , " --log-config static/txgen-logging.yaml"
-                                 , " --json-log=txgen.json"
-                                 , " --", bot, "-distr '(", gn, ",", cshow totalMoneyAmount, ")'"
-                                 ]
-              in pure cliCmd
+getSmartGenCmd c = runError $ do
+  nodes <- ExceptT $ getNodesMap c
+  config@Config{..} <- ExceptT $ getConfig
+  peers <- ExceptT $ return $ getPeers c config nodes  
+
+  let bot = if bitcoinOverFlat then "bitcoin" else "flat"
+      recipShare = "0.3"
+      cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
+                       , " +RTS -N -pa -hc -T -A4G -qg -RTS"
+                       --, " +RTS -N -A4G -qg -RTS"
+                       , (T.pack . mconcat $ map (\i -> " -i " <> show i) txgenAddresses)
+                       , if enableP2P
+                         then " --explicit-initial --disable-propagation "
+                         else ""
+                       , peers
+                       , " -R ", show' txgenR," -N ", show' txgenN," -p ", show' txgenPause
+                       , " --init-money ", show' totalMoneyAmount
+                       , " -t ", show' txgenInitTps, " -S ", show' txgenTpsStep, " -P ", show' txgenP
+                       , " --recipients-share " <> if enableP2P then recipShare else "1"
+                       , " --log-config static/txgen-logging.yaml"
+                       , " --json-log=txgen.json"
+                       , " --", bot, "-distr '(", show' genesisN, ",", show' totalMoneyAmount, ")'"
+                       ]
+  return cliCmd
 
 genDhtKey :: Int -> Text
 genDhtKey i = T.pack $ "MHdrsP-oPf7UWl" ++ padding ++ show i ++ "7QuXnLK5RD="
@@ -152,6 +150,38 @@ genPeers port = mconcat . map impl
   where
     impl (i, getIP . diPublicIP -> ip) = " --peer " <> ip <> ":" <> port' <> "/" <> genDhtKey i
     port' = T.pack $ show port
+
+getPeers :: NixOpsConfig -> Config -> M.Map Int DeploymentInfo -> Either String Text
+getPeers c config nodes = do
+  case M.lookup 0 nodes of
+    Nothing -> Left "Node0 retrieval failed"
+    Just node0 -> let port = nodePort config
+                      infos = if enableP2P config then [(0, node0)] else M.toList nodes
+                  in Right $ genPeers port infos
+
+getWalletDelegationCmd :: NixOpsConfig -> IO Text
+getWalletDelegationCmd c = runError $ do
+  nodes <- ExceptT $ getNodesMap c
+  config@Config{..} <- ExceptT $ getConfig
+  peers <- ExceptT $ return $ getPeers c config nodes
+ 
+  let mkCmd i = "delegate-light " <> show' i <> " " <> show' delegationNode
+      cmds = T.intercalate "," $ map mkCmd $ filter (/= delegationNode) $ M.keys nodes
+      bot = if bitcoinOverFlat then "bitcoin" else "flat"
+      cliCmd = mconcat [ "./result/bin/cardano-wallet"
+                       , " +RTS -N -pa -hc -T -A4G -qg -RTS"
+                       --, " +RTS -N -A4G -qg -RTS"
+                       , if enableP2P
+                         then " --explicit-initial --disable-propagation "
+                         else ""
+                       , peers
+                       , " --log-config static/wallet-logging.yaml"
+                       , " --json-log=wallet.json"
+                       , " --", bot, "-distr '(", show' genesisN, ",", show' totalMoneyAmount, ")'"
+                       , " cmd --commands \"", cmds, "\""
+                       ]
+ 
+  return cliCmd 
 
 runexperiment :: NixOpsConfig -> IO ()
 runexperiment c = do
@@ -167,6 +197,14 @@ runexperiment c = do
   startCardanoNodes c nodes
   echo "Delaying... (40s)"
   sleep 40
+  config <- either error id <$> getConfig
+  when (enableDelegation config) $ do
+    echo "Launching wallet to send delegation certs"
+    shells "rm -f wallet.log wallet.json" empty
+    cliCmd <- getWalletDelegationCmd c
+    shells (cliCmd <> " | awk '{print}; /Command execution finished/ {exit}'") empty
+    echo "Delaying... (40s)"
+    sleep 40
   echo "Launching txgen"
   shells ("rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications*.csv smart-gen-tps.csv") empty
   cliCmd <- getSmartGenCmd c
@@ -263,6 +301,8 @@ data Config = Config
   , txgenInitTps :: Int
   , txgenTpsStep :: Int
   , txgenAddresses :: [Int]
+  , enableDelegation :: Bool
+  , delegationNode :: Int
   } deriving (Generic, Show)
 
 instance FromJSON Config

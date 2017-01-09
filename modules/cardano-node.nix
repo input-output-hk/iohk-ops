@@ -21,7 +21,9 @@ let
     "--port ${toString cfg.port}"
     "--rebuild-db"
     # Profiling
-    "+RTS -N -pa -hb -T -A6G -qg -RTS"
+    # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
+    # (it actually happened)
+    #"+RTS -N -pa -hb -T -A6G -qg -RTS"
     # Event logging (cannot be used with profiling)
     #"+RTS -N -T -l -A6G -qg -RTS"
     (enableIf cfg.stats "--stats")
@@ -35,7 +37,6 @@ let
     "--dht-key ${cfg.dhtKey}"
     (enableIf cfg.supporter "--supporter")
     (enableIf cfg.timeLord "--time-lord")
-    "--memory-mode" #add option to nixops.nix
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
     (enableIf (! cfg.enableP2P) "--explicit-initial --disable-propagation ${smartGenPeer}")
@@ -106,7 +107,7 @@ in
       serviceConfig = {
         User = "cardano-node";
         Group = "cardano-node";
-        Restart = "always";
+#        Restart = "always";
         StartLimitInterval=0;
         KillSignal = "SIGINT";
         WorkingDirectory = stateDir;
