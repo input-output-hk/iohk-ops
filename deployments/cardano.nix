@@ -15,7 +15,7 @@ let
       jsonLog = false;
       distribution = true;
 
-      inherit (cconf) genesisN slotDuration networkDiameter mpcRelayInterval totalMoneyAmount bitcoinOverFlat;
+      inherit (cconf) enableP2P genesisN slotDuration networkDiameter mpcRelayInterval totalMoneyAmount bitcoinOverFlat;
     };
   } // optionalAttrs (generatingAMI != "1") {
     deployment.ec2.region = mkForce region;
@@ -34,7 +34,6 @@ let
     imports = [ (nodeGenericConfig testIndex region keypair) ];
 
     services.cardano-node = {
-      inherit (cconf) enableP2P;
     };
   };
 
