@@ -9,6 +9,7 @@ import Data.Char (ord)
 import Data.Yaml (FromJSON(..))
 import Data.Monoid ((<>))
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import Data.Text.Lazy (fromStrict)
 import Data.Text.Lazy.Encoding (encodeUtf8)
 import Data.Csv (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
@@ -66,17 +67,10 @@ create c =
 checkstatus :: NixOpsConfig -> IO ()
 checkstatus c = do
   nodes <- getNodes c
-  sh . using $ parallel nodes $ rebootIfDown c
+  parallelIO $ fmap (rebootIfDown c) nodes 
 
-
--- Helper to run commands in parallel and wait for all results
--- TODO: use upstream parallel
-parallel :: [a] -> (a -> IO ()) -> Managed ()
-parallel (first:rest) action = do
-  async <- using $ fork $ action first
-  parallel rest action
-  liftIO (wait async)
-parallel [] _ = return ()
+parallelIO :: [IO a] -> IO ()
+parallelIO = sh . parallel
 
 rebootIfDown :: NixOpsConfig -> NodeName -> IO ()
 rebootIfDown c (getNodeName -> node) = do
@@ -84,7 +78,7 @@ rebootIfDown c (getNodeName -> node) = do
   case x of
     ExitSuccess -> return ()
     ExitFailure _ -> do
-      echo $ "Rebooting " <> node
+      TIO.putStrLn $ "Rebooting " <> node
       procs (nixopsExecutable c) (["reboot"] ++ getArgsList c ++ ["--include", node]) empty
 
 ssh :: NixOpsConfig -> Text -> NodeName -> IO ()
@@ -96,7 +90,7 @@ ssh' c f cmd' (getNodeName -> node) = do
     f output
     case exitcode of
         ExitSuccess -> return ()
-        ExitFailure code -> echo $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
+        ExitFailure code -> TIO.putStrLn $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
   where
     cmd = nixopsExecutable c <> " ssh " <> getArgs c <> node <> " -- " <> cmd'
 
@@ -105,7 +99,7 @@ scpFromNode c (getNodeName -> node) from to = do
   (exitcode, output) <- shellStrict (nixopsExecutable c <> " scp" <> getArgs c <> "--from " <> node <> " " <> from <> " " <> to) empty
   case exitcode of
     ExitSuccess -> return ()
-    ExitFailure code -> echo $ "Scp from " <> node <> " failed with " <> (T.pack $ show code)
+    ExitFailure code -> TIO.putStrLn $ "Scp from " <> node <> " failed with " <> (T.pack $ show code)
 
 sshForEach :: NixOpsConfig -> Text -> Text
 sshForEach c cmd = nixopsExecutable c <> " ssh-for-each" <> getArgs c <> " -- " <> cmd
@@ -123,7 +117,7 @@ getNodes c = do
   result <- (fmap . fmap) (map diName . toNodesInfo) $ info c
   case result of
     Left s -> do
-        echo $ T.pack s
+        TIO.putStrLn $ T.pack s
         return []
     Right vector -> return vector
 

@@ -87,7 +87,7 @@ dumpLogs c withProf nodes = do
     let workDir = "tw_experiments/" <> dt
     echo workDir
     shell ("mkdir -p " <> workDir) empty
-    sh . using $ parallel nodes (dump workDir)
+    parallelIO $ fmap (dump workDir) nodes 
     return dt
   where
     dump workDir node = do
