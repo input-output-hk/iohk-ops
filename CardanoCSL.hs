@@ -42,6 +42,8 @@ data Command =
   | DumpLogs { withProf :: Bool }
   | Start
   | Stop
+  | FirewallBlock { fromRegion :: Text, toRegion :: Text }
+  | FirewallClear
   | AMI
   | PrintDate
   deriving (Show)
@@ -60,6 +62,8 @@ subparser =
   <|> subcommand "stop" "Stop cardano-node service" (pure Stop)
   <|> subcommand "start" "Start cardano-node service" (pure Start)
   <|> subcommand "date" "Print date/time" (pure PrintDate)
+  <|> subcommand "firewall-block-region" "Block whole region in firewall" (FirewallBlock <$> optText "from-region" 'f' "AWS Region that won't reach --to" <*> optText "to-region" 't' "AWS Region that all nodes will be blocked")
+  <|> subcommand "firewall-clear" "Clear firewall" (pure FirewallClear)
   <|> subcommand "ami" "Build ami" (pure AMI)
 
 parser :: Parser (FilePath, Command)
@@ -82,11 +86,13 @@ main = do
     RunExperiment -> runexperiment c
     PostExperiment -> postexperiment c
     Build -> build c
-    DumpLogs {..} -> getNodes c >>= void . dumpLogs c withProf
-    Start -> getNodes c >>= startCardanoNodes c
-    Stop -> getNodes c >>= stopCardanoNodes c
+    DumpLogs {..} -> getNodeNames c >>= void . dumpLogs c withProf
+    Start -> getNodeNames c >>= startCardanoNodes c
+    Stop -> getNodeNames c >>= stopCardanoNodes c
     AMI -> buildAMI c
-    PrintDate -> getNodes c >>= printDate c
+    PrintDate -> getNodeNames c >>= printDate c
+    FirewallBlock from to -> firewallBlock c from to
+    FirewallClear -> firewallClear c
     -- TODO: invoke nixops with passed parameters
 
 
@@ -104,15 +110,25 @@ build c = do
   shells ("nix-build -j 4 --cores 2 default.nix -I " <> nixPath c) empty
 
 firewallClear ::  NixOpsConfig -> IO ()
-firewallClear c = undefined 
+firewallClear c = sshForEach c "iptables -F"
 
 firewallBlock ::  NixOpsConfig -> Text -> Text -> IO ()
-firewallBlock c from to = undefined 
+firewallBlock c from to = do
+  nodes <- getNodes c
+  let fromNodes = filter (f from) nodes
+  let toNodes = filter (f to) nodes
+  TIO.putStrLn $ "Blocking nodes: " <> (T.intercalate ", " $ fmap (getNodeName . diName) toNodes) 
+  TIO.putStrLn $ "Applying on nodes: " <> (T.intercalate ", " $ fmap (getNodeName . diName) fromNodes)
+  parallelIO $ fmap (g toNodes) fromNodes
+    where
+      f s node = T.isInfixOf ("[" <> s) (diType node)
+      g toNodes node = ssh c ("'for ip in " <> ips toNodes <> "; do iptables -A INPUT -s $ip -j DROP;done'") $ diName node
+      ips = T.intercalate " " . fmap (getIP . diPublicIP)
 
 runexperiment :: NixOpsConfig -> IO ()
 runexperiment c = do
   -- TODO: use info to avoid shell call
-  nodes <- getNodes c
+  nodes <- getNodeNames c
   -- build
   echo "Checking nodes' status, rebooting failed"
   checkstatus c
@@ -141,7 +157,7 @@ runexperiment c = do
 
 postexperiment :: NixOpsConfig -> IO ()
 postexperiment c = do
-  nodes <- getNodes c
+  nodes <- getNodeNames c
   echo "Checking nodes' status, rebooting failed"
   checkstatus c
   echo "Retreive logs..."

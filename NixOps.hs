@@ -66,7 +66,7 @@ create c =
 -- Check if nodes are online and reboots them if they timeout
 checkstatus :: NixOpsConfig -> IO ()
 checkstatus c = do
-  nodes <- getNodes c
+  nodes <- getNodeNames c
   parallelIO $ fmap (rebootIfDown c) nodes 
 
 parallelIO :: [IO a] -> IO ()
@@ -101,8 +101,9 @@ scpFromNode c (getNodeName -> node) from to = do
     ExitSuccess -> return ()
     ExitFailure code -> TIO.putStrLn $ "Scp from " <> node <> " failed with " <> (T.pack $ show code)
 
-sshForEach :: NixOpsConfig -> Text -> Text
-sshForEach c cmd = nixopsExecutable c <> " ssh-for-each" <> getArgs c <> " -- " <> cmd
+sshForEach :: NixOpsConfig -> Text -> IO ()
+sshForEach c cmd = 
+  shells (nixopsExecutable c <> " ssh-for-each " <> getArgs c <> " -- " <> cmd) empty
 
 -- Functions for extracting information out of nixops info command
 
@@ -111,15 +112,20 @@ newtype IP = IP { getIP :: Text }
 newtype NodeName = NodeName { getNodeName :: Text }
    deriving (Show, Generic, FromField)
 
--- | Get all node IPs in EC2 cluster
-getNodes :: NixOpsConfig -> IO [NodeName]
+-- | Get all nodes in EC2 cluster
+getNodes :: NixOpsConfig -> IO [DeploymentInfo]
 getNodes c = do
-  result <- (fmap . fmap) (map diName . toNodesInfo) $ info c
+  result <- (fmap . fmap) toNodesInfo $ info c
   case result of
     Left s -> do
         TIO.putStrLn $ T.pack s
         return []
     Right vector -> return vector
+
+getNodeNames :: NixOpsConfig -> IO [NodeName]
+getNodeNames c = do
+  nodes <- getNodes c
+  return $ fmap diName nodes
 
 data DeploymentStatus = UpToDate | Obsolete | Outdated
   deriving (Show, Eq)
@@ -133,7 +139,7 @@ instance FromField DeploymentStatus where
 data DeploymentInfo = DeploymentInfo
     { diName :: !NodeName
     , diStatus :: !DeploymentStatus
-    , diLocation :: !Text
+    , diType :: !Text
     , diResourceID :: !Text
     , diPublicIP :: !IP
     , diPrivateIP :: !IP
@@ -157,7 +163,7 @@ toNodesInfo :: V.Vector DeploymentInfo -> [DeploymentInfo]
 toNodesInfo vector = 
   V.toList $ V.filter filterEC2 vector
     where
-      filterEC2 di = T.take 4 (diLocation di) == "ec2 " && diStatus di /= Obsolete
+      filterEC2 di = T.take 4 (diType di) == "ec2 " && diStatus di /= Obsolete
 
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
 getNodePublicIP name vector =
