@@ -105,10 +105,6 @@ runError :: ExceptT String IO Text -> IO Text
 runError action = runExceptT action >>=
   either (\(T.pack -> err) -> echo err >> return err) pure
 
-maybeToRight :: b -> Maybe a -> Either b a
-maybeToRight b Nothing  = Left b
-maybeToRight _ (Just a) = Right a
-
 show' :: Show a => a -> Text
 show' = T.pack . show
 
