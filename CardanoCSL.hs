@@ -121,8 +121,8 @@ getSmartGenCmd c = runError $ do
   let bot = if bitcoinOverFlat then "bitcoin" else "flat"
       recipShare = "0.3"
       cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
-                       , " +RTS -N -pa -hc -T -A4G -qg -RTS"
-                       --, " +RTS -N -A4G -qg -RTS"
+                       --, " +RTS -N -pa -hc -T -A4G -qg -RTS"
+                       , " +RTS -N -A4G -qg -RTS"
                        , (T.pack . mconcat $ map (\i -> " -i " <> show i) txgenAddresses)
                        , if enableP2P
                          then " --explicit-initial --disable-propagation "
@@ -169,8 +169,8 @@ getWalletDelegationCmd c = runError $ do
       cmds = T.intercalate "," $ map mkCmd $ filter (/= delegationNode) $ M.keys nodes
       bot = if bitcoinOverFlat then "bitcoin" else "flat"
       cliCmd = mconcat [ "./result/bin/cardano-wallet"
-                       , " +RTS -N -pa -hc -T -A4G -qg -RTS"
-                       --, " +RTS -N -A4G -qg -RTS"
+                       --, " +RTS -N -pa -hc -T -A4G -qg -RTS"
+                       , " +RTS -N -A4G -qg -RTS"
                        , if enableP2P
                          then " --explicit-initial --disable-propagation "
                          else ""
@@ -245,6 +245,8 @@ dumpLogs c withProf nodes = do
     echo workDir
     shell ("mkdir -p " <> workDir) empty
     sh . using $ parallel nodes (dump workDir)
+    cp "txgen.log" (fromString . T.unpack $ workDir <> "/txgen.log")
+    echo workDir
     return dt
   where
     dump workDir node = do

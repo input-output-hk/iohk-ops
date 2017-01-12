@@ -1,7 +1,7 @@
 severity: Info
 file: txgen.log
 smart-gen:
-    severity: Info
+    severity: Debug
     comm:
         severity: Info
     dht:
@@ -12,3 +12,5 @@ time-slave:
         severity: Info
     dht:
         severity: Info
+kademlia:
+    severity: Info
