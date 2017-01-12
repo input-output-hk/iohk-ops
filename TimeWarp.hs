@@ -1,5 +1,6 @@
 #!/usr/bin/env nix-shell
-#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle cassava vector safe yaml ])'
+#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle_1_3_0 cassava vector safe yaml ])'
+#! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/464c79ea9f929d1237dbc2df878eedad91767a72.tar.gz
 
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -10,6 +11,7 @@ import Filesystem.Path.CurrentOS (encodeString)
 import GHC.Conc (threadDelay)
 import Prelude hiding (FilePath)
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import Turtle
 
 import NixOps
@@ -62,13 +64,13 @@ runexperiment c = do
   -- build
   --checkstatus
   --deploy
-  shells (sshForEach c "systemctl stop timewarp") empty
-  shells (sshForEach c "rm -f /home/timewarp/node.log") empty
-  nodes <- getNodes c
-  shells (sshForEach c "systemctl start timewarp") empty
+  sshForEach c "systemctl stop timewarp"
+  sshForEach c "rm -f /home/timewarp/node.log"
+  nodes <- getNodeNames c
+  sshForEach c "systemctl start timewarp"
   threadDelay (150*1000000)
   dt <- dumpLogs c False nodes
-  echo $ "Log dir: tw_experiments/" <> dt
+  TIO.putStrLn $ "Log dir: tw_experiments/" <> dt
 
 build :: NixOpsConfig -> IO ()
 build c = do
@@ -77,17 +79,17 @@ build c = do
 
 dumpLogs :: NixOpsConfig -> Bool ->  [NodeName] -> IO Text
 dumpLogs c withProf nodes = do
-    echo $ "WithProf: " <> T.pack (show withProf)
+    TIO.putStrLn $ "WithProf: " <> T.pack (show withProf)
     when withProf $ do
         echo "Stopping nodes..."
-        shells (sshForEach c "systemctl stop timewarp") empty
+        sshForEach c "systemctl stop timewarp"
         sleep 2
         echo "Dumping logs..."
     (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
     let workDir = "tw_experiments/" <> dt
-    echo workDir
+    TIO.putStrLn workDir
     shell ("mkdir -p " <> workDir) empty
-    sh . using $ parallel nodes (dump workDir)
+    parallelIO $ fmap (dump workDir) nodes 
     return dt
   where
     dump workDir node = do

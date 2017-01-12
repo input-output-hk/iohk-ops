@@ -9,6 +9,7 @@ import Data.Char (ord)
 import Data.Yaml (FromJSON(..))
 import Data.Monoid ((<>))
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import Data.Text.Lazy (fromStrict)
 import Data.Text.Lazy.Encoding (encodeUtf8)
 import Data.Csv (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
@@ -65,18 +66,11 @@ create c =
 -- Check if nodes are online and reboots them if they timeout
 checkstatus :: NixOpsConfig -> IO ()
 checkstatus c = do
-  nodes <- getNodes c
-  sh . using $ parallel nodes $ rebootIfDown c
+  nodes <- getNodeNames c
+  parallelIO $ fmap (rebootIfDown c) nodes 
 
-
--- Helper to run commands in parallel and wait for all results
--- TODO: use upstream parallel
-parallel :: [a] -> (a -> IO ()) -> Managed ()
-parallel (first:rest) action = do
-  async <- using $ fork $ action first
-  parallel rest action
-  liftIO (wait async)
-parallel [] _ = return ()
+parallelIO :: [IO a] -> IO ()
+parallelIO = sh . parallel
 
 rebootIfDown :: NixOpsConfig -> NodeName -> IO ()
 rebootIfDown c (getNodeName -> node) = do
@@ -84,7 +78,7 @@ rebootIfDown c (getNodeName -> node) = do
   case x of
     ExitSuccess -> return ()
     ExitFailure _ -> do
-      echo $ "Rebooting " <> node
+      TIO.putStrLn $ "Rebooting " <> node
       procs (nixopsExecutable c) (["reboot"] ++ getArgsList c ++ ["--include", node]) empty
 
 ssh :: NixOpsConfig -> Text -> NodeName -> IO ()
@@ -96,7 +90,7 @@ ssh' c f cmd' (getNodeName -> node) = do
     f output
     case exitcode of
         ExitSuccess -> return ()
-        ExitFailure code -> echo $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
+        ExitFailure code -> TIO.putStrLn $ "Ssh cmd '" <> cmd <> "' to " <> node <> " failed with " <> (T.pack $ show code)
   where
     cmd = nixopsExecutable c <> " ssh " <> getArgs c <> node <> " -- " <> cmd'
 
@@ -105,10 +99,11 @@ scpFromNode c (getNodeName -> node) from to = do
   (exitcode, output) <- shellStrict (nixopsExecutable c <> " scp" <> getArgs c <> "--from " <> node <> " " <> from <> " " <> to) empty
   case exitcode of
     ExitSuccess -> return ()
-    ExitFailure code -> echo $ "Scp from " <> node <> " failed with " <> (T.pack $ show code)
+    ExitFailure code -> TIO.putStrLn $ "Scp from " <> node <> " failed with " <> (T.pack $ show code)
 
-sshForEach :: NixOpsConfig -> Text -> Text
-sshForEach c cmd = nixopsExecutable c <> " ssh-for-each" <> getArgs c <> " -- " <> cmd
+sshForEach :: NixOpsConfig -> Text -> IO ()
+sshForEach c cmd = 
+  shells (nixopsExecutable c <> " ssh-for-each " <> getArgs c <> " -- " <> cmd) empty
 
 -- Functions for extracting information out of nixops info command
 
@@ -117,15 +112,20 @@ newtype IP = IP { getIP :: Text }
 newtype NodeName = NodeName { getNodeName :: Text }
    deriving (Show, Generic, FromField)
 
--- | Get all node IPs in EC2 cluster
-getNodes :: NixOpsConfig -> IO [NodeName]
+-- | Get all nodes in EC2 cluster
+getNodes :: NixOpsConfig -> IO [DeploymentInfo]
 getNodes c = do
-  result <- (fmap . fmap) (map diName . toNodesInfo) $ info c
+  result <- (fmap . fmap) toNodesInfo $ info c
   case result of
     Left s -> do
-        echo $ T.pack s
+        TIO.putStrLn $ T.pack s
         return []
     Right vector -> return vector
+
+getNodeNames :: NixOpsConfig -> IO [NodeName]
+getNodeNames c = do
+  nodes <- getNodes c
+  return $ fmap diName nodes
 
 data DeploymentStatus = UpToDate | Obsolete | Outdated
   deriving (Show, Eq)
@@ -139,7 +139,7 @@ instance FromField DeploymentStatus where
 data DeploymentInfo = DeploymentInfo
     { diName :: !NodeName
     , diStatus :: !DeploymentStatus
-    , diLocation :: !Text
+    , diType :: !Text
     , diResourceID :: !Text
     , diPublicIP :: !IP
     , diPrivateIP :: !IP
@@ -163,7 +163,7 @@ toNodesInfo :: V.Vector DeploymentInfo -> [DeploymentInfo]
 toNodesInfo vector = 
   V.toList $ V.filter filterEC2 vector
     where
-      filterEC2 di = T.take 4 (diLocation di) == "ec2 " && diStatus di /= Obsolete
+      filterEC2 di = T.take 4 (diType di) == "ec2 " && diStatus di /= Obsolete
 
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
 getNodePublicIP name vector =
