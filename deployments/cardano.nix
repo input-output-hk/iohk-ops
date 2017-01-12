@@ -47,14 +47,14 @@ let
 in 
   (genAttrs' (range 1 9) (key: "node${toString key}") (name: cardano-node-eu name)) // 
   (genAttrs' (range 10 19) (key: "node${toString key}") (name: cardano-node-us name)) // 
-  #(genAttrs' (range 20 29) (key: "node${toString key}") (name: cardano-node-asia name)) //
-  #(genAttrs' (range 30 39) (key: "node${toString key}") (name: cardano-node-sydney name)) //
-  #(genAttrs' (range 40 49) (key: "node${toString key}") (name: cardano-node-sa name)) //
-  #(genAttrs' (range 50 59) (key: "node${toString key}") (name: cardano-node-eu name)) // 
-  #(genAttrs' (range 60 69) (key: "node${toString key}") (name: cardano-node-us name)) // 
-  #(genAttrs' (range 70 79) (key: "node${toString key}") (name: cardano-node-asia name)) //
-  #(genAttrs' (range 80 89) (key: "node${toString key}") (name: cardano-node-sydney name)) //
-  #(genAttrs' (range 90 99) (key: "node${toString key}") (name: cardano-node-sa name)) //
+  (genAttrs' (range 20 29) (key: "node${toString key}") (name: cardano-node-asia name)) //
+  (genAttrs' (range 30 39) (key: "node${toString key}") (name: cardano-node-sydney name)) //
+  (genAttrs' (range 40 49) (key: "node${toString key}") (name: cardano-node-sa name)) //
+  (genAttrs' (range 50 59) (key: "node${toString key}") (name: cardano-node-eu name)) // 
+  (genAttrs' (range 60 69) (key: "node${toString key}") (name: cardano-node-us name)) // 
+  (genAttrs' (range 70 79) (key: "node${toString key}") (name: cardano-node-asia name)) //
+  (genAttrs' (range 80 89) (key: "node${toString key}") (name: cardano-node-sydney name)) //
+  (genAttrs' (range 90 99) (key: "node${toString key}") (name: cardano-node-sa name)) //
 {
   network.description = "Cardano SL experiments";
 

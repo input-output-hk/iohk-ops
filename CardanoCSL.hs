@@ -226,8 +226,8 @@ getSmartGenCmd c = runError $ do
   let bot = if bitcoinOverFlat then "bitcoin" else "flat"
       recipShare = "0.3"
       cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
-                       , " +RTS -N -pa -hc -T -A4G -qg -RTS"
-                       --, " +RTS -N -A4G -qg -RTS"
+                       --, " +RTS -N -pa -hc -T -A4G -qg -RTS"
+                       , " +RTS -N -A4G -qg -RTS"
                        , (T.pack . mconcat $ map (\i -> " -i " <> show i) txgenAddresses)
                        , if enableP2P
                          then " --explicit-initial --disable-propagation "
@@ -270,8 +270,8 @@ getWalletDelegationCmd c = runError $ do
       cmds = T.intercalate "," $ map mkCmd $ filter (/= delegationNode) $ M.keys nodes
       bot = if bitcoinOverFlat then "bitcoin" else "flat"
       cliCmd = mconcat [ "./result/bin/cardano-wallet"
-                       , " +RTS -N -pa -hc -T -A4G -qg -RTS"
-                       --, " +RTS -N -A4G -qg -RTS"
+                       --, " +RTS -N -pa -hc -T -A4G -qg -RTS"
+                       , " +RTS -N -A4G -qg -RTS"
                        , if enableP2P
                          then " --explicit-initial --disable-propagation "
                          else ""
