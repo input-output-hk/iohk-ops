@@ -1,6 +1,6 @@
 rec {
   # Compile time settings
-  genesisN = 100;
+  genesisN = 20;
   slotDuration = 20;
   networkDiameter = 15;
   mpcRelayInterval = 45;
@@ -11,14 +11,14 @@ rec {
   nodePort = 3000;
   enableP2P = true;
 
-  txgenR = 3;
+  txgenR = 1;
   txgenN = 3;
   txgenPause = 0;
-  txgenInitTps = 1;
-  txgenTpsStep = 1;
+  txgenInitTps = 5;
+  txgenTpsStep = 5;
   txgenP = 2;
   txgenAddresses = [ 0 ];
-  # txgenMofN = [ 3 5 ];
+  #txgenMofN = [ 3 5 ];
 
   # Delegation settings
   enableDelegation = false;

@@ -1,6 +1,6 @@
-severity: Info
+severity: Debug
 node:
-    severity: Info
+    severity: Debug
     file: node.log
     comm:
         severity: Info

@@ -18,7 +18,7 @@ let
 
   command = toString [
     "${cardano}/bin/cardano-node"
-    "--port ${toString cfg.port}"
+    "--listen ${config.networking.publicIPv4}:${toString cfg.port}"
     "--rebuild-db"
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
