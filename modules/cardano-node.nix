@@ -63,7 +63,7 @@ in
       productionMode = mkOption {
         type = types.bool;
         default = false;
-      }
+      };
 
       genesisN = mkOption { type = types.int; };
       slotDuration = mkOption { type = types.int; };
