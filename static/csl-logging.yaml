@@ -13,3 +13,5 @@ time-slave:
         severity: Info
     dht:
         severity: Info
+kademlia:
+    severity: Info
