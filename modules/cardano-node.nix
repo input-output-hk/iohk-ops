@@ -19,7 +19,7 @@ let
   command = toString [
     "${cardano}/bin/cardano-node"
     "--listen ${config.networking.publicIPv4}:${toString cfg.port}"
-    "--rebuild-db"
+    (enableIf (!cfg.productionMode) "--rebuild-db")
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
@@ -27,14 +27,15 @@ let
     # Event logging (cannot be used with profiling)
     #"+RTS -N -T -l -A6G -qg -RTS"
     (enableIf cfg.stats "--stats")
-    "--spending-genesis ${toString cfg.testIndex}"
-    "--vss-genesis ${toString cfg.testIndex}"
-    (enableIf cfg.distribution (
+    (enableIf (!cfg.productionMode) "--spending-genesis ${toString cfg.testIndex}")
+    (enableIf (!cfg.productionMode) "--vss-genesis ${toString cfg.testIndex}")
+    (enableIf (cfg.distribution && !cfg.productionMode) (
        if cfg.bitcoinOverFlat
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
     (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     "--dht-key ${cfg.dhtKey}"
+    (enableIf cfg.productionMode "--keyfile /var/lib/cardano-node/key${toString (cfg.testIndex + 1)}.sk")
     (enableIf cfg.supporter "--supporter")
     (enableIf cfg.timeLord "--time-lord")
     "--log-config ${./../static/csl-logging.yaml}"
@@ -59,6 +60,10 @@ in
         type = types.string; 
         description = "base64-url string describing dht key"; 
       };
+      productionMode = mkOption {
+        type = types.bool;
+        default = false;
+      }
 
       genesisN = mkOption { type = types.int; };
       slotDuration = mkOption { type = types.int; };
