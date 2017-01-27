@@ -1,8 +1,8 @@
 rec {
   # Compile time settings
-  genesisN = 20;
-  slotDuration = 20;
-  networkDiameter = 15;
+  genesisN = 14;
+  slotDuration = 120;
+  networkDiameter = 45;
   mpcRelayInterval = 45;
 
   # Run time settings
