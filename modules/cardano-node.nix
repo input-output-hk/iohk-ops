@@ -1,10 +1,10 @@
-{ config, pkgs, lib, nodes, ... } :
+{ config, pkgs, lib, ... }@args:
 
 with (import ./../lib.nix);
 
 let
   cfg = config.services.cardano-node;
-  node0 = nodes.node0.config;
+  node0 = args.nodes.node0.config;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
   cardano = (import ./../srk-nixpkgs/default.nix { inherit pkgs; inherit (cfg) genesisN slotDuration networkDiameter mpcRelayInterval; }).cardano-sl;
@@ -18,7 +18,7 @@ let
 
   command = toString [
     "${cardano}/bin/cardano-node"
-    "--listen ${config.networking.publicIPv4}:${toString cfg.port}"
+    "--listen ${config.networking.publicIPv4 or "0.0.0.0"}:${toString cfg.port}"
     (enableIf (!cfg.productionMode) "--rebuild-db")
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
@@ -40,11 +40,11 @@ let
     (enableIf cfg.timeLord "--time-lord")
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
-    (enableIf (! cfg.enableP2P) "--explicit-initial --disable-propagation ${smartGenPeer}")
-    (if cfg.enableP2P
+    (enableIf (!cfg.enableP2P) "--explicit-initial --disable-propagation ${smartGenPeer}")
+    (enableIf (!generatingAMI) (if cfg.enableP2P
        then "--peer ${node0.networking.publicIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey}"
        else (toString (mapAttrsToList (name: value: "--peer ${value.config.networking.publicIPv4}:${toString value.config.services.cardano-node.port}/${value.config.services.cardano-node.dhtKey}") nodes))
-    )
+    ))
   ];
 in
 {

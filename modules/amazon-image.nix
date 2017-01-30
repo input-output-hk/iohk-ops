@@ -15,7 +15,6 @@ with lib;
     partitioned = config.ec2.hvm;
     diskSize = 6144;
     format = "qcow2";
-    fixValidity = false;
     configFile = pkgs.writeText "configuration.nix"
       ''
         {

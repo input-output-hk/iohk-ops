@@ -47,7 +47,7 @@ with (import ./../lib.nix);
   networking.firewall.allowedUDPPortRanges = [
     { from = 60000; to = 61000; }
   ];
-} // optionalAttrs (generatingAMI != "1") {
+} // optionalAttrs (generatingAMI == false) {
   deployment.targetEnv = "ec2";
   deployment.ec2.instanceType = "t2.large";
   deployment.ec2.region = region;

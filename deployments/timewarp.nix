@@ -5,7 +5,7 @@ let
     imports = [ ./../modules/timewarp-node.nix ];
     services.timewarp-node.enable = true;
     networking.firewall.enable = mkForce false;
-  } // optionalAttrs (generatingAMI != "1") {
+  } // optionalAttrs (generatingAMI == false) {
     deployment.ec2.region = mkForce region;
     deployment.ec2.keyPair = mkForce (keypair resources.ec2KeyPairs);
   };

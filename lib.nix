@@ -6,16 +6,10 @@ in lib // (rec {
     lib.listToAttrs (map (n: lib.nameValuePair (fkey n) (fname n)) names);
 
   # If we're generating an AMI, don't set nixops deployment attributes
-  generatingAMI = builtins.getEnv "GENERATING_AMI";
+  generatingAMI = (builtins.getEnv "GENERATING_AMI") == "1";
 
   # Function to generate DHT key
-  genDhtKey = { i
-              , dhtKeyPrefix  ? "MHdrsP-oPf7UWl"
-              , dhtKeyPostfix ? "7QuXnLK5RD=" }:
-              let padded =
-                  (if i < 10 then "00" else (if i < 100 then "0" else ""))
-                  + toString i
-              ; in dhtKeyPrefix + padded + dhtKeyPostfix;
+  genDhtKey = { i }: (builtins.fromJSON (builtins.readFile ./dht.json))."node${toString i}";
 
   accessKeyId = "cardano-deployer";
   region = "eu-central-1";

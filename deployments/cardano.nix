@@ -17,7 +17,7 @@ let
 
       inherit (cconf) enableP2P genesisN slotDuration networkDiameter mpcRelayInterval totalMoneyAmount bitcoinOverFlat;
     };
-  } // optionalAttrs (generatingAMI != "1") {
+  } // optionalAttrs (generatingAMI == false) {
     deployment.ec2.region = mkForce region;
     deployment.ec2.keyPair = mkForce (keypair resources.ec2KeyPairs);
   };
@@ -30,11 +30,8 @@ let
     };
   };
 
-  cardano-node = {testIndex, region, keypair}: {pkgs, nodes, ...}: {
+  cardano-node = {testIndex, region, keypair}: {pkgs, ...}: {
     imports = [ (nodeGenericConfig testIndex region keypair) ];
-
-    services.cardano-node = {
-    };
   };
 
   regionIndex = region: keypair: testIndex: cardano-node { inherit region testIndex keypair; };
