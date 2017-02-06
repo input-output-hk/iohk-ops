@@ -35,7 +35,7 @@ let
        else "--flat-distr \"${distributionParam}\""))
     (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     "--dht-key ${cfg.dhtKey}"
-    (enableIf cfg.productionMode "--keyfile /var/lib/cardano-node/key${toString (cfg.testIndex + 1)}.sk")
+    (enableIf cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.testIndex + 1)}.sk")
     (enableIf cfg.supporter "--supporter")
     (enableIf cfg.timeLord "--time-lord")
     "--log-config ${./../static/csl-logging.yaml}"
@@ -96,6 +96,7 @@ in
         group           = "cardano-node";
         home            = stateDir;
         createHome      = true;
+        extraGroups     = [ "keys" ];
       };
       groups.cardano-node = {
         gid = 123123;
@@ -117,8 +118,12 @@ in
         KillSignal = "SIGINT";
         WorkingDirectory = stateDir;
         PrivateTmp = true;
-        ExecStart = pkgs.writeScript "cardano-node.sh" ''
+        ExecStart = let
+            keyId = "key" + toString (cfg.testIndex + 1);
+            key = keyId + ".sk";
+          in pkgs.writeScript "cardano-node.sh" ''
           #!/bin/sh
+          [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}${key}
           exec ${command}
         '';
       };

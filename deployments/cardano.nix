@@ -14,13 +14,17 @@ let
       stats = false;
       jsonLog = false;
       distribution = true;
-
-      inherit (cconf) enableP2P genesisN slotDuration networkDiameter mpcRelayInterval totalMoneyAmount bitcoinOverFlat;
+      inherit (cconf) enableP2P genesisN slotDuration networkDiameter mpcRelayInterval totalMoneyAmount bitcoinOverFlat productionMode;
     };
-  } // optionalAttrs (generatingAMI == false) {
-    deployment.ec2.region = mkForce region;
-    deployment.ec2.keyPair = mkForce (keypair resources.ec2KeyPairs);
-  };
+  } // optionalAttrs (generatingAMI == false) ({
+      deployment.ec2.region = mkForce region;
+      deployment.ec2.keyPair = mkForce (keypair resources.ec2KeyPairs);
+    } // optionalAttrs cconf.productionMode  {
+      deployment.keys."key${toString (testIndex + 1)}" = {
+        text = builtins.readFile (builtins.getEnv("PWD") + "/keys/key${toString (testIndex + 1)}.sk");
+        user = "cardano-node";
+      };
+  });
 
   cardano-node-coordinator = {testIndex, region, keypair}: {resources, pkgs, ...}: {
     imports = [ (nodeGenericConfig testIndex region keypair) ];
