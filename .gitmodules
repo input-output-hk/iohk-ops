@@ -1,3 +1,0 @@
-[submodule "srk-nixpkgs"]
-	path = srk-nixpkgs
-	url = https://github.com/serokell/srk-nixpkgs

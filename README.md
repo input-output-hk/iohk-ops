@@ -6,7 +6,7 @@ File structure
 - `modules` has NixOS modules
 - `lib.nix` warps upstream `<nixpkgs/lib.nix>` with our common functions
 - `scripts` has bash scripts not converted to Haskell/Turtle into Cardano.hs yet
-- `srk-nixpkgs` is a collection of upstream Serokell packages
+- `srk-nixpkgs.nix` is a collection of upstream Serokell packages
 - `static` includes files being static, not generated
 - `jobsets` is used by Hydra CI
 

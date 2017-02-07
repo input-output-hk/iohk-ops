@@ -3,7 +3,7 @@
 with lib;
 
 let
-  time-warp = (import ./../srk-nixpkgs/default.nix { inherit pkgs; }).tw-rework-sketch;
+  time-warp = (import ./../srk-nixpkgs.nix { inherit pkgs; }).tw-rework-sketch;
   generatingAMI = builtins.getEnv "GENERATING_AMI";
   cfg = config.services.timewarp-node;
 in {
