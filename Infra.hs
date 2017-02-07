@@ -7,7 +7,6 @@
 import Turtle
 import Data.Monoid ((<>))
 import qualified Data.Text as T
-import GHC.Conc (threadDelay)
 
 import NixOps
 

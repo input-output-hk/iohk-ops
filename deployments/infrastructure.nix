@@ -27,6 +27,34 @@ with (import ./../lib.nix);
     };
   };
 
+  sl-explorer = { config, pkgs, resources, ... }: {
+    imports = [
+      ./../modules/common.nix
+    ];
+
+    networking.firewall.allowedTCPPorts = [ 80 443 ];
+
+    services.nginx = {
+      enable = true;
+      virtualHosts = {
+       "cardano-explorer-dev.iohk.io" = {
+         forceSSL = true;
+         enableACME = true;
+         locations."/" = {
+           root = /home/production/cardano-sl-explorer-frontend/dist;
+         };
+       };
+     };
+    };
+
+    deployment.ec2 = {
+      instanceType = mkForce "t2.medium";
+      ebsInitialRootDiskSize = mkForce 50;
+      elasticIPv4 = resources.elasticIPs.sl-explorer-ip;
+      associatePublicIpAddress = true;
+    };
+  };
+
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [ ./../modules/common.nix ];
 
@@ -70,6 +98,7 @@ with (import ./../lib.nix);
     elasticIPs = {
       hydra-ip = { inherit region accessKeyId; };
       cardanod-ip = { inherit region accessKeyId; };
+      sl-explorer-ip = { inherit region accessKeyId; };
     };
   };
 }
