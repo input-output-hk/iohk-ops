@@ -7,7 +7,7 @@ let
   node0 = args.nodes.node0.config;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
-  cardano = (import ./../srk-nixpkgs.nix { inherit pkgs; inherit (cfg) genesisN slotDuration networkDiameter mpcRelayInterval; }).cardano-sl;
+  cardano = (import ./../srk-nixpkgs.nix { inherit pkgs; inherit (cfg) genesisN slotDuration networkDiameter mpcRelayInterval; }).hspkgs.cardano-sl;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   enableIf = cond: flag: if cond then flag else "";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
