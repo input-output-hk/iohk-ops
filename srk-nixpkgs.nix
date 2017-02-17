@@ -36,8 +36,8 @@ in rec {
     haskellPackageGen {} (pkgs.fetchFromGitHub {
         owner = "serokell";
         repo = "universum";
-        rev = "0c95eda5e900b1e769bf5648cc62a3ad3372c3bd";
-        sha256 = "0scfv782apgdm5h8ndw1xhyh7i7d3pad5a5fxli6ykbjbdhj22qw";
+        rev = "d4199cb7e67265a8b2ea1e5c0d9fa3142e473ab5";
+        sha256 = "0l87zc75zd94qd5hwfb9ykq7834isqg7nij6zhgjjjs3k91is9jj";
       })
   ) { };
   acid-state = hspkgs.callPackage (
@@ -52,16 +52,24 @@ in rec {
     haskellPackageGen {} (pkgs.fetchFromGitHub {
         owner = "serokell";
         repo = "log-warper";
-        rev = "fa5f0ab17b4248d072e5a5bb01ce1a72fae4eebc";
-        sha256 = "03anjzm3fcak4gqrmn6qfw06ki9c6d35p0zz449nfxmlhpczl5kw";
+        rev = "5c298604db2cba695dc24e19381810ba8095c668";
+        sha256 = "0w2pjgimmfdgs4pwanp60y5z1cvh7h51vn0qaj1njq3lkx375rc4";
       })
   ) { };
   network-transport-tcp = hspkgs.callPackage (
     haskellPackageGen {} (pkgs.fetchFromGitHub {
-        owner = "serokell";
+        owner = "avieth";
         repo = "network-transport-tcp";
-        rev = "586c9bf830252476522cab6274ef8ddc32615686";
-        sha256 = "04q73wpi5kzqr4fk1zm5bgayljjc62qi34yls59zwv73k745dwzp";
+        rev = "d2705abd5b54707ca97b5bf9c9c24005e800ee49";
+        sha256 = "0qivhcvz25jvnpnf218qm7nkq84nbyzbqcx4ajys0rvv907pjybc";
+      })
+  ) { };
+  network-transport = hspkgs.callPackage (
+    haskellPackageGen {} (pkgs.fetchFromGitHub {
+        owner = "avieth";
+        repo = "network-transport";
+        rev = "e7a5f44d0d98370d16df103c9dc61ef7bf15aee8";
+        sha256 = "032hl9jx5sq178kc1v0sjjr2347n5rvbfhkvjq0fmbgg710ghzfa";
       })
   ) { };
   plutus-prototype = hspkgs.callPackage (
@@ -100,22 +108,31 @@ in rec {
     haskellPackageGen { } (pkgs.fetchFromGitHub {
         owner = "serokell";
         repo = "time-warp-nt";
-        rev = "7b44e90d9831de861ca6f563929630407c6294b4";
-        sha256 = "143bkllc8lra8j2q93i36gwsz6dwpj3sjlha2mlfqfmnkzq0lr1k";
+        rev = "9865cea6fe7a2b376d67c0ff77efaaa26ea73d45";
+        sha256 = "13akc3yj8vm11xqzil5vg8l674r9d4lcnwdvv5g6qxsxrp0j2a3x";
       })
   ) { };
+  cardano-report-server = hspkgs.callPackage (
+    haskellPackageGen { } (pkgs.fetchFromGitHub {
+        owner = "input-output-hk";
+        repo = "cardano-report-server";
+        rev = "344f0e6e1b69b512cbfb04caf42bbe285cc7727a";
+        sha256 = "1qm430h8k9h7bvpr4nsgg25q65vn5z5hkk9gkm4zqia6ms4kqc0v";
+      })
+  ) { };
+  
   cardano-sl = hspkgs.callPackage (
     haskellPackageGen { } (pkgs.fetchFromGitHub {
         owner = "input-output-hk";
         repo = "cardano-sl";
-        rev = "32ca3c44d617932052dc9e28369ec8daa0d549a9";
-        sha256 = "0xxr1yr5x6xfmnzcybw8rgkkd9xs8gkn44h17c1ffrp3qvvw02xr";
+        rev = "8540e55dd55094bbc9fb7da3266104dee1fac512";
+        sha256 = "1z7jvfyc7n1czypljlbm9331lgp6pa2ib4069dwhvv6rgh16napf";
       })
   ) { rocksdb = rocksdb-haskell; };
   
   hspkgs = compiler.override {
     overrides = self: super: {
-      inherit universum acid-state kademlia plutus-prototype node-sketch network-transport-tcp ed25519 log-warper;
+      inherit universum acid-state kademlia plutus-prototype node-sketch network-transport-tcp ed25519 log-warper cardano-report-server network-transport;
 
       QuickCheck = super.QuickCheck_2_9_2;
       optparse-applicative = super.optparse-applicative_0_13_0_0;
