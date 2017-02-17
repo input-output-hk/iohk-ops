@@ -60,4 +60,15 @@ in
   network.description = "Cardano SL experiments";
 
   node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
+
+  report-server = { pkgs, config, lib, resources, ...}: {
+    imports = [ ./../modules/common.nix ./../modules/report-server.nix ];
+
+    services.report-server = {
+      enable = true;
+      port = 5555;
+    };
+
+    deployment.ec2.elasticIPv4 = resources.elasticIPs.report-server-ip;
+  };
 } // ec2Keys
