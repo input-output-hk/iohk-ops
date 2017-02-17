@@ -19,6 +19,7 @@ let
   } // optionalAttrs (generatingAMI == false) ({
       deployment.ec2.region = mkForce region;
       deployment.ec2.keyPair = mkForce (keypair resources.ec2KeyPairs);
+      deployment.ec2.elasticIPv4 = resources.elasticIPs.${"nodeip" + toString testIndex};
     } // optionalAttrs cconf.productionMode  {
       deployment.keys."key${toString (testIndex + 1)}" = {
         text = builtins.readFile (builtins.getEnv("PWD") + "/keys/key${toString (testIndex + 1)}.sk");
@@ -74,6 +75,10 @@ in
   
   resources = {
     inherit ec2KeyPairs;
-    elasticIPs.report-server-ip = { inherit region accessKeyId; };
+    elasticIPs = 
+      # TODO: generalize with node generation
+      (genAttrs' (range 0 6) (key: "nodeip${toString key}") (name: { region = "eu-central-1"; inherit accessKeyId; })) //
+      (genAttrs' (range 7 13) (key: "nodeip${toString key}") (name: { region = "us-west-1"; inherit accessKeyId; })) //
+      { report-server-ip = { inherit region accessKeyId; }; };
   };
 }
