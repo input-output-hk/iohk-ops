@@ -25,4 +25,8 @@ in
   (genAttrs' (range 3 4) (key: "timewarp${toString key}") (name: rcv-node-eu name)) // 
 {
   network.description = "Time-warp experiments";
-} // ec2Keys
+
+  resources = {
+    inherit ec2KeyPairs;
+  };
+}

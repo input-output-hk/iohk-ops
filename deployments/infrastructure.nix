@@ -94,7 +94,7 @@ with (import ./../lib.nix);
     };
   };
   resources = {
-    inherit (ec2Keys.resources) ec2KeyPairs;
+    inherit ec2KeyPairs;
     elasticIPs = {
       hydra-ip = { inherit region accessKeyId; };
       cardanod-ip = { inherit region accessKeyId; };

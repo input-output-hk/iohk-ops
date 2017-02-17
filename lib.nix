@@ -14,16 +14,13 @@ in lib // (rec {
   accessKeyId = "cardano-deployer";
   region = "eu-central-1";
   
-  ec2Keys = {
-    resources = {
-      ec2KeyPairs.my-key-pair = { inherit accessKeyId; region = "eu-central-1"; };
-      ec2KeyPairs.cardano-test-eu = { inherit accessKeyId; region = "eu-central-1"; };
-      ec2KeyPairs.cardano-test-us = { inherit accessKeyId; region = "us-west-1"; };
-      ec2KeyPairs.cardano-test-asia = { inherit accessKeyId; region = "ap-southeast-1"; };
-      ec2KeyPairs.cardano-test-sydney = { inherit accessKeyId; region = "ap-southeast-2"; };
-      ec2KeyPairs.cardano-test-sa = { inherit accessKeyId; region = "sa-east-1"; };
-      elasticIPs.report-server-ip = { inherit region accessKeyId; };
-    };
+  ec2KeyPairs = {
+    my-key-pair = { inherit accessKeyId; region = "eu-central-1"; };
+    cardano-test-eu = { inherit accessKeyId; region = "eu-central-1"; };
+    cardano-test-us = { inherit accessKeyId; region = "us-west-1"; };
+    cardano-test-asia = { inherit accessKeyId; region = "ap-southeast-1"; };
+    cardano-test-sydney = { inherit accessKeyId; region = "ap-southeast-2"; };
+    cardano-test-sa = { inherit accessKeyId; region = "sa-east-1"; };
   };
 
   volhovmKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRMQ16PB/UvIEF+UIHfy66FNaBUWgviE2xuD5qoq/nXURBsHogGzv1ssdj1uaLdh7pZxmo/cRC+Y5f6dallIHHwdiKKOdRq1R/IWToMxnL/TTre+px6rxq21al9r4lvibelIU9vDn0R6OFZo+pRWyXUm33bQ4DVhwWiSls3Hw+9xRq4Pf2aWy//ey5CUTW+QkVdDIOFQG97kHDO3OdoNuaOMdeS+HBgH25bzSlcMw044T/NV9Cyi3y1eEBCoyqA9ba28GIl3vNADBdoQb5YYhBViFLaFsadzgWv5XWTpXV4Kwnq8ekmTcBkDzoTng/QOrDLsFMLo1nEMvhbFZopAfZ volhovm.cs@gmail.com";

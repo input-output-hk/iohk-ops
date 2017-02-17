@@ -71,4 +71,9 @@ in
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.report-server-ip;
   };
-} // ec2Keys
+  
+  resources = {
+    inherit ec2KeyPairs;
+    elasticIPs.report-server-ip = { inherit region accessKeyId; };
+  };
+}
