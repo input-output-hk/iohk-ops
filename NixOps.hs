@@ -33,7 +33,7 @@ instance FromJSON NixOpsConfig
 -- deprecated
 getArgs :: NixOpsConfig -> Text
 getArgs c =
-  " -d " <> deploymentName c <> " -I " <> nixPath c <> " "
+  " --show-trace -d " <> deploymentName c <> " -I " <> nixPath c <> " "
 
 getArgsList :: NixOpsConfig -> [Text]
 getArgsList c =
