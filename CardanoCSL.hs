@@ -12,6 +12,7 @@ import Control.Monad.Except (ExceptT (..), runExceptT)
 import Turtle hiding (printf)
 import Prelude hiding (FilePath)
 import Control.Monad (forM_, void, when)
+import Control.Monad.Trans(lift)
 import Data.Monoid ((<>))
 import Filesystem.Path.CurrentOS (encodeString)
 import Data.Aeson
@@ -46,6 +47,7 @@ data Command =
   | FirewallClear
   | AMI
   | PrintDate
+  | GenerateIPDHTMappings
   deriving (Show)
 
 subparser :: Parser Command
@@ -65,6 +67,7 @@ subparser =
   <|> subcommand "firewall-block-region" "Block whole region in firewall" (FirewallBlock <$> optText "from-region" 'f' "AWS Region that won't reach --to" <*> optText "to-region" 't' "AWS Region that all nodes will be blocked")
   <|> subcommand "firewall-clear" "Clear firewall" (pure FirewallClear)
   <|> subcommand "ami" "Build ami" (pure AMI)
+  <|> subcommand "generate-ipdht" "Generate IP/DHT mappings for wallet use" (pure GenerateIPDHTMappings)
 
 parser :: Parser (FilePath, Command)
 parser = (,) <$> optPath "config" 'c' "Configuration file"
@@ -93,6 +96,7 @@ main = do
     PrintDate -> getNodeNames c >>= printDate c
     FirewallBlock from to -> firewallBlock c from to
     FirewallClear -> firewallClear c
+    GenerateIPDHTMappings -> void $ generateIPDHTMappings c
     -- TODO: invoke nixops with passed parameters
 
 
@@ -199,6 +203,13 @@ dumpLogs c withProf nodes = do
              , defLogs
              ]
 
+generateIPDHTMappings :: NixOpsConfig -> IO Text
+generateIPDHTMappings c = runError $ do
+  nodes <- ExceptT $ getNodesMap c
+  config@Config{..} <- ExceptT $ getConfig
+  let peers = genPeers nodePort (M.toList nodes)
+  lift $ TIO.writeFile "daedalus/installers/data/ip-dht-mappings" $ T.unlines peers
+  return $ T.unlines peers
 -- Rest
 
 
@@ -247,10 +258,10 @@ getSmartGenCmd c = runError $ do
 genDhtKey :: Int -> Text
 genDhtKey i = "MHdrsP-oPf7UWl" <> (T.pack $ printf "%.3d" i) <> "7QuXnLK5RD="
 
-genPeers :: Int -> [(Int, DeploymentInfo)] -> Text
-genPeers port = mconcat . map impl
+genPeers :: Int -> [(Int, DeploymentInfo)] -> [Text]
+genPeers port = map impl
   where
-    impl (i, getIP . diPublicIP -> ip) = " --peer " <> ip <> ":" <> show' port <> "/" <> genDhtKey i
+    impl (i, getIP . diPublicIP -> ip) = ip <> ":" <> show' port <> "/" <> genDhtKey i
 
 getPeers :: NixOpsConfig -> Config -> M.Map Int DeploymentInfo -> Either String Text
 getPeers c config nodes = do
@@ -258,7 +269,7 @@ getPeers c config nodes = do
     Nothing -> Left "Node0 retrieval failed"
     Just node0 -> let port = nodePort config
                       infos = if enableP2P config then [(0, node0)] else M.toList nodes
-                  in Right $ genPeers port infos
+                  in Right $ mconcat $ map (\p -> " --peer " <> p) $ genPeers port infos
 
 getWalletDelegationCmd :: NixOpsConfig -> IO Text
 getWalletDelegationCmd c = runError $ do
