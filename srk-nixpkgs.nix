@@ -40,6 +40,14 @@ in rec {
         sha256 = "0l87zc75zd94qd5hwfb9ykq7834isqg7nij6zhgjjjs3k91is9jj";
       })
   ) { };
+  serokell-util = hspkgs.callPackage (
+    haskellPackageGen {} (pkgs.fetchFromGitHub {
+        owner = "serokell";
+        repo = "serokell-util";
+        rev = "3675d2e8484c4e1bab98c92a4c9b01ca721ff808";
+        sha256 = "1ak41860jdpmrgfjxnf8s5iapn2fh5ss0y1db1hw3g0hd70s80fd";
+      })
+  ) { };
   acid-state = hspkgs.callPackage (
     haskellPackageGen {} (pkgs.fetchFromGitHub {
         owner = "serokell";
@@ -108,16 +116,16 @@ in rec {
     haskellPackageGen { } (pkgs.fetchFromGitHub {
         owner = "serokell";
         repo = "time-warp-nt";
-        rev = "9865cea6fe7a2b376d67c0ff77efaaa26ea73d45";
-        sha256 = "13akc3yj8vm11xqzil5vg8l674r9d4lcnwdvv5g6qxsxrp0j2a3x";
+        rev = "b913bfc698fd2927ee5031826688eb7245906e6d";
+        sha256 = "0vwj0vlby951v5180m7qh2rl3kxwncmcpfmvx3f2mnhb1nm05va4";
       })
   ) { };
   cardano-report-server = hspkgs.callPackage (
     haskellPackageGen { } (pkgs.fetchFromGitHub {
         owner = "input-output-hk";
         repo = "cardano-report-server";
-        rev = "344f0e6e1b69b512cbfb04caf42bbe285cc7727a";
-        sha256 = "1qm430h8k9h7bvpr4nsgg25q65vn5z5hkk9gkm4zqia6ms4kqc0v";
+        rev = "ede7a1a9eafd88e3449b38c7425f5529d6584014";
+        sha256 = "1j6dcjs80mxqq5r1p47c8076629hbsqw4kf63023s2rvw548qh4i";
       })
   ) { };
   
@@ -125,17 +133,19 @@ in rec {
     haskellPackageGen { } (pkgs.fetchFromGitHub {
         owner = "input-output-hk";
         repo = "cardano-sl";
-        rev = "8540e55dd55094bbc9fb7da3266104dee1fac512";
-        sha256 = "1z7jvfyc7n1czypljlbm9331lgp6pa2ib4069dwhvv6rgh16napf";
+        rev = "e4f74733a414609f8b1fcf9ae968f5b8c21af0b6";
+        sha256 = "0lz167rd330kqp2gaqsgvvylzanh0sbsxpcxjbkgkbsrqhh86aa5";
       })
   ) { rocksdb = rocksdb-haskell; };
   
   hspkgs = compiler.override {
     overrides = self: super: {
-      inherit universum acid-state kademlia plutus-prototype node-sketch network-transport-tcp ed25519 log-warper cardano-report-server network-transport;
+      inherit universum acid-state kademlia plutus-prototype node-sketch network-transport-tcp ed25519 log-warper cardano-report-server network-transport serokell-util;
 
       QuickCheck = super.QuickCheck_2_9_2;
       optparse-applicative = super.optparse-applicative_0_13_0_0;
+      criterion = super.criterion_1_1_4_0;
+      #code-page = super.code-page_0_1_1;
 
       turtle = doJailbreak super.turtle_1_3_0;
 
