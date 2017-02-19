@@ -1,10 +1,10 @@
-{ config, pkgs, lib, ... }@args:
+{ config, pkgs, lib, nodes ? null, ... }:
 
 with (import ./../lib.nix);
 
 let
   cfg = config.services.cardano-node;
-  node0 = args.nodes.node0.config;
+  node0 = nodes.node0.config;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
   cardano = (import ./../srk-nixpkgs.nix { inherit pkgs; inherit (cfg) genesisN slotDuration networkDiameter mpcRelayInterval; }).hspkgs.cardano-sl;
