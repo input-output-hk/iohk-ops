@@ -9,7 +9,7 @@ script:
   - ./CardanoCSL.hs --help
   - ./TimeWarp.hs --help
   - ./Infra.hs --help
-  - nix-instantiate default.nix  
+  - nix-instantiate default.nix -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/4281374b8d3a3aabbb08f4aad042ec7a81794db9.tar.gz
   - nixops deploy -d csl --evaluate-only
   - nixops deploy -d tw --evaluate-only
   - nixops deploy -d inf --evaluate-only
