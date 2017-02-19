@@ -1,5 +1,8 @@
 language: nix
 
+env:
+  GENERATING_AMI=1
+
 install:
   - nix-env -iA nixpkgs.nixopsUnstable
   - nixops create deployments/cardano.nix -d csl
