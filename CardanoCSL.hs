@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle_1_3_0 cassava vector safe aeson yaml ])'
+#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle_1_3_0 cassava vector safe aeson yaml lens-aeson ])'
 #! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/464c79ea9f929d1237dbc2df878eedad91767a72.tar.gz
 
 {-# LANGUAGE OverloadedStrings #-}
@@ -13,16 +13,18 @@ import Turtle hiding (printf)
 import Prelude hiding (FilePath)
 import Control.Monad (forM_, void, when)
 import Control.Monad.Trans(lift)
-import Data.Monoid ((<>))
+import Control.Lens
 import Filesystem.Path.CurrentOS (encodeString)
 import Data.Aeson
+import Data.Aeson.Lens
+import Data.Maybe (catMaybes, fromJust)
+import Data.Monoid ((<>))
 import Data.Yaml (decodeFile)
 import Data.Text.Lazy (fromStrict)
 import Data.Text.IO as TIO
 import Data.Text.Lazy.Encoding (encodeUtf8)
 import qualified Data.Text as T
 import GHC.Generics
-import Data.Maybe (catMaybes)
 import Text.Printf
 import qualified Data.Map as M
 
@@ -207,7 +209,8 @@ generateIPDHTMappings :: NixOpsConfig -> IO Text
 generateIPDHTMappings c = runError $ do
   nodes <- ExceptT $ getNodesMap c
   config@Config{..} <- ExceptT $ getConfig
-  let peers = genPeers nodePort (M.toList nodes)
+  dhtfile <- lift $ Prelude.readFile "static/dht.json"
+  let peers = genPeers dhtfile nodePort (M.toList nodes)
   lift $ TIO.writeFile "daedalus/installers/data/ip-dht-mappings" $ T.unlines peers
   return $ T.unlines peers
 -- Rest
@@ -232,7 +235,8 @@ getSmartGenCmd :: NixOpsConfig -> IO Text
 getSmartGenCmd c = runError $ do
   nodes <- ExceptT $ getNodesMap c
   config@Config{..} <- ExceptT $ getConfig
-  peers <- ExceptT $ return $ getPeers c config nodes  
+  dhtfile <- lift $ Prelude.readFile "static/dht.json"
+  peers <- ExceptT $ return $ getPeers c config dhtfile nodes  
 
   let bot = if bitcoinOverFlat then "bitcoin" else "flat"
       recipShare = "0.3"
@@ -258,24 +262,25 @@ getSmartGenCmd c = runError $ do
 genDhtKey :: Int -> Text
 genDhtKey i = "MHdrsP-oPf7UWl" <> (T.pack $ printf "%.3d" i) <> "7QuXnLK5RD="
 
-genPeers :: Int -> [(Int, DeploymentInfo)] -> [Text]
-genPeers port = map impl
+genPeers :: String -> Int -> [(Int, DeploymentInfo)] -> [Text]
+genPeers dhtfile port = map impl
   where
-    impl (i, getIP . diPublicIP -> ip) = ip <> ":" <> show' port <> "/" <> genDhtKey i
+    impl (i, getIP . diPublicIP -> ip) = ip <> ":" <> show' port <> "/" <> (fromJust $ dhtfile ^? key ("node" <> show' i) . _String)
 
-getPeers :: NixOpsConfig -> Config -> M.Map Int DeploymentInfo -> Either String Text
-getPeers c config nodes = do
+getPeers :: NixOpsConfig -> Config -> String -> M.Map Int DeploymentInfo -> Either String Text
+getPeers c config dhtfile nodes = do
   case M.lookup 0 nodes of
     Nothing -> Left "Node0 retrieval failed"
     Just node0 -> let port = nodePort config
                       infos = if enableP2P config then [(0, node0)] else M.toList nodes
-                  in Right $ mconcat $ map (\p -> " --peer " <> p) $ genPeers port infos
+                  in Right $ mconcat $ map (\p -> " --peer " <> p) $ genPeers dhtfile port infos
 
 getWalletDelegationCmd :: NixOpsConfig -> IO Text
 getWalletDelegationCmd c = runError $ do
   nodes <- ExceptT $ getNodesMap c
   config@Config{..} <- ExceptT $ getConfig
-  peers <- ExceptT $ return $ getPeers c config nodes
+  dhtfile <- lift $ Prelude.readFile "static/dht.json"
+  peers <- ExceptT $ return $ getPeers c config dhtfile nodes
  
   let mkCmd i = "delegate-light " <> show' i <> " " <> show' delegationNode
       cmds = T.intercalate "," $ map mkCmd $ filter (/= delegationNode) $ M.keys nodes
