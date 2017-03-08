@@ -128,19 +128,28 @@ in rec {
         sha256 = "1j6dcjs80mxqq5r1p47c8076629hbsqw4kf63023s2rvw548qh4i";
       })
   ) { };
+
+  cardano-sl-core = hspkgs.callPackage (
+    haskellPackageGen { } ("${pkgs.fetchFromGitHub {
+        owner = "input-output-hk";
+        repo = "cardano-sl";
+        rev = "aa46ea4973b2afd3e1ec4d578cc10c1b63f5fcdb";
+        sha256 = "03cqs2ddlw1sgk5lbr19f2br7vn1nn22f3xibvarcscbmryjrp33";
+      }}/core")
+  ) { };
   
   cardano-sl = hspkgs.callPackage (
     haskellPackageGen { } (pkgs.fetchFromGitHub {
         owner = "input-output-hk";
         repo = "cardano-sl";
-        rev = "e4f74733a414609f8b1fcf9ae968f5b8c21af0b6";
-        sha256 = "0lz167rd330kqp2gaqsgvvylzanh0sbsxpcxjbkgkbsrqhh86aa5";
+        rev = "aa46ea4973b2afd3e1ec4d578cc10c1b63f5fcdb";
+        sha256 = "03cqs2ddlw1sgk5lbr19f2br7vn1nn22f3xibvarcscbmryjrp33";
       })
   ) { rocksdb = rocksdb-haskell; };
   
   hspkgs = compiler.override {
     overrides = self: super: {
-      inherit universum acid-state kademlia plutus-prototype node-sketch network-transport-tcp ed25519 log-warper cardano-report-server network-transport serokell-util;
+      inherit universum acid-state kademlia plutus-prototype node-sketch network-transport-tcp ed25519 log-warper cardano-report-server network-transport serokell-util cardano-sl-core;
 
       QuickCheck = super.QuickCheck_2_9_2;
       optparse-applicative = super.optparse-applicative_0_13_0_0;
