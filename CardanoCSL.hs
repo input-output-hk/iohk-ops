@@ -82,20 +82,23 @@ main = do
   --dat <- fmap toNodesInfo <$> info c
   dat <- getSmartGenCmd c
   TIO.putStrLn $ T.pack $ show dat
+  let isNode (T.unpack . getNodeName -> ('n':'o':'d':'e':_)) = True
+      isNode _ = False
+      getNodeNames' = filter isNode <$> getNodeNames c
   case command of
     Deploy -> deploy c
     Create -> create c
     Destroy -> destroy c
     FromScratch -> fromscratch c
     CheckStatus -> checkstatus c
-    RunExperiment -> runexperiment c
+    RunExperiment -> getNodeNames' >>= runexperiment c
     PostExperiment -> postexperiment c
     Build -> build c
-    DumpLogs {..} -> getNodeNames c >>= void . dumpLogs c withProf
-    Start -> getNodeNames c >>= startCardanoNodes c
-    Stop -> getNodeNames c >>= stopCardanoNodes c
+    DumpLogs {..} -> getNodeNames' >>= void . dumpLogs c withProf
+    Start -> getNodeNames' >>= startCardanoNodes c
+    Stop -> getNodeNames' >>= stopCardanoNodes c
     AMI -> buildAMI c
-    PrintDate -> getNodeNames c >>= printDate c
+    PrintDate -> getNodeNames' >>= printDate c
     FirewallBlock from to -> firewallBlock c from to
     FirewallClear -> firewallClear c
     GenerateIPDHTMappings -> void $ generateIPDHTMappings c
@@ -131,10 +134,8 @@ firewallBlock c from to = do
       g toNodes node = ssh c ("'for ip in " <> ips toNodes <> "; do iptables -A INPUT -s $ip -j DROP;done'") $ diName node
       ips = T.intercalate " " . fmap (getIP . diPublicIP)
 
-runexperiment :: NixOpsConfig -> IO ()
-runexperiment c = do
-  -- TODO: use info to avoid shell call
-  nodes <- getNodeNames c
+runexperiment :: NixOpsConfig -> [NodeName] -> IO ()
+runexperiment c nodes = do
   -- build
   echo "Checking nodes' status, rebooting failed"
   checkstatus c
