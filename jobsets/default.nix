@@ -14,7 +14,7 @@ let
     inputs = {
       nixpkgs = {
         type = "git";
-        value = "https://github.com/NixOS/nixpkgs-channels.git nixos-17.03";
+        value = "https://github.com/NixOS/nixpkgs-channels.git nixos-unstable";
       };
       jobsets = {
         type = "git";
