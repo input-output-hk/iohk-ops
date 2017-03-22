@@ -8,9 +8,6 @@ let
   prodMode = drv: overrideCabal drv (drv: {
     configureFlags = [ "-f-asserts" "-f-dev-mode"];
   });
-
-  # https://github.com/NixOS/nix/issues/1074#issuecomment-288347845
-  toPath = s: ./. + s
 in rec {
   hspkgs = compiler.override {
     overrides = self: super: {
@@ -32,11 +29,11 @@ in rec {
       cryptonite = super.callPackage ./pkgs/cryptonite.nix { };
 
       # TODO: https://github.com/NixOS/cabal2nix/issues/261
-      cardano-sl-core = prodMode (super.callCabal2nix "cardano-sl-core" (toPath "${self.cardano-sl.src}/core") {});
-      cardano-sl-db = super.callCabal2nix "cardano-sl-db" (toPath "${self.cardano-sl.src}/db") {};
-      cardano-sl-infra = prodMode (super.callCabal2nix "cardano-sl-infra" (toPath "${self.cardano-sl.src}/infra") {});
-      cardano-sl-lrc = super.callCabal2nix "cardano-sl-lrc" (toPath "${self.cardano-sl.src}/lrc") {};
-      cardano-sl-update = super.callCabal2nix "cardano-sl-update" (toPath "${self.cardano-sl.src}/update") {};
+      cardano-sl-core = prodMode (super.callCabal2nix "cardano-sl-core" "${self.cardano-sl.src}/core" {});
+      cardano-sl-db = super.callCabal2nix "cardano-sl-db" "${self.cardano-sl.src}/db" {};
+      cardano-sl-infra = prodMode (super.callCabal2nix "cardano-sl-infra" "${self.cardano-sl.src}/infra" {});
+      cardano-sl-lrc = super.callCabal2nix "cardano-sl-lrc" "${self.cardano-sl.src}/lrc" {};
+      cardano-sl-update = super.callCabal2nix "cardano-sl-update" "${self.cardano-sl.src}/update" {};
       cardano-sl-explorer = prodMode (super.callPackage ./pkgs/cardano-sl-explorer.nix { });
 
       cardano-sl = overrideCabal (super.callPackage ./pkgs/cardano-sl.nix { }) (drv: {
