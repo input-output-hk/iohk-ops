@@ -1,29 +1,25 @@
-Collection of tools to deploy Serokell infrastructure.
+Collection of tools to deploy IOHK infrastructure.
 
-File structure
+### Structure
 
-- `deployments` includes all NixOps deployments controlled via `Cardano*.hs` scripts
-- `modules` has NixOS modules
-- `lib.nix` warps upstream `<nixpkgs/lib.nix>` with our common functions
-- `scripts` has bash scripts not converted to Haskell/Turtle into Cardano.hs yet
-- `srk-nixpkgs.nix` is a collection of upstream Serokell packages
-- `static` includes files being static, not generated
+- `deployments` - includes all NixOps deployments controlled via `.hs` scripts
+- `modules` - NixOS modules
+- `lib.nix` - warps upstream `<nixpkgs/lib.nix>` with our common functions
+- `scripts` - has bash scripts not converted to Haskell/Turtle into Cardano.hs yet
+- `srk-nixpkgs.nix` - is a collection of Haskell packages
+- `static` includes files using in deployments
 - `jobsets` is used by Hydra CI
 
 
-### Getting started
+### Compiling localy
 
-Check out nixpkgs repository to the root (~/nixpkgs) using branch `release-16.09`.
-
-### Compiling localy 
-
-./Cardano.hs build
+     $ ./CardanoCSL.hs build
 
 ### Deploying changes
 
-./Cardano.hs deploy
+    $ ./CardanoCSL.hs deploy
 
-Note this will not remove machines if they no longer exist. 
+**Note this will not remove machines if they no longer exist.**
 
 ### Removing machines
 
@@ -34,25 +30,25 @@ Then run `nixops deploy` with `-k`:
 
 ### List all deployments
 
-`nixops list`
+    $ nixops list
 
-### Infos about all machines (including public IPs)
+### Information about all machines (including public IPs)
 
-`nixops info [-d deployment]`
+    $ nixops info -d <deployment-name>
 
-### Connect to a machine
+### SSH to a single machine
 
-`nixops ssh -d deployment machine-name`
+    $ nixops ssh -d <deployment-name> <machine-name>
 
-Replace `machine-name` with the machine you want to connect to (from `info` call).
+Replace `<machine-name>` with the machine you want to connect to (from `info` call).
 
 ### Destroy everything
 
-./Cardano.hs destroy
+    $ ./CardanoCSL.hs destroy
 
 ### Building AMIs
 
-./Cardano.hs ami
+    $ ./CardanoCSL.hs ami
 
 This will update `modules/amis.nix` so make sure to commit it.
 
