@@ -2,9 +2,10 @@ language: nix
 
 env:
   GENERATING_AMI=1
+  NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/d370e5fa226abe4f8ad660d8daca9ecfc483e7fc.tar.gz
 
 install:
-  - nix-env -iA nixpkgs.nixopsUnstable
+  - nix-env -iA nixpkgs.nixops
   - nixops create deployments/cardano.nix -d csl
   - nixops create deployments/timewarp.nix -d tw
   - nixops create deployments/infrastructure.nix -d inf
@@ -12,7 +13,7 @@ script:
   - ./CardanoCSL.hs --help
   - ./TimeWarp.hs --help
   - ./Infra.hs --help
-  - nix-instantiate default.nix -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/763e21e982370f67c126f92a1113ea949db3b6e0.tar.gz
+  - nix-instantiate default.nix
   - nixops deploy -d csl --evaluate-only
   - nixops deploy -d tw --evaluate-only
   - nixops deploy -d inf --evaluate-only
