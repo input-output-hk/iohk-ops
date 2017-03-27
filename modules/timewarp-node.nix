@@ -3,11 +3,10 @@
 with lib;
 
 let
-  time-warp = (import ./../srk-nixpkgs.nix { inherit pkgs; }).tw-rework-sketch;
+  time-warp = (import ./../default.nix { inherit pkgs; }).tw-rework-sketch;
   generatingAMI = builtins.getEnv "GENERATING_AMI";
   cfg = config.services.timewarp-node;
 in {
-
   options = {
     services.timewarp-node = {
       enable = mkEnableOption "timewarp-node";
@@ -19,7 +18,6 @@ in {
   imports = [ ./common.nix ];
 
   config = mkIf cfg.enable {
-
     users = {
       users.timewarp = {
         description     = "";
@@ -67,4 +65,4 @@ in {
       };
     };
   };
-} 
+}

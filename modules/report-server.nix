@@ -3,7 +3,7 @@
 with (import ./../lib.nix);
 
 let
-  report-server = (import ./../srk-nixpkgs.nix {}).hspkgs.cardano-report-server;
+  report-server = (import ./../default.nix {}).cardano-report-server;
   cfg = config.services.report-server;
 in {
   options = {

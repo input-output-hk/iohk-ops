@@ -2,7 +2,9 @@
 
 with pkgs;
 
-rec {
+let
+  iohkpkgs = import ./../default.nix;
+in rec {
   image = (import <nixpkgs/nixos/lib/eval-config.nix> {
     system = "x86_64-linux";
     modules = [
@@ -12,5 +14,5 @@ rec {
     ];
   }).config.system.build.amazonImage;
 
-  cardano-sl = import ./../default.nix;
+  inherit (iohkpkgs) cardano-report-server-static cardano-sl-static cardano-sl-explorer-static;
 }
