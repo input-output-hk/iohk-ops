@@ -116,7 +116,7 @@ buildAMI c = do
 build :: NixOpsConfig -> IO ()
 build c = do
   TIO.putStrLn "Building derivation..."
-  shells ("nix-build -j 4 --cores 2 default.nix -I " <> nixPath c) empty
+  shells ("nix-build -j 4 --cores 2 default.nix -A cardano-sl-static -I " <> nixPath c) empty
 
 firewallClear ::  NixOpsConfig -> IO ()
 firewallClear c = sshForEach c "iptables -F"
