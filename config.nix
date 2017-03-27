@@ -1,8 +1,8 @@
 rec {
   # Compile time settings
-  genesisN = 14;
-  slotDuration = 120;
-  networkDiameter = 45;
+  genesisN = 6;
+  slotDuration = 20;
+  networkDiameter = 15;
   mpcRelayInterval = 45;
 
   # Run time settings
@@ -26,4 +26,5 @@ rec {
   delegationNode = 0;
 
   productionMode = true;
+  systemStart = 1489953182;
 } 

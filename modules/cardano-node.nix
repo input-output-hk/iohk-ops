@@ -36,6 +36,7 @@ let
     (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     "--dht-key ${cfg.dhtKey}"
     (enableIf cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.testIndex + 1)}.sk")
+    (enableIf (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (enableIf cfg.supporter "--supporter")
     (enableIf cfg.timeLord "--time-lord")
     "--log-config ${./../static/csl-logging.yaml}"
@@ -52,6 +53,7 @@ in
     services.cardano-node = {
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };
+      systemStart = mkOption { type = types.int; default = 0; };
 
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
