@@ -18,9 +18,9 @@ with (import ./../lib.nix);
   environment.variables.TERM = "xterm-256color";
 
   services.cron.enable = true;
-  services.cron.systemCronJobs = [
-    "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 2 29 /var/log/saALL"
-  ];
+  #services.cron.systemCronJobs = [
+  #  "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 2 29 /var/log/saALL"
+  #];
 
   nix = rec {
     # use nix sandboxing for greater determinism
