@@ -36,6 +36,7 @@ with (import ./../lib.nix);
           enableACME = true;
           locations = {
             # TODO: one day we'll build purescript with Nix!
+            # but today, this is built by ./scripts/generate-explorer-frontend.sh
             "/".root = ./../cardano-sl-explorer/frontend/dist;
             "/api/".proxyPass = "http://localhost:8100";
           };
