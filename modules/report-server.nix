@@ -3,7 +3,7 @@
 with (import ./../lib.nix);
 
 let
-  report-server = (import ./../default.nix {}).cardano-report-server;
+  report-server = (import ./../default.nix {}).cardano-report-server-static;
   cfg = config.services.report-server;
 in {
   options = {
