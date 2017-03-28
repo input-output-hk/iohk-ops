@@ -31,7 +31,7 @@ import qualified Data.Map as M
 import NixOps
 
 
--- CLI Parser 
+-- CLI Parser
 
 data Command =
     Deploy
@@ -126,7 +126,7 @@ firewallBlock c from to = do
   nodes <- getNodes c
   let fromNodes = filter (f from) nodes
   let toNodes = filter (f to) nodes
-  TIO.putStrLn $ "Blocking nodes: " <> (T.intercalate ", " $ fmap (getNodeName . diName) toNodes) 
+  TIO.putStrLn $ "Blocking nodes: " <> (T.intercalate ", " $ fmap (getNodeName . diName) toNodes)
   TIO.putStrLn $ "Applying on nodes: " <> (T.intercalate ", " $ fmap (getNodeName . diName) fromNodes)
   parallelIO $ fmap (g toNodes) fromNodes
     where
@@ -157,7 +157,7 @@ runexperiment c nodes = do
   echo "Launching txgen"
   shells "rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications*.csv smart-gen-tps.csv" empty
   cliCmd <- getSmartGenCmd c
-  shells cliCmd empty 
+  shells cliCmd empty
   echo "Delaying... (150s)"
   sleep 150
   postexperiment c
@@ -173,14 +173,14 @@ postexperiment c = do
   let dirname = "./experiments/" <> dt
   shells ("echo \"" <> cliCmd <> "\" > " <> dirname <> "/txCommandLine") empty
   shells ("echo -n \"cardano-sl revision: \" > " <> dirname <> "/revisions.info") empty
-  shells ("cat srk-nixpkgs/cardano-sl.nix | grep rev >> " <> dirname <> "/revisions.info") empty
+  shells ("cat pkgs/cardano-sl.nix | grep rev >> " <> dirname <> "/revisions.info") empty
   shells ("echo -n \"time-warp revision: \" >> " <> dirname <> "/revisions.info") empty
-  shells ("cat srk-nixpkgs/time-warp.nix | grep rev >> " <> dirname <> "/revisions.info") empty
+  shells ("cat kgs/time-warp.nix | grep rev >> " <> dirname <> "/revisions.info") empty
   shells ("cp config.nix " <> dirname) empty
   shells ("mv txgen* smart* " <> dirname) empty
   --shells (foldl (\s n -> s <> " --file " <> n <> ".json") ("sh -c 'cd " <> workDir <> "; ./result/bin/cardano-analyzer --tx-file timestampsTxSender.json") nodes <> "'") empty
   shells ("tar -czf experiments/" <> dt <> ".tgz experiments/" <> dt) empty
-  
+
 dumpLogs :: NixOpsConfig -> Bool -> [NodeName] -> IO Text
 dumpLogs c withProf nodes = do
     TIO.putStrLn $ "WithProf: " <> T.pack (show withProf)
@@ -237,7 +237,7 @@ getSmartGenCmd c = runError $ do
   nodes <- ExceptT $ getNodesMap c
   config@Config{..} <- ExceptT $ getConfig
   dhtfile <- lift $ Prelude.readFile "static/dht.json"
-  peers <- ExceptT $ return $ getPeers c config dhtfile nodes  
+  peers <- ExceptT $ return $ getPeers c config dhtfile nodes
 
   let bot = if bitcoinOverFlat then "bitcoin" else "flat"
       recipShare = "0.3"
@@ -282,7 +282,7 @@ getWalletDelegationCmd c = runError $ do
   config@Config{..} <- ExceptT $ getConfig
   dhtfile <- lift $ Prelude.readFile "static/dht.json"
   peers <- ExceptT $ return $ getPeers c config dhtfile nodes
- 
+
   let mkCmd i = "delegate-light " <> show' i <> " " <> show' delegationNode
       cmds = T.intercalate "," $ map mkCmd $ filter (/= delegationNode) $ M.keys nodes
       bot = if bitcoinOverFlat then "bitcoin" else "flat"
@@ -298,8 +298,8 @@ getWalletDelegationCmd c = runError $ do
                        , " --", bot, "-distr '(", show' genesisN, ",", show' totalMoneyAmount, ")'"
                        , " cmd --commands \"", cmds, "\""
                        ]
- 
-  return cliCmd 
+
+  return cliCmd
 
 defLogs =
     [ ("/var/lib/cardano-node/node.log", (<> ".log"))
@@ -314,7 +314,7 @@ profLogs =
     -- but scp will just say "not found" and it's all good
     , ("/var/lib/cardano-node/cardano-node.eventlog", (<> ".eventlog"))
     ]
-   
+
 
 printDate :: NixOpsConfig -> [NodeName] -> IO ()
 printDate c nodes = parallelIO $ fmap f nodes
