@@ -16,6 +16,9 @@ script:
   - ./TimeWarp.hs --help
   - ./Infra.hs --help
   - nix-instantiate default.nix
+    -A cardano-sl-static
+    -A cardano-report-server-static
+    -A cardano-sl-explorer-static
   - nixops deploy -d csl --evaluate-only
   - nixops deploy -d tw --evaluate-only
   - nixops deploy -d inf --evaluate-only
