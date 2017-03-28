@@ -4,7 +4,10 @@ let
   cconf = import ./../config.nix;
 
   nodeGenericConfig = testIndex: region: keypair: {resources, pkgs, ...}: {
-    imports = [ ./../modules/common.nix ];
+    imports = [
+      ./../modules/common.nix
+      ./../modules/amazon-base.nix
+    ];
 
     services.cardano-node = {
       enable = true;
@@ -64,11 +67,14 @@ in
   node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
 
   report-server = { pkgs, config, lib, resources, ...}: {
-    imports = [ ./../modules/common.nix ./../modules/report-server.nix ];
+    imports = [
+      ./../modules/common.nix
+      ./../modules/amazon-base.nix
+      ./../modules/report-server.nix
+    ];
 
     services.report-server = {
       enable = true;
-      port = 5555;
     };
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.report-server-ip;

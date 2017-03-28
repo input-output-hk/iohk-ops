@@ -2,7 +2,7 @@ with (import ./../lib.nix);
 
 let
   timeWarpReceiver = region: keypair: testIndex: { pkgs, resources, ... }: {
-    imports = [ ./../modules/timewarp-node.nix ];
+    imports = [ ./../modules/timewarp-node.nix ./../modules/amazon-base.nix ];
     services.timewarp-node.enable = true;
     networking.firewall.enable = mkForce false;
   } // optionalAttrs (generatingAMI == false) {
