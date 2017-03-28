@@ -18,7 +18,7 @@ in lib // (rec {
 
   ec2KeyPairs = {
     my-key-pair = { inherit accessKeyId; region = "eu-central-1"; };
-    iohk = { accesKeyId = "iohk"; inherit region; };
+    iohk = { accessKeyId = "iohk"; inherit region; };
     cardano-test-eu = { inherit accessKeyId; region = "eu-central-1"; };
     cardano-test-us = { inherit accessKeyId; region = "us-west-1"; };
     cardano-test-asia = { inherit accessKeyId; region = "ap-southeast-1"; };

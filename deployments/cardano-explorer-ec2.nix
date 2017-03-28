@@ -4,6 +4,7 @@ let
   accessKeyId = "iohk";
 in {
   sl-explorer = { config, pkgs, resources, ... }: {
+    imports = [ ./../modules/amazon-base.nix ];
     deployment.ec2 = {
       instanceType = mkForce "t2.large";
       ebsInitialRootDiskSize = mkForce 200;

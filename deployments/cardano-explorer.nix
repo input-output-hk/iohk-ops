@@ -17,7 +17,7 @@ with (import ./../lib.nix);
       stats = false;
       jsonLog = false;
       distribution = true;
-      #autoStart = true;
+      autoStart = true;
       # TODO: this should/may come with cardano-sl and we would just use it from there
       peersFile = pkgs.fetchurl {
         url = "https://raw.githubusercontent.com/input-output-hk/daedalus/cardano-sl-0.3/installers/data/ip-dht-mappings";

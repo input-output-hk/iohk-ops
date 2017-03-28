@@ -14,6 +14,7 @@ with (import ./../lib.nix);
       ./../modules/hydra-slave.nix
       ./../modules/hydra-master.nix
       ./../modules/common.nix
+      ./../modules/amazon-base.nix
     ];
 
     networking.firewall.enable = mkForce true;
@@ -28,7 +29,10 @@ with (import ./../lib.nix);
   };
 
   cardano-deployer = { config, pkgs, resources, ... }: {
-    imports = [ ./../modules/common.nix ];
+    imports = [
+      ./../modules/common.nix
+      ./../modules/amazon-base.nix
+    ];
 
     users = {
       users.staging = {
