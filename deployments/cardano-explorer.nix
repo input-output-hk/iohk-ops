@@ -32,8 +32,7 @@ with (import ./../lib.nix);
       enable = true;
       virtualHosts = {
         "cardano-explorer-dev.iohk.io" = {
-          forceSSL = true;
-          enableACME = true;
+          # TLS provided by cloudfront
           locations = {
             # TODO: one day we'll build purescript with Nix!
             # but today, this is built by ./scripts/generate-explorer-frontend.sh
