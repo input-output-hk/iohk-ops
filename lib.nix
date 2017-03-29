@@ -8,14 +8,17 @@ in lib // (rec {
   # If we're generating an AMI, don't set nixops deployment attributes
   generatingAMI = (builtins.getEnv "GENERATING_AMI") == "1";
 
+  cconf = import ./config.nix;
+
   # Function to generate DHT key
   genDhtKey = { i }: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
 
   accessKeyId = "cardano-deployer";
   region = "eu-central-1";
-  
+
   ec2KeyPairs = {
     my-key-pair = { inherit accessKeyId; region = "eu-central-1"; };
+    iohk = { accessKeyId = "iohk"; inherit region; };
     cardano-test-eu = { inherit accessKeyId; region = "eu-central-1"; };
     cardano-test-us = { inherit accessKeyId; region = "us-west-1"; };
     cardano-test-asia = { inherit accessKeyId; region = "ap-southeast-1"; };

@@ -14,6 +14,7 @@ with (import ./../lib.nix);
       ./../modules/hydra-slave.nix
       ./../modules/hydra-master.nix
       ./../modules/common.nix
+      ./../modules/amazon-base.nix
     ];
 
     networking.firewall.enable = mkForce true;
@@ -27,36 +28,11 @@ with (import ./../lib.nix);
     };
   };
 
-  sl-explorer = { config, pkgs, resources, ... }: {
+  cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
       ./../modules/common.nix
+      ./../modules/amazon-base.nix
     ];
-
-    networking.firewall.allowedTCPPorts = [ 80 443 ];
-
-    services.nginx = {
-      enable = true;
-      virtualHosts = {
-       "cardano-explorer-dev.iohk.io" = {
-         forceSSL = true;
-         enableACME = true;
-         locations."/" = {
-           root = /home/production/cardano-sl-explorer-frontend/dist;
-         };
-       };
-     };
-    };
-
-    deployment.ec2 = {
-      instanceType = mkForce "t2.medium";
-      ebsInitialRootDiskSize = mkForce 50;
-      elasticIPv4 = resources.elasticIPs.sl-explorer-ip;
-      associatePublicIpAddress = true;
-    };
-  };
-
-  cardano-deployer = { config, pkgs, resources, ... }: {
-    imports = [ ./../modules/common.nix ];
 
     users = {
       users.staging = {

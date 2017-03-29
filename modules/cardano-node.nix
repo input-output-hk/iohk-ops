@@ -9,46 +9,64 @@ let
   stateDir = "/var/lib/cardano-node/";
   cardano = (import ./../default.nix { inherit pkgs; }).cardano-sl-static;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
-  enableIf = cond: flag: if cond then flag else "";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
   smartGenPeer =
     if (smartGenIP != "")
     then "--peer ${smartGenIP}:24962/${genDhtKey { i = 999; }}"
     else "";
+  publicIP = config.networking.publicIPv4 or null;
+
+  # Parse peers from a file
+  #
+  # > staticPeers
+  # ["ip:port/dht" "ip:port/dht" ...]
+  staticPeers = lib.splitString "\n" (builtins.readFile cfg.peersFile);
+
+  # Given a list of dht/ip mappings, generate peers line
+  #
+  # > genPeers ["ip:port/dht" "ip:port/dht" ...]
+  # "--peer ip:port/dht --peer ip:port/dht ..."
+  genPeers = peers: toString (map (p: "--peer " + p) peers);
+
+  # Given a list of NixOS configs, generate peers
+  genPeersFromConfig = configs: genPeers (map (c: "${c.networking.publicIPv4}:${toString c.services.cardano-node.port}/${c.services.cardano-node.dhtKey}") configs);
 
   command = toString [
-    "${cardano}/bin/cardano-node"
-    "--listen ${config.networking.publicIPv4 or "0.0.0.0"}:${toString cfg.port}"
-    (enableIf (!cfg.productionMode) "--rebuild-db")
+    cfg.executable
+    "--listen ${if publicIP == null then "0.0.0.0" else publicIP}:${toString cfg.port}"
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
     #"+RTS -N -pa -hb -T -A6G -qg -RTS"
     # Event logging (cannot be used with profiling)
     #"+RTS -N -T -l -A6G -qg -RTS"
-    (enableIf cfg.stats "--stats")
-    (enableIf (!cfg.productionMode) "--spending-genesis ${toString cfg.testIndex}")
-    (enableIf (!cfg.productionMode) "--vss-genesis ${toString cfg.testIndex}")
-    (enableIf (cfg.distribution && !cfg.productionMode) (
+    (optionalString cfg.stats "--stats")
+    (optionalString (!cfg.productionMode) "--rebuild-db")
+    (optionalString (!cfg.productionMode) "--spending-genesis ${toString cfg.testIndex}")
+    (optionalString (!cfg.productionMode) "--vss-genesis ${toString cfg.testIndex}")
+    (optionalString (cfg.distribution && !cfg.productionMode) (
        if cfg.bitcoinOverFlat
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
-    (enableIf cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
+    (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     "--dht-key ${cfg.dhtKey}"
-    (enableIf cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.testIndex + 1)}.sk")
-    (enableIf (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
-    (enableIf cfg.supporter "--supporter")
-    (enableIf cfg.timeLord "--time-lord")
+    (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.testIndex + 1)}.sk")
+    (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
+    (optionalString cfg.supporter "--supporter")
+    (optionalString cfg.timeLord "--time-lord")
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
-    (enableIf (!cfg.enableP2P) "--explicit-initial --disable-propagation ${smartGenPeer}")
-    (enableIf (!generatingAMI) (if cfg.enableP2P
-       then "--peer ${node0.networking.publicIPv4}:${toString node0.services.cardano-node.port}/${node0.services.cardano-node.dhtKey}"
-       else (toString (mapAttrsToList (name: value: "--peer ${value.config.networking.publicIPv4}:${toString value.config.services.cardano-node.port}/${value.config.services.cardano-node.dhtKey}") nodes))
+    (optionalString (!cfg.enableP2P) "--explicit-initial --disable-propagation ${smartGenPeer}")
+    (optionalString (!generatingAMI)
+       (if (cfg.peersFile == null)
+        then (if cfg.enableP2P
+              then genPeersFromConfig [node0]
+              else genPeersFromConfig (mapAttrsToList (name: value: value.config) nodes)
+             )
+        else genPeers staticPeers
     ))
   ];
-in
-{
+in {
   options = {
     services.cardano-node = {
       enable = mkEnableOption name;
@@ -57,14 +75,26 @@ in
 
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
-      timeLord = mkOption { type = types.bool; default = false; };   
-      dhtKey = mkOption { 
-        type = types.string; 
-        description = "base64-url string describing dht key"; 
+      timeLord = mkOption { type = types.bool; default = false; };
+      dhtKey = mkOption {
+        type = types.string;
+        description = "base64-url string describing dht key";
       };
       productionMode = mkOption {
         type = types.bool;
         default = false;
+      };
+
+      executable = mkOption {
+        type = types.str;
+        description = "Executable to run as the daemon.";
+        default = "${cardano}/bin/cardano-node";
+      };
+      autoStart = mkOption { type = types.bool; default = false; };
+      peersFile = mkOption {
+        type = types.nullOr types.path;
+        description = "A file with peer/dht mappings";
+        default = null;
       };
 
       genesisN = mkOption { type = types.int; };
@@ -75,13 +105,13 @@ in
       stats = mkOption { type = types.bool; default = false; };
       jsonLog = mkOption { type = types.bool; default = false; };
       totalMoneyAmount = mkOption { type = types.int; default = 100000; };
-      distribution = mkOption { 
-        type = types.bool; 
-        default = true; 
-        description = "pass distribution flag"; 
+      distribution = mkOption {
+        type = types.bool;
+        default = true;
+        description = "pass distribution flag";
       };
-      bitcoinOverFlat = mkOption { 
-        type = types.bool; 
+      bitcoinOverFlat = mkOption {
+        type = types.bool;
         default = false;
         description = "If distribution is on, use bitcoin distribution. Otherwise flat";
       };
@@ -107,11 +137,10 @@ in
 
     networking.firewall.allowedTCPPorts = [ cfg.port ];
 
-    environment.systemPackages = [ cardano ];
-
     systemd.services.cardano-node = {
       description   = "cardano node service";
       after         = [ "network.target" ];
+      wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       serviceConfig = {
         User = "cardano-node";
         Group = "cardano-node";
