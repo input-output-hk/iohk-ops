@@ -14,3 +14,4 @@ txgen.json
 smart-gen-*
 static/id_buildfarm
 *prof
+static/*.secret
