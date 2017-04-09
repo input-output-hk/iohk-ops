@@ -1,0 +1,16 @@
+severity: Warning
+file: txgen.log
+smart-gen:
+    severity: Warning
+    comm:
+        severity: Warning
+    dht:
+        severity: Warning
+time-slave:
+    severity: Warning
+    comm:
+        severity: Warning
+    dht:
+        severity: Warning
+kademlia:
+    severity: Warning

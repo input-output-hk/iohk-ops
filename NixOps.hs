@@ -39,11 +39,17 @@ getArgsList :: NixOpsConfig -> [Text]
 getArgsList c =
   ["-d", deploymentName c, "-I", nixPath c]
 
+myIpUrl :: Text
+myIpUrl = "http://169.254.169.254/latest/meta-data/public-ipv4"
+
+smGenIpEnv :: Text
+smGenIpEnv = "SMART_GEN_IP=$(curl " <> myIpUrl <> ") "
+
 deploy :: NixOpsConfig -> IO ()
 deploy c = do
   echo "Deploying cluster..."
   -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
-  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) SMART_GEN_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4) " <> nixopsExecutable c <> " deploy" <> getArgs c <> "--max-concurrent-copy 50 -j 4") empty
+  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) " <> smGenIpEnv <> nixopsExecutable c <> " deploy" <> getArgs c <> "--max-concurrent-copy 50 -j 4") empty
   echo "Done."
 
 destroy :: NixOpsConfig -> IO ()

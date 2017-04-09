@@ -6,7 +6,7 @@ with (import <nixpkgs/pkgs/development/haskell-modules/lib.nix> { inherit pkgs;}
 
 let
   prodMode = drv: overrideCabal drv (drv: {
-    configureFlags = [ "-f-asserts" "-f-dev-mode"];
+    configureFlags = [ "-f-asserts" "-fwith-wallet" "-fwith-web" "-fdev-mode" "-fembed-config"];
   });
 in compiler.override {
   overrides = self: super: {

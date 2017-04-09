@@ -238,9 +238,11 @@ getSmartGenCmd c = runError $ do
   config@Config{..} <- ExceptT $ getConfig
   dhtfile <- lift $ Prelude.readFile "static/dht.json"
   peers <- ExceptT $ return $ getPeers c config dhtfile nodes
+  (_, sgIp) <- fmap T.strip <$> shellStrict ("curl " <> myIpUrl) empty
+  let sgDhtKey = fromJust $ dhtfile ^? key "node100" . _String
 
   let bot = if bitcoinOverFlat then "bitcoin" else "flat"
-      recipShare = "0.3"
+      recipShare = "0.5"
       cliCmd = mconcat [ "./result/bin/cardano-smart-generator"
                        --, " +RTS -N -pa -hc -T -A4G -qg -RTS"
                        , " +RTS -N -A4G -qg -RTS"
@@ -253,8 +255,10 @@ getSmartGenCmd c = runError $ do
                        , " --init-money ", show' totalMoneyAmount
                        , " -t ", show' txgenInitTps, " -S ", show' txgenTpsStep, " -P ", show' txgenP
                        , " --recipients-share " <> if enableP2P then recipShare else "1"
-                       , " --log-config static/txgen-logging.yaml"
+                       , " --log-config static/txgen-logging-warnonly.yaml"
                        , " --json-log=txgen.json"
+                       , " --listen " <> sgIp <> ":24962"
+                       -- , " --dht-key " <> sgDhtKey
                        , " --", bot, "-distr '(", show' genesisN, ",", show' totalMoneyAmount, ")'"
                        ]
   return cliCmd
