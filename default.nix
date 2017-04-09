@@ -27,6 +27,12 @@ in compiler.override {
     derive = super.callPackage ./pkgs/derive.nix { };
     cryptonite = super.callPackage ./pkgs/cryptonite.nix { };
 
+    # servant-multipart needs servant 0.10
+    servant = dontCheck super.servant_0_10;
+    servant-server = super.servant-server_0_10;
+    servant-swagger = super.servant-swagger_1_1_2_1;
+    servant-docs = super.servant-docs_0_10;
+
     # TODO: https://github.com/NixOS/cabal2nix/issues/261
     cardano-sl-core = prodMode (super.callCabal2nix "cardano-sl-core" "${self.cardano-sl.src}/core" {});
     cardano-sl-db = super.callCabal2nix "cardano-sl-db" "${self.cardano-sl.src}/db" {};

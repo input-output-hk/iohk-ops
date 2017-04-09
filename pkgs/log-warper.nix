@@ -1,28 +1,28 @@
-{ mkDerivation, aeson, ansi-terminal, async, base, bytestring
-, containers, data-default, directory, dlist, errors, exceptions
-, extra, fetchgit, filepath, formatting, hashable, hspec, HUnit
-, lens, monad-control, monad-loops, mtl, network, QuickCheck
+{ mkDerivation, aeson, ansi-terminal, async, base, containers
+, data-default, directory, dlist, errors, exceptions, extra
+, fetchgit, filepath, formatting, hashable, hspec, HUnit, lens
+, mmorph, monad-control, monad-loops, mtl, network, QuickCheck
 , safecopy, stdenv, text, text-format, time, transformers
 , transformers-base, universum, unix, unordered-containers, yaml
 }:
 mkDerivation {
   pname = "log-warper";
-  version = "1.0.3";
+  version = "1.1.1";
   src = fetchgit {
     url = "https://github.com/serokell/log-warper.git";
-    sha256 = "0zwrjipjbjrqlgwdyn8ad0m28bndgz1dr2z01k4464c1whcy46m1";
-    rev = "b3b2d4d5afa2c22f3aff10b4cceab3914c6bc0e5";
+    sha256 = "06jc5dsg87xg0669dxdmmi0nxqnifdkilgcfmkcn2h3hwyda5ixc";
+    rev = "c2a21fd2971d9ed48cdd7295f8efd56fc8ec4821";
   };
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    aeson ansi-terminal base bytestring containers directory dlist
-    errors exceptions extra filepath formatting hashable lens
+    aeson ansi-terminal base containers directory dlist errors
+    exceptions extra filepath formatting hashable lens mmorph
     monad-control monad-loops mtl network safecopy text text-format
     time transformers transformers-base universum unix
     unordered-containers yaml
   ];
-  executableHaskellDepends = [ base exceptions text ];
+  executableHaskellDepends = [ base exceptions text universum yaml ];
   testHaskellDepends = [
     async base data-default directory filepath hspec HUnit lens
     QuickCheck universum unordered-containers

@@ -7,8 +7,8 @@ mkDerivation {
   version = "0.5.1";
   src = fetchgit {
     url = "https://github.com/avieth/network-transport-tcp.git";
-    sha256 = "1lznyp62w4h5387p70i4hm29v52bi2cackxl4ig2adfi8dg83i88";
-    rev = "1739cc6d5c73257201e5551088f4ba56d5ede15c";
+    sha256 = "0pklkrvvd38d7ykhclaz6rvn9wnn2gvpph25wbkkj2i990gz8q4k";
+    rev = "15847920ac1a32ada237e5a00ac4f56f3ca421a7";
   };
   libraryHaskellDepends = [
     base bytestring containers data-accessor network network-transport
