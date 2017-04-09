@@ -12,7 +12,7 @@ let
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
   smartGenPeer =
     if (smartGenIP != "")
-    then "--peer ${smartGenIP}:24962/${genDhtKey { i = 999; }}"
+    then "--peer ${smartGenIP}:24962/${genDhtKey { i = 100; }}"
     else "";
   publicIP = config.networking.publicIPv4 or null;
 
@@ -61,7 +61,7 @@ let
        (if (cfg.peersFile == null)
         then (if cfg.enableP2P
               then genPeersFromConfig [node0]
-              else genPeersFromConfig (mapAttrsToList (name: value: value.config) nodes)
+              else genPeersFromConfig (mapAttrsToList (name: value: value.config) (removeAttrs nodes ["report-server"]))
              )
         else genPeers staticPeers
     ))
