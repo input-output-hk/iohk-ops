@@ -7,16 +7,14 @@ rec {
 
   # Run time settings
   bitcoinOverFlat = false;
-  richPoorDistr = true;
-  totalMoneyAmount = 6000000000;
+  totalMoneyAmount = 60000000;
   nodePort = 3000;
-  # enableP2P = false;
   enableP2P = true;
 
   txgenR = 1;
-  txgenN = 20;
-  txgenPause = 20;
-  txgenInitTps = 1;
+  txgenN = 3;
+  txgenPause = 0;
+  txgenInitTps = 5;
   txgenTpsStep = 5;
   txgenP = 2;
   txgenAddresses = [ 0 ];
@@ -27,6 +25,6 @@ rec {
   #enableDelegation = true;
   delegationNode = 0;
 
-  productionMode = false;
-  systemStart = 0;
-}
+  productionMode = true;
+  systemStart = 1491770897;
+} 
