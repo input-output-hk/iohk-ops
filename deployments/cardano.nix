@@ -15,9 +15,9 @@ let
       testIndex = testIndex;
       dhtKey = genDhtKey { i = testIndex; };
       stats = false;
-      jsonLog = false;
+      jsonLog = true;
       distribution = true;
-      inherit (cconf) enableP2P genesisN slotDuration networkDiameter mpcRelayInterval totalMoneyAmount bitcoinOverFlat productionMode systemStart;
+      inherit (cconf) enableP2P genesisN slotDuration networkDiameter mpcRelayInterval totalMoneyAmount bitcoinOverFlat productionMode systemStart richPoorDistr;
     };
   } // optionalAttrs (generatingAMI == false) ({
       deployment.ec2.region = mkForce region;

@@ -6,6 +6,13 @@ node:
         severity: Info
     dht:
         severity: Info
+smart-wallet:
+    severity: Debug
+    file: wallet.log
+    comm:
+        severity: Info
+    dht:
+        severity: Info
 time-slave:
     severity: Info
     file: time-slave.log

@@ -9,6 +9,7 @@ let
   stateDir = "/var/lib/cardano-node/";
   cardano = (import ./../default.nix { inherit pkgs; }).cardano-sl-static;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
+  rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
   smartGenPeer =
     if (smartGenIP != "")
@@ -44,7 +45,9 @@ let
     (optionalString (!cfg.productionMode) "--rebuild-db")
     (optionalString (!cfg.productionMode) "--spending-genesis ${toString cfg.testIndex}")
     (optionalString (!cfg.productionMode) "--vss-genesis ${toString cfg.testIndex}")
-    (optionalString (cfg.distribution && !cfg.productionMode) (
+    (optionalString (cfg.distribution && !cfg.productionMode && cfg.richPoorDistr) (
+       "--rich-poor-distr \"${rnpDistributionParam}\""))
+    (optionalString (cfg.distribution && !cfg.productionMode && !cfg.richPoorDistr) (
        if cfg.bitcoinOverFlat
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
@@ -115,6 +118,12 @@ in {
         default = false;
         description = "If distribution is on, use bitcoin distribution. Otherwise flat";
       };
+      richPoorDistr = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Enable rich-poor distr";
+      };
+
 
       testIndex = mkOption { type = types.int; };
     };

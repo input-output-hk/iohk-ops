@@ -12,7 +12,7 @@ cabal2nix https://github.com/serokell/kademlia.git --no-check --revision bf65ac0
 cabal2nix https://github.com/serokell/rocksdb-haskell.git --revision 4dfd8d61263d78a91168e86e8005eb9b7069389e > rocksdb-haskell.nix
 cabal2nix https://github.com/serokell/time-warp-nt.git --no-check --revision e0a48924e7e308f1164168a81f67c0f25eaabda1 > time-warp-nt.nix
 
-cabal2nix https://github.com/input-output-hk/cardano-sl.git --no-check --revision 4234d66a55c5310be2751eeffbdd0672e9ab9fba > cardano-sl.nix
+cabal2nix https://github.com/input-output-hk/cardano-sl.git --no-check --revision 599e8dfdf3f2c4f2a1067eb2830defa3a92fc893 > cardano-sl.nix
 cabal2nix https://github.com/input-output-hk/cardano-report-server.git --revision 424e4ecacdf038a01542025dd1296bd272ce770d > cardano-report-server.nix
 cabal2nix https://github.com/input-output-hk/plutus-prototype.git --revision e2e2711e6978002279b4d7c49cab1aff47a2fd43 > plutus-prototype.nix
 

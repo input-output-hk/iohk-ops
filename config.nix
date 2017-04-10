@@ -7,10 +7,11 @@ rec {
 
   # Run time settings
   bitcoinOverFlat = false;
-  totalMoneyAmount = 60000000;
+  richPoorDistr = true;
+  totalMoneyAmount = 6000000000;
   nodePort = 3000;
-  enableP2P = false;
-  # enableP2P = true;
+  # enableP2P = false;
+  enableP2P = true;
 
   txgenR = 1;
   txgenN = 20;
