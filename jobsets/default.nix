@@ -29,6 +29,10 @@ let
       path = "jobsets/cardano.nix";
       description = "Cardano SL";
     };
+    deployments = {
+      path = "jobsets/deployments.nix";
+      description = "Builds for deployments";
+    }
     #pos-prototype-deployment = {
     #  path = "jobsets/infra.nix";
     #  description = "Deployments infrastructure";
