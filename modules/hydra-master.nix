@@ -39,12 +39,12 @@ in {
     enable = true;
     hydraURL = "https://hydra.iohk.io";
     port = 8080;
+    package = (import "${fetchTarball "https://github.com/domenkozar/hydra/archive/fc4a2c817788f936c0e114ee11aedab7cea66717.tar.gz"}/release.nix" {}).build.x86_64-linux;
     useSubstitutes = true;
     notificationSender = "hi@serokell.io";
     # max output is 4GB because of amis
     extraConfig = ''
       max_output_size = 4294967296
-      use-substitutes = 1
       store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
     '';
     logo = (pkgs.fetchurl {
