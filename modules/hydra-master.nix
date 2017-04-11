@@ -46,6 +46,7 @@ in {
     extraConfig = ''
       max_output_size = 4294967296
       store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
+      binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
     '';
     logo = (pkgs.fetchurl {
       url    = "https://iohk.io/images/iohk-share-logo.jpg";

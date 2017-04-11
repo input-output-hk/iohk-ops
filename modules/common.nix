@@ -39,7 +39,7 @@ with (import ./../lib.nix);
     # use our hydra builds
     trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
     binaryCaches = trustedBinaryCaches;
-    binaryCachePublicKeys = [ "hydra.serokell.io-1:qayq5mjxrNSx0QTRcpfD74pmRMHSmZCHy5vOrT8eF88=" ];
+    binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
   };
 
   networking.firewall.enable = false;
