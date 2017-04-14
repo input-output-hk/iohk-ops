@@ -4,6 +4,7 @@ let
   conf = { config, pkgs, resources, ... }: {
     imports = [
       ./../modules/datadog.nix
+      ./../modules/papertrail.nix
     ];
     services.dd-agent.tags = ["prod"];
   };

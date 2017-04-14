@@ -37,6 +37,7 @@ with (import ./../lib.nix);
       ./../modules/common.nix
       ./../modules/amazon-base.nix
       ./../modules/datadog.nix
+      ./../modules/papertrail.nix
     ];
 
     # TODO: move into separate -prod.nix
