@@ -15,7 +15,11 @@ with (import ./../lib.nix);
       ./../modules/hydra-master.nix
       ./../modules/common.nix
       ./../modules/amazon-base.nix
+      ./../modules/datadog.nix
     ];
+
+    # TODO: move into separate -prod.nix
+    services.dd-agent.tags = ["prod"];
 
     networking.firewall.enable = mkForce true;
 
@@ -32,7 +36,11 @@ with (import ./../lib.nix);
     imports = [
       ./../modules/common.nix
       ./../modules/amazon-base.nix
+      ./../modules/datadog.nix
     ];
+
+    # TODO: move into separate -prod.nix
+    services.dd-agent.tags = ["prod"];
 
     users = {
       users.staging = {
