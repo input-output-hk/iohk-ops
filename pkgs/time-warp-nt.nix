@@ -13,8 +13,8 @@ mkDerivation {
   version = "0.1.1.0";
   src = fetchgit {
     url = "https://github.com/serokell/time-warp-nt.git";
-    sha256 = "17isyy83z5jrkg6zrqs7wzfn07sjickvvdwg14g1shqb6gd8jas5";
-    rev = "e0a48924e7e308f1164168a81f67c0f25eaabda1";
+    sha256 = "0xslqvfx7hgiwmpp6qsmpi6dflsk2ip1nlgzyc94lr98w2abmzqr";
+    rev = "95433016161134a0fb4b6a3e67a75d681d158e0f";
   };
   isLibrary = true;
   isExecutable = true;
