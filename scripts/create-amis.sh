@@ -23,7 +23,7 @@ echo "NixOS version is $version ($major)"
 type="hvm"
 store="ebs"
 region="eu-central-1"
-newregions="us-west-1 ap-southeast-1 ap-southeast-2 sa-east-1"
+newregions="eu-west-1 eu-west-2 ap-southeast-1 ap-southeast-2 ap-northeast-1 ap-northeast-2"
 
 link=`pwd`/image
 imageFile=$link/nixos.qcow2
@@ -142,7 +142,7 @@ if ! [ -e $amiFile ]; then
         --block-device-mappings $blockDeviceMappings \
         $extraFlags | jq -r .ImageId)
     if [ "$ami" = null ]; then break; fi
-else                    
+else
     ami=$(cat $amiFile)
 fi
 
@@ -154,9 +154,9 @@ echo "{" > $amisFile
 echo "  $region = \"$ami\";" >> $amisFile
 
 for newregion in $newregions; do
-    echo	
+    echo
     echo "Copying $ami to $newregion"
-    echo	
+    echo
     newami=$(aws ec2 copy-image --region "$newregion" \
 	    --source-region "$region" --source-image-id $ami \
 	    --name "$name" --description "$description" | jq --raw-output '.ImageId')
@@ -178,4 +178,3 @@ for newregion in $newregions; do
   done
   echo
 done
-

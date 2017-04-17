@@ -144,6 +144,12 @@ in {
       };
     };
 
+    # TODO: link issue that will fix this ugly hack
+    # Reboot cardano-node every hour, offset by node id (in 4 minute intervals)
+    services.cron.systemCronJobs = [
+      "${toString (cfg.testIndex * 4)} * * * * /run/current-system/sw/bin/systemctl restart cardano-node"
+    ];
+
     networking.firewall.allowedTCPPorts = [ cfg.port ];
 
     systemd.services.cardano-node = {

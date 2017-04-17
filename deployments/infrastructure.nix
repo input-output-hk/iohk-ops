@@ -62,6 +62,15 @@ with (import ./../lib.nix);
       };
       groups.production = {};
 
+      users.live-production = {
+        description     = "cardano live-production";
+        group           = "live-production";
+        createHome      = true;
+        isNormalUser = true;
+        openssh.authorizedKeys.keys = [domenKey georgeeeKey kosergeKey jakeKey];
+      };
+      groups.live-production = {};
+
     };
 
     networking.firewall.allowedTCPPortRanges = [

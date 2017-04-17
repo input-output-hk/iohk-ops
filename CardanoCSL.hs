@@ -110,7 +110,7 @@ main = do
 
 buildAMI :: NixOpsConfig -> IO ()
 buildAMI c = do
-  shells ("GENERATING_AMI=1 nix-build jobsets/cardano.nix -A image -o image -I " <> nixPath c) empty
+  shells ("GENERATING_AMI=1 nix-build jobsets/deployments.nix -A image -o image -I " <> nixPath c) empty
   shells "./scripts/create-amis.sh" empty
 
 build :: NixOpsConfig -> IO ()

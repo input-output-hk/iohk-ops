@@ -23,6 +23,8 @@ let
       deployment.ec2.region = mkForce region;
       deployment.ec2.keyPair = mkForce (keypair resources.ec2KeyPairs);
       deployment.ec2.elasticIPv4 = resources.elasticIPs.${"nodeip" + toString testIndex};
+      # Initial block is big enough to hold 3 months of transactions
+      deployment.ec2.ebsInitialRootDiskSize = mkForce 700;
     } // optionalAttrs cconf.productionMode  {
       #deployment.keys."key${toString (testIndex + 1)}" = {
       #  text = builtins.readFile (builtins.getEnv("PWD") + "/keys/key${toString (testIndex + 1)}.sk");
@@ -43,28 +45,28 @@ let
   };
 
   regionIndex = region: keypair: testIndex: cardano-node { inherit region testIndex keypair; };
-  cardano-node-eu = regionIndex "eu-central-1" (pairs: pairs.cardano-test-eu);
-  cardano-node-eu_old = regionIndex "eu-central-1" (pairs: pairs.my-key-pair);
-  cardano-node-us = regionIndex "us-west-1" (pairs: pairs.cardano-test-us);
-  cardano-node-asia = regionIndex "ap-southeast-1" (pairs: pairs.cardano-test-asia);
-  cardano-node-sydney = regionIndex "ap-southeast-2" (pairs: pairs.cardano-test-sydney);
-  cardano-node-sa = regionIndex "sa-east-1" (pairs: pairs.cardano-test-sa);
-in 
+
+  cardano-node-eu-central = regionIndex "eu-central-1" (pairs: pairs.cardano-test-eu-central);
+  cardano-node-eu-west-1 = regionIndex "eu-west-1" (pairs: pairs.cardano-test-eu-west-1);
+  cardano-node-eu-west-2 = regionIndex "eu-west-2" (pairs: pairs.cardano-test-eu-west-2);
+  cardano-node-ap-southeast-1 = regionIndex "ap-southeast-1" (pairs: pairs.cardano-test-ap-southeast-1);
+  cardano-node-ap-southeast-2 = regionIndex "ap-southeast-2" (pairs: pairs.cardano-test-ap-southeast-2);
+  cardano-node-ap-northeast-1 = regionIndex "ap-northeast-1" (pairs: pairs.cardano-test-ap-northeast-1);
+  cardano-node-ap-northeast-2 = regionIndex "ap-northeast-2" (pairs: pairs.cardano-test-ap-northeast-2);
+
+in
   # NOTE: Also update resources at the bottom
-  (genAttrs' (range 1 5) (key: "node${toString key}") (name: cardano-node-eu name)) // 
-  #(genAttrs' (range 3 5) (key: "node${toString key}") (name: cardano-node-us name)) // 
-  #(genAttrs' (range 20 29) (key: "node${toString key}") (name: cardano-node-asia name)) //
-  #(genAttrs' (range 30 39) (key: "node${toString key}") (name: cardano-node-sydney name)) //
-  #(genAttrs' (range 40 49) (key: "node${toString key}") (name: cardano-node-sa name)) //
-  #(genAttrs' (range 50 59) (key: "node${toString key}") (name: cardano-node-eu name)) // 
-  #(genAttrs' (range 60 69) (key: "node${toString key}") (name: cardano-node-us name)) // 
-  #(genAttrs' (range 70 79) (key: "node${toString key}") (name: cardano-node-asia name)) //
-  #(genAttrs' (range 80 89) (key: "node${toString key}") (name: cardano-node-sydney name)) //
-  #(genAttrs' (range 90 99) (key: "node${toString key}") (name: cardano-node-sa name)) //
+  (genAttrs' (range 1 1) (key: "node${toString key}") (name: cardano-node-eu-central name)) //
+  (genAttrs' (range 2 3) (key: "node${toString key}") (name: cardano-node-eu-west-1 name)) //
+  (genAttrs' (range 4 5) (key: "node${toString key}") (name: cardano-node-eu-west-2 name)) //
+  (genAttrs' (range 6 7) (key: "node${toString key}") (name: cardano-node-ap-southeast-1 name)) //
+  (genAttrs' (range 8 9) (key: "node${toString key}") (name: cardano-node-ap-southeast-2 name)) //
+  (genAttrs' (range 10 11) (key: "node${toString key}") (name: cardano-node-ap-northeast-1 name)) //
+  (genAttrs' (range 12 13) (key: "node${toString key}") (name: cardano-node-ap-northeast-2 name)) //
 {
   network.description = "Cardano SL experiments";
 
-  node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.my-key-pair); };
+  node0 = cardano-node-coordinator { testIndex = 0; region = "eu-central-1"; keypair = (pairs: pairs.cardano-test-eu-central); };
 
   report-server = { pkgs, config, lib, resources, ...}: {
     imports = [
@@ -79,10 +81,10 @@ in
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.report-server-ip;
   };
-  
+
   resources = {
     inherit ec2KeyPairs;
-    elasticIPs = 
+    elasticIPs =
       # TODO: generalize with node generation
       (genAttrs' (range 0 5) (key: "nodeip${toString key}") (name: { region = "eu-central-1"; inherit accessKeyId; })) //
       #(genAttrs' (range 7 13) (key: "nodeip${toString key}") (name: { region = "us-west-1"; inherit accessKeyId; })) //
