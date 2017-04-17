@@ -10,9 +10,9 @@ cabal2nix https://github.com/serokell/acid-state.git --revision 95fce1dbada62020
 cabal2nix https://github.com/serokell/log-warper.git --revision c2a21fd2971d9ed48cdd7295f8efd56fc8ec4821 > log-warper.nix
 cabal2nix https://github.com/serokell/kademlia.git --no-check --revision bf65ac0cd50d2ccd7ef6507f0d71786c4bd10ae1 > kademlia.nix
 cabal2nix https://github.com/serokell/rocksdb-haskell.git --revision 4dfd8d61263d78a91168e86e8005eb9b7069389e > rocksdb-haskell.nix
-cabal2nix https://github.com/serokell/time-warp-nt.git --no-check --revision e0a48924e7e308f1164168a81f67c0f25eaabda1 > time-warp-nt.nix
+cabal2nix https://github.com/serokell/time-warp-nt.git --no-check --revision 95433016161134a0fb4b6a3e67a75d681d158e0f > time-warp-nt.nix
 
-cabal2nix https://github.com/input-output-hk/cardano-sl.git --no-check --revision 599e8dfdf3f2c4f2a1067eb2830defa3a92fc893 > cardano-sl.nix
+cabal2nix https://github.com/input-output-hk/cardano-sl.git --no-check --revision b1601653d2fc5ae139c6b0c261506870f503c550 > cardano-sl.nix
 cabal2nix https://github.com/input-output-hk/cardano-report-server.git --revision 424e4ecacdf038a01542025dd1296bd272ce770d > cardano-report-server.nix
 cabal2nix https://github.com/input-output-hk/plutus-prototype.git --revision e2e2711e6978002279b4d7c49cab1aff47a2fd43 > plutus-prototype.nix
 
