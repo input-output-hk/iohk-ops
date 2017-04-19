@@ -48,7 +48,7 @@ Replace `<machine-name>` with the machine you want to connect to (from `info` ca
 
 ### Building AMIs
 
-    $ ./CardanoCSL.hs ami
+    $ ./CardanoCSL.hs ami -c config.yaml
 
 This will update `modules/amis.nix` so make sure to commit it.
 

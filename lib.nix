@@ -17,13 +17,14 @@ in lib // (rec {
   region = "eu-central-1";
 
   ec2KeyPairs = {
-    my-key-pair = { inherit accessKeyId; region = "eu-central-1"; };
-    iohk = { accessKeyId = "iohk"; inherit region; };
-    cardano-test-eu = { inherit accessKeyId; region = "eu-central-1"; };
-    cardano-test-us = { inherit accessKeyId; region = "us-west-1"; };
-    cardano-test-asia = { inherit accessKeyId; region = "ap-southeast-1"; };
-    cardano-test-sydney = { inherit accessKeyId; region = "ap-southeast-2"; };
-    cardano-test-sa = { inherit accessKeyId; region = "sa-east-1"; };
+    #iohk = { accessKeyId = "iohk"; inherit region; };
+    cardano-test-eu-central = { inherit accessKeyId; region = "eu-central-1"; };
+    cardano-test-eu-west-1 = { inherit accessKeyId; region = "eu-west-1"; };
+    cardano-test-eu-west-2 = { inherit accessKeyId; region = "eu-west-2"; };
+    cardano-test-ap-southeast-1 = { inherit accessKeyId; region = "ap-southeast-1"; };
+    cardano-test-ap-southeast-2 = { inherit accessKeyId; region = "ap-southeast-2"; };
+    cardano-test-ap-northeast-1 = { inherit accessKeyId; region = "ap-northeast-1"; };
+    cardano-test-ap-northeast-2 = { inherit accessKeyId; region = "ap-northeast-2"; };
   };
 
   volhovmKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRMQ16PB/UvIEF+UIHfy66FNaBUWgviE2xuD5qoq/nXURBsHogGzv1ssdj1uaLdh7pZxmo/cRC+Y5f6dallIHHwdiKKOdRq1R/IWToMxnL/TTre+px6rxq21al9r4lvibelIU9vDn0R6OFZo+pRWyXUm33bQ4DVhwWiSls3Hw+9xRq4Pf2aWy//ey5CUTW+QkVdDIOFQG97kHDO3OdoNuaOMdeS+HBgH25bzSlcMw044T/NV9Cyi3y1eEBCoyqA9ba28GIl3vNADBdoQb5YYhBViFLaFsadzgWv5XWTpXV4Kwnq8ekmTcBkDzoTng/QOrDLsFMLo1nEMvhbFZopAfZ volhovm.cs@gmail.com";
@@ -45,6 +46,6 @@ in lib // (rec {
   fersel2Key = "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAiFnGf5zKfX/YHtrug4D+yz0o2RqJGzTLUq+zRGW0hf4fcJT1V6GDhnzjjgLK0r8OCBesblRsf6NO+PuVRnlx03EwomlD4HNAKyw7o0vMg9J6IaBQIESmOqDxCl8eYDMylnMCpIt+/ZKP4AneFu+8NeXxnB5Hy2gGRhkhc2MS/jkfqHdtc4V+FB1gWO4gDu+PB0kVyvsHS66J72OIiPHfPzYAfc8ZMsjssftCm3e0KEEaI3OAzIMuZTkPwX6ZFBoZP/WwRez4i0fHRbpwWm543K31gbITHCIJYlTi0T6ICPVG2j9Pz187C2BQvxwLkof4nyQdcLJypQlmMXKtuiyYiw== rsa-key-20170404";
   niklasFPCKey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAtwCIGPYJlD2eeUtxngmT+4yR7BMlK0F5kzj+84uHsxxsy+PXFrP/tScCpwmuoiEYNv/9WKnPJJfCA9XlIDr6cla1MLpaW6eg672TRYMmKzH6SLlkg+kyDmPxSIJw+KdKfnPYyva+Y/VocACYJo0voabUeLAVgtSKGz/AFzccjfOR0GmFO911zjAaR+jFb9M7t7dveNVKm9KbuBfu3giMgGg3/mKz1TKY8yk2ZOxpT5CllBb+B5BcEf+7IGNvNxr1Z0zz5cFXQ3LyBIZklnC/OaQCnD78BSiyPTkIXcmBFal2TaFwTDvki6PuCRpJy+dU1fDdgWLql97D0SVnjmmomw== niklas";
   kosergeKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDDwRtXm1TviRRjstPHV6G+to0P7lhN5F4Za5fMxva9MbY3XequPBBU5/HjoyZUTcZYN7bVlh9TFLQW6GrwYtL8g6W7+qj9vjZAT+pdrnpLgN+mGXppzsIbe8SZdLj11+nrL+jr1EBDnu4CmIeGfGCeKmQdYcXHBxDOYUxl80Qqjw4SKzLCWa0NAiJPaO+O1BQ1gjjDSTGumTq/DFtYi0yCjhhgXRKLQFZeOc4eV3uUXzqqwKb8i89sUFNIxPnZgEpMC5IX33r8+9CcibhDvFXxhCbEhwyxAlygzJCdntwRzIigOHxBiZV+KW9nRy/sUUC/82zB6BHZPdYV9Gb3r2740BR5jTac9Qps7MkaGuFANDkjy4ASC9DiL3TGoWjiScF100kbHsBDnEqzsybQrDXxpgTd8PiqZq9I1l1as2UoeuR3IPHO7zBbgbCy4rv9a7ZeITsPT7HcRDGHsVT762KnxVxQnR3m0CpoKGKWOKngMVRCTYsQ7Ng7f/ade9isduccrMeeTjGdkeC8QGS4VnfIEEqfHPJBS8/nree40vpvtWsvKHM346GQRm6A2UI14yBZIr/SoLQEZZP3TGwcOAA4Ze3BNGjPT38gnrPO3M8HiUJCyK3RS8GMOVr2K35aS+YTKOkLRYt4vM+vwSIWLtNgjq5kXh3HHOwFAWFn2m+ZBw== koserge-2017-04";
-  
+
   devKeys = [ volhovmKey georgeeeKey gromakKey gromak2Key flyingleafeKey flyingleafe2Key martoonKey domenKey alanKey jakeKey neongreenKey dshevchenkoKey larsKey philippKey shershKey fersel1Key fersel2Key niklasFPCKey kosergeKey ];
 })
