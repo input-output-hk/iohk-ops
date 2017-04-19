@@ -16,6 +16,7 @@ let
     then "--peer ${smartGenIP}:24962/${genDhtKey { i = 100; }}"
     else "";
   publicIP = config.networking.publicIPv4 or null;
+  privateIP = config.networking.privateIPv4 or null;
 
   # Parse peers from a file
   #
@@ -34,7 +35,8 @@ let
 
   command = toString [
     cfg.executable
-    "--listen ${if publicIP == null then "0.0.0.0" else publicIP}:${toString cfg.port}"
+    "--listen ${if privateIP == null then "0.0.0.0" else privateIP}:${toString cfg.port}"
+    (optionalString (publicIP != null) "--pubhost ${publicIP}")
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
