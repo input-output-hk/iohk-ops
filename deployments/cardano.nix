@@ -86,8 +86,13 @@ in
     inherit ec2KeyPairs;
     elasticIPs =
       # TODO: generalize with node generation
-      (genAttrs' (range 0 5) (key: "nodeip${toString key}") (name: { region = "eu-central-1"; inherit accessKeyId; })) //
-      #(genAttrs' (range 7 13) (key: "nodeip${toString key}") (name: { region = "us-west-1"; inherit accessKeyId; })) //
+      (genAttrs' (range 0 1) (key: "nodeip${toString key}") (name: { region = "eu-central-1"; inherit accessKeyId; })) //
+      (genAttrs' (range 2 3) (key: "nodeip${toString key}") (name: { region = "eu-west-1"; inherit accessKeyId; })) //
+      (genAttrs' (range 4 5) (key: "nodeip${toString key}") (name: { region = "eu-west-2"; inherit accessKeyId; })) //
+      (genAttrs' (range 6 7) (key: "nodeip${toString key}") (name: { region = "ap-southeast-1"; inherit accessKeyId; })) //
+      (genAttrs' (range 8 9) (key: "nodeip${toString key}") (name: { region = "ap-southeast-2"; inherit accessKeyId; })) //
+      (genAttrs' (range 10 11) (key: "nodeip${toString key}") (name: { region = "ap-northeast-1"; inherit accessKeyId; })) //
+      (genAttrs' (range 12 13) (key: "nodeip${toString key}") (name: { region = "ap-northeast-2"; inherit accessKeyId; })) //
       { report-server-ip = { inherit region accessKeyId; }; };
   };
 }
