@@ -147,7 +147,7 @@ in {
     # Workaround for CSL-1029
     # Reboot cardano-node every hour, offset by node id (in 4 minute intervals)
     services.cron.systemCronJobs = [
-      "${toString (cfg.testIndex * 4)} * * * * /run/current-system/sw/bin/systemctl restart cardano-node"
+      "${toString (cfg.testIndex * 4)} * * * * root /run/current-system/sw/bin/systemctl restart cardano-node"
     ];
 
     networking.firewall.allowedTCPPorts = [ cfg.port ];
