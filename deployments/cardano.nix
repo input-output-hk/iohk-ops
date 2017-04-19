@@ -23,8 +23,6 @@ let
       deployment.ec2.region = mkForce region;
       deployment.ec2.keyPair = mkForce (keypair resources.ec2KeyPairs);
       deployment.ec2.elasticIPv4 = resources.elasticIPs.${"nodeip" + toString testIndex};
-      # Initial block is big enough to hold 3 months of transactions
-      deployment.ec2.ebsInitialRootDiskSize = mkForce 700;
     } // optionalAttrs cconf.productionMode  {
       #deployment.keys."key${toString (testIndex + 1)}" = {
       #  text = builtins.readFile (builtins.getEnv("PWD") + "/keys/key${toString (testIndex + 1)}.sk");
