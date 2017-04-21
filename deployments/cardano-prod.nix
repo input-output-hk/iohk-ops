@@ -7,6 +7,9 @@ let
       ./../modules/papertrail.nix
     ];
     services.dd-agent.tags = ["prod"];
+
+    # DEVOPS-64: disable log bursting
+    services.journald.rateLimitBurst = 0;
   };
 in {
   report-server = conf;
