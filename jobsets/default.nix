@@ -14,11 +14,11 @@ let
     inputs = {
       nixpkgs = {
         type = "git";
-        value = "https://github.com/NixOS/nixpkgs.git 1b95985b71ea56e88c571f57b3acd3907ae23c00";
+        value = "https://github.com/NixOS/nixpkgs.git ebbababd8f9cb49d039f11d58e4e49d8e02d7533";
       };
       jobsets = {
         type = "git";
-        value = "https://github.com/input-output-hk/pos-prototype-deployment.git master 1";
+        value = "https://github.com/input-output-hk/cardano-sl.git master 1";
       };
     };
     mail = false;

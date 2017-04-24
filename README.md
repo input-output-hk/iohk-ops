@@ -55,16 +55,3 @@ This will update `modules/amis.nix` so make sure to commit it.
 ### Getting SSH access
 
 Append https://github.com/input-output-hk/pos-prototype-deployment/blob/master/lib.nix#L46 and submit a PR.
-
-# Deploying
-
-## Cardano explorer
-
-    $ ./scripts/generate-explorer-frontend.sh
-    $ cat explorer-production.yaml
-    deploymentName: csl-testnet-explorer-live
-    nixPath: nixpkgs=https://github.com/NixOS/nixpkgs/archive/763e21e982370f67c126f92a1113ea949db3b6e0.tar.gz
-    deploymentFiles:
-      - deployments/cardano-explorer.nix
-      - deployments/cardano-explorer-ec2.nix
-    $ ./CardanoCSL.hs deploy -c explorer-production.yaml

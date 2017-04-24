@@ -1,36 +1,41 @@
-{ mkDerivation, aeson, base, base16-bytestring, bytestring
+{ mkDerivation, aeson, base, base16-bytestring, binary, bytestring
 , cardano-sl, cardano-sl-core, cardano-sl-db, cardano-sl-infra
-, cpphs, either, exceptions, fetchgit, formatting, lens, log-warper
-, monad-loops, mtl, node-sketch, optparse-simple, purescript-bridge
-, serokell-util, servant, servant-docs, servant-server, stdenv, stm
-, text-format, time, transformers, universum, unordered-containers
-, wai
+, containers, cpphs, either, engine-io, engine-io-snap
+, engine-io-wai, exceptions, fetchgit, formatting, lens
+, lifted-base, log-warper, monad-control, monad-loops, mtl
+, node-sketch, optparse-simple, purescript-bridge, serokell-util
+, servant, servant-docs, servant-server, snap-core, snap-cors
+, snap-server, socket-io, stdenv, stm, text, text-format, time
+, time-units, transformers, universum, unordered-containers, wai
+, warp
 }:
 mkDerivation {
   pname = "cardano-sl-explorer";
-  version = "0.0.1.0";
+  version = "1.0.0";
   src = fetchgit {
     url = "https://github.com/input-output-hk/cardano-sl-explorer.git";
-    sha256 = "0wr48br9p8c5f30z2ls37k417n2ww6hqi3sqarijbanvc2d7qna3";
-    rev = "3ff32b51fef5a89722598a65acc47218edd44683";
+    sha256 = "1b40nldvkaji5k4l389ndl0v96pwvvb0jlcgilqia3appjpv8xdc";
+    rev = "a7f23de9bb8253e61a69d9acc3a1d5ad77680973";
   };
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    aeson base base16-bytestring bytestring cardano-sl cardano-sl-core
-    cardano-sl-db cardano-sl-infra either exceptions formatting lens
-    log-warper monad-loops mtl node-sketch servant servant-docs
-    servant-server stm text-format time transformers universum
-    unordered-containers wai
+    aeson base base16-bytestring binary bytestring cardano-sl
+    cardano-sl-core cardano-sl-db cardano-sl-infra containers either
+    engine-io engine-io-snap engine-io-wai exceptions formatting lens
+    lifted-base log-warper monad-control monad-loops mtl node-sketch
+    serokell-util servant servant-docs servant-server snap-core
+    snap-cors snap-server socket-io stm text text-format time
+    time-units transformers universum unordered-containers wai warp
   ];
   libraryToolDepends = [ cpphs ];
   executableHaskellDepends = [
-    base cardano-sl cardano-sl-core cardano-sl-infra lens log-warper
-    node-sketch optparse-simple purescript-bridge serokell-util
-    universum
+    base cardano-sl cardano-sl-core cardano-sl-infra formatting lens
+    log-warper node-sketch optparse-simple purescript-bridge
+    serokell-util universum
   ];
   executableToolDepends = [ cpphs ];
   doCheck = false;
-  description = "Cardano SL main implementation";
+  description = "Cardano explorer";
   license = stdenv.lib.licenses.mit;
 }

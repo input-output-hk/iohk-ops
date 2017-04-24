@@ -5,6 +5,11 @@ in lib // (rec {
   genAttrs' = names: fkey: fname:
     lib.listToAttrs (map (n: lib.nameValuePair (fkey n) (fname n)) names);
 
+  # modulo operator
+  # mod 11 10 == 1
+  # mod 1 10 == 1
+  mod = base: int: base - (int * (builtins.div base int));
+
   # If we're generating an AMI, don't set nixops deployment attributes
   generatingAMI = (builtins.getEnv "GENERATING_AMI") == "1";
 
