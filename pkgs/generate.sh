@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#! nix-shell -j 4 -i bash -p pkgs.cabal2nix
+#! nix-shell -j 4 -i bash -p pkgs.cabal2nix pkgs.nix-prefetch-scripts
 #! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/464c79ea9f929d1237dbc2df878eedad91767a72.tar.gz
 
 set -xe
