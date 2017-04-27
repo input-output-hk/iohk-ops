@@ -18,7 +18,7 @@ let
       };
       jobsets = {
         type = "git";
-        value = "https://github.com/input-output-hk/cardano-sl.git master 1";
+        value = "https://github.com/input-output-hk/iohk-nixops.git master 1";
       };
     };
     mail = false;
