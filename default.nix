@@ -5,9 +5,12 @@
 with (import <nixpkgs/pkgs/development/haskell-modules/lib.nix> { inherit pkgs;});
 
 let
+  lib = import <nixpkgs/lib>;
   prodMode = drv: overrideCabal drv (drv: {
     configureFlags = [ "-f-asserts" "-f-dev-mode"];
   });
+  socket-io-src = pkgs.fetchgit (removeAttrs (lib.importJSON ./pkgs/engine-io.json) ["date"]);
+  cardano-sl-src = pkgs.fetchgit (removeAttrs (lib.importJSON ./pkgs/cardano-sl.json) ["date"]);
 in compiler.override {
   overrides = self: super: {
     # To generate these go to ./pkgs and run ./generate.sh
@@ -33,15 +36,24 @@ in compiler.override {
     servant-swagger = super.servant-swagger_1_1_2_1;
     servant-docs = super.servant-docs_0_10;
 
+    # sl-explorer fixes
+    map-syntax = dontCheck super.map-syntax;
+    snap = dontCheck super.snap;
+
+    socket-io = super.callCabal2nix "socket-io" "${socket-io-src}/socket-io" {};
+    engine-io = super.callCabal2nix "engine-io" "${socket-io-src}/engine-io" {};
+    engine-io-wai = super.callCabal2nix "engine-io-wai" "${socket-io-src}/engine-io-wai" {};
+
     # TODO: https://github.com/NixOS/cabal2nix/issues/261
-    cardano-sl-core = prodMode (super.callCabal2nix "cardano-sl-core" "${self.cardano-sl.src}/core" {});
-    cardano-sl-db = super.callCabal2nix "cardano-sl-db" "${self.cardano-sl.src}/db" {};
-    cardano-sl-infra = prodMode (super.callCabal2nix "cardano-sl-infra" "${self.cardano-sl.src}/infra" {});
-    cardano-sl-lrc = super.callCabal2nix "cardano-sl-lrc" "${self.cardano-sl.src}/lrc" {};
-    cardano-sl-update = super.callCabal2nix "cardano-sl-update" "${self.cardano-sl.src}/update" {};
+    cardano-sl-core = prodMode (super.callCabal2nix "cardano-sl-core" "${cardano-sl-src}/core" {});
+    cardano-sl-db = super.callCabal2nix "cardano-sl-db" "${cardano-sl-src}/db" {};
+    cardano-sl-infra = prodMode (super.callCabal2nix "cardano-sl-infra" "${cardano-sl-src}/infra" {});
+    cardano-sl-lrc = super.callCabal2nix "cardano-sl-lrc" "${cardano-sl-src}/lrc" {};
+    cardano-sl-update = super.callCabal2nix "cardano-sl-update" "${cardano-sl-src}/update" {};
     cardano-sl-explorer = prodMode (super.callPackage ./pkgs/cardano-sl-explorer.nix { });
 
-    cardano-sl = overrideCabal (super.callPackage ./pkgs/cardano-sl.nix { }) (drv: {
+    cardano-sl = overrideCabal (super.callCabal2nix "cardano-sl" cardano-sl-src {}) (drv: {
+      doHaddock = false;
       patchPhase = ''
        export CSL_SYSTEM_TAG=linux64
       '';
