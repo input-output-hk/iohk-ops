@@ -54,5 +54,5 @@ in lib // (rec {
   ksaric = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsXWw3gV6QSH19yE/wNSie+e9lcJ01kfSacEUtqkLJpV5DrhaPJ6P73c8olV3AkysmJdaMMPzaf34Q62suo0baHQPxjvZL9dXcEKPeO98EUtU6cDUclIVRQKD2zit/6hNy1EeHpaRufjzuJCoWWDhp0n17TSNcWx05UOi5W3ZWmRw4hzQLj0fJ4+DS4iNhWKGei4SeUI1XkOg7o1Rg3ODdg5hpzQx9AWy7RfO8MJoXqdjEwbhIE+rzfiXiuClCBH+uNvtNNqEp0gqtsOU3qSyn65OLVA1M3pDHQGe+xQQnJYHRVLAKFWK9Ft6YKnJZLczmgZJ85PRydLbtWPzo34ax ksaric@ksaric-H61M-S2V-B3";
   sectore = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6DwuVqK+5Rt5iFuqSU9DhwmpklGZI+OE2/4gnfesr7kZcNIBErg+MvlOyjSHZufQrgXcjGcUbp7uP26rUVy74on8cffD9nGtPNs9t+xiCTAuCg4ddAvdszzcf7sSTQt0ElCbUuXX7QhEXGuAb0u6f6YWxnivPProq+YkZZ1OWvV3yQwhDH0xv9Vi4KJL0hv+xOhcyZGDKtjvoWbptXRmtP+aHet7wFdXaw1qlaECktqkFrfjlL///EMFm0XarMCH8qVC6sa81JIbHpSgx9FR/ZkrBB0YVgb6odh8LUPIKwvXYdwrzc1MIfPp+JpjZqnYP+2IEO5f3iuxvh5JjLpNn info@websector.de";
 
-  devKeys = [ volhovmKey georgeeeKey gromakKey gromak2Key flyingleafeKey flyingleafe2Key martoonKey domenKey alanKey jakeKey neongreenKey dshevchenkoKey larsKey philippKey shershKey fersel1Key fersel2Key niklasFPCKey kosergeKey ksaric ];
+  devKeys = [ volhovmKey georgeeeKey gromakKey gromak2Key flyingleafeKey flyingleafe2Key martoonKey domenKey alanKey jakeKey neongreenKey dshevchenkoKey larsKey philippKey shershKey fersel1Key fersel2Key niklasFPCKey kosergeKey ksaric sectore];
 })
