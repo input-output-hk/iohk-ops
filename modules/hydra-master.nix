@@ -41,12 +41,13 @@ in {
     port = 8080;
     package = (import "${fetchTarball "https://github.com/domenkozar/hydra/archive/fc4a2c817788f936c0e114ee11aedab7cea66717.tar.gz"}/release.nix" {}).build.x86_64-linux;
     useSubstitutes = true;
-    notificationSender = "hi@serokell.io";
+    notificationSender = "hi@iohk.io";
     # max output is 4GB because of amis
     extraConfig = ''
       max_output_size = 4294967296
       store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
       binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
+      use-substitutes = 1
     '';
     logo = (pkgs.fetchurl {
       url    = "https://iohk.io/images/iohk-share-logo.jpg";
