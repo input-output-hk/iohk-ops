@@ -8,7 +8,12 @@
 # echo "{ allowUnfree = true; }" > ~/.nixpkgs/config.nix
 # ~/.create-amis/export
 
-source ~/.ami-creds/export
+if [ -f ~/.ami-creds/export ]; then
+  source ~/.ami-creds/export
+else
+  echo "~/.ami-creds/export does not exist."
+  exit 1
+fi
 
 set -o pipefail
 
