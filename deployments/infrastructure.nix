@@ -58,7 +58,7 @@ with (import ./../lib.nix);
         group           = "production";
         createHome      = true;
         isNormalUser = true;
-        openssh.authorizedKeys.keys = devKeys;
+        openssh.authorizedKeys.keys = [];  # this account is obsolete
       };
       groups.production = {};
 
