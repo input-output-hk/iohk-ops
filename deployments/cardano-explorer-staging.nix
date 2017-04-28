@@ -45,32 +45,8 @@ in {
   sl-explorer = { pkgs, config, lib, resources, ... }: {
     imports = [
       (nodeGenericConfig 40 "eu-central-1" (pairs: pairs.cardano-test-eu-central))
+      ./../modules/cardano-explorer.nix
     ];
-
-    services.cardano-node = {
-      executable = "${(import ./../default.nix {}).cardano-sl-explorer-static}/bin/cardano-explorer";
-      autoStart = true;
-    };
-
-    networking.firewall.allowedTCPPorts = [
-      80 #nginx
-      8110
-    ];
-
-    services.nginx = {
-      enable = true;
-      virtualHosts = {
-        "cardano-explorer-dev.iohk.io" = {
-          # TLS provided by cloudfront
-          locations = {
-            # TODO: one day we'll build purescript with Nix!
-            # but today, this is built by ./scripts/generate-explorer-frontend.sh
-            "/".root = ./../cardano-sl-explorer/frontend/dist;
-            "/api/".proxyPass = "http://localhost:8100";
-          };
-        };
-      };
-    };
   };
 
   resources = {
