@@ -106,6 +106,12 @@ in
             "/".root = ./../cardano-sl-explorer/frontend/dist;
             "/api/".proxyPass = "http://localhost:8100";
           };
+	  # Otherwise nginx serves files with timestamps from /nix/store
+          extraConfig = ''
+            if_modified_since off;
+            add_header Last-Modified "";
+            etag off;
+          '';
         };
       };
     };
