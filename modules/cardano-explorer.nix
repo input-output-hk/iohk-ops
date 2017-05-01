@@ -12,13 +12,6 @@ with (import ./../lib.nix);
       autoStart = true;
     };
 
-    # Otherwise nginx serves files with timestamps unixtime+1 from /nix/store
-    extraConfig = ''
-      if_modified_since off;
-      add_header Last-Modified "";
-      etag off;
-    '';
-
     networking.firewall.allowedTCPPorts = [
       80 # nginx
       8110 # websocket
@@ -35,6 +28,12 @@ with (import ./../lib.nix);
             "/".root = ./../cardano-sl-explorer/frontend/dist;
             "/api/".proxyPass = "http://localhost:8100";
           };
+          # Otherwise nginx serves files with timestamps unixtime+1 from /nix/store
+          extraConfig = ''
+            if_modified_since off;
+            add_header Last-Modified "";
+            etag off;
+          '';
         };
       };
     };

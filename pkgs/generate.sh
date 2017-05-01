@@ -18,7 +18,7 @@ cabal2nix https://github.com/avieth/network-transport-tcp.git --no-check --revis
 cabal2nix https://github.com/ndmitchell/derive.git --no-check --revision 9b564c23543d92757168581beb832f4dc0db223b > derive.nix
 cabal2nix https://github.com/input-output-hk/cardano-crypto --no-check --revision 838b064d8a59286142aa2fe14434fe7601896ddb > cardano-crypto.nix
 cabal2nix https://github.com/haskell-crypto/cryptonite.git --no-check --revision 6440a7ebab7d85612e47099017bee0da6339af05 > cryptonite.nix
-cabal2nix https://github.com/input-output-hk/cardano-sl-explorer.git --no-check --revision a7f23de9bb8253e61a69d9acc3a1d5ad77680973 > cardano-sl-explorer.nix
+cabal2nix https://github.com/input-output-hk/cardano-sl-explorer.git --no-check --revision e3bb99dc5427d4e386859f4e22da72d3686d5d50 > cardano-sl-explorer.nix
 
 cabal2nix https://github.com/input-output-hk/cardano-report-server.git --revision 424e4ecacdf038a01542025dd1296bd272ce770d > cardano-report-server.nix
 cabal2nix https://github.com/input-output-hk/plutus-prototype.git --revision e2e2711e6978002279b4d7c49cab1aff47a2fd43 > plutus-prototype.nix
