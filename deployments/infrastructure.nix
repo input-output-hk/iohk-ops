@@ -92,7 +92,6 @@ with (import ./../lib.nix);
     elasticIPs = {
       hydra-ip = { inherit region accessKeyId; };
       cardanod-ip = { inherit region accessKeyId; };
-      sl-explorer-ip = { inherit region accessKeyId; };
     };
   };
 }

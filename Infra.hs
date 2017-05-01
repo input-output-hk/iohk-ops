@@ -13,10 +13,10 @@ import NixOps
 
 c :: NixOpsConfig
 c = NixOpsConfig
-  { deploymentName = "serokell-infra"
+  { deploymentName = "iohk-infra"
   , deploymentFiles = ["deployments/infrastructure.nix"]
   , nixopsExecutable = "nixops"
-  , nixPath = "nixpkgs=$HOME/nixpkgs-hydra"
+  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/5ab1994500ab080daae33dfb118f530f92c9c826.tar.gz"
   }
 
 data Command =
