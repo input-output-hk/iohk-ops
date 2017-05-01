@@ -16,7 +16,7 @@ c = NixOpsConfig
   { deploymentName = "iohk-infra"
   , deploymentFiles = ["deployments/infrastructure.nix"]
   , nixopsExecutable = "nixops"
-  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/5ab1994500ab080daae33dfb118f530f92c9c826.tar.gz"
+  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/47c8ee6daea8dd2d3ca5b0683bd4273955ff0973.tar.gz"
   }
 
 data Command =
