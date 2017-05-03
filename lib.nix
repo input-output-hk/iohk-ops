@@ -1,3 +1,6 @@
+# To interact with this file:
+# nix-repl lib.nix
+
 let
   lib = (import <nixpkgs> {}).lib;
 in lib // (rec {
@@ -5,21 +8,49 @@ in lib // (rec {
   genAttrs' = names: fkey: fname:
     lib.listToAttrs (map (n: lib.nameValuePair (fkey n) (fname n)) names);
 
+  # Given a list of integers and a function,
+  # generate an attribute set with that many nodes and call the function with node index
+  genNodes = ids: f: genAttrs' ids (i: "node${toString i}") f;
+
+  # TODO: sanity check there's no duplicate nodes for same index
+  # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
+  mergeNodes = nodes: lib.foldAttrs (a: b: a) [] nodes;
+
+  mkNodes = nodes: config: lib.mapAttrs (name: value: config value.i value.region) nodes;
+  mkNodeIPs = nodes: accessKeyId: lib.mapAttrs' (name: value:
+      { name = "nodeip${toString value.i}";
+        value = { inherit (value) region; inherit accessKeyId;};
+      }
+    ) nodes;
+
+  # Parse peers from a file
+  #
+  # > peersFromFile ./peers.txt
+  # ["ip:port/dht" "ip:port/dht" ...]
+  peersFromFile = file: lib.splitString "\n" (builtins.readFile file);
+
+  # Given a list of NixOS configs, generate a list of peers (ip/dht mappings)
+  genPeersFromConfig = configs:
+    let
+      f = c: "${c.networking.publicIPv4}:${toString c.services.cardano-node.port}/${c.services.cardano-node.dhtKey}";
+    in map f configs;
+
   # modulo operator
   # mod 11 10 == 1
   # mod 1 10 == 1
   mod = base: int: base - (int * (builtins.div base int));
 
-  # If we're generating an AMI, don't set nixops deployment attributes
-  generatingAMI = (builtins.getEnv "GENERATING_AMI") == "1";
-
   cconf = import ./config.nix;
 
   # Function to generate DHT key
-  genDhtKey = { i }: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
+  genDhtKey = i: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
 
   accessKeyId = "cardano-deployer";
   region = "eu-central-1";
+
+  # Given a region, returns it's keypair
+  # TODO: meaningful error if keypair for region doesn't exist
+  keypairFor = region: lib.head (lib.attrNames (lib.filterAttrs (n: v: v.region == region) ec2KeyPairs));
 
   ec2KeyPairs = {
     #iohk = { accessKeyId = "iohk"; inherit region; };

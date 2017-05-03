@@ -1,10 +1,9 @@
-{ config, pkgs, lib, nodes ? null, ... }:
+{ config, pkgs, lib, ... }:
 
 with (import ./../lib.nix);
 
 let
   cfg = config.services.cardano-node;
-  node0 = nodes.node0.config;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
   cardano = (import ./../default.nix { inherit pkgs; }).cardano-sl-static;
@@ -13,25 +12,16 @@ let
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
   smartGenPeer =
     if (smartGenIP != "")
-    then "--peer ${smartGenIP}:24962/${genDhtKey { i = 100; }}"
+    then "--peer ${smartGenIP}:24962/${genDhtKey 100 }}"
     else "";
   publicIP = config.networking.publicIPv4 or null;
   privateIP = config.networking.privateIPv4 or null;
-
-  # Parse peers from a file
-  #
-  # > staticPeers
-  # ["ip:port/dht" "ip:port/dht" ...]
-  staticPeers = lib.splitString "\n" (builtins.readFile cfg.peersFile);
 
   # Given a list of dht/ip mappings, generate peers line
   #
   # > genPeers ["ip:port/dht" "ip:port/dht" ...]
   # "--peer ip:port/dht --peer ip:port/dht ..."
   genPeers = peers: toString (map (p: "--peer " + p) peers);
-
-  # Given a list of NixOS configs, generate peers
-  genPeersFromConfig = configs: genPeers (map (c: "${c.networking.publicIPv4}:${toString c.services.cardano-node.port}/${c.services.cardano-node.dhtKey}") configs);
 
   command = toString [
     cfg.executable
@@ -58,18 +48,10 @@ let
     (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.testIndex + 1)}.sk")
     (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (optionalString cfg.supporter "--supporter")
-    (optionalString cfg.timeLord "--time-lord")
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
     (optionalString (!cfg.enableP2P) "--explicit-initial --disable-propagation ${smartGenPeer}")
-    (optionalString (!generatingAMI)
-       (if (cfg.peersFile == null)
-        then (if cfg.enableP2P
-              then genPeersFromConfig [node0]
-              else genPeersFromConfig (mapAttrsToList (name: value: value.config) (removeAttrs nodes ["report-server"]))
-             )
-        else genPeers staticPeers
-    ))
+    (genPeers cfg.initialPeers)
   ];
 in {
   options = {
@@ -80,7 +62,6 @@ in {
 
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
-      timeLord = mkOption { type = types.bool; default = false; };
       dhtKey = mkOption {
         type = types.string;
         description = "base64-url string describing dht key";
@@ -96,8 +77,8 @@ in {
         default = "${cardano}/bin/cardano-node";
       };
       autoStart = mkOption { type = types.bool; default = false; };
-      peersFile = mkOption {
-        type = types.nullOr types.path;
+      initialPeers = mkOption {
+        type = types.nullOr (types.listOf types.str);
         description = "A file with peer/dht mappings";
         default = null;
       };
@@ -108,7 +89,7 @@ in {
       mpcRelayInterval = mkOption { type = types.int; };
 
       stats = mkOption { type = types.bool; default = false; };
-      jsonLog = mkOption { type = types.bool; default = false; };
+      jsonLog = mkOption { type = types.bool; default = true; };
       totalMoneyAmount = mkOption { type = types.int; default = 100000; };
       distribution = mkOption {
         type = types.bool;
@@ -126,12 +107,16 @@ in {
         description = "Enable rich-poor distr";
       };
 
-
       testIndex = mkOption { type = types.int; };
     };
   };
 
   config = mkIf cfg.enable {
+    assertions = [{
+      assertion = cfg.initialPeers != null;
+      message = "services.cardano-node.initialPeers must be set, a node needs at least one initial peer (testIndex: ${toString cfg.testIndex})";
+    }];
+
     users = {
       users.cardano-node = {
         uid             = 10014;
@@ -145,6 +130,8 @@ in {
         gid = 123123;
       };
     };
+
+    services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.testIndex);
 
     # Workaround for CSL-1029
     services.cron.systemCronJobs =

@@ -7,6 +7,7 @@ with lib;
   imports =
     [ <nixpkgs/nixos/modules/installer/cd-dvd/channel.nix>
       <nixpkgs/nixos/modules/virtualisation/amazon-image.nix>
+      ({ ec2.hvm = true; })
     ];
 
   system.build.amazonImage = import <nixpkgs/nixos/lib/make-disk-image.nix> {

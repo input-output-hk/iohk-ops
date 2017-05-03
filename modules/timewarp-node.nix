@@ -4,7 +4,6 @@ with lib;
 
 let
   time-warp = (import ./../default.nix { inherit pkgs; }).tw-rework-sketch;
-  generatingAMI = builtins.getEnv "GENERATING_AMI";
   cfg = config.services.timewarp-node;
 in {
   options = {
