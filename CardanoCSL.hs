@@ -212,7 +212,7 @@ generateIPDHTMappings c = runError $ do
   config@Config{..} <- ExceptT $ getConfig
   dhtfile <- lift $ Prelude.readFile "static/dht.json"
   let peers = genPeers dhtfile nodePort (M.toList nodes)
-  lift $ TIO.writeFile "daedalus/installers/data/ip-dht-mappings" $ T.unlines peers
+  lift $ TIO.putStrLn $ T.unlines peers
   return $ T.unlines peers
 -- Rest
 
