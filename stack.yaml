@@ -1,0 +1,6 @@
+nix:
+  enable: false
+system-ghc: true
+resolver: ghc-8.0.2
+packages:
+- '.'
