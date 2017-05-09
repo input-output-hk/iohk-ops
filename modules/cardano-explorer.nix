@@ -14,7 +14,6 @@ with (import ./../lib.nix);
 
     networking.firewall.allowedTCPPorts = [
       80 # nginx
-      8110 # websocket
     ];
 
     services.nginx = {
@@ -31,6 +30,7 @@ with (import ./../lib.nix);
               tryFiles = "$uri /index.html";
             };
             "/api/".proxyPass = "http://localhost:8100";
+            "/socket.io/".proxyPass = "http://localhost:8110";
           };
           # Otherwise nginx serves files with timestamps unixtime+1 from /nix/store
           extraConfig = ''
