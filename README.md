@@ -4,7 +4,7 @@ Collection of tools to deploy IOHK infrastructure.
 
 - `deployments` - includes all NixOps deployments controlled via `.hs` scripts
 - `modules` - NixOS modules
-- `lib.nix` - warps upstream `<nixpkgs/lib.nix>` with our common functions
+- `lib.nix` - wraps upstream `<nixpkgs/lib.nix>` with our common functions
 - `scripts` - has bash scripts not converted to Haskell/Turtle into Cardano.hs yet
 - `default.nix` - is a collection of Haskell packages
 - `static` includes files using in deployments
