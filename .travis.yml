@@ -2,7 +2,7 @@ language: nix
 
 env:
   GENERATING_AMI=1
-  NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/d370e5fa226abe4f8ad660d8daca9ecfc483e7fc.tar.gz
+  NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/b9628313300b7c9e4cc88b91b7c98dfe3cfd9fc4.tar.gz
 
 install:
   - nix-env -iA nixpkgs.nixops
