@@ -18,7 +18,7 @@ let
       };
       jobsets = {
         type = "git";
-        value = "https://github.com/input-output-hk/iohk-nixops.git master 1";
+        value = "https://github.com/input-output-hk/iohk-nixops.git master";
       };
     };
     mail = false;
@@ -28,6 +28,20 @@ let
     cardano-sl = {
       path = "jobsets/cardano.nix";
       description = "Cardano SL";
+    };
+    cardano-sl-staging = {
+      path = "jobsets/cardano.nix";
+      description = "Cardano SL";
+      inputs = {
+        nixpkgs = {
+          type = "git";
+          value = "https://github.com/NixOS/nixpkgs.git b9628313300b7c9e4cc88b91b7c98dfe3cfd9fc4";
+        };
+        jobsets = {
+          type = "git";
+          value = "https://github.com/input-output-hk/iohk-nixops.git staging";
+        };
+      };
     };
     deployments = {
       path = "jobsets/deployments.nix";
