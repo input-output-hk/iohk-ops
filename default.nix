@@ -27,14 +27,16 @@ in compiler.override {
     plutus-prototype = super.callPackage ./pkgs/plutus-prototype.nix { };
     network-transport = super.callPackage ./pkgs/network-transport.nix { };
     network-transport-tcp = super.callPackage ./pkgs/network-transport-tcp.nix { };
-    derive = super.callPackage ./pkgs/derive.nix { };
-    cryptonite = super.callPackage ./pkgs/cryptonite.nix { };
 
     # servant-multipart needs servant 0.10
     servant = dontCheck super.servant_0_10;
     servant-server = super.servant-server_0_10;
     servant-swagger = super.servant-swagger_1_1_2_1;
     servant-docs = super.servant-docs_0_10;
+
+    memory = super.memory_0_14_5;
+    cryptonite = super.cryptonite_0_23;
+    foundation = super.foundation_0_0_8;
 
     # sl-explorer fixes
     map-syntax = dontCheck super.map-syntax;

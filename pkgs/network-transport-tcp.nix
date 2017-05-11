@@ -6,9 +6,9 @@ mkDerivation {
   pname = "network-transport-tcp";
   version = "0.5.1";
   src = fetchgit {
-    url = "https://github.com/avieth/network-transport-tcp.git";
-    sha256 = "08zjqpcxlf044q02dhr6gx4ndzqvmimvwy49v4540rj2ah10gsf9";
-    rev = "ca42a954a15792f5ea8dc203e56fac8175b99c33";
+    url = "https://github.com/serokell/network-transport-tcp.git";
+    sha256 = "1176y7dqyk7gn4576zxy7l03l7h4jsq9xw4bpgbm3qfpax6mfimf";
+    rev = "a6c04c35f3a1d786bc5e57fd04cf3e2a043179f3";
   };
   libraryHaskellDepends = [
     base bytestring containers data-accessor network network-transport

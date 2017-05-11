@@ -10,11 +10,11 @@
 }:
 mkDerivation {
   pname = "node-sketch";
-  version = "0.1.1.0";
+  version = "0.1.2.0";
   src = fetchgit {
     url = "https://github.com/serokell/time-warp-nt.git";
-    sha256 = "02ir2pb0adhgma8vr7i15pr3nnagzb8dxy6q2cxj1gp6rdma6784";
-    rev = "08855c3002d36a898bdb58754d7b184c200f4b17";
+    sha256 = "1sh45b84mmzj2b9k36l6m3zl1fm3gz6frh4n14qdbqmcwr20bj46";
+    rev = "22f8f3913bad6cc229b3c6e348ef8457e5a55b47";
   };
   isLibrary = true;
   isExecutable = true;
