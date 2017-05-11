@@ -10,19 +10,17 @@ cabal2nix https://github.com/serokell/acid-state.git --revision 95fce1dbada62020
 cabal2nix https://github.com/serokell/log-warper.git --revision c2a21fd2971d9ed48cdd7295f8efd56fc8ec4821 > log-warper.nix
 cabal2nix https://github.com/serokell/kademlia.git --no-check --revision 21df94f41008f82ee023e8e0324c7e4a82c4fef2 > kademlia.nix
 cabal2nix https://github.com/serokell/rocksdb-haskell.git --revision 4dfd8d61263d78a91168e86e8005eb9b7069389e > rocksdb-haskell.nix
-cabal2nix https://github.com/serokell/time-warp-nt.git --no-check --revision 08855c3002d36a898bdb58754d7b184c200f4b17 > time-warp-nt.nix
+cabal2nix https://github.com/serokell/time-warp-nt.git --no-check --revision 22f8f3913bad6cc229b3c6e348ef8457e5a55b47 > time-warp-nt.nix
 
 cabal2nix https://github.com/thoughtpolice/hs-ed25519.git --revision da4247b5b3420120e20451e6a252e2a2ca15b43c > ed25519.nix
-cabal2nix https://github.com/avieth/network-transport.git --no-check --revision f2321a103f53f51d36c99383132e3ffa3ef1c401 > network-transport.nix
-cabal2nix https://github.com/avieth/network-transport-tcp.git --no-check --revision ca42a954a15792f5ea8dc203e56fac8175b99c33 > network-transport-tcp.nix
-cabal2nix https://github.com/ndmitchell/derive.git --no-check --revision 9b564c23543d92757168581beb832f4dc0db223b > derive.nix
+cabal2nix https://github.com/serokell/network-transport.git --no-check --revision f2321a103f53f51d36c99383132e3ffa3ef1c401 > network-transport.nix
+cabal2nix https://github.com/serokell/network-transport-tcp.git --no-check --revision a6c04c35f3a1d786bc5e57fd04cf3e2a043179f3 > network-transport-tcp.nix
 cabal2nix https://github.com/input-output-hk/cardano-crypto --no-check --revision 838b064d8a59286142aa2fe14434fe7601896ddb > cardano-crypto.nix
-cabal2nix https://github.com/haskell-crypto/cryptonite.git --no-check --revision 6440a7ebab7d85612e47099017bee0da6339af05 > cryptonite.nix
-cabal2nix https://github.com/input-output-hk/cardano-sl-explorer.git --no-check --revision e3bb99dc5427d4e386859f4e22da72d3686d5d50 > cardano-sl-explorer.nix
+cabal2nix https://github.com/input-output-hk/cardano-sl-explorer.git --no-check --revision 24cd9bf6b3b02efd9f81a4791a6f42de8ab23e8a > cardano-sl-explorer.nix
 
 cabal2nix https://github.com/input-output-hk/cardano-report-server.git --revision 424e4ecacdf038a01542025dd1296bd272ce770d > cardano-report-server.nix
 cabal2nix https://github.com/input-output-hk/plutus-prototype.git --revision e2e2711e6978002279b4d7c49cab1aff47a2fd43 > plutus-prototype.nix
 
 # TODO: https://github.com/NixOS/cabal2nix/issues/261
 nix-prefetch-git https://github.com/serokell/engine.io.git a594e402fd450f11ad60d09ddbd93db500000632 > engine-io.json
-nix-prefetch-git https://github.com/input-output-hk/cardano-sl.git dd9a6742e3a29bb8a1471e761e7f89317208dda0 > cardano-sl.json
+nix-prefetch-git https://github.com/input-output-hk/cardano-sl.git 26b24d7bb8680d96b6543b7ec5c1d271ef737c67 > cardano-sl.json

@@ -5,7 +5,7 @@ mkDerivation {
   pname = "network-transport";
   version = "0.5.1";
   src = fetchgit {
-    url = "https://github.com/avieth/network-transport.git";
+    url = "https://github.com/serokell/network-transport.git";
     sha256 = "0gd1c36khb0mdp0w9b8xrmcr1pdnki2l9m2rck8y5lmn5xjf2bhr";
     rev = "f2321a103f53f51d36c99383132e3ffa3ef1c401";
   };
