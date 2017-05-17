@@ -13,7 +13,7 @@ testIndex: region:
         if cfg.enableP2P
         then [nodes.node0.config]
         else (lib.mapAttrsToList (name: node: node.config)
-                             (lib.filter (node: node.config.cardano-node.enable) nodes))
+                             (lib.filter (node: node.config.services.cardano-node.enable) nodes))
       );
 
       deployment.ec2.region = region;
