@@ -18,9 +18,10 @@ testIndex: region:
 
       deployment.ec2.region = region;
       deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor region};
-      #} // lib.optionalAttrs cfg.productionMode  {
-        #deployment.keys."key${toString (testIndex + 1)}" = {
-        #  text = builtins.readFile (builtins.getEnv("PWD") + "/keys/key${toString (testIndex + 1)}.sk");
-        #  user = "cardano-node";
-        #};
+      deployment.keys = optionalAttrs cfg.productionMode {
+        "key${toString (testIndex + 1)}" = {
+          keyFile = ./. + "/../keys/key${toString (testIndex + 1)}.sk";
+          user = "cardano-node";
+        };
+      };
     }
