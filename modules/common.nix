@@ -7,7 +7,7 @@ with (import ./../lib.nix);
 
   environment.systemPackages = with pkgs;
     [ git tmux vim sysstat nixops lsof ncdu tree mosh tig
-      cabal2nix stack iptables ];
+      cabal2nix stack iptables graphviz ];
 
   services.openssh.passwordAuthentication = true;
   services.openssh.enable = true;
