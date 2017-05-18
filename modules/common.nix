@@ -8,7 +8,8 @@ with (import ./../lib.nix);
   ];
 
   environment.systemPackages = with pkgs;
-    [ git tmux vim sysstat nixops lsof ncdu tree mosh tig
+    # nixopsUnstable: wait for 1.5.1 release
+    [ git tmux vim sysstat nixopsUnstable lsof ncdu tree mosh tig
       cabal2nix stack iptables graphviz ];
 
   services.openssh.passwordAuthentication = true;
