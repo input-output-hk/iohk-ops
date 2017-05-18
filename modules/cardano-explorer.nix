@@ -6,6 +6,8 @@ with (import ./../lib.nix);
   options = {
   };
 
+  imports = [ ./common.nix ];
+
   config = {
     services.cardano-node = {
       executable = "${(import ./../default.nix {}).cardano-sl-explorer-static}/bin/cardano-explorer";
@@ -19,7 +21,7 @@ with (import ./../lib.nix);
     services.nginx = {
       enable = true;
       virtualHosts = {
-        "cardano-explorer-dev.iohk.io" = {
+        "explorer.iohkdev.io" = {
           # TLS provided by cloudfront
           locations = {
             "/" = {

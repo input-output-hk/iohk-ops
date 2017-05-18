@@ -1,25 +1,36 @@
 language: nix
 
 env:
-  GENERATING_AMI=1
   NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/b9628313300b7c9e4cc88b91b7c98dfe3cfd9fc4.tar.gz
 
 install:
   - nix-env -iA nixpkgs.nixops
-  - nixops create deployments/cardano.nix -d csl
-  - nixops create deployments/timewarp.nix -d tw
-  - nixops create deployments/infrastructure.nix -d inf
 script:
+  - echo "" > datadog.secret
+  # check all scripts compile
   - ./CardanoCSL.hs --help
   - ./TimeWarp.hs --help
   - ./Infra.hs --help
+  # check all packages build
   - nix-instantiate default.nix
     -A cardano-sl-static
     -A cardano-report-server-static
     -A cardano-sl-explorer-static
-  - nixops deploy -d csl --evaluate-only
-  - nixops deploy -d tw --evaluate-only
-  - nixops deploy -d inf --evaluate-only
+  # check AMI generation
+  - nix-instantiate jobsets/deployments.nix -A image --show-trace
+  # check deploy evaluations
+  - nixops create deployments/{cardano-nodes,cardano-nodes-target-aws,cardano-nodes-env-production,cardano-explorer,cardano-explorer-target-aws,cardano-explorer-env-production,report-server,report-server-target-aws,report-server-env-production,keypairs}.nix -d csl-production
+  - nixops create deployments/{cardano-nodes,cardano-nodes-target-aws,cardano-nodes-env-staging,cardano-explorer,cardano-explorer-target-aws,cardano-explorer-env-staging,report-server,report-server-target-aws,report-server-env-staging,keypairs}.nix -d csl-staging
+  - nixops create deployments/{cardano-nodes,cardano-nodes-target-aws,cardano-explorer,cardano-explorer-target-aws,report-server,report-server-target-aws,keypairs}.nix -d csl
+  - nixops create deployments/{cardano-explorer,cardano-explorer-target-aws,cardano-explorer-env-staging,cardano-explorer-env-development,keypairs}.nix -d csl-explorer-staging
+  - nixops create deployments/timewarp{,-target-aws}.nix deployments/keypairs.nix -d tw
+  - nixops create deployments/{infrastructure,infrastructure-target-aws,infrastructure-env-production,keypairs}.nix -d inf
+  - nixops deploy -d csl --evaluate-only --show-trace
+  - nixops deploy -d csl-production --evaluate-only --show-trace
+  - nixops deploy -d csl-staging --evaluate-only --show-trace
+  - nixops deploy -d csl-explorer-staging --evaluate-only --show-trace
+  - nixops deploy -d tw --evaluate-only --show-trace
+  - nixops deploy -d inf --evaluate-only --show-trace
 
 notifications:
   email: false

@@ -8,13 +8,14 @@ let
 in {
   options = {
     services.report-server = {
-      enable = mkEnableOption "report-server";
       port = mkOption { type = types.int; default = 8080; };
       logsdir = mkOption { type = types.path; default = "/var/lib/report-server"; };
     };
   };
 
-  config = mkIf cfg.enable {
+  imports = [ ./common.nix ];
+
+  config = {
     users = {
       users.report-server = {
         group = "report-server";

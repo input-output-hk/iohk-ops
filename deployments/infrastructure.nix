@@ -1,9 +1,7 @@
 with (import ./../lib.nix);
 
 {
-  network.description = "Serokell infrastructure";
-
-  hydra = { config, pkgs, resources, ... }: {
+  hydra = { config, pkgs, ... }: {
     # TODO: Slack integration
     # On first setup:
 
@@ -14,34 +12,15 @@ with (import ./../lib.nix);
       ./../modules/hydra-slave.nix
       ./../modules/hydra-master.nix
       ./../modules/common.nix
-      ./../modules/amazon-base.nix
-      ./../modules/datadog.nix
     ];
-
-    # TODO: move into separate -prod.nix
-    services.dd-agent.tags = ["prod"];
 
     networking.firewall.enable = mkForce true;
-
-    deployment.ec2 = {
-      # 16G memory
-      instanceType = mkForce "r3.large";
-      ebsInitialRootDiskSize = mkForce 200;
-      elasticIPv4 = resources.elasticIPs.hydra-ip;
-      associatePublicIpAddress = true;
-    };
   };
 
-  cardano-deployer = { config, pkgs, resources, ... }: {
+  cardano-deployer = { config, pkgs, ... }: {
     imports = [
       ./../modules/common.nix
-      ./../modules/amazon-base.nix
-      ./../modules/datadog.nix
-      ./../modules/papertrail.nix
     ];
-
-    # TODO: move into separate -prod.nix
-    services.dd-agent.tags = ["prod"];
 
     users = {
       users.staging = {
@@ -70,28 +49,11 @@ with (import ./../lib.nix);
         openssh.authorizedKeys.keys = [domenKey georgeeeKey kosergeKey jakeKey];
       };
       groups.live-production = {};
-
     };
 
     networking.firewall.allowedTCPPortRanges = [
       { from = 24962; to = 25062; }
     ];
     networking.firewall.enable = mkForce true;
-
-    deployment.ec2 = {
-      # 16G memory needed for 100 nodes evaluation
-      instanceType = mkForce "r3.large";
-      ebsInitialRootDiskSize = mkForce 50;
-      elasticIPv4 = resources.elasticIPs.cardanod-ip;
-      associatePublicIpAddress = true;
-      ami = mkForce "ami-01f7306e";
-    };
-  };
-  resources = {
-    inherit ec2KeyPairs;
-    elasticIPs = {
-      hydra-ip = { inherit region accessKeyId; };
-      cardanod-ip = { inherit region accessKeyId; };
-    };
   };
 }

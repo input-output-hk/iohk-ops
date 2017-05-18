@@ -1,9 +1,11 @@
-{ config, resources, pkgs, ... }:
+{ config, pkgs, ... }:
 
 with (import ./../lib.nix);
 
 {
-  imports = [ ./cardano-node.nix ];
+  imports = [
+    ./cardano-node.nix
+  ];
 
   environment.systemPackages = with pkgs;
     [ git tmux vim sysstat nixops lsof ncdu tree mosh tig
