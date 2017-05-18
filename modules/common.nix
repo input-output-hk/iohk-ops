@@ -36,6 +36,8 @@ with (import ./../lib.nix);
 
     buildCores = 0;
 
+    nixPath = ["nixpkgs=http://nixos.org/channels/nixos-17.03/nixexprs.tar.xz"];
+
     # use our hydra builds
     trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
     binaryCaches = trustedBinaryCaches;
