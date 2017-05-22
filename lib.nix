@@ -42,14 +42,6 @@ in lib // (rec {
 
   cconf = import ./config.nix;
 
-  # Helper function to retrieve a key into a string bypassing nix store
-  getKey = keyFile:
-    let
-      key = toString keyFile;
-    in if builtins.pathExists key
-       then builtins.readFile key
-       else throw (key + " is missing, it's required for the deployment.");
-
   # Function to generate DHT key
   genDhtKey = i: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
 
