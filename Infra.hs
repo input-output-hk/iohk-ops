@@ -14,9 +14,12 @@ import NixOps
 c :: NixOpsConfig
 c = NixOpsConfig
   { deploymentName = "iohk-infra"
-  , deploymentFiles = ["deployments/infrastructure.nix"]
+  , deploymentFiles =
+    [ "deployments/infrastructure.nix"
+    , "deployments/infrastructure-target-aws.nix"
+    , "deployments/infrastructure-env-production.nix"]
   , nixopsExecutable = "nixops"
-  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/47c8ee6daea8dd2d3ca5b0683bd4273955ff0973.tar.gz"
+  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/fe62c993b5dfecb871a54eb6654b09bcd5595fe5.tar.gz"
   }
 
 data Command =
