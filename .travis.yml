@@ -1,11 +1,12 @@
 language: nix
 
 env:
-  NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/3e47e6251930294711d625a8123b7f395dd16b58.tar.gz
+  NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/fe62c993b5dfecb871a54eb6654b09bcd5595fe5.tar.gz
 
 install:
   - nix-env -iA nixopsUnstable -f '<nixpkgs>'
   - touch datadog.secret
+  - echo "secret" > static/tarsnap-cardano-deployer.secret
   - mkdir keys
   - touch keys/key{0,1,2,3,4,5,6,7,8,9,10,11,12,13,41}.sk
 script:

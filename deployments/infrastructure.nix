@@ -51,6 +51,22 @@ with (import ./../lib.nix);
       groups.live-production = {};
     };
 
+    services.tarsnap = {
+      enable = true;
+      keyfile = "/var/lib/keys/tarsnap";
+      archives.cardano-deployer = {
+        directories = [
+          "/home/staging/.ec2-keys"
+          "/home/staging/.aws"
+          "/home/staging/.nixops"
+          "/home/live-production/.ec2-keys"
+          "/home/live-production/.aws"
+          "/home/live-production/.nixops"
+          "/etc/"
+        ];
+      };
+    };
+
     networking.firewall.allowedTCPPortRanges = [
       { from = 24962; to = 25062; }
     ];
