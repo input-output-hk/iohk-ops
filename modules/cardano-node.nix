@@ -151,8 +151,11 @@ in {
       serviceConfig = {
         User = "cardano-node";
         Group = "cardano-node";
-#        Restart = "always";
-        StartLimitInterval=0;
+        # Allow a maximum of 5 retries separated by 30 seconds, in total capped by 200s
+        Restart = "always";
+        RestartSec = 30;
+        StartLimitInterval = 200;
+        StartLimitBurst = 5;
         KillSignal = "SIGINT";
         WorkingDirectory = stateDir;
         PrivateTmp = true;
