@@ -142,7 +142,14 @@ in {
       "${toString hour} * * * * root /run/current-system/sw/bin/systemctl restart cardano-node"
     ];
 
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
+    networking.firewall = {
+      enable = mkForce true;
+      allowedTCPPorts = [ cfg.port ];
+
+      # TODO: securing this depends on CSLA-27
+      # NOTE: this implicitly blocks DHCPCD, which uses port 68
+      allowedUDPPortRanges = [ { from = 1024; to = 65000; } ];
+    };
 
     systemd.services.cardano-node = {
       description   = "cardano node service";
