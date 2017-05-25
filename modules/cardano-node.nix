@@ -143,7 +143,6 @@ in {
     ];
 
     networking.firewall = {
-      enable = mkForce true;
       allowedTCPPorts = [ cfg.port ];
 
       # TODO: securing this depends on CSLA-27

@@ -47,7 +47,6 @@ with (import ./../lib.nix);
     binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
   };
 
-  networking.firewall.enable = false;
   # Mosh
   networking.firewall.allowedUDPPortRanges = [
     { from = 60000; to = 61000; }

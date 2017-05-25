@@ -25,7 +25,7 @@ in {
       groups.report-server = {};
     };
 
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
+    networking.firewall.enabled = false;
 
     systemd.services.report-server = {
       description   = "";

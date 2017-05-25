@@ -13,8 +13,6 @@ with (import ./../lib.nix);
       ./../modules/hydra-master.nix
       ./../modules/common.nix
     ];
-
-    networking.firewall.enable = mkForce true;
   };
 
   cardano-deployer = { config, pkgs, ... }: {
@@ -70,6 +68,5 @@ with (import ./../lib.nix);
     networking.firewall.allowedTCPPortRanges = [
       { from = 24962; to = 25062; }
     ];
-    networking.firewall.enable = mkForce true;
   };
 }
