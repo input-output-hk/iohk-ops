@@ -53,7 +53,7 @@ buildURL (BuildId id) =
 avpathURL :: AppveyorPath -> URL
 avpathURL (AppveyorPath avp) =
   URL "https" "ci.appveyor.com" $
-  mconcat ["buildjobs/", avp, "-installer.exe"]
+  mconcat ["api/buildjobs/", avp, "-installer.exe"]
 
 show' :: Show a => a -> Text
 show' = T.pack . show
@@ -75,10 +75,16 @@ checkURL desc url = do
   echo ""
   shells ("wget --tries=1 --spider " <> ppURL url) empty
 
+-- Note Appveyor URL checking broken
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--
+-- Sadly, neither 'curl' nor 'wget --spider' seem to be able to test AppVeyor URLs
+-- for liveness.  Which sounds sort of amazing, indeed.
+---
 runS3 :: S3 -> IO ()
 runS3 CheckDaedalusReleaseURLs = do
   checkURL "OSX release" osxLive
-  checkURL "W64 release" w64Live
+  -- checkURL "W64 release" w64Live -- See Note Appveyor URL checking broken
 
   echo "URLs live:"
   echo ""
@@ -93,7 +99,7 @@ runS3 (SetDaedalusReleaseBuild rsOSX@(OSX id) rsWin64@(Win64 avPath)) = do
   echo $ unsafeTextToLine $ mconcat [ "  OS X:   ", ppURL osxurl]
   echo $ unsafeTextToLine $ mconcat [ "  Win64:  ", ppURL w64url]
   checkURL "OSX build" osxurl
-  checkURL "W64 build" w64url
+  -- checkURL "W64 build" w64url -- See Note Appveyor URL checking broken
 
   echo "Both URLs live, proceeding to update latest release build references to:"
   echo $ unsafeTextToLine $ mconcat [ "  OS X:  ", ppURL osxurl]
