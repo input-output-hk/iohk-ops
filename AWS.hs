@@ -17,12 +17,12 @@ import Turtle
 -- * URLs
 data URL =
   URL
-  { proto :: T.Text
-  , host  :: T.Text
-  , key   :: T.Text
+  { proto ∷ T.Text
+  , host  ∷ T.Text
+  , key   ∷ T.Text
   } deriving (Show)
 
-ppURL:: URL -> T.Text
+ppURL∷ URL → T.Text
 ppURL (URL pro ho ke) = pro <> "://" <> ho <> "/" <> ke
 
 
@@ -40,11 +40,11 @@ data RSpecWin64   = Win64 AppveyorPath  deriving (Show)
 data AppveyorPath = AppveyorPath T.Text deriving (Show)
 data BuildId      = BuildId      T.Text deriving (Show)
 
-buildURL :: BuildId -> URL
+buildURL ∷ BuildId → URL
 buildURL (BuildId id) =
   URL "https" "s3.eu-central-1.amazonaws.com" $
   mconcat ["daedalus-travis/Daedalus-installer-", id, ".pkg"]
-avpathURL :: AppveyorPath -> URL
+avpathURL ∷ AppveyorPath → URL
 avpathURL (AppveyorPath avp) =
   URL "https" "ci.appveyor.com" $
   mconcat ["api/buildjobs/", avp, "-installer.exe"]
@@ -60,7 +60,7 @@ data S3Command
   | SetDaedalusReleaseBuild RSpecOSX RSpecWin64
   deriving (Show)
 
-parser :: Parser Command
+parser ∷ Parser Command
 parser =
   subcommand "s3" "Control the S3-related AWS-ities."
   (S3 <$> (subcommand "set-daedalus-release-build" "Set the S3 daedalus-<OS>-latest.<EXT> redirect to a particular version."
@@ -72,11 +72,11 @@ parser =
       <*> (fromMaybe defaultBucket
            <$> optional (Bucket <$> (argText "bucket" "The S3 bucket to operate on.  Defaults to 'daedalus-travis'."))))
 
-main :: IO ()
+main ∷ IO ()
 main = do
-  top <- options "Helper CLI around IOHK AWS functionality" parser
+  top ← options "Helper CLI around IOHK AWS functionality" parser
   case top of
-    S3 cmd bucket -> runS3 cmd bucket
+    S3 cmd bucket → runS3 cmd bucket
 
 
 
@@ -84,7 +84,7 @@ osxLive, w64Live ∷ Bucket → URL
 osxLive (Bucket b) = URL "http" (b <> ".s3-website.eu-central-1.amazonaws.com") "daedalus-osx-latest.pkg"
 w64Live (Bucket b) = URL "http" (b <> ".s3-website.eu-central-1.amazonaws.com") "daedalus-win64-latest.exe"
 
-checkURL :: Text -> URL -> IO ()
+checkURL ∷ Text → URL → IO ()
 checkURL desc url = do
   echo ""
   printf ("============== Checking if "%s%" URL is live:") desc
@@ -122,7 +122,7 @@ runS3 (SetDaedalusReleaseBuild rsOSX@(OSX id) rsWin64@(Win64 avPath)) bucket = d
   echo $ unsafeTextToLine $ mconcat [ "  Win64: ", ppURL w64url]
   echo ""
 
-  with (mktempfile "/tmp" "awstmp.json") $ \tmpfile -> do
+  with (mktempfile "/tmp" "awstmp.json") $ \tmpfile → do
     writeTextFile tmpfile . T.unlines $
       [ "{",
         "    \"IndexDocument\": {",
