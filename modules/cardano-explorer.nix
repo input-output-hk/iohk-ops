@@ -14,8 +14,6 @@ with (import ./../lib.nix);
       autoStart = true;
     };
 
-    networking.firewall.enable = false;
-
     services.nginx = {
       enable = true;
       virtualHosts = {

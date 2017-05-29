@@ -25,8 +25,6 @@ in {
       groups.report-server = {};
     };
 
-    networking.firewall.enabled = false;
-
     systemd.services.report-server = {
       description   = "";
       after         = [ "network.target" ];
