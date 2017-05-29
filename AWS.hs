@@ -29,7 +29,7 @@ ppURL (URL pro ho ke) = pro <> "://" <> ho <> "/" <> ke
 -- * Buckets
 data Bucket     = Bucket { fromBucket ∷ T.Text } deriving (Show)
 
-defaultBucket = Bucket "daedalus-installer-routing-rules"
+defaultBucket = Bucket "daedalus-travis"
 
 
 -- * Build/release logic
