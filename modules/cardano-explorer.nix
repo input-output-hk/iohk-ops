@@ -14,9 +14,11 @@ with (import ./../lib.nix);
       autoStart = true;
     };
 
-    networking.firewall.allowedTCPPorts = [
-      80 # nginx
-    ];
+    networking.firewall = {
+      allowedTCPPorts = [
+        80 # nginx
+      ];
+    };
 
     services.nginx = {
       enable = true;

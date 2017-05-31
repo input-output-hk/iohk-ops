@@ -27,7 +27,11 @@ in {
       groups.timewarp = { };
     };
 
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
+    networking.firewall = {
+      enable = false;
+
+      allowedTCPPorts = [ cfg.port ];
+    };
 
     systemd.services.timewarp = {
       description   = "";

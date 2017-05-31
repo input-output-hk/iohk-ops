@@ -4,12 +4,11 @@ let
   timeWarpReceiver = { pkgs, ... }: {
     imports = [ ./../modules/timewarp-node.nix ];
     services.timewarp-node.enable = true;
-    networking.firewall.enable = mkForce false;
   };
   timeWarpSender = { pkgs, ... }: {
     imports = [ timeWarpReceiver ];
     services.timewarp-node.sender = true;
-};
+  };
 in {
   network.description = "TimeWarp experiments";
 
