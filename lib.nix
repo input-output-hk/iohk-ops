@@ -14,7 +14,8 @@ in lib // (rec {
 
   # TODO: sanity check there's no duplicate nodes for same index
   # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
-  mergeNodes = nodes: lib.foldAttrs (a: b: a) [] nodes;
+  mergeNodes = mergeAttrs;
+  mergeAttrs = nodes: lib.foldAttrs (a: b: a) [] nodes;
 
   mkNodes = nodes: config: lib.mapAttrs (name: value: config value.i value.region) nodes;
   mkNodeIPs = nodes: accessKeyId: lib.mapAttrs' (name: value:
