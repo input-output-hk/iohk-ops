@@ -4,16 +4,17 @@ testIndex: region:
   { config, resources, pkgs, nodes, ... }:
     let
       cfg = config.services.cardano-node;
+      cardanoNodeConfigs = filter (c: c.services.cardano-node.enable)
+               (map (node: node.config) (attrValues nodes));
     in  {
       imports = [
         ./amazon-base.nix
       ];
 
       services.cardano-node.initialPeers = genPeersFromConfig (
-        if cfg.enableP2P
-        then [nodes.node0.config]
-        else (lib.mapAttrsToList (name: node: node.config)
-                             (lib.filter (node: node.config.services.cardano-node.enable) nodes))
+        if (cfg.enableP2P && !cfg.productionMode)
+        then [head cardanoNodeConfigs]
+        else cardanoNodeConfigs
       );
 
       deployment.ec2.ami = (import ./amis.nix).${config.deployment.ec2.region};
