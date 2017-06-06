@@ -20,7 +20,7 @@ c = NixOpsConfig
     , "deployments/infrastructure-target-aws.nix"
     , "deployments/infrastructure-env-production.nix"]
   , nixopsExecutable = "nixops"
-  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/fe62c993b5dfecb871a54eb6654b09bcd5595fe5.tar.gz"
+  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/05126bc8503a37bfd2fe80867eb5b0bea287c633.tar.gz"
   }
 
 data Command =
