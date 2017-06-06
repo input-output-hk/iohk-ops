@@ -24,7 +24,8 @@ c = NixOpsConfig
   }
 
 data Command =
-    Deploy
+    Create
+  | Deploy
   | Destroy
   | FromScratch
   | CheckStatus
@@ -32,7 +33,8 @@ data Command =
 
 parser :: Parser Command
 parser =
-      subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
+      subcommand "create" "Create a new cluster" (pure Create)
+  <|> subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
   <|> subcommand "destroy" "Destroy the whole cluster" (pure Destroy)
   <|> subcommand "fromscratch" "Destroy, Delete, Create, Deploy" (pure FromScratch)
   <|> subcommand "checkstatus" "Check if nodes are accessible via ssh and reboot if they timeout" (pure CheckStatus)
@@ -41,6 +43,7 @@ main :: IO ()
 main = do
   command <- options "Helper CLI around NixOps to run experiments" parser
   case command of
+    Create -> create c
     Deploy -> deploy c
     Destroy -> destroy c
     FromScratch -> fromscratch c
