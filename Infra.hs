@@ -15,7 +15,8 @@ c :: NixOpsConfig
 c = NixOpsConfig
   { deploymentName = "iohk-infra"
   , deploymentFiles =
-    [ "deployments/infrastructure.nix"
+    [ "deployments/keypairs.nix"
+    , "deployments/infrastructure.nix"
     , "deployments/infrastructure-target-aws.nix"
     , "deployments/infrastructure-env-production.nix"]
   , nixopsExecutable = "nixops"
