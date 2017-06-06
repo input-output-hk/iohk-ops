@@ -15,4 +15,5 @@ in rec {
       ({ services.cardano-node.initialPeers = [];})
     ];
   }).config.system.build.amazonImage;
+  stack2nix = iohkpkgs.callPackage ./../pkgs/stack2nix.nix {};
 }
