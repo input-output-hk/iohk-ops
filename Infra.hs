@@ -15,15 +15,17 @@ c :: NixOpsConfig
 c = NixOpsConfig
   { deploymentName = "iohk-infra"
   , deploymentFiles =
-    [ "deployments/infrastructure.nix"
+    [ "deployments/keypairs.nix"
+    , "deployments/infrastructure.nix"
     , "deployments/infrastructure-target-aws.nix"
     , "deployments/infrastructure-env-production.nix"]
   , nixopsExecutable = "nixops"
-  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/fe62c993b5dfecb871a54eb6654b09bcd5595fe5.tar.gz"
+  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/05126bc8503a37bfd2fe80867eb5b0bea287c633.tar.gz"
   }
 
 data Command =
-    Deploy
+    Create
+  | Deploy
   | Destroy
   | FromScratch
   | CheckStatus
@@ -31,7 +33,8 @@ data Command =
 
 parser :: Parser Command
 parser =
-      subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
+      subcommand "create" "Create a new cluster" (pure Create)
+  <|> subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
   <|> subcommand "destroy" "Destroy the whole cluster" (pure Destroy)
   <|> subcommand "fromscratch" "Destroy, Delete, Create, Deploy" (pure FromScratch)
   <|> subcommand "checkstatus" "Check if nodes are accessible via ssh and reboot if they timeout" (pure CheckStatus)
@@ -40,6 +43,7 @@ main :: IO ()
 main = do
   command <- options "Helper CLI around NixOps to run experiments" parser
   case command of
+    Create -> create c
     Deploy -> deploy c
     Destroy -> destroy c
     FromScratch -> fromscratch c
