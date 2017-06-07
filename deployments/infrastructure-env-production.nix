@@ -39,8 +39,8 @@ with (import ./../lib.nix);
     };
     datadogMonitors =
       let
-        appKey = "???";
-        apiKey = fileContents ./../static/datadog.secret;
+        appKey = fileContents ./../static/datadog-application.secret;
+        apiKey = fileContents ./../static/datadog-api.secret;
         baseMonitorOptions = {
           renotify_interval = 60;
           include_tags = true;
