@@ -5,7 +5,7 @@ with pkgs;
 let
   iohkpkgs = import ./../default.nix {};
 in rec {
-  inherit (iohkpkgs) cardano-report-server-static cardano-sl-static cardano-sl-explorer-static;
+  inherit (iohkpkgs) cardano-report-server-static cardano-sl-static cardano-sl-explorer-static cardano-sl;
   cardano-node-image = (import <nixpkgs/nixos/lib/eval-config.nix> {
     system = "x86_64-linux";
     modules = [
