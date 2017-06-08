@@ -49,26 +49,32 @@ with (import ./../lib.nix);
           notify_no_data = false;
           require_full_window = true;
         };
-        messages = {
-          critical = "notify @pagerduty-Datadog_Critical";
-          non_critical = "notify @pagerduty-Datadog_Non-Critical";
-        };
+	pagerdutyMessage = ''
+	  {{#is_alert}}
+	  @pagerduty-Datadog_Critical
+	  {{/is_alert}}
+
+	  {{#is_warning}}
+	  @pagerduty-Datadog_Non-Critical
+	  {{/is_warning}}
+	'';
       in
       {
         # ---------------------------------------------------------------------------
         # cardano-node process
         #
 
-        crit_cardano_node_process_monitor = { config, ... }:
+        cardano_node_process_monitor = { config, ... }:
           {
             inherit apiKey appKey;
 
-            name = "Critical: cardano-node process is down";
-            type = "metric alert";
-            message = messages.critical;
+            name = "cardano-node process is down";
+            type = "service check";
+            message = pagerdutyMessage;
             query = "\"process.up\".over(\"cardano-node\",\"process:cardano-node\").by(\"host\",\"process\").last(2).count_by_status()";
             monitorOptions = builtins.toJSON (baseMonitorOptions // {
-              thresholds.critical = "0.2";
+	      thresholds.warning = 1;
+              thresholds.critical = 1;
             });
           };
 
@@ -76,29 +82,17 @@ with (import ./../lib.nix);
         # CPU
         #
 
-        crit_cpu_monitor = { config, ... }:
+        cpu_monitor = { config, ... }:
           {
             inherit apiKey appKey;
 
-            name = "Critical: high CPU usage";
+            name = "High CPU usage";
             type = "metric alert";
-            message = messages.critical;
+            message = pagerdutyMessage;
             query = "avg(last_5m):avg:system.load.norm.1{host:${config.deployment.name}.machine} by {host} > 0.9";
             monitorOptions = builtins.toJSON (baseMonitorOptions // {
+	      thresholds.warning = "0.75";
               thresholds.critical = "0.9";
-            });
-          };
-
-        non_crit_cpu_monitor = { config, ... }:
-          {
-            inherit apiKey appKey;
-
-            name = "Non-Critical: high CPU usage";
-            type = "metric alert";
-            message = messages.non_critical;
-            query = "avg(last_5m):avg:system.load.norm.1{host:${config.deployment.name}.machine} by {host} > 0.75";
-            monitorOptions = builtins.toJSON (baseMonitorOptions // {
-              thresholds.critical = "0.75";
             });
           };
 
@@ -106,29 +100,17 @@ with (import ./../lib.nix);
         # Disk
         #
 
-        crit_disk_monitor = { config, ... }:
+        disk_monitor = { config, ... }:
           {
             inherit apiKey appKey;
 
-            name = "Critical: high disk usage";
+            name = "High disk usage";
             type = "metric alert";
-            message = messages.critical;
+            message = pagerdutyMessage;
             query = "max(last_5m):avg:system.disk.in_use{host:${config.deployment.name}.machine} by {host} > 0.9";
             monitorOptions = builtins.toJSON (baseMonitorOptions // {
+              thresholds.warning = "0.8";
               thresholds.critical = "0.9";
-            });
-          };
-
-        non_crit_disk_monitor = { config, ... }:
-          {
-            inherit apiKey appKey;
-
-            name = "Non-Critical: high disk usage";
-            type = "metric alert";
-            message = messages.non_critical;
-            query = "max(last_5m):avg:system.disk.in_use{host:${config.deployment.name}.machine} by {host} > 0.8";
-            monitorOptions = builtins.toJSON (baseMonitorOptions // {
-              thresholds.critical = "0.8";
             });
           };
 
@@ -136,29 +118,17 @@ with (import ./../lib.nix);
         # RAM
         #
 
-        crit_ram_monitor = { config, ... }:
+        ram_monitor = { config, ... }:
           {
             inherit apiKey appKey;
 
-            name = "Critical: RAM is running low";
+            name = "RAM is running low";
             type = "metric alert";
-            message = messages.critical;
+            message = pagerdutyMessage;
             query = "avg(last_1m):avg:system.mem.pct_usable{host:${config.deployment.name}.machine} by {host} < 0.2";
             monitorOptions = builtins.toJSON (baseMonitorOptions // {
+              thresholds.warning = "0.5";
               thresholds.critical = "0.2";
-            });
-          };
-
-        non_crit_ram_monitor = { config, ... }:
-          {
-            inherit apiKey appKey;
-
-            name = "Non-Critical: RAM is running low";
-            type = "metric alert";
-            message = messages.non_critical;
-            query = "avg(last_1m):avg:system.mem.pct_usable{host:${config.deployment.name}.machine} by {host} < 0.5";
-            monitorOptions = builtins.toJSON (baseMonitorOptions // {
-              thresholds.critical = "0.5";
             });
           };
 
@@ -166,13 +136,13 @@ with (import ./../lib.nix);
         # NTP
         #
 
-        crit_ntp_monitor = { config, ... }:
+        ntp_monitor = { config, ... }:
           {
             inherit apiKey appKey;
 
-            name = "Critical: Clock out of sync with NTP";
+            name = "Clock out of sync with NTP";
             type = "service check";
-            message = messages.critical;
+            message = pagerdutyMessage;
             query = "\"ntp.in_sync\".over(\"{host:${config.deployment.name}.machine}\").by(\"host\").last(2).count_by_status()";
             monitorOptions = builtins.toJSON (baseMonitorOptions // {
               thresholds.critical = 1;
