@@ -35,7 +35,7 @@ let
       inputs = {
         nixpkgs = {
           type = "git";
-          value = "https://github.com/NixOS/nixpkgs.git b9628313300b7c9e4cc88b91b7c98dfe3cfd9fc4";
+          value = "https://github.com/NixOS/nixpkgs.git 18e4687c38b9bc4e72f40ef2768a200119af7304";
         };
         jobsets = {
           type = "git";
