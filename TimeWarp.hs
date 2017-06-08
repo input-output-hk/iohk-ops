@@ -51,12 +51,12 @@ main = do
   (opts@Options{..}, command) <- options "Helper CLI around NixOps to run experiments" parser
   Just c <- decodeFile $ encodeString oConfigFile
   case command of
-    CheckStatus -> checkstatus c
-    RunExperiment -> runexperiment c
-    Build -> build c
     Deploy        -> deploy        opts c
     Destroy       -> destroy       opts c
     FromScratch   -> fromscratch   opts c
+    CheckStatus   -> checkstatus        c
+    RunExperiment -> runexperiment      c
+    Build         -> build c
     -- TODO: invoke nixops with passed parameters
 
 runexperiment :: NixOpsConfig -> IO ()

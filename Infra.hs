@@ -23,8 +23,8 @@ c = NixOpsConfig
   , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/05126bc8503a37bfd2fe80867eb5b0bea287c633.tar.gz"
   }
 
-data Command =
-    Create
+data Command
+  = Create
   | Deploy
   | Destroy
   | FromScratch

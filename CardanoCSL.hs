@@ -86,12 +86,12 @@ main = do
       isNode _ = False
       getNodeNames' = filter isNode <$> getNodeNames c
   case command of
-    CheckStatus -> checkstatus c
-    RunExperiment -> getNodeNames' >>= runexperiment c
     Deploy         -> deploy      opts c
     Create         -> create      opts c
     Destroy        -> destroy     opts c
     FromScratch    -> fromscratch opts c
+    CheckStatus    -> checkstatus c
+    RunExperiment  -> getNodeNames' >>= runexperiment c
     PostExperiment -> postexperiment c
     Build -> build c
     DumpLogs {..} -> getNodeNames' >>= void . dumpLogs c withProf
