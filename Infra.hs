@@ -31,20 +31,22 @@ data Command =
   | CheckStatus
   deriving (Show)
 
-parser :: Parser Command
+parser :: Parser (Options, Command)
 parser =
-      subcommand "create" "Create a new cluster" (pure Create)
-  <|> subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
-  <|> subcommand "destroy" "Destroy the whole cluster" (pure Destroy)
-  <|> subcommand "fromscratch" "Destroy, Delete, Create, Deploy" (pure FromScratch)
-  <|> subcommand "checkstatus" "Check if nodes are accessible via ssh and reboot if they timeout" (pure CheckStatus)
+  (,)
+  <$> optionsParser
+  <*> (subcommand "create" "Create a new cluster" (pure Create)
+   <|> subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
+   <|> subcommand "destroy" "Destroy the whole cluster" (pure Destroy)
+   <|> subcommand "fromscratch" "Destroy, Delete, Create, Deploy" (pure FromScratch)
+   <|> subcommand "checkstatus" "Check if nodes are accessible via ssh and reboot if they timeout" (pure CheckStatus))
 
 main :: IO ()
 main = do
-  command <- options "Helper CLI around NixOps to run experiments" parser
+  (opts, command) <- options "Helper CLI around NixOps to run experiments" parser
   case command of
-    Create -> create c
-    Deploy -> deploy c
-    Destroy -> destroy c
-    FromScratch -> fromscratch c
+    Create      -> create      opts c
+    Deploy      -> deploy      opts c
+    Destroy     -> destroy     opts c
+    FromScratch -> fromscratch opts c
     CheckStatus -> checkstatus c

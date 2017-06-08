@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module NixOps where
 
+import Prelude hiding (FilePath)
 import Data.Char (ord)
 import Data.Yaml (FromJSON(..))
 import Data.Monoid ((<>))
@@ -17,7 +19,7 @@ import qualified Data.Vector as V
 import Data.ByteString.Lazy.Char8 (ByteString, pack)
 import GHC.Generics
 import Safe (headMay)
-import Turtle hiding (FilePath)
+import Turtle
 
 
 data NixOpsConfig = NixOpsConfig
@@ -29,6 +31,18 @@ data NixOpsConfig = NixOpsConfig
 
 instance FromJSON NixOpsConfig
 
+data Options = Options
+  { oDebug      :: Bool
+  , oConfigFile :: FilePath
+  }
+
+optionsParser :: Parser Options
+optionsParser = Options
+                <$> switch  "debug"  'd' "Pass --debug to nixops"
+                <*> optPath "config" 'c' "Configuration file"
+
+optDebug :: Options -> [Text]
+optDebug Options{..} = ["--debug"  | oDebug]
 
 -- deprecated
 getArgs :: NixOpsConfig -> Text
@@ -45,29 +59,30 @@ myIpUrl = "http://169.254.169.254/latest/meta-data/public-ipv4"
 smGenIpEnv :: Text
 smGenIpEnv = "SMART_GEN_IP=$(curl " <> myIpUrl <> ") "
 
-deploy :: NixOpsConfig -> IO ()
-deploy c = do
+deploy :: Options -> NixOpsConfig -> IO ()
+deploy Options{..} c = do
   echo "Deploying cluster..."
   -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
-  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) " <> smGenIpEnv <> nixopsExecutable c <> " deploy" <> getArgs c <> "--max-concurrent-copy 50 -j 4") empty
+  shells ("GC_INITIAL_HEAP_SIZE=$((8*1024*1024*1024)) " <> smGenIpEnv <> nixopsExecutable c <> " deploy" <> getArgs c <> "--max-concurrent-copy 50 -j 4"
+          <> if oDebug then " --debug" else "") empty
   echo "Done."
 
-destroy :: NixOpsConfig -> IO ()
-destroy c = do
+destroy :: Options -> NixOpsConfig -> IO ()
+destroy o@Options{..} c = do
   echo "Destroying cluster..."
-  procs (nixopsExecutable c) (["destroy"] ++ getArgsList c ++ ["--confirm"]) empty
+  procs (nixopsExecutable c) (["destroy"] ++ getArgsList c ++ ["--confirm"] ++ optDebug o) empty
   echo "Done."
 
-fromscratch :: NixOpsConfig -> IO ()
-fromscratch c = do
-  destroy c
-  procs (nixopsExecutable c) (["delete"] ++ getArgsList c ++ ["--confirm"]) empty
-  create c
-  deploy c
+fromscratch :: Options -> NixOpsConfig -> IO ()
+fromscratch o@Options{..} c = do
+  destroy o c
+  procs (nixopsExecutable c) (["delete"] ++ getArgsList c ++ ["--confirm"] ++ optDebug o) empty
+  create o c
+  deploy o c
 
-create :: NixOpsConfig -> IO ()
-create c =
-  procs (nixopsExecutable c) (["create"] ++ deploymentFiles c ++ (getArgsList c)) empty
+create :: Options -> NixOpsConfig -> IO ()
+create o@Options{..} c =
+  procs (nixopsExecutable c) (["create"] ++ deploymentFiles c ++ getArgsList c ++ optDebug o) empty
 
 -- Check if nodes are online and reboots them if they timeout
 checkstatus :: NixOpsConfig -> IO ()
