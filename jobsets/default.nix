@@ -47,14 +47,6 @@ let
       path = "jobsets/deployments.nix";
       description = "Builds for deployments";
     };
-    #pos-prototype-deployment = {
-    #  path = "jobsets/infra.nix";
-    #  description = "Deployments infrastructure";
-    #};
-    #rscoin = {
-    #  path = "jobsets/rscoin.nix";
-    #  description = "RSCoin";
-    #};
   });
 in {
   jobsets = with pkgs.lib; pkgs.runCommand "spec.json" {} ''
