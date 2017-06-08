@@ -16,12 +16,7 @@ script:
   - ./TimeWarp.hs --help
   - ./Infra.hs --help
   # check all packages build
-  - nix-instantiate default.nix
-    -A cardano-sl-static
-    -A cardano-report-server-static
-    -A cardano-sl-explorer-static
-  # check AMI generation
-  - nix-instantiate jobsets/deployments.nix -A image --show-trace
+  - nix-instantiate jobsets/cardano.nix --show-trace
   # check deploy evaluations
   - nixops create deployments/{cardano-nodes,cardano-nodes-target-aws,cardano-nodes-env-production,cardano-explorer,cardano-explorer-target-aws,cardano-explorer-env-production,report-server,report-server-target-aws,report-server-env-production,keypairs}.nix -d csl-production
   - nixops create deployments/{cardano-nodes,cardano-nodes-target-aws,cardano-nodes-env-staging,cardano-explorer,cardano-explorer-target-aws,cardano-explorer-env-staging,report-server,report-server-target-aws,report-server-env-staging,keypairs}.nix -d csl-staging
