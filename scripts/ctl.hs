@@ -124,3 +124,6 @@ runArea opts@(Options nixpkgs) (New branch@(Branch bname) deployments) = do
   writeTextFile "config.yaml" $
     areaConfig nixpkgs branch deployments
   procs "git" (["config", "--replace-all", "receive.denyCurrentBranch", "warn"]) empty
+  echo ""
+  echo "-- config.yaml is:"
+  procs "cat" ["config.yaml"] empty -- XXX TODO: figure out Turtle.cat
