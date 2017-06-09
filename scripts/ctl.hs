@@ -79,11 +79,10 @@ optionsParser =
   <$> (fromMaybe defaultNixpkgsCommit
         <$> optional (Commit <$> optText "nixpkgs" 'n' "Nixpkgs commit to use"))
 
-parser ∷ Parser (Options, Command)
+parser ∷ Parser (Options, AreaCommand)
 parser = (,) <$> optionsParser <*>
-  subcommand "area" "Operate on an iohk-nixops checkouts"
-  (Area
-   <$> (subcommand "new" "Checkout a new iohk-nixops experiment from BRANCH, for a specified set of deployments"
+  -- subcommand "area" "Operate on an iohk-nixops checkouts"
+  subcommand "new" "Checkout a new iohk-nixops experiment from BRANCH, for a specified set of deployments"
          (New
           <$> (Branch <$> argText "branch" "iohk-nixops branch to check out.")
           <*> (parseDeployments
@@ -91,15 +90,16 @@ parser = (,) <$> optionsParser <*>
                     <$> (optional (argRead "DEPL" "Deployment: 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
                     <*> (optional (argRead "DEPL" "Deployment: 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
                     <*> (optional (argRead "DEPL" "Deployment: 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-                    <*> (optional (argRead "DEPL" "Deployment: 'Nodes', 'Infra', 'Report' or 'Timewarp'")))))))
+                    <*> (optional (argRead "DEPL" "Deployment: 'Nodes', 'Infra', 'Report' or 'Timewarp'")))))
   where parseDeployments (a, b, c, d) = concat $ maybeToList <$> [a, b, c, d]
 
 
 main ∷ IO ()
 main = do
   (opts, topcmd) ← options "Helper CLI around IOHK NixOps" parser
-  case topcmd of
-    Area cmd → runArea opts cmd
+  runArea opts topcmd
+  -- case topcmd of
+    -- Area cmd → runArea opts cmd
 
 
 areaConfig ∷ Commit → Branch → [Deployment] → Text
@@ -123,3 +123,4 @@ runArea opts@(Options nixpkgs) (New branch@(Branch bname) deployments) = do
   procs "git" (["checkout", bname]) empty
   writeTextFile "config.yaml" $
     areaConfig nixpkgs branch deployments
+  procs "git" (["config", "--replace-all", "receive.denyCurrentBranch", "warn"]) empty
