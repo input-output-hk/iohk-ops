@@ -13,15 +13,14 @@ import           Filesystem.Path.CurrentOS         hiding (concat, empty, null)
 import           Turtle
 
 
-data Branch = Branch { fromBranch ∷ Text } deriving (Show)
-data Commit = Commit { fromCommit ∷ Text } deriving (Show)
-
-
-defaultNixpkgsCommit ∷ Commit
 defaultNixpkgsCommit = Commit "05126bc8503a37bfd2fe80867eb5b0bea287c633"
 
 iohkNixopsURL ∷ Text
 iohkNixopsURL = "https://github.com/input-output-hk/iohk-nixops.git"
+
+defaultEnvironment = Development
+
+defaultTarget      = AWS
 
 
 data Options where
@@ -39,6 +38,10 @@ data AreaCommand
   , anTarget       ∷ Target
   , anDeployments  ∷ [Deployment]
   }
+
+
+data Branch = Branch { fromBranch ∷ Text } deriving (Show)
+data Commit = Commit { fromCommit ∷ Text } deriving (Show)
 
 
 data Deployment
@@ -87,7 +90,7 @@ deployments =
       , (Any,         AWS, "deployments/report-server-target-aws.nix") ])
   , (Timewarp
     , [ (Any,         All, "deployments/timewarp.nix")
-      , (Development, AWS, "deployments/timewarp-target-aws.nix") ])
+      , (Any,         AWS, "deployments/timewarp-target-aws.nix") ])
   ]
 
 deploymentSpecs ∷ Deployment → [FileSpec]
@@ -122,9 +125,9 @@ parser = (,) <$> optionsParser <*>
   subcommand "new" "Checkout a new iohk-nixops experiment from BRANCH, for a specified set of deployments"
          (New
           <$> (Branch <$> argText "branch" "iohk-nixops branch to check out.")
-          <*> (fromMaybe Any
+          <*> (fromMaybe defaultEnvironment
                <$> optional (optRead "env" 'e' "Environment: Development, Staging or Production;  defaults to Any"))
-          <*> (fromMaybe All
+          <*> (fromMaybe defaultTarget
                <$> optional (optRead "tgt" 't' "Target: AWS;  defaults to All"))
           <*> (parseDeployments
                <$> ((,,,) 
@@ -136,6 +139,8 @@ parser = (,) <$> optionsParser <*>
 
 
 ttl = unsafeTextToLine
+
+tShow ∷ Show a ⇒ a → Text
 tShow = T.pack . show
 
 
