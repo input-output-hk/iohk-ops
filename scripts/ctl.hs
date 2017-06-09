@@ -8,7 +8,7 @@ import           Data.Monoid               ((<>))
 import           Data.Maybe
 import qualified Data.Text                         as T
 import           Data.Text                 (Text)
-import           Filesystem.Path.CurrentOS         hiding (concat, empty)
+import           Filesystem.Path.CurrentOS         hiding (concat, empty, null)
 -- import           Prelude.Unicode
 import           Turtle
 
@@ -35,42 +35,79 @@ data Command
 data AreaCommand
   = New
   { anBranch       ∷ Branch
+  , anEnvironment  ∷ Environment
+  , anTarget       ∷ Target
   , anDeployments  ∷ [Deployment]
   }
 
+
 data Deployment
   = Explorer
   | Nodes
   | Infra
   | Report
   | Timewarp
+  deriving (Eq, Read, Show)
+
+data Environment
+  = Any
+  | Production
+  | Staging
+  | Development
   deriving (Eq, Read)
 
-deployments ∷ [(Deployment, [Text])]
+data Target
+  = All
+  | AWS
+  deriving (Eq, Read)
+
+type FileSpec = (Environment, Target, Text)
+
+deployments ∷ [(Deployment, [(Environment, Target, Text)])]
 deployments =
   [ (Explorer
-    , [ "deployments/cardano-explorer.nix"
-      , "deployments/cardano-explorer-target-aws.nix"
-      , "deployments/cardano-explorer-env-production.nix" ])
+    , [ (Any,         All, "deployments/cardano-explorer.nix")
+      , (Development, All, "deployments/cardano-explorer-env-development.nix")
+      , (Production,  All, "deployments/cardano-explorer-env-production.nix")
+      , (Staging,     All, "deployments/cardano-explorer-env-staging.nix")
+      , (Any,         AWS, "deployments/cardano-explorer-target-aws.nix") ])
   , (Nodes
-    , [ "deployments/cardano-nodes.nix"
-      , "deployments/cardano-nodes-target-aws.nix"
-      , "deployments/cardano-nodes-env-production.nix" ])
+    , [ (Any,         All, "deployments/cardano-nodes.nix")
+      , (Production,  All, "deployments/cardano-nodes-env-production.nix")
+      , (Staging,     All, "deployments/cardano-nodes-env-staging.nix")
+      , (Any,         AWS, "deployments/cardano-nodes-target-aws.nix") ])
   , (Infra
-    , [ "deployments/infrastructure.nix"
-      , "deployments/infrastructure-target-aws.nix"
-      , "deployments/infrastructure-env-production.nix" ])
+    , [ (Any,         All, "deployments/infrastructure.nix")
+      , (Production,  All, "deployments/infrastructure-env-production.nix")
+      , (Any,         AWS, "deployments/infrastructure-target-aws.nix") ])
   , (Report
-    , [ "deployments/report-server.nix"
-      , "deployments/report-server-target-aws.nix"
-      , "deployments/report-server-env-production.nix" ])
+    , [ (Any,         All, "deployments/report-server.nix")
+      , (Production,  All, "deployments/report-server-env-production.nix")
+      , (Staging,     All, "deployments/report-server-env-staging.nix")
+      , (Any,         AWS, "deployments/report-server-target-aws.nix") ])
   , (Timewarp
-    , [ "deployments/timewarp.nix"
-      , "deployments/timewarp-target-aws.nix" ])
+    , [ (Any,         All, "deployments/timewarp.nix")
+      , (Development, AWS, "deployments/timewarp-target-aws.nix") ])
   ]
 
-deploymentFiles ∷ Deployment → [Text]
-deploymentFiles = fromJust . flip lookup deployments
+deploymentSpecs ∷ Deployment → [FileSpec]
+deploymentSpecs = fromJust . flip lookup deployments
+
+filespecEnvSpecific ∷ Environment → FileSpec → Bool
+filespecEnvSpecific x (x', _, _) = x == x'
+filespecTgtSpecific ∷ Target      → FileSpec → Bool
+filespecTgtSpecific x (_, x', _) = x == x'
+
+filespecNeededEnv ∷ Environment → FileSpec → Bool
+filespecNeededTgt ∷ Target      → FileSpec → Bool
+filespecNeededEnv x fs = filespecEnvSpecific Any fs || filespecEnvSpecific x fs
+filespecNeededTgt x fs = filespecTgtSpecific All fs || filespecTgtSpecific x fs
+
+filespecFile ∷ FileSpec → Text
+filespecFile (_, _, x) = x
+
+deploymentFiles ∷ Environment → Target → Deployment → [Text]
+deploymentFiles env tgt depl = filespecFile <$> (filter (\x → filespecNeededEnv env x && filespecNeededTgt tgt x) $ deploymentSpecs depl)
 
 
 optionsParser ∷ Parser Options
@@ -85,13 +122,21 @@ parser = (,) <$> optionsParser <*>
   subcommand "new" "Checkout a new iohk-nixops experiment from BRANCH, for a specified set of deployments"
          (New
           <$> (Branch <$> argText "branch" "iohk-nixops branch to check out.")
+          <*> (fromMaybe Any
+               <$> optional (optRead "env" 'e' "Environment: Development, Staging or Production;  defaults to Any"))
+          <*> (fromMaybe All
+               <$> optional (optRead "tgt" 't' "Target: AWS;  defaults to All"))
           <*> (parseDeployments
                <$> ((,,,) 
-                    <$> (optional (argRead "DEPL" "Deployment: 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-                    <*> (optional (argRead "DEPL" "Deployment: 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-                    <*> (optional (argRead "DEPL" "Deployment: 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-                    <*> (optional (argRead "DEPL" "Deployment: 'Nodes', 'Infra', 'Report' or 'Timewarp'")))))
+                    <$> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
+                    <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
+                    <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
+                    <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'")))))
   where parseDeployments (a, b, c, d) = concat $ maybeToList <$> [a, b, c, d]
+
+
+ttl = unsafeTextToLine
+tShow = T.pack . show
 
 
 main ∷ IO ()
@@ -102,18 +147,18 @@ main = do
     -- Area cmd → runArea opts cmd
 
 
-areaConfig ∷ Commit → Branch → [Deployment] → Text
-areaConfig (Commit commit) (Branch branch) depls =
+areaConfig ∷ Commit → Branch → Environment → Target → [Deployment] → Text
+areaConfig (Commit commit) (Branch branch) env tgt depls =
   T.unlines $
   [ "deploymentName: " <> branch
   , "nixPath: nixpkgs=https://github.com/NixOS/nixpkgs/archive/" <> commit <> ".tar.gz"
   , "nixopsExecutable: nixops"
   , "deploymentFiles:"
   ,    "  - deployments/keypairs.nix" ]
-  ++ (("  - " <>) <$> concat (deploymentFiles <$> depls))
+  ++ (("  - " <>) <$> concat (deploymentFiles env tgt <$> depls))
 
 runArea ∷ Options → AreaCommand → IO ()
-runArea opts@(Options nixpkgs) (New branch@(Branch bname) deployments) = do
+runArea opts@(Options nixpkgs) (New branch@(Branch bname) env tgt deployments) = do
   let branchDir = fromText bname
   exists ← testpath branchDir
   when exists $
@@ -122,7 +167,7 @@ runArea opts@(Options nixpkgs) (New branch@(Branch bname) deployments) = do
   cd branchDir
   procs "git" (["checkout", bname]) empty
   writeTextFile "config.yaml" $
-    areaConfig nixpkgs branch deployments
+    areaConfig nixpkgs branch env tgt deployments
   procs "git" (["config", "--replace-all", "receive.denyCurrentBranch", "warn"]) empty
   echo ""
   echo "-- config.yaml is:"
