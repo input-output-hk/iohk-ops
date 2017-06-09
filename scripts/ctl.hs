@@ -38,6 +38,12 @@ data AreaCommand
   , anTarget       ∷ Target
   , anDeployments  ∷ [Deployment]
   }
+  | Change
+  { anBranch       ∷ Branch
+  , anEnvironment  ∷ Environment
+  , anTarget       ∷ Target
+  , anDeployments  ∷ [Deployment]
+  }
 
 
 data Branch = Branch { fromBranch ∷ Text } deriving (Show)
@@ -119,23 +125,27 @@ optionsParser =
   <$> (fromMaybe defaultNixpkgsCommit
         <$> optional (Commit <$> optText "nixpkgs" 'n' "Nixpkgs commit to use"))
 
+deploymentsParser ∷ Parser [Deployment]
+deploymentsParser =
+  (\(a, b, c, d) → concat $ maybeToList <$> [a, b, c, d])
+  <$> ((,,,)
+        <$> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
+        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
+        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
+        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'")))
+
+branchParser desc = Branch <$> argText "branch" desc
+envParser         = fromMaybe defaultEnvironment <$> optional (optRead "env" 'e' "Environment: Development, Staging or Production;  defaults to Any")
+tgtParser         = fromMaybe defaultTarget      <$> optional (optRead "tgt" 't' "Target: AWS;  defaults to All")
+
 parser ∷ Parser (Options, AreaCommand)
 parser = (,) <$> optionsParser <*>
   -- subcommand "area" "Operate on an iohk-nixops checkouts"
-  subcommand "new" "Checkout a new iohk-nixops experiment from BRANCH, for a specified set of deployments"
-         (New
-          <$> (Branch <$> argText "branch" "iohk-nixops branch to check out.")
-          <*> (fromMaybe defaultEnvironment
-               <$> optional (optRead "env" 'e' "Environment: Development, Staging or Production;  defaults to Any"))
-          <*> (fromMaybe defaultTarget
-               <$> optional (optRead "tgt" 't' "Target: AWS;  defaults to All"))
-          <*> (parseDeployments
-               <$> ((,,,) 
-                    <$> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-                    <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-                    <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-                    <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'")))))
-  where parseDeployments (a, b, c, d) = concat $ maybeToList <$> [a, b, c, d]
+  (   subcommand "new"    "Checkout a new iohk-nixops experiment from BRANCH, for a specified set of deployments"
+    (New    <$> branchParser "iohk-nixops branch to check out"                   <*> envParser <*> tgtParser <*> deploymentsParser)
+  <|> subcommand "change" "Change configuration of the specified iohk-nixops experiment"
+    (Change <$> branchParser "iohk-nixops experiment to update configuration of" <*> envParser <*> tgtParser <*> deploymentsParser)
+  )
 
 
 ttl = unsafeTextToLine
@@ -176,4 +186,15 @@ runArea opts@(Options nixpkgs) (New branch@(Branch bname) env tgt deployments) =
   procs "git" (["config", "--replace-all", "receive.denyCurrentBranch", "warn"]) empty
   echo ""
   echo "-- config.yaml is:"
+  procs "cat" ["config.yaml"] empty -- XXX TODO: figure out Turtle.cat
+runArea opts@(Options nixpkgs) (Change branch@(Branch bname) env tgt deployments) = do
+  let branchDir = fromText bname
+  exists ← testpath branchDir
+  unless exists $
+    die $ "Directory does not ∃: " <> bname
+  cd branchDir
+  writeTextFile "config.yaml" $
+    areaConfig nixpkgs branch env tgt deployments
+  echo ""
+  echo "-- config.yaml updated to:"
   procs "cat" ["config.yaml"] empty -- XXX TODO: figure out Turtle.cat
