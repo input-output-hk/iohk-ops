@@ -3,6 +3,7 @@
 #! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/05126bc8503a37bfd2fe80867eb5b0bea287c633.tar.gz
 
 {-# LANGUAGE GADTs, OverloadedStrings, RecordWildCards, UnicodeSyntax #-}
+{-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures #-}
 
 import           Data.Monoid               ((<>))
 import           Data.Maybe
@@ -170,7 +171,7 @@ areaConfig (Commit commit) (Branch branch) env tgt depls =
   ++ (("  - " <>) <$> concat (deploymentFiles env tgt <$> depls))
 
 runArea ∷ Options → AreaCommand → IO ()
-runArea opts@(Options nixpkgs) (New branch@(Branch bname) env tgt deployments) = do
+runArea (Options nixpkgs) (New branch@(Branch bname) env tgt deployments) = do
   let branchDir = fromText bname
   exists ← testpath branchDir
   when exists $
@@ -184,7 +185,7 @@ runArea opts@(Options nixpkgs) (New branch@(Branch bname) env tgt deployments) =
   echo ""
   echo "-- config.yaml is:"
   procs "cat" ["config.yaml"] empty -- XXX TODO: figure out Turtle.cat
-runArea opts@(Options nixpkgs) (Change branch@(Branch bname) env tgt deployments) = do
+runArea (Options nixpkgs) (Change branch@(Branch bname) env tgt deployments) = do
   let branchDir = fromText bname
   exists ← testpath branchDir
   unless exists $
