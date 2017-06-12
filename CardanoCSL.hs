@@ -71,14 +71,14 @@ subparser =
   <|> subcommand "ami" "Build ami" (pure AMI)
   <|> subcommand "generate-ipdht" "Generate IP/DHT mappings for wallet use" (pure GenerateIPDHTMappings)
 
-parser :: Parser (FilePath, Command)
-parser = (,) <$> optPath "config" 'c' "Configuration file"
+parser :: Parser (Options, Command)
+parser = (,) <$> optionsParser
              <*> subparser
 
 main :: IO ()
 main = do
-  (configFile, command) <- options "Helper CLI around NixOps to run experiments" parser
-  Just c <- decodeFile $ encodeString configFile
+  (opts@Options{..}, command) <- options "Helper CLI around NixOps to run experiments" parser
+  Just c <- decodeFile $ encodeString oConfigFile
   --dat <- fmap toNodesInfo <$> info c
   dat <- getSmartGenCmd c
   TIO.putStrLn $ T.pack $ show dat
@@ -86,12 +86,12 @@ main = do
       isNode _ = False
       getNodeNames' = filter isNode <$> getNodeNames c
   case command of
-    Deploy -> deploy c
-    Create -> create c
-    Destroy -> destroy c
-    FromScratch -> fromscratch c
-    CheckStatus -> checkstatus c
-    RunExperiment -> getNodeNames' >>= runexperiment c
+    Deploy         -> deploy      opts c
+    Create         -> create      opts c
+    Destroy        -> destroy     opts c
+    FromScratch    -> fromscratch opts c
+    CheckStatus    -> checkstatus c
+    RunExperiment  -> getNodeNames' >>= runexperiment c
     PostExperiment -> postexperiment c
     Build -> build c
     DumpLogs {..} -> getNodeNames' >>= void . dumpLogs c withProf
