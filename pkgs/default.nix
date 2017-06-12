@@ -1431,8 +1431,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0w50g6hxpa3isa9y03ni3k8fzw5pl2g4k4w269l5pds3lfyvgwv4";
-            rev = "8b2f884a556a40e9e8af977bb3b9803c432fc149";
+            sha256 = "13wwvirj4878jdd6rr5z0v68k999nqshd5j0x4cbh057ii53f8p1";
+            rev = "6bee8bbf88d14632a7994ac80209987a2ead2403";
           };
           isLibrary = true;
           isExecutable = true;
@@ -1623,6 +1623,7 @@ self: {
             bytestring
             cardano-sl-core
             cardano-sl-infra
+            cardano-sl-lrc
             cardano-sl-ssc
             cardano-sl-txp
             cardano-sl-update
@@ -1687,8 +1688,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0w50g6hxpa3isa9y03ni3k8fzw5pl2g4k4w269l5pds3lfyvgwv4";
-            rev = "8b2f884a556a40e9e8af977bb3b9803c432fc149";
+            sha256 = "13wwvirj4878jdd6rr5z0v68k999nqshd5j0x4cbh057ii53f8p1";
+            rev = "6bee8bbf88d14632a7994ac80209987a2ead2403";
           };
           postUnpack = "sourceRoot+=/core; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1761,8 +1762,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0w50g6hxpa3isa9y03ni3k8fzw5pl2g4k4w269l5pds3lfyvgwv4";
-            rev = "8b2f884a556a40e9e8af977bb3b9803c432fc149";
+            sha256 = "13wwvirj4878jdd6rr5z0v68k999nqshd5j0x4cbh057ii53f8p1";
+            rev = "6bee8bbf88d14632a7994ac80209987a2ead2403";
           };
           postUnpack = "sourceRoot+=/db; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1799,8 +1800,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0w50g6hxpa3isa9y03ni3k8fzw5pl2g4k4w269l5pds3lfyvgwv4";
-            rev = "8b2f884a556a40e9e8af977bb3b9803c432fc149";
+            sha256 = "13wwvirj4878jdd6rr5z0v68k999nqshd5j0x4cbh057ii53f8p1";
+            rev = "6bee8bbf88d14632a7994ac80209987a2ead2403";
           };
           postUnpack = "sourceRoot+=/godtossing; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1847,8 +1848,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0w50g6hxpa3isa9y03ni3k8fzw5pl2g4k4w269l5pds3lfyvgwv4";
-            rev = "8b2f884a556a40e9e8af977bb3b9803c432fc149";
+            sha256 = "13wwvirj4878jdd6rr5z0v68k999nqshd5j0x4cbh057ii53f8p1";
+            rev = "6bee8bbf88d14632a7994ac80209987a2ead2403";
           };
           postUnpack = "sourceRoot+=/infra; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1909,8 +1910,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0w50g6hxpa3isa9y03ni3k8fzw5pl2g4k4w269l5pds3lfyvgwv4";
-            rev = "8b2f884a556a40e9e8af977bb3b9803c432fc149";
+            sha256 = "13wwvirj4878jdd6rr5z0v68k999nqshd5j0x4cbh057ii53f8p1";
+            rev = "6bee8bbf88d14632a7994ac80209987a2ead2403";
           };
           postUnpack = "sourceRoot+=/lrc; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1939,8 +1940,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0w50g6hxpa3isa9y03ni3k8fzw5pl2g4k4w269l5pds3lfyvgwv4";
-            rev = "8b2f884a556a40e9e8af977bb3b9803c432fc149";
+            sha256 = "13wwvirj4878jdd6rr5z0v68k999nqshd5j0x4cbh057ii53f8p1";
+            rev = "6bee8bbf88d14632a7994ac80209987a2ead2403";
           };
           postUnpack = "sourceRoot+=/ssc; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1976,8 +1977,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0w50g6hxpa3isa9y03ni3k8fzw5pl2g4k4w269l5pds3lfyvgwv4";
-            rev = "8b2f884a556a40e9e8af977bb3b9803c432fc149";
+            sha256 = "13wwvirj4878jdd6rr5z0v68k999nqshd5j0x4cbh057ii53f8p1";
+            rev = "6bee8bbf88d14632a7994ac80209987a2ead2403";
           };
           postUnpack = "sourceRoot+=/txp; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -2022,8 +2023,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0w50g6hxpa3isa9y03ni3k8fzw5pl2g4k4w269l5pds3lfyvgwv4";
-            rev = "8b2f884a556a40e9e8af977bb3b9803c432fc149";
+            sha256 = "13wwvirj4878jdd6rr5z0v68k999nqshd5j0x4cbh057ii53f8p1";
+            rev = "6bee8bbf88d14632a7994ac80209987a2ead2403";
           };
           postUnpack = "sourceRoot+=/update; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
