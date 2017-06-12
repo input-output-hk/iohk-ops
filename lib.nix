@@ -33,7 +33,7 @@ in lib // (rec {
   # Given a list of NixOS configs, generate a list of peers (ip/dht mappings)
   genPeersFromConfig = configs:
     let
-      f = c: "${c.networking.publicIPv4}:${toString c.services.cardano-node.port}/${c.services.cardano-node.dhtKey}";
+      f = c: "${c.networking.publicIPv4}:${toString c.services.cardano-node.port}";
     in map f configs;
 
   # modulo operator

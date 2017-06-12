@@ -12,7 +12,7 @@ let
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
   smartGenPeer =
     if (smartGenIP != "")
-    then "--peer ${smartGenIP}:24962/${genDhtKey 100 }}"
+    then "--kademlia-peer ${smartGenIP}:24962"
     else "";
   publicIP = config.networking.publicIPv4 or null;
   privateIP = config.networking.privateIPv4 or null;
@@ -20,13 +20,14 @@ let
   # Given a list of dht/ip mappings, generate peers line
   #
   # > genPeers ["ip:port/dht" "ip:port/dht" ...]
-  # "--peer ip:port/dht --peer ip:port/dht ..."
-  genPeers = peers: toString (map (p: "--peer " + p) peers);
+  # "--kademlia-peer ip:port/dht --peer ip:port/dht ..."
+  genPeers = peers: toString (map (p: "--kademlia-peer " + p) peers);
 
   command = toString [
     cfg.executable
+    "--address ${if publicIP == null then "0.0.0.0" else publicIP}:${toString cfg.port}"
     "--listen ${if privateIP == null then "0.0.0.0" else privateIP}:${toString cfg.port}"
-    (optionalString (publicIP != null) "--pubhost ${publicIP}")
+    "--kademlia-address ${if privateIP == null then "0.0.0.0" else privateIP}:${toString cfg.port}"
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
@@ -44,13 +45,13 @@ let
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
-    "--dht-key ${cfg.dhtKey}"
+    "--kademlia-id ${cfg.dhtKey}"
     (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.testIndex + 1)}.sk")
     (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
-    (optionalString (!cfg.enableP2P) "--explicit-initial --disable-propagation ${smartGenPeer}")
+    (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
     (genPeers cfg.initialPeers)
   ];
 in {
