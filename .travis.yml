@@ -15,6 +15,7 @@ script:
   - ./CardanoCSL.hs --help
   - ./TimeWarp.hs --help
   - ./Infra.hs --help
+  - ./scripts/ctl.hs --help
   # check all packages build
   - nix-instantiate jobsets/cardano.nix --show-trace
   # check deploy evaluations
