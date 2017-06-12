@@ -9,7 +9,6 @@ import           Data.Maybe
 import qualified Data.Text                         as T
 import           Data.Text                 (Text)
 import           Filesystem.Path.CurrentOS         hiding (concat, empty, null)
--- import           Prelude.Unicode
 import           Turtle
 
 
@@ -148,8 +147,6 @@ parser = (,) <$> optionsParser <*>
   )
 
 
-ttl = unsafeTextToLine
-
 tShow ∷ Show a ⇒ a → Text
 tShow = T.pack . show
 
