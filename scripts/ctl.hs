@@ -12,7 +12,7 @@ import           Data.Text                 (Text)
 import           Filesystem.Path.CurrentOS         hiding (concat, empty, null)
 import           Turtle
 
-
+
 defaultNixpkgsCommit = Commit "05126bc8503a37bfd2fe80867eb5b0bea287c633"
 
 iohkNixopsURL ∷ Text
@@ -26,7 +26,7 @@ defaultTarget      = AWS
 data Options where
   Options ∷
     { oNixpkgsCommit ∷ Commit
-    } → Options
+    } -> Options
 
 data Command
   = Area AreaCommand
@@ -99,24 +99,24 @@ deployments =
       , (Any,         AWS, "deployments/timewarp-target-aws.nix") ])
   ]
 
-deploymentSpecs ∷ Deployment → [FileSpec]
+deploymentSpecs ∷ Deployment -> [FileSpec]
 deploymentSpecs = fromJust . flip lookup deployments
 
-filespecEnvSpecific ∷ Environment → FileSpec → Bool
+filespecEnvSpecific ∷ Environment -> FileSpec -> Bool
 filespecEnvSpecific x (x', _, _) = x == x'
-filespecTgtSpecific ∷ Target      → FileSpec → Bool
+filespecTgtSpecific ∷ Target      -> FileSpec -> Bool
 filespecTgtSpecific x (_, x', _) = x == x'
 
-filespecNeededEnv ∷ Environment → FileSpec → Bool
-filespecNeededTgt ∷ Target      → FileSpec → Bool
+filespecNeededEnv ∷ Environment -> FileSpec -> Bool
+filespecNeededTgt ∷ Target      -> FileSpec -> Bool
 filespecNeededEnv x fs = filespecEnvSpecific Any fs || filespecEnvSpecific x fs
 filespecNeededTgt x fs = filespecTgtSpecific All fs || filespecTgtSpecific x fs
 
-filespecFile ∷ FileSpec → Text
+filespecFile ∷ FileSpec -> Text
 filespecFile (_, _, x) = x
 
-deploymentFiles ∷ Environment → Target → Deployment → [Text]
-deploymentFiles env tgt depl = filespecFile <$> (filter (\x → filespecNeededEnv env x && filespecNeededTgt tgt x) $ deploymentSpecs depl)
+deploymentFiles ∷ Environment -> Target -> Deployment -> [Text]
+deploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNeededEnv env x && filespecNeededTgt tgt x) $ deploymentSpecs depl)
 
 
 optionsParser ∷ Parser Options
@@ -127,7 +127,7 @@ optionsParser =
 
 deploymentsParser ∷ Parser [Deployment]
 deploymentsParser =
-  (\(a, b, c, d) → concat $ maybeToList <$> [a, b, c, d])
+  (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
   <$> ((,,,)
         <$> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
         <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
@@ -148,19 +148,19 @@ parser = (,) <$> optionsParser <*>
   )
 
 
-tShow ∷ Show a ⇒ a → Text
+tShow ∷ Show a ⇒ a -> Text
 tShow = T.pack . show
 
 
 main ∷ IO ()
 main = do
-  (opts, topcmd) ← options "Helper CLI around IOHK NixOps" parser
+  (opts, topcmd) <- options "Helper CLI around IOHK NixOps" parser
   runArea opts topcmd
   -- case topcmd of
-    -- Area cmd → runArea opts cmd
+    -- Area cmd -> runArea opts cmd
 
 
-areaConfig ∷ Commit → Branch → Environment → Target → [Deployment] → Text
+areaConfig ∷ Commit -> Branch -> Environment -> Target -> [Deployment] -> Text
 areaConfig (Commit commit) (Branch branch) env tgt depls =
   T.unlines $
   [ "deploymentName: " <> branch
@@ -170,12 +170,12 @@ areaConfig (Commit commit) (Branch branch) env tgt depls =
   ,    "  - deployments/keypairs.nix" ]
   ++ (("  - " <>) <$> concat (deploymentFiles env tgt <$> depls))
 
-runArea ∷ Options → AreaCommand → IO ()
+runArea ∷ Options -> AreaCommand -> IO ()
 runArea (Options nixpkgs) (New branch@(Branch bname) env tgt deployments) = do
   let branchDir = fromText bname
-  exists ← testpath branchDir
+  exists <- testpath branchDir
   when exists $
-    die $ "Directory already ∃: " <> bname
+    die $ "Directory already exists: " <> bname
   procs "git" (["clone", iohkNixopsURL, bname]) empty
   cd branchDir
   procs "git" (["checkout", bname]) empty
@@ -187,9 +187,9 @@ runArea (Options nixpkgs) (New branch@(Branch bname) env tgt deployments) = do
   procs "cat" ["config.yaml"] empty -- XXX TODO: figure out Turtle.cat
 runArea (Options nixpkgs) (Change branch@(Branch bname) env tgt deployments) = do
   let branchDir = fromText bname
-  exists ← testpath branchDir
+  exists <- testpath branchDir
   unless exists $
-    die $ "Directory does not ∃: " <> bname
+    die $ "Directory does not exists: " <> bname
   cd branchDir
   writeTextFile "config.yaml" $
     areaConfig nixpkgs branch env tgt deployments
