@@ -135,8 +135,8 @@ deploymentsParser =
         <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'")))
 
 branchParser desc = Branch <$> argText "branch" desc
-envParser         = fromMaybe defaultEnvironment <$> optional (optRead "env" 'e' "Environment: Development, Staging or Production;  defaults to Any")
-tgtParser         = fromMaybe defaultTarget      <$> optional (optRead "tgt" 't' "Target: AWS;  defaults to All")
+envParser         = fromMaybe defaultEnvironment <$> optional (optRead "env" 'e' "Environment: Development, Staging or Production;  defaults to Development")
+tgtParser         = fromMaybe defaultTarget      <$> optional (optRead "tgt" 't' "Target: AWS;  defaults to AWS")
 
 parser ∷ Parser (Options, AreaCommand)
 parser = (,) <$> optionsParser <*>
