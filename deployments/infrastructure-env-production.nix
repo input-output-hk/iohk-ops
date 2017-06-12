@@ -38,8 +38,8 @@ with (import ./../lib.nix);
       cardanod-ip = { inherit region accessKeyId; };
     };
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
-      inherit disk_monitor;
-      inherit ntp_monitor;
+      disk = mkMonitor disk_monitor;
+      ntp = mkMonitor ntp_monitor;
     });
   };
 }
