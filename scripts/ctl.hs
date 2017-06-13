@@ -5,11 +5,13 @@
 {-# LANGUAGE GADTs, OverloadedStrings, RecordWildCards #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures #-}
 
-import           Data.Monoid               ((<>))
+import           Data.Monoid                      ((<>))
 import           Data.Maybe
-import qualified Data.Text                 as T
-import           Data.Text                 (Text)
+import           Data.Optional (Optional)
+import qualified Data.Text                     as T
+import           Data.Text                        (Text)
 import           Filesystem.Path.CurrentOS hiding (concat, empty, null)
+import           Text.Read                        (readMaybe)
 import           Turtle
 
 
@@ -42,7 +44,7 @@ data Deployment
   = Explorer
   | Nodes
   | Infra
-  | Report
+  | ReportServer
   | Timewarp
   deriving (Eq, Read, Show)
 
@@ -77,7 +79,7 @@ deployments =
     , [ (Any,         All, "deployments/infrastructure.nix")
       , (Production,  All, "deployments/infrastructure-env-production.nix")
       , (Any,         AWS, "deployments/infrastructure-target-aws.nix") ])
-  , (Report
+  , (ReportServer
     , [ (Any,         All, "deployments/report-server.nix")
       , (Production,  All, "deployments/report-server-env-production.nix")
       , (Staging,     All, "deployments/report-server-env-staging.nix")
@@ -106,7 +108,9 @@ filespecFile (_, _, x) = x
 deploymentFiles :: Environment -> Target -> Deployment -> [Text]
 deploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNeededEnv env x && filespecNeededTgt tgt x) $ deploymentSpecs depl)
 
-
+optReadLower :: Read a => ArgName -> ShortName -> Optional HelpMessage -> Parser a
+optReadLower = opt (readMaybe . T.unpack . T.toTitle)
+
 optionsParser :: Parser Options
 optionsParser =
   Options
@@ -117,10 +121,10 @@ deploymentsParser :: Parser [Deployment]
 deploymentsParser =
   (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
   <$> ((,,,)
-        <$> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'")))
+        <$> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'"))
+        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'"))
+        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'"))
+        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'")))
 
 
 parser :: Parser (Options, Command)
@@ -133,8 +137,8 @@ parser = (,) <$> optionsParser <*>
   )
   where
     branchParser desc = Branch <$> argText "branch" desc
-    envParser = fromMaybe defaultEnvironment <$> optional (optRead "environment" 'e' "Environment: Development, Staging or Production;  defaults to Development")
-    tgtParser = fromMaybe defaultTarget      <$> optional (optRead "target" 't' "Target: AWS, All;  defaults to AWS")
+    envParser = fromMaybe defaultEnvironment <$> optional (optReadLower "environment" 'e' "Environment: Development, Staging or Production;  defaults to Development")
+    tgtParser = fromMaybe defaultTarget      <$> optional (optReadLower "target" 't' "Target: AWS, All;  defaults to AWS")
 
 main :: IO ()
 main = do
