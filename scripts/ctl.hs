@@ -158,8 +158,8 @@ areaConfig (Commit commit) (Branch branch) env tgt depls =
 
 run :: Options -> Command -> IO ()
 run (Options nixpkgs) (Template env tgt branch@(Branch bname) deployments) = do
-  -- TODO: absolute path
-  let branchDir = fromText bname
+  homeDir <- home
+  let branchDir = homeDir <> (fromText bname)
   exists <- testpath branchDir
   if exists
     then echo $ "Using existing git clone ..."
