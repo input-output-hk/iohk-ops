@@ -165,11 +165,12 @@ run (Options nixpkgs) (Template env tgt branch@(Branch bname) deployments) = do
     then echo $ "Using existing git clone ..."
     else procs "git" (["clone", iohkNixopsURL, "-b", bname, bname]) empty
   cd branchDir
-  writeTextFile (envToConfig env) $ areaConfig nixpkgs branch env tgt deployments
+  let configFile = envToConfig env
+  writeTextFile (fromText configFile) $ areaConfig nixpkgs branch env tgt deployments
   procs "git" (["config", "--replace-all", "receive.denyCurrentBranch", "warn"]) empty
   echo ""
-  echo "-- config.yaml is:"
-  procs "cat" [envToConfig env] empty -- XXX TODO: figure out Turtle.cat
+  echo $ "-- " <> (unsafeTextToLine configFile) <> " is:"
+  procs "cat" [configFile] mempty
 
 envToConfig :: IsString s => Environment -> s
 envToConfig Any = "config.yaml"
