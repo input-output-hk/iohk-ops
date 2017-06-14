@@ -19,7 +19,7 @@ nix-build -E "with import <nixpkgs> {}; haskell.packages.ghc802.callPackage ${sc
 # Generate explorer until it's merged with cardano-sl repo
 cabal2nix \
   --no-check \
-  --revision b612b69f8849adb78f130841462efc0128eff657 \
+  --revision 982ac2dd3efeca6fd7ebc1df11e9d1bf628c1700 \
   https://github.com/input-output-hk/cardano-sl-explorer.git > $scriptDir/cardano-sl-explorer.nix
 
 # Generate cardano-sl package set
