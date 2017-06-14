@@ -46,7 +46,7 @@ in lib // (rec {
   # Function to generate DHT key
   genDhtKey = i: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
 
-  accessKeyId = "cardano-deployer";
+  accessKeyId = "iohk";
   region = "eu-central-1";
 
   # Given a region, returns it's keypair
