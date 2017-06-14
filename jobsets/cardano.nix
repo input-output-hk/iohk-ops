@@ -12,8 +12,8 @@ in rec {
     modules = [
       (import ./../deployments/cardano-nodes.nix).node0
       (import ./../modules/amazon-image.nix)
-      # Rare exception, for generating AMI we can allow not having initial peers
-      ({ services.cardano-node.initialPeers = [];})
+      # Just build packages
+      ({ lib, ...}: { services.cardano-node.enable = lib.mkForce false;})
     ];
   }).config.system.build.amazonImage;
 }
