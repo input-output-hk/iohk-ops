@@ -8,7 +8,7 @@ if [ ! -d "cardano-sl-explorer" ]; then
 fi
 
 pushd cardano-sl-explorer
-  # checkout the revision used by Nix
+  git fetch
   git checkout "$(nix-instantiate --eval ../default.nix -A cardano-sl-explorer-static.src.rev|tr -d '"')"
   pushd frontend
     EXPLORER_NIX_FILE=../default.nix ./scripts/build.sh
