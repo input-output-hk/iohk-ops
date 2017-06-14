@@ -64,7 +64,7 @@ in {
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
       dhtKey = mkOption {
-        type = types.string;
+        type = types.str;
         description = "base64-url string describing dht key";
       };
       productionMode = mkOption {
