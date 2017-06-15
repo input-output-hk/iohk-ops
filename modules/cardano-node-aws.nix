@@ -17,7 +17,8 @@ testIndex: region:
         else cardanoNodeConfigs
       );
 
-      deployment.ec2.ami = (import ./amis.nix).${config.deployment.ec2.region};
+      # TODO: DEVOPS-8
+      #deployment.ec2.ami = (import ./amis.nix).${config.deployment.ec2.region};
       deployment.ec2.region = region;
       deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor region};
       deployment.keys = optionalAttrs cfg.productionMode {
