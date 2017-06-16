@@ -106,6 +106,11 @@ in {
         default = false;
         description = "Enable rich-poor distr";
       };
+      hasExplorer = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Does the node has explorer running?";
+      };
 
       testIndex = mkOption { type = types.int; };
 
