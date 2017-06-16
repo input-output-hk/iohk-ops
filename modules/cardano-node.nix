@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, options, ... }:
 
 with (import ./../lib.nix);
 
@@ -14,8 +14,6 @@ let
     if (smartGenIP != "")
     then "--kademlia-peer ${smartGenIP}:24962"
     else "";
-  publicIP = config.networking.publicIPv4 or null;
-  privateIP = config.networking.privateIPv4 or null;
 
   # Given a list of dht/ip mappings, generate peers line
   #
@@ -25,9 +23,9 @@ let
 
   command = toString [
     cfg.executable
-    "--address ${if publicIP == null then "0.0.0.0" else publicIP}:${toString cfg.port}"
-    "--listen ${if privateIP == null then "0.0.0.0" else privateIP}:${toString cfg.port}"
-    "--kademlia-address ${if privateIP == null then "0.0.0.0" else privateIP}:${toString cfg.port}"
+    "--address ${if cfg.publicIP == null then "0.0.0.0" else cfg.publicIP}:${toString cfg.port}"
+    "--listen ${cfg.privateIP}:${toString cfg.port}"
+    "--kademlia-address ${cfg.privateIP}:${toString cfg.port}"
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
@@ -110,6 +108,18 @@ in {
       };
 
       testIndex = mkOption { type = types.int; };
+
+      publicIP = mkOption {
+        type = types.nullOr types.str;
+        description = "Public IP to advertise to peers";
+        default = null;
+      };
+
+      privateIP = mkOption {
+        type = types.str;
+        description = "Private IP to bind to";
+        default = "0.0.0.0";
+      };
     };
   };
 

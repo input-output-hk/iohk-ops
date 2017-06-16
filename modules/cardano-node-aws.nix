@@ -1,7 +1,7 @@
 with (import ./../lib.nix);
 
 testIndex: region:
-  { config, resources, pkgs, nodes, ... }:
+  { config, resources, pkgs, nodes, options, ... }:
     let
       cfg = config.services.cardano-node;
       cardanoNodeConfigs = filter (c: c.services.cardano-node.enable)
@@ -11,11 +11,15 @@ testIndex: region:
         ./amazon-base.nix
       ];
 
-      services.cardano-node.initialPeers = genPeersFromConfig (
-        if (cfg.enableP2P && !cfg.productionMode)
-        then [head cardanoNodeConfigs]
-        else cardanoNodeConfigs
-      );
+      services.cardano-node = {
+        initialPeers = genPeersFromConfig (
+          if (cfg.enableP2P && !cfg.productionMode)
+          then [head cardanoNodeConfigs]
+          else cardanoNodeConfigs
+        );
+        publicIP = if options.networking.publicIPv4.isDefined then config.networking.publicIPv4 else null;
+        privateIP = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
+      };
 
       # TODO: DEVOPS-8
       #deployment.ec2.ami = (import ./amis.nix).${config.deployment.ec2.region};
