@@ -44,7 +44,7 @@ with (import ./../lib.nix);
         group           = "live-production";
         createHome      = true;
         isNormalUser = true;
-        openssh.authorizedKeys.keys = [domenKey georgeeeKey kosergeKey jakeKey];
+        openssh.authorizedKeys.keys = devOpsKeys;
       };
       groups.live-production = {};
     };
