@@ -34,6 +34,7 @@ let
     #"+RTS -N -pa -hb -T -A6G -qg -RTS"
     # Event logging (cannot be used with profiling)
     #"+RTS -N -T -l -A6G -qg -RTS"
+    "--no-ntp" # DEVOPS-160
     (optionalString cfg.stats "--stats")
     (optionalString (!cfg.productionMode) "--rebuild-db")
     (optionalString (!cfg.productionMode) "--spending-genesis ${toString cfg.testIndex}")
