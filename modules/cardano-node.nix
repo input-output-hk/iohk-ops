@@ -23,7 +23,7 @@ let
 
   command = toString [
     cfg.executable
-    "--address ${if cfg.publicIP == null then "0.0.0.0" else cfg.publicIP}:${toString cfg.port}"
+    (optionalString (cfg.publicIP != null) "--address ${cfg.publicIP}:${toString cfg.port}")
     "--listen ${cfg.privateIP}:${toString cfg.port}"
     "--kademlia-address ${cfg.privateIP}:${toString cfg.port}"
     # Profiling
@@ -150,21 +150,28 @@ in {
 
     services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.testIndex);
 
-    # Workaround for CSL-1029
-    services.cron.systemCronJobs =
-    let
-      # Reboot cardano-node every hour, offset by node id (in 4 minute intervals) modulo 60min
-      hour = (mod (cfg.testIndex * 4) 60);
-    in [
-      "${toString hour} * * * * root /run/current-system/sw/bin/systemctl restart cardano-node"
-    ];
-
     networking.firewall = {
       allowedTCPPorts = [ cfg.port ];
 
       # TODO: securing this depends on CSLA-27
       # NOTE: this implicitly blocks DHCPCD, which uses port 68
       allowedUDPPortRanges = [ { from = 1024; to = 65000; } ];
+    };
+
+    # Workaround for CSL-1029
+    systemd.services.cardano-restart = let
+      # Reboot cardano-node every day, offset by node id (in ${interval} minute intervals)
+      getDailyTime = testIndex: let
+          # how many minutes between each node restarting
+          interval = 60;
+          minute = mod (testIndex * interval) 60;
+          hour = mod ((testIndex * interval) / 60) 24;
+        in "${toString hour}:${toString minute}";
+    in {
+      script = ''
+        /run/current-system/sw/bin/systemctl restart cardano-node
+      '';
+      startAt = getDailyTime cfg.testIndex;
     };
 
     systemd.services.cardano-node = {
