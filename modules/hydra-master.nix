@@ -10,6 +10,15 @@ let
     system = "x86_64-linux";
     supportedFeatures = [ "kvm" "nixos-test" ];
   };
+  # TODO, remove override once hydra in nixpkgs has advanced far enough 207d2dd10cf54f79770e370304f1e9fefc01f31a
+  hydraMaster = pkgs.hydra.overrideAttrs (old: {
+    src = pkgs.fetchFromGitHub {
+      owner = "NixOS";
+      repo = "hydra";
+      rev = "207d2dd10cf54f79770e370304f1e9fefc01f31a";
+      sha256 = "16ivi8yni9474afq5zhi4fhv5zw6yxpk3rlav1k3s1zbhdlxydcm";
+    };
+  });
 in {
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
@@ -35,6 +44,9 @@ in {
     StrictHostKeyChecking no
   '';
 
+  # TODO, remove override once hydra in nixpkgs has advanced far enough 7bd918b3641ce30f4766dffadd779bc7f4614195
+  systemd.services.hydra-evaluator.path = [ pkgs.jq ];
+
   services.hydra = {
     enable = true;
     hydraURL = "https://hydra.iohk.io";
@@ -42,11 +54,19 @@ in {
     useSubstitutes = true;
     notificationSender = "hi@iohk.io";
     # max output is 4GB because of amis
+    # auth token needs `repo:status`
     extraConfig = ''
       max_output_size = 4294967296
       store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
       binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
+      <githubstatus>
+        jobs = serokell:.*
+        inputs = jobsets
+        authorization = ${builtins.readFile ../static/github_token}
+        excludeBuildFromContext = 1
+      </githubstatus>
     '';
+    package = hydraMaster;
     logo = (pkgs.fetchurl {
       url    = "https://iohk.io/images/iohk-share-logo.jpg";
       sha256 = "0pg2igski35wf1y4gn8dxw6444kx1107mg4ns5xj29ays2c1j5sl";

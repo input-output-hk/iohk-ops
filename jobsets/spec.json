@@ -11,6 +11,7 @@
     "keepnr": 3,
     "inputs": {
          "src": { "type": "git", "value": "https://github.com/input-output-hk/pos-prototype-deployment.git", "emailresponsible": false },
-         "nixpkgs": { "type": "git", "value": "https://github.com/NixOS/nixpkgs-channels.git nixos-16.09", "emailresponsible": false }
+         "nixpkgs": { "type": "git", "value": "https://github.com/NixOS/nixpkgs-channels.git nixos-16.09", "emailresponsible": false },
+         "prsJSON": { "type": "githubpulls", "value": "input-output-hk iohk-nixops", "emailresponsible": false }
      }
 }
