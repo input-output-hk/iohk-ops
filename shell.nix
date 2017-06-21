@@ -8,8 +8,7 @@ pkgs      = import nixpkgs {};
 compiler  = pkgs.haskell.packages."${ghcVer}";
 
 ghcOrig   = import ./default.nix { inherit pkgs compiler; };
-overcabal = pkgs.haskell.lib.overrideCabal;
-hubsrc    =      repo: rev: sha256:       pkgs.fetchgit { url = "https://github.com/" + repo; rev = rev; sha256 = sha256; };
+overcabal = pkgs.haskell.lib.overrideCabal; hubsrc    =      repo: rev: sha256:       pkgs.fetchgit { url = "https://github.com/" + repo; rev = rev; sha256 = sha256; };
 overc     = old:                    args: overcabal old (oldAttrs: (oldAttrs // args));
 overhub   = old: repo: rev: sha256: args: overc old ({ src = hubsrc repo rev sha256; }       // args);
 overhage  = old: version:   sha256: args: overc old ({ version = version; sha256 = sha256; } // args);
@@ -27,7 +26,7 @@ ghc       = ghcOrig.override (oldArgs: {
 ###
 drvf =
 { mkDerivation, stdenv, src ? ./.
-, base, turtle, cassava, vector, safe, aeson, yaml, lens-aeson
+,   aeson, base, cassava, jq, lens-aeson, nix-prefetch-git, safe, turtle, utf8-string, vector, yaml
 }:
 mkDerivation {
   pname = "iohk-nixops";
@@ -37,7 +36,7 @@ mkDerivation {
   isExecutable = true;
   doHaddock = false;
   executableHaskellDepends = [
-   base turtle cassava vector safe aeson yaml lens-aeson
+    aeson  base  cassava  jq  lens-aeson  nix-prefetch-git  safe  turtle  utf8-string  vector  yaml
   ];
   shellHook =
   ''
