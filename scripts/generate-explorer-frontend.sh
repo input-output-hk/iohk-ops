@@ -1,7 +1,9 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i bash -p git
+#!nix-shell -i bash -p git jq
 
-export NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/7648f528de9917933bc104359c9a507c6622925c.tar.gz
+set -euo pipefail
+
+source scripts/set_nixpath.sh
 
 if [ ! -d "cardano-sl-explorer" ]; then
   git clone https://github.com/input-output-hk/cardano-sl-explorer.git

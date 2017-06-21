@@ -41,13 +41,18 @@ with (import ./../lib.nix);
 
     buildCores = 0;
 
-    nixPath = ["nixpkgs=http://nixos.org/channels/nixos-17.03/nixexprs.tar.xz"];
+    nixPath = [ "nixpkgs=/run/current-system/nixpkgs" ];
 
     # use our hydra builds
     trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
     binaryCaches = trustedBinaryCaches;
     binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
   };
+  system.extraSystemBuilderCmds = let
+    setNixpkgs = pkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./../nixpkgs-src.json));
+  in ''
+    ln -sv ${setNixpkgs} $out/nixpkgs
+  '';
 
   # Mosh
   networking.firewall.allowedUDPPortRanges = [

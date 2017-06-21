@@ -6,15 +6,13 @@ let
   nixopsPrs = builtins.fromJSON (builtins.readFile nixopsPrsJSON);
   cardanoPrs = builtins.fromJSON (builtins.readFile cardanoPrsJSON);
   iohkNixopsUri = "https://github.com/input-output-hk/iohk-nixops.git";
-  # when hydra builds PR's, it wont know the correct nixpkgs, this locks it in
-  fixedNixpkgs = (import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ../nixpkgs-src.json));
-  pkgs = import fixedNixpkgs {};
   mkFetchGithub = value: {
     inherit value;
     type = "git";
     emailresponsible = false;
   };
   nixpkgs-src = builtins.fromJSON (builtins.readFile ./../nixpkgs-src.json);
+  pkgs = import nixpkgs {};
   defaultSettings = {
     enabled = 1;
     hidden = false;
@@ -23,7 +21,7 @@ let
     schedulingshares = 42;
     checkinterval = 60;
     inputs = {
-      nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git 9b948ea439ddbaa26740ce35543e7e35d2aa6d18";
+      nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
       jobsets = mkFetchGithub "${iohkNixopsUri} master";
     };
     enableemail = false;
@@ -52,8 +50,8 @@ let
   };
   nixopsPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeNixopsPR nixopsPrs);
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
-    cardano-sl = mkCardano "master" "9b948ea439ddbaa26740ce35543e7e35d2aa6d18";
-    cardano-sl-staging = mkCardano "staging" "9b948ea439ddbaa26740ce35543e7e35d2aa6d18";
+    cardano-sl = mkCardano "master" nixpkgs-src.rev;
+    cardano-sl-staging = mkCardano "staging" nixpkgs-src.rev;
     deployments = {
       nixexprpath = "jobsets/deployments.nix";
       description = "Builds for deployments";
