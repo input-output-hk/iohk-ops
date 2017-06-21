@@ -3,25 +3,16 @@
 #! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/f2c4af4e3bd9ecd4b1cf494270eae5fd3ca9e68c.tar.gz
 
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
-import Turtle
+import Data.Yaml (decodeFile)
 import Data.Monoid ((<>))
+import Filesystem.Path.CurrentOS (encodeString)
+import Turtle
 import qualified Data.Text as T
 
 import NixOps
 
-
-c :: NixOpsConfig
-c = NixOpsConfig
-  { deploymentName = "iohk-infra"
-  , deploymentFiles =
-    [ "deployments/keypairs.nix"
-    , "deployments/infrastructure.nix"
-    , "deployments/infrastructure-target-aws.nix"
-    , "deployments/infrastructure-env-production.nix"]
-  , nixopsExecutable = "nixops"
-  , nixPath = "nixpkgs=https://github.com/NixOS/nixpkgs/archive/05126bc8503a37bfd2fe80867eb5b0bea287c633.tar.gz"
-  }
 
 data Command
   = Create
@@ -43,7 +34,8 @@ parser =
 
 main :: IO ()
 main = do
-  (opts, command) <- options "Helper CLI around NixOps to run experiments" parser
+  (opts@Options{..}, command) <- options "Helper CLI around NixOps to run experiments" parser
+  Just c <- decodeFile $ encodeString oConfigFile
   case command of
     Create      -> create      opts c
     Deploy      -> deploy      opts c

@@ -1,0 +1,15 @@
+deploymentName: staging
+nixPath: nixpkgs=https://github.com/NixOS/nixpkgs/archive/7648f528de9917933bc104359c9a507c6622925c.tar.gz
+nixopsExecutable: nixops
+deploymentFiles:
+  - deployments/keypairs.nix
+  - deployments/cardano-nodes.nix
+  - deployments/cardano-nodes-env-staging.nix
+  - deployments/cardano-nodes-target-aws.nix
+  - deployments/cardano-explorer.nix
+  - deployments/cardano-explorer-env-staging.nix
+  - deployments/cardano-explorer-target-aws.nix
+  - deployments/report-server.nix
+  - deployments/report-server-env-staging.nix
+  - deployments/report-server-target-aws.nix
+

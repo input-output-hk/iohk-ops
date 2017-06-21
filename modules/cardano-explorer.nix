@@ -12,6 +12,7 @@ with (import ./../lib.nix);
     services.cardano-node = {
       executable = "${(import ./../default.nix {}).cardano-sl-explorer-static}/bin/cardano-explorer";
       autoStart = true;
+      hasExplorer = true;
     };
 
     networking.firewall = {

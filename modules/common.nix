@@ -15,8 +15,10 @@ with (import ./../lib.nix);
   services.openssh.passwordAuthentication = true;
   services.openssh.enable = true;
 
+  services.ntp.enable = true;
+
   users.mutableUsers = false;
-  users.users.root.openssh.authorizedKeys.keys = devKeys;
+  users.users.root.openssh.authorizedKeys.keys = devOpsKeys;
 
   environment.variables.TERM = "xterm-256color";
 

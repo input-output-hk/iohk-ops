@@ -210,8 +210,7 @@ generateIPDHTMappings :: NixOpsConfig -> IO Text
 generateIPDHTMappings c = runError $ do
   nodes <- ExceptT $ getNodesMap c
   config@Config{..} <- ExceptT $ getConfig
-  dhtfile <- lift $ Prelude.readFile "static/dht.json"
-  let peers = genPeers dhtfile nodePort (M.toList nodes)
+  let peers = genPeers nodePort (M.toList nodes)
   lift $ TIO.putStrLn $ T.unlines peers
   return $ T.unlines peers
 -- Rest
@@ -267,10 +266,10 @@ getSmartGenCmd c = runError $ do
 genDhtKey :: Int -> Text
 genDhtKey i = "MHdrsP-oPf7UWl" <> (T.pack $ printf "%.3d" i) <> "7QuXnLK5RD="
 
-genPeers :: String -> Int -> [(Int, DeploymentInfo)] -> [Text]
-genPeers dhtfile port = map impl
+genPeers :: Int -> [(Int, DeploymentInfo)] -> [Text]
+genPeers port = map impl
   where
-    impl (i, getIP . diPublicIP -> ip) = ip <> ":" <> show' port <> "/" <> (fromJust $ dhtfile ^? key ("node" <> show' i) . _String)
+    impl (i, getIP . diPublicIP -> ip) = ip <> ":" <> show' port 
 
 getPeers :: NixOpsConfig -> Config -> String -> M.Map Int DeploymentInfo -> Either String Text
 getPeers c config dhtfile nodes = do
@@ -278,7 +277,7 @@ getPeers c config dhtfile nodes = do
     Nothing -> Left "Node0 retrieval failed"
     Just node0 -> let port = nodePort config
                       infos = if enableP2P config then [(0, node0)] else M.toList nodes
-                  in Right $ mconcat $ map (\p -> " --peer " <> p) $ genPeers dhtfile port infos
+                  in Right $ mconcat $ map (\p -> " --kademlia-peer " <> p) $ genPeers port infos
 
 getWalletDelegationCmd :: NixOpsConfig -> IO Text
 getWalletDelegationCmd c = runError $ do

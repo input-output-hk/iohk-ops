@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, options, ... }:
 
 with (import ./../lib.nix);
 
@@ -12,27 +12,27 @@ let
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
   smartGenPeer =
     if (smartGenIP != "")
-    then "--peer ${smartGenIP}:24962/${genDhtKey 100 }}"
+    then "--kademlia-peer ${smartGenIP}:24962"
     else "";
-  publicIP = config.networking.publicIPv4 or null;
-  privateIP = config.networking.privateIPv4 or null;
 
   # Given a list of dht/ip mappings, generate peers line
   #
   # > genPeers ["ip:port/dht" "ip:port/dht" ...]
-  # "--peer ip:port/dht --peer ip:port/dht ..."
-  genPeers = peers: toString (map (p: "--peer " + p) peers);
+  # "--kademlia-peer ip:port/dht --peer ip:port/dht ..."
+  genPeers = peers: toString (map (p: "--kademlia-peer " + p) peers);
 
   command = toString [
     cfg.executable
-    "--listen ${if privateIP == null then "0.0.0.0" else privateIP}:${toString cfg.port}"
-    (optionalString (publicIP != null) "--pubhost ${publicIP}")
+    (optionalString (cfg.publicIP != null) "--address ${cfg.publicIP}:${toString cfg.port}")
+    "--listen ${cfg.privateIP}:${toString cfg.port}"
+    "--kademlia-address ${cfg.privateIP}:${toString cfg.port}"
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
     #"+RTS -N -pa -hb -T -A6G -qg -RTS"
     # Event logging (cannot be used with profiling)
     #"+RTS -N -T -l -A6G -qg -RTS"
+    "--no-ntp" # DEVOPS-160
     (optionalString cfg.stats "--stats")
     (optionalString (!cfg.productionMode) "--rebuild-db")
     (optionalString (!cfg.productionMode) "--spending-genesis ${toString cfg.testIndex}")
@@ -44,13 +44,13 @@ let
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
-    "--dht-key ${cfg.dhtKey}"
+    "--kademlia-id ${cfg.dhtKey}"
     (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.testIndex + 1)}.sk")
     (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
-    (optionalString (!cfg.enableP2P) "--explicit-initial --disable-propagation ${smartGenPeer}")
+    (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
     (genPeers cfg.initialPeers)
   ];
 in {
@@ -63,7 +63,7 @@ in {
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
       dhtKey = mkOption {
-        type = types.string;
+        type = types.str;
         description = "base64-url string describing dht key";
       };
       productionMode = mkOption {
@@ -106,8 +106,25 @@ in {
         default = false;
         description = "Enable rich-poor distr";
       };
+      hasExplorer = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Does the node has explorer running?";
+      };
 
       testIndex = mkOption { type = types.int; };
+
+      publicIP = mkOption {
+        type = types.nullOr types.str;
+        description = "Public IP to advertise to peers";
+        default = null;
+      };
+
+      privateIP = mkOption {
+        type = types.str;
+        description = "Private IP to bind to";
+        default = "0.0.0.0";
+      };
     };
   };
 
@@ -133,21 +150,28 @@ in {
 
     services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.testIndex);
 
-    # Workaround for CSL-1029
-    services.cron.systemCronJobs =
-    let
-      # Reboot cardano-node every hour, offset by node id (in 4 minute intervals) modulo 60min
-      hour = (mod (cfg.testIndex * 4) 60);
-    in [
-      "${toString hour} * * * * root /run/current-system/sw/bin/systemctl restart cardano-node"
-    ];
-
     networking.firewall = {
       allowedTCPPorts = [ cfg.port ];
 
       # TODO: securing this depends on CSLA-27
       # NOTE: this implicitly blocks DHCPCD, which uses port 68
       allowedUDPPortRanges = [ { from = 1024; to = 65000; } ];
+    };
+
+    # Workaround for CSL-1029
+    systemd.services.cardano-restart = let
+      # Reboot cardano-node every day, offset by node id (in ${interval} minute intervals)
+      getDailyTime = testIndex: let
+          # how many minutes between each node restarting
+          interval = 60;
+          minute = mod (testIndex * interval) 60;
+          hour = mod ((testIndex * interval) / 60) 24;
+        in "${toString hour}:${toString minute}";
+    in {
+      script = ''
+        /run/current-system/sw/bin/systemctl restart cardano-node
+      '';
+      startAt = getDailyTime cfg.testIndex;
     };
 
     systemd.services.cardano-node = {

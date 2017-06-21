@@ -1,60 +1,50 @@
 #!/usr/bin/env nix-shell
 #! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle safe base-unicode-symbols ])'
-#! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/05126bc8503a37bfd2fe80867eb5b0bea287c633.tar.gz
+#! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/ed070354a9e307fdf20a94cb2af749738562385d.tar.gz
 
-{-# LANGUAGE GADTs, OverloadedStrings, RecordWildCards, UnicodeSyntax #-}
+{-# LANGUAGE GADTs, OverloadedStrings, RecordWildCards #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures #-}
 
-import           Data.Monoid               ((<>))
+import           Data.Monoid                      ((<>))
 import           Data.Maybe
-import qualified Data.Text                         as T
-import           Data.Text                 (Text)
-import           Filesystem.Path.CurrentOS         hiding (concat, empty, null)
+import           Data.Optional (Optional)
+import qualified Data.Text                     as T
+import           Data.Text                        (Text)
+import           Filesystem.Path.CurrentOS hiding (concat, empty, null)
+import           Text.Read                        (readMaybe)
 import           Turtle
 
-
-defaultNixpkgsCommit = Commit "05126bc8503a37bfd2fe80867eb5b0bea287c633"
 
-iohkNixopsURL ∷ Text
+iohkNixopsURL :: Text
 iohkNixopsURL = "https://github.com/input-output-hk/iohk-nixops.git"
 
 defaultEnvironment = Development
-
-defaultTarget      = AWS
-
+defaultTarget = AWS
+defaultNixpkgsCommit = Commit "05126bc8503a37bfd2fe80867eb5b0bea287c633"
 
 data Options where
-  Options ∷
-    { oNixpkgsCommit ∷ Commit
-    } → Options
+  Options ::
+    { oNixpkgsCommit :: Commit
+    } -> Options
 
 data Command
-  = Area AreaCommand
-
-data AreaCommand
-  = New
-  { anBranch       ∷ Branch
-  , anEnvironment  ∷ Environment
-  , anTarget       ∷ Target
-  , anDeployments  ∷ [Deployment]
-  }
-  | Change
-  { anBranch       ∷ Branch
-  , anEnvironment  ∷ Environment
-  , anTarget       ∷ Target
-  , anDeployments  ∷ [Deployment]
-  }
+  = Template
+  { anEnvironment  :: Environment
+  , anTarget       :: Target
+  , anBranch       :: Branch
+  , anDeployments  :: [Deployment]
+  } deriving (Show)
 
 
-data Branch = Branch { fromBranch ∷ Text } deriving (Show)
-data Commit = Commit { fromCommit ∷ Text } deriving (Show)
+data Branch = Branch { fromBranch :: Text } deriving (Show)
+data Commit = Commit { fromCommit :: Text } deriving (Show)
 
 
 data Deployment
   = Explorer
   | Nodes
   | Infra
-  | Report
+  | ReportServer
   | Timewarp
   deriving (Eq, Read, Show)
 
@@ -63,16 +53,16 @@ data Environment
   | Production
   | Staging
   | Development
-  deriving (Eq, Read)
+  deriving (Eq, Read, Show)
 
 data Target
   = All
   | AWS
-  deriving (Eq, Read)
+  deriving (Eq, Read, Show)
 
 type FileSpec = (Environment, Target, Text)
 
-deployments ∷ [(Deployment, [(Environment, Target, Text)])]
+deployments :: [(Deployment, [(Environment, Target, Text)])]
 deployments =
   [ (Explorer
     , [ (Any,         All, "deployments/cardano-explorer.nix")
@@ -89,7 +79,7 @@ deployments =
     , [ (Any,         All, "deployments/infrastructure.nix")
       , (Production,  All, "deployments/infrastructure-env-production.nix")
       , (Any,         AWS, "deployments/infrastructure-target-aws.nix") ])
-  , (Report
+  , (ReportServer
     , [ (Any,         All, "deployments/report-server.nix")
       , (Production,  All, "deployments/report-server-env-production.nix")
       , (Staging,     All, "deployments/report-server-env-staging.nix")
@@ -99,68 +89,64 @@ deployments =
       , (Any,         AWS, "deployments/timewarp-target-aws.nix") ])
   ]
 
-deploymentSpecs ∷ Deployment → [FileSpec]
+deploymentSpecs :: Deployment -> [FileSpec]
 deploymentSpecs = fromJust . flip lookup deployments
 
-filespecEnvSpecific ∷ Environment → FileSpec → Bool
+filespecEnvSpecific :: Environment -> FileSpec -> Bool
 filespecEnvSpecific x (x', _, _) = x == x'
-filespecTgtSpecific ∷ Target      → FileSpec → Bool
+filespecTgtSpecific :: Target      -> FileSpec -> Bool
 filespecTgtSpecific x (_, x', _) = x == x'
 
-filespecNeededEnv ∷ Environment → FileSpec → Bool
-filespecNeededTgt ∷ Target      → FileSpec → Bool
+filespecNeededEnv :: Environment -> FileSpec -> Bool
+filespecNeededTgt :: Target      -> FileSpec -> Bool
 filespecNeededEnv x fs = filespecEnvSpecific Any fs || filespecEnvSpecific x fs
 filespecNeededTgt x fs = filespecTgtSpecific All fs || filespecTgtSpecific x fs
 
-filespecFile ∷ FileSpec → Text
+filespecFile :: FileSpec -> Text
 filespecFile (_, _, x) = x
 
-deploymentFiles ∷ Environment → Target → Deployment → [Text]
-deploymentFiles env tgt depl = filespecFile <$> (filter (\x → filespecNeededEnv env x && filespecNeededTgt tgt x) $ deploymentSpecs depl)
+deploymentFiles :: Environment -> Target -> Deployment -> [Text]
+deploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNeededEnv env x && filespecNeededTgt tgt x) $ deploymentSpecs depl)
 
-
-optionsParser ∷ Parser Options
+optReadLower :: Read a => ArgName -> ShortName -> Optional HelpMessage -> Parser a
+optReadLower = opt (readMaybe . T.unpack . T.toTitle)
+
+optionsParser :: Parser Options
 optionsParser =
   Options
   <$> (fromMaybe defaultNixpkgsCommit
         <$> optional (Commit <$> optText "nixpkgs" 'n' "Nixpkgs commit to use"))
 
-deploymentsParser ∷ Parser [Deployment]
+deploymentsParser :: Parser [Deployment]
 deploymentsParser =
-  (\(a, b, c, d) → concat $ maybeToList <$> [a, b, c, d])
+  (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
   <$> ((,,,)
-        <$> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'"))
-        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'Report' or 'Timewarp'")))
+        <$> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'"))
+        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'"))
+        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'"))
+        <*> (optional (argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'")))
 
-branchParser desc = Branch <$> argText "branch" desc
-envParser         = fromMaybe defaultEnvironment <$> optional (optRead "env" 'e' "Environment: Development, Staging or Production;  defaults to Any")
-tgtParser         = fromMaybe defaultTarget      <$> optional (optRead "tgt" 't' "Target: AWS;  defaults to All")
 
-parser ∷ Parser (Options, AreaCommand)
+parser :: Parser (Options, Command)
 parser = (,) <$> optionsParser <*>
-  -- subcommand "area" "Operate on an iohk-nixops checkouts"
-  (   subcommand "new"    "Checkout a new iohk-nixops experiment from BRANCH, for a specified set of deployments"
-    (New    <$> branchParser "iohk-nixops branch to check out"                   <*> envParser <*> tgtParser <*> deploymentsParser)
-  <|> subcommand "change" "Change configuration of the specified iohk-nixops experiment"
-    (Change <$> branchParser "iohk-nixops experiment to update configuration of" <*> envParser <*> tgtParser <*> deploymentsParser)
+  (subcommand "template" "Clone iohk-nixops from git BRANCH, for a specified set of deployments"
+    (Template <$> envParser
+              <*> tgtParser
+              <*> branchParser "iohk-nixops branch to check out"
+              <*> deploymentsParser)
   )
-
+  where
+    branchParser desc = Branch <$> argText "branch" desc
+    envParser = fromMaybe defaultEnvironment <$> optional (optReadLower "environment" 'e' "Environment: Development, Staging or Production;  defaults to Development")
+    tgtParser = fromMaybe defaultTarget      <$> optional (optReadLower "target" 't' "Target: AWS, All;  defaults to AWS")
 
-tShow ∷ Show a ⇒ a → Text
-tShow = T.pack . show
-
-
-main ∷ IO ()
+main :: IO ()
 main = do
-  (opts, topcmd) ← options "Helper CLI around IOHK NixOps" parser
-  runArea opts topcmd
-  -- case topcmd of
-    -- Area cmd → runArea opts cmd
+  (opts, topcmd) <- options "Helper CLI around IOHK NixOps" parser
+  run opts topcmd
 
-
-areaConfig ∷ Commit → Branch → Environment → Target → [Deployment] → Text
+-- TODO: use NixOpsConfig and ToJSON
+areaConfig :: Commit -> Branch -> Environment -> Target -> [Deployment] -> Text
 areaConfig (Commit commit) (Branch branch) env tgt depls =
   T.unlines $
   [ "deploymentName: " <> branch
@@ -170,29 +156,24 @@ areaConfig (Commit commit) (Branch branch) env tgt depls =
   ,    "  - deployments/keypairs.nix" ]
   ++ (("  - " <>) <$> concat (deploymentFiles env tgt <$> depls))
 
-runArea ∷ Options → AreaCommand → IO ()
-runArea (Options nixpkgs) (New branch@(Branch bname) env tgt deployments) = do
-  let branchDir = fromText bname
-  exists ← testpath branchDir
-  when exists $
-    die $ "Directory already ∃: " <> bname
-  procs "git" (["clone", iohkNixopsURL, bname]) empty
+run :: Options -> Command -> IO ()
+run (Options nixpkgs) (Template env tgt branch@(Branch bname) deployments) = do
+  homeDir <- home
+  let branchDir = homeDir <> (fromText bname)
+  exists <- testpath branchDir
+  if exists
+    then echo $ "Using existing git clone ..."
+    else procs "git" (["clone", iohkNixopsURL, "-b", bname, bname]) empty
   cd branchDir
-  procs "git" (["checkout", bname]) empty
-  writeTextFile "config.yaml" $
-    areaConfig nixpkgs branch env tgt deployments
+  let configFile = envToConfig env
+  writeTextFile (fromText configFile) $ areaConfig nixpkgs branch env tgt deployments
   procs "git" (["config", "--replace-all", "receive.denyCurrentBranch", "warn"]) empty
   echo ""
-  echo "-- config.yaml is:"
-  procs "cat" ["config.yaml"] empty -- XXX TODO: figure out Turtle.cat
-runArea (Options nixpkgs) (Change branch@(Branch bname) env tgt deployments) = do
-  let branchDir = fromText bname
-  exists ← testpath branchDir
-  unless exists $
-    die $ "Directory does not ∃: " <> bname
-  cd branchDir
-  writeTextFile "config.yaml" $
-    areaConfig nixpkgs branch env tgt deployments
-  echo ""
-  echo "-- config.yaml updated to:"
-  procs "cat" ["config.yaml"] empty -- XXX TODO: figure out Turtle.cat
+  echo $ "-- " <> (unsafeTextToLine configFile) <> " is:"
+  procs "cat" [configFile] mempty
+
+envToConfig :: IsString s => Environment -> s
+envToConfig Any = "config.yaml"
+envToConfig Development = "config.yaml"
+envToConfig Staging = "staging.yaml"
+envToConfig Production = "production.yaml"
