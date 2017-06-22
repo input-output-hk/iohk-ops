@@ -15,10 +15,7 @@ script:
   - ./scripts/find-all-revisions.sh
   - nixops --version
   # check all scripts compile
-  - ./CardanoCSL.hs --help
-  - ./TimeWarp.hs --help
-  - ./Infra.hs --help
-  - ./scripts/ctl.hs --help
+  - ./scripts/iohk-ops.hs --help
   # check all packages build
   - nix-instantiate jobsets/cardano.nix --show-trace
   - nix-shell --run "echo it works"
