@@ -59,10 +59,12 @@ in {
       max_output_size = 4294967296
       store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
       binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
+      <github_authorization>
+        input-output-hk = ${builtins.readFile ../static/github_token}
+      </github_authorization>
       <githubstatus>
         jobs = serokell:.*
         inputs = jobsets
-        authorization = ${builtins.readFile ../static/github_token}
         excludeBuildFromContext = 1
       </githubstatus>
     '';
