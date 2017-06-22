@@ -1,3 +1,4 @@
+
 #!/bin/sh
 
 function runInShell {
@@ -23,10 +24,10 @@ nix-build -E "with import <nixpkgs> {}; haskell.packages.ghc802.callPackage ${sc
 # Generate explorer until it's merged with cardano-sl repo
 runInShell cabal2nix \
   --no-check \
-  --revision 982ac2dd3efeca6fd7ebc1df11e9d1bf628c1700 \
+  --revision $(jq .rev < ../cardano-sl-explorer-src.json -r) \
   https://github.com/input-output-hk/cardano-sl-explorer.git > $scriptDir/cardano-sl-explorer.nix
 
 # Generate cardano-sl package set
 runInShell $scriptDir/stack2nix/bin/stack2nix \
-  --revision 4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c \
+  --revision $(jq .rev < ../cardano-sl-src.json -r) \
   https://github.com/input-output-hk/cardano-sl.git > $scriptDir/default.nix
