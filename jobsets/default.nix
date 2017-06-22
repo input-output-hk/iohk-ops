@@ -33,6 +33,7 @@ let
     inputs = {
       nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgsRev}";
       jobsets = mkFetchGithub "${iohkNixopsUri} ${nixopsBranch}";
+      nixops = mkFetchGithub "https://github.com/NixOS/NixOps.git tags/v1.5";
     };
   };
   makeNixopsPR = num: info: {
@@ -43,6 +44,7 @@ let
       inputs = {
         nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
         jobsets = mkFetchGithub "https://github.com/${info.head.repo.owner.login}/${info.head.repo.name}.git ${info.head.ref}";
+        nixops = mkFetchGithub "https://github.com/NixOS/NixOps.git tags/v1.5";
       };
     };
   };
