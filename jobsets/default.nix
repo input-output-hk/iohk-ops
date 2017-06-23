@@ -5,7 +5,7 @@
 let
   iohkNixopsUri = "https://github.com/input-output-hk/iohk-nixops.git";
   # when hydra builds PR's, it wont know the correct nixpkgs, this locks it in
-  fixedNixpkgs = (import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
+  fixedNixpkgs = (import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ../nixpkgs-src.json));
   pkgs = import fixedNixpkgs {};
   mkFetchGithub = value: {
     inherit value;
