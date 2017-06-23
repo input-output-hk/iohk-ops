@@ -235,7 +235,7 @@ runTemplate o@Options{..} env tgt branch@(Branch bname) deployments = do
   let configFilename = Ops.envConfigFilename env
       config         = Ops.mkConfig branch env tgt deployments
   writeTextFile (fromText configFilename) $ T.pack $ BUTF8.toString $ YAML.encode config
-  cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "warn"])
+  cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
   echo ""
   echo $ "-- " <> (unsafeTextToLine configFilename) <> " is:"
   cmd o "cat" [configFilename]
