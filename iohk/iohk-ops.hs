@@ -7,9 +7,7 @@ import           Data.Monoid                      ((<>))
 import           Data.Maybe
 import           Data.Optional (Optional)
 import qualified Data.Text                     as T
-import qualified Data.ByteString.UTF8          as BUTF8
-import qualified Data.Yaml                     as YAML
-import           Filesystem.Path.CurrentOS hiding (concat, empty, null)
+import qualified Filesystem.Path.CurrentOS     as Path
 import           Text.Read                        (readMaybe)
 import           Turtle                    hiding (procs, shells)
 
@@ -164,11 +162,8 @@ main = do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
       let cf = flip fromMaybe oConfigFile $
                error $ "Sub-command " <> show topcmd <> " requires -c <config-file> to be specified."
-      cfParse <- YAML.decodeFileEither $ encodeString $ cf
-      let c = case cfParse of
-                Right c -> c
-                Left  e -> error $ T.unpack $ format ("Failed to parse config file "%fp%": "%s)
-                           cf (T.pack $ YAML.prettyPrintParseException e)
+      c <- Ops.readConfig cf
+      
       when oVerbose $
         printf ("-- config '"%fp%"'\n"%w%"\n") cf c
 
@@ -232,12 +227,13 @@ runTemplate o@Options{..} env tgt branch@(Branch bname) deployments = do
     then echo $ "Using existing git clone ..."
     else cmd o "git" ["clone", fromURL Ops.iohkNixopsURL, "-b", bname, bname]
   cd branchDir
-  let configFilename = Ops.envConfigFilename env
-      config         = Ops.mkConfig branch env tgt deployments
-  writeTextFile (fromText configFilename) $ T.pack $ BUTF8.toString $ YAML.encode config
   cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
+
+  let config = Ops.mkConfig branch env tgt deployments
+  configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig config
+
   echo ""
-  echo $ "-- " <> (unsafeTextToLine configFilename) <> " is:"
+  echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
   cmd o "cat" [configFilename]
 
 runSetCardano :: Options -> Commit -> IO ()

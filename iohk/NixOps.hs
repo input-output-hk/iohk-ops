@@ -13,12 +13,16 @@ import           Control.Exception (throwIO)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.=))
 import qualified Data.ByteString.Lazy          as BL
+import qualified Data.ByteString.UTF8          as BUTF8
 import Data.Char (ord)
+import qualified Data.Yaml                     as YAML
 import Data.Yaml (FromJSON(..), ToJSON(..))
 import           Data.Maybe
 import qualified Data.Map                      as Map
 import Data.Monoid ((<>))
 import           Data.Optional (Optional)
+import           Data.List                        (sort)
+import qualified Data.Set                      as Set
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Text.Lazy (fromStrict)
@@ -26,6 +30,7 @@ import Data.Text.Lazy.Encoding (encodeUtf8)
 import Data.Csv (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
 import qualified Data.Vector as V
 import Data.ByteString.Lazy.Char8 (ByteString, pack)
+import qualified Filesystem.Path.CurrentOS     as Path
 import GHC.Generics
 import Safe (headMay)
 import           Text.Read                        (readMaybe)
@@ -244,6 +249,30 @@ mkConfig (Branch cName) cEnvironment cTarget cElements =
       cDeplArgs = selectDeploymentArgs cEnvironment cElements
   in NixopsConfig{..}
 
+-- | Write the config file
+writeConfig :: MonadIO m => NixopsConfig -> m FilePath
+writeConfig c@NixopsConfig{..} = do
+  let configFilename = envConfigFilename cEnvironment
+  liftIO $ writeTextFile configFilename $ T.pack $ BUTF8.toString $ YAML.encode c
+  pure configFilename
+  
+-- | Read back config, doing validation
+readConfig :: MonadIO m => FilePath -> m NixopsConfig
+readConfig cf = do
+  cfParse <- liftIO $ YAML.decodeFileEither $ Path.encodeString $ cf
+  let c@NixopsConfig{..}
+        = case cfParse of
+            Right c -> c
+            Left  e -> error $ T.unpack $ format ("Failed to parse config file "%fp%": "%s)
+                       cf (T.pack $ YAML.prettyPrintParseException e)
+      storedFileSet  = Set.fromList cFiles
+      deducedFiles   = deploymentFiles cEnvironment cTarget cElements
+      deducedFileSet = Set.fromList $ deducedFiles
+  unless (storedFileSet == deducedFileSet) $
+    die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
+          cf cElements (sort cFiles) (sort deducedFiles)
+  pure c
+  
 
 parallelIO :: Options -> [IO a] -> IO ()
 parallelIO Options{..} =
