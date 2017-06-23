@@ -1,3 +1,4 @@
+{ accessKeyId }:
 with (import ./../lib.nix);
 
 {

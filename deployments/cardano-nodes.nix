@@ -1,3 +1,5 @@
+{ accessKeyId }:
+
 with (import ./../lib.nix);
 
 let

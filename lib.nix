@@ -49,14 +49,13 @@ in lib // (rec {
   # Function to generate DHT key
   genDhtKey = i: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
 
-  accessKeyId = "iohk";
   region = "eu-central-1";
 
   # Given a region, returns it's keypair
   # TODO: meaningful error if keypair for region doesn't exist
-  keypairFor = region: lib.head (lib.attrNames (lib.filterAttrs (n: v: v.region == region) ec2KeyPairs));
+  keypairFor = accessKeyId: region: lib.head (lib.attrNames (lib.filterAttrs (n: v: v.region == region) (ec2KeyPairs accessKeyId)));
 
-  ec2KeyPairs = {
+  ec2KeyPairs = accessKeyId: {
     cardano-test-eu-central = { inherit accessKeyId; region = "eu-central-1"; };
     cardano-test-eu-west-1 = { inherit accessKeyId; region = "eu-west-1"; };
     cardano-test-eu-west-2 = { inherit accessKeyId; region = "eu-west-2"; };

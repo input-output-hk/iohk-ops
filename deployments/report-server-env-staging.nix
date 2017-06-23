@@ -1,4 +1,5 @@
 with (import ./../lib.nix);
+{ accessKeyId }:
 
 {
   report-server = { resources, ...}: {
