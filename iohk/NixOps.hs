@@ -79,6 +79,11 @@ data NixValue
 instance FromJSON NixValue
 instance ToJSON NixValue
 
+nixArgCmdline :: NixParam -> NixValue -> [Text]
+nixArgCmdline (NixParam name) (NixBool bool) = ["--arg",    name, T.toLower $ showT bool]
+nixArgCmdline (NixParam name) (NixInt int)   = ["--arg",    name, showT int]
+nixArgCmdline (NixParam name) (NixStr str)   = ["--argstr", name, str]
+
 
 -- * Domain
 --
@@ -310,6 +315,8 @@ deploy o c@NixopsConfig{..} = do
 
   when (elem Explorer cElements) $ do
     cmd o "scripts/generate-explorer-frontend.sh" []
+
+  nixops o c "set-args" $ concat $ uncurry nixArgCmdline <$> Map.toList cDeplArgs
 
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
 
