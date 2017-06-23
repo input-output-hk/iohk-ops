@@ -1,7 +1,8 @@
 #!/usr/bin/env runhaskell
 {-# LANGUAGE DeriveGeneric, GADTs, OverloadedStrings, RecordWildCards, StandaloneDeriving, TupleSections, ViewPatterns #-}
-{-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures #-}
+{-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 
+import           Control.Monad                    (forM_)
 import           Data.Monoid                      ((<>))
 import           Data.Maybe
 import           Data.Optional (Optional)
@@ -57,6 +58,8 @@ data Command where
                            } -> Command
   SetCardano            :: Commit -> Command
   SetExplorer           :: Commit -> Command
+  FakeKeys              :: Command
+
   -- * building
   Genesis               :: Command
   GenerateIPDHTMappings :: Command
@@ -71,6 +74,7 @@ data Command where
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
+  Info                  :: Command
 
   -- * live cluster ops
   CheckStatus           :: Command
@@ -98,7 +102,8 @@ centralCommandParser =
         , ("set-cardano",           "Set cardano-sl commit to COMMIT",
                                     SetCardano  <$> parserCommit "Commit to set 'cardano-sl' version to")
         , ("set-explorer",          "Set cardano-sl-explorer commit to COMMIT",
-                                    SetExplorer <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")]
+                                    SetExplorer <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
+        , ("fake-keys",             "Fake keys necessary for a deployment",                             pure FakeKeys) ]
 
        <|> subcommandGroup "Build-related:"
         [ ("genesis",               "Generate genesis",                                                 pure Genesis)
@@ -119,7 +124,8 @@ centralCommandParser =
        , ("deploy",                 "Deploy the whole cluster",                                         pure Deploy)
        , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
        , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
-       , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)]
+       , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
+       , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
 
        <|> subcommandGroup "Live cluster ops:"
        [ ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
@@ -151,6 +157,7 @@ main = do
     Template{..}             -> runTemplate    o tEnvironment tTarget tBranch tDeployments
     SetCardano  commit       -> runSetCardano  o commit
     SetExplorer commit       -> runSetExplorer o commit
+    FakeKeys                 -> runFakeKeys
 
     -- * config-dependent
     _ -> do
@@ -188,6 +195,7 @@ main = do
         Destroy                  -> Ops.destroy                   o c
         Delete                   -> Ops.delete                    o c
         FromScratch              -> Ops.fromscratch               o c
+        Info                     -> Ops.nixops                    o c "info" []
         -- * live deployment ops
         CheckStatus              -> Ops.checkstatus               o c
         Start                    -> getNodeNames'
@@ -212,6 +220,7 @@ main = do
         Template{..}             -> error "impossible"
         SetCardano _             -> error "impossible"
         SetExplorer _            -> error "impossible"
+        FakeKeys                 -> error "impossible"
 
 
 runTemplate :: Options -> Environment -> Target -> Branch -> [Deployment] -> IO ()
@@ -242,3 +251,14 @@ runSetExplorer o rev = do
   printf ("Setting cardano-sl-explorer commit to "%s%"\n") $ fromCommit rev
   spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlExplorerURL, fromCommit rev]
   writeFile "cardano-sl-explorer-src.json" $ T.unpack spec
+
+runFakeKeys :: IO ()
+runFakeKeys = do
+  echo "Faking keys/key*.sk"
+  testdir "keys"
+    >>= flip unless (mkdir "keys")
+  forM_ (41:[1..14]) $
+    (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
+  echo "Faking static/datadog-*.secret"
+  touch "static/datadog-api.secret"
+  touch "static/datadog-application.secret"
