@@ -25,7 +25,7 @@ ghc       = ghcOrig.override (oldArgs: {
 ###
 drvf =
 { mkDerivation, stdenv, src ? ./.
-, base, turtle_1_3_0, cassava, vector, safe, aeson, yaml, lens-aeson
+, base, turtle, cassava, vector, safe, aeson, yaml, lens-aeson
 }:
 mkDerivation {
   pname = "iohk-nixops";
@@ -35,7 +35,7 @@ mkDerivation {
   isExecutable = true;
   doHaddock = false;
   executableHaskellDepends = [
-   base turtle_1_3_0 cassava vector safe aeson yaml lens-aeson
+   base turtle cassava vector safe aeson yaml lens-aeson
   ];
   # description  = "Visual mind assistant";
   license      = stdenv.lib.licenses.agpl3;
