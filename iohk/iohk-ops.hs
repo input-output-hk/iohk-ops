@@ -49,7 +49,8 @@ parserDeployments = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
 data Command where
 
   -- * setup 
-  Template              :: { tEnvironment :: Environment
+  Template              :: { tNodeLimit   :: Integer
+                           , tEnvironment :: Environment
                            , tTarget      :: Target
                            , tBranch      :: Branch
                            , tDeployments :: [Deployment]
@@ -93,7 +94,9 @@ centralCommandParser =
   <*> (    subcommandGroup "Templating:"
         [ ("template",              "Clone iohk-nixops from git BRANCH, for a specified set of deployments",
                                     Template
-                                    <$> parserEnvironment
+                                    <$> (fromMaybe Ops.defaultNodeLimit
+                                         <$> optional (optInteger "node-limit" 'l' "Limit cardano-node count to N"))
+                                    <*> parserEnvironment
                                     <*> parserTarget
                                     <*> parserBranch "iohk-nixops branch to check out"
                                     <*> parserDeployments)
@@ -152,7 +155,7 @@ main = do
 
   case topcmd of
     -- * setup 
-    Template{..}             -> runTemplate    o tEnvironment tTarget tBranch tDeployments
+    Template{..}             -> runTemplate    o topcmd
     SetCardano  commit       -> runSetCardano  o commit
     SetExplorer commit       -> runSetExplorer o commit
     FakeKeys                 -> runFakeKeys
@@ -218,10 +221,11 @@ main = do
         FakeKeys                 -> error "impossible"
 
 
-runTemplate :: Options -> Environment -> Target -> Branch -> [Deployment] -> IO ()
-runTemplate o@Options{..} env tgt branch@(Branch bname) deployments = do
+runTemplate :: Options -> Command -> IO ()
+runTemplate o@Options{..} Template{..} = do
   homeDir <- home
-  let branchDir = homeDir <> (fromText bname)
+  let bname     = fromBranch tBranch
+      branchDir = homeDir <> (fromText bname)
   exists <- testpath branchDir
   if exists
     then echo $ "Using existing git clone ..."
@@ -229,12 +233,13 @@ runTemplate o@Options{..} env tgt branch@(Branch bname) deployments = do
   cd branchDir
   cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
 
-  let config = Ops.mkConfig branch env tgt deployments
+  let config = Ops.mkConfig tBranch tEnvironment tTarget tDeployments tNodeLimit
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig config
 
   echo ""
   echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
   cmd o "cat" [configFilename]
+runTemplate Options{..} _ = error "impossible"
 
 runSetCardano :: Options -> Commit -> IO ()
 runSetCardano o rev = do

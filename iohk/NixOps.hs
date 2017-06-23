@@ -47,7 +47,8 @@ cardanoSlExplorerURL = "https://github.com/input-output-hk/cardano-sl-explorer.g
 awsPublicIPURL       = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
 defaultEnvironment = Development
-defaultTarget = AWS
+defaultTarget      = AWS
+defaultNodeLimit   = 14
 
 
 -- * Primitive types
@@ -128,10 +129,12 @@ selectDeployer _ _                              = "cardano-deployer"
 
 type DeplArgs = Map.Map NixParam NixValue
 
-selectDeploymentArgs :: Environment -> [Deployment] -> DeplArgs
-selectDeploymentArgs env delts = Map.fromList
+selectDeploymentArgs :: Environment -> [Deployment] -> Integer -> DeplArgs
+selectDeploymentArgs env delts limit = Map.fromList
   [ ("accessKeyId"
-    , NixStr . fromMachine $ selectDeployer env delts) ]
+    , NixStr . fromMachine $ selectDeployer env delts)
+  , ("nodeLimit"
+    , NixInt limit ) ]
 
 
 -- * Deployment structure
@@ -243,10 +246,10 @@ deploymentFiles cEnvironment cTarget cElements =
   concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Branch -> Environment -> Target -> [Deployment] -> NixopsConfig
-mkConfig (Branch cName) cEnvironment cTarget cElements =
+mkConfig :: Branch -> Environment -> Target -> [Deployment] -> Integer -> NixopsConfig
+mkConfig (Branch cName) cEnvironment cTarget cElements nodeLimit =
   let cFiles    = deploymentFiles cEnvironment cTarget cElements
-      cDeplArgs = selectDeploymentArgs cEnvironment cElements
+      cDeplArgs = selectDeploymentArgs cEnvironment cElements nodeLimit
   in NixopsConfig{..}
 
 -- | Write the config file

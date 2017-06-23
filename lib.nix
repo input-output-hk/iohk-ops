@@ -10,7 +10,10 @@ in lib // (rec {
 
   # Given a list of integers and a function,
   # generate an attribute set with that many nodes and call the function with node index
-  genNodes = ids: f: genAttrs' ids (i: "node${toString i}") f;
+  genNodes = nodeLimit: ids: f:
+             genAttrs' (lib.flip builtins.filter ids
+                          (id: id < nodeLimit))
+                       (i: "node${toString i}") f;
 
   # TODO: sanity check there's no duplicate nodes for same index
   # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
