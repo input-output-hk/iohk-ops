@@ -162,6 +162,8 @@ main = do
                 Right c -> c
                 Left  e -> error $ T.unpack $ format ("Failed to parse config file "%fp%": "%s)
                            cf (T.pack $ YAML.prettyPrintParseException e)
+      when oVerbose $
+        printf ("-- config '"%fp%"'\n"%w%"\n") cf c
 
       -- * CardanoCSL
       -- dat <- getSmartGenCmd c

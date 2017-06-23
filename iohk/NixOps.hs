@@ -49,11 +49,18 @@ defaultTarget = AWS
 --
 newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype NixParam  = NixParam  { fromNixParam :: Text } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
+newtype Machine   = Machine   { fromMachine :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString)
+
+
+-- * A bit of Nix types
+--
+-- | The output of 'nix-prefetch-git'
 data NixGitSource
   = NixGitSource
   { url             :: URL
@@ -62,6 +69,15 @@ data NixGitSource
   , fetchSubmodules :: Bool
   } deriving (Generic, Show)
 instance FromJSON NixGitSource
+
+-- | The set of first-class types present in Nix
+data NixValue
+  = NixBool Bool
+  | NixInt  Integer
+  | NixStr  Text
+  deriving (Generic, Show)
+instance FromJSON NixValue
+instance ToJSON NixValue
 
 
 -- * Domain
@@ -94,6 +110,18 @@ envConfigFilename Any           = "config.yaml"
 envConfigFilename Development   = "config.yaml"
 envConfigFilename Staging       = "staging.yaml"
 envConfigFilename Production    = "production.yaml"
+
+selectDeployer :: Environment -> [Deployment] -> Machine
+selectDeployer Staging delts | elem Nodes delts = "iohk"
+                             | otherwise        = "cardano-deployer"
+selectDeployer _ _                              = "cardano-deployer"
+
+type DeplArgs = Map.Map NixParam NixValue
+
+selectDeploymentArgs :: Environment -> [Deployment] -> DeplArgs
+selectDeploymentArgs env delts = Map.fromList
+  [ ("accessKeyId"
+    , NixStr . fromMachine $ selectDeployer env delts) ]
 
 
 -- * Deployment structure
@@ -177,6 +205,7 @@ data NixopsConfig = NixopsConfig
   , cTarget           :: Target
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
+  , cDeplArgs         :: DeplArgs
   } deriving (Generic, Show)
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
@@ -185,6 +214,7 @@ instance FromJSON NixopsConfig where
         <*> v .: "target"
         <*> v .: "elements"
         <*> v .: "files"
+        <*> v .: "args"
 instance ToJSON Environment
 instance ToJSON Target
 instance ToJSON Deployment
@@ -194,7 +224,8 @@ instance ToJSON NixopsConfig where
    , "environment" .= showT cEnvironment
    , "target"      .= showT cTarget
    , "elements"    .= cElements
-   , "files"       .= cFiles ]
+   , "files"       .= cFiles
+   , "args"        .= cDeplArgs ]
 
 deploymentFiles :: Environment -> Target -> [Deployment] -> [Text]
 deploymentFiles cEnvironment cTarget cElements =
@@ -204,7 +235,8 @@ deploymentFiles cEnvironment cTarget cElements =
 -- | Interpret inputs into a NixopsConfig
 mkConfig :: Branch -> Environment -> Target -> [Deployment] -> NixopsConfig
 mkConfig (Branch cName) cEnvironment cTarget cElements =
-  let cFiles = deploymentFiles cEnvironment cTarget cElements
+  let cFiles    = deploymentFiles cEnvironment cTarget cElements
+      cDeplArgs = selectDeploymentArgs cEnvironment cElements
   in NixopsConfig{..}
 
 
