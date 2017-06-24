@@ -1,6 +1,6 @@
-{ accessKeyId }:
-with (import ./../lib.nix);
+{ accessKeyId, ... }:
 
+with (import ./../lib.nix);
 let
   timeWarpNode = region: keypair: { pkgs, resources, ... }: {
     inherit accessKeyId;

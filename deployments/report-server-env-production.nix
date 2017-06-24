@@ -1,6 +1,6 @@
-{ accessKeyId }:
-with (import ./../lib.nix);
+{ accessKeyId, ... }:
 
+with (import ./../lib.nix);
 {
   report-server = { resources, ...}: {
     imports = [

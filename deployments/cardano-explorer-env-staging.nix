@@ -1,6 +1,6 @@
-{ accessKeyId }:
-with (import ./../lib.nix);
+{ accessKeyId, ... }:
 
+with (import ./../lib.nix);
 let
   nodeStagingConf = import ./../modules/cardano-node-staging.nix;
 in {

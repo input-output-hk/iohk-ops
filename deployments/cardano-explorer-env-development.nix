@@ -1,6 +1,6 @@
-{ accessKeyId }:
-with (import ./../lib.nix);
+{ ... }:
 
+with (import ./../lib.nix);
 {
   sl-explorer = { pkgs, ...}: {
     services.cardano-node.initialPeers = mkForce (peersFromFile (pkgs.fetchurl {
