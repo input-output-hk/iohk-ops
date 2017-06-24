@@ -43,6 +43,11 @@ parserDeployments = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
                     <$> ((,,,)
                          <$> (optional parserDeployment) <*> (optional parserDeployment) <*> (optional parserDeployment) <*> (optional parserDeployment))
 
+parserDo :: Parser [Command]
+parserDo = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
+           <$> ((,,,)
+                 <$> (optional centralCommandParser) <*> (optional centralCommandParser) <*> (optional centralCommandParser) <*> (optional centralCommandParser))
+
 
 -- * Central command
 --
@@ -67,6 +72,7 @@ data Command where
 
   -- * cluster lifecycle
   Nixops                :: NixopsCmd -> [Text] -> Command
+  Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
   Deploy                :: Command
@@ -87,80 +93,75 @@ data Command where
   PrintDate             :: Command
 deriving instance Show Command
 
-centralCommandParser :: Parser (Options, Command)
+centralCommandParser :: Parser Command
 centralCommandParser =
-  (,)
-  <$> Ops.parserOptions
-  <*> (    subcommandGroup "Templating:"
-        [ ("template",              "Clone iohk-nixops from git BRANCH, for a specified set of deployments",
-                                    Template
-                                    <$> (fromMaybe Ops.defaultNodeLimit
-                                         <$> optional (optInteger "node-limit" 'l' "Limit cardano-node count to N"))
-                                    <*> parserEnvironment
-                                    <*> parserTarget
-                                    <*> parserBranch "iohk-nixops branch to check out"
-                                    <*> parserDeployments)
-        , ("set-cardano",           "Set cardano-sl commit to COMMIT",
-                                    SetCardano  <$> parserCommit "Commit to set 'cardano-sl' version to")
-        , ("set-explorer",          "Set cardano-sl-explorer commit to COMMIT",
-                                    SetExplorer <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
-        , ("fake-keys",             "Fake keys necessary for a deployment",                             pure FakeKeys) ]
+  (    subcommandGroup "Templating:"
+    [ ("template",              "Clone iohk-nixops from git BRANCH, for a specified set of deployments",
+                                Template
+                                <$> (fromMaybe Ops.defaultNodeLimit
+                                     <$> optional (optInteger "node-limit" 'l' "Limit cardano-node count to N"))
+                                <*> parserEnvironment
+                                <*> parserTarget
+                                <*> parserBranch "iohk-nixops branch to check out"
+                                <*> parserDeployments)
+    , ("set-cardano",           "Set cardano-sl commit to COMMIT",
+                                SetCardano  <$> parserCommit "Commit to set 'cardano-sl' version to")
+    , ("set-explorer",          "Set cardano-sl-explorer commit to COMMIT",
+                                SetExplorer <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
+    , ("fake-keys",             "Fake keys necessary for a deployment",                             pure FakeKeys) ]
 
-       <|> subcommandGroup "Build-related:"
-        [ ("genesis",               "Generate genesis",                                                 pure Genesis)
-        , ("generate-ipdht",        "Generate IP/DHT mappings for wallet use",                          pure GenerateIPDHTMappings)
-        , ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
-        , ("ami",                   "Build ami",                                                        pure AMI) ]
-      
-       -- * cluster lifecycle
+   <|> subcommandGroup "Build-related:"
+    [ ("genesis",               "Generate genesis",                                                 pure Genesis)
+    , ("generate-ipdht",        "Generate IP/DHT mappings for wallet use",                          pure GenerateIPDHTMappings)
+    , ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
+    , ("ami",                   "Build ami",                                                        pure AMI) ]
+  
+   -- * cluster lifecycle
 
-       <|> subcommandGroup "Cluster lifecycle:"
-       [
-         -- ("nixops",                "Call 'nixops' with current configuration",
-         --                           (Nixops
-         --                            <$> (NixopsCmd <$> argText "CMD" "Nixops command to invoke")
-         --                            <*> ???)) -- should we switch to optparse-applicative?
-         ("create",                 "Create the whole cluster",                                         pure Create)
-       , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
-       , ("deploy",                 "Deploy the whole cluster",                                         pure Deploy)
-       , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
-       , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
-       , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
-       , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
+   <|> subcommandGroup "Cluster lifecycle:"
+   [
+     -- ("nixops",                "Call 'nixops' with current configuration",
+     --                           (Nixops
+     --                            <$> (NixopsCmd <$> argText "CMD" "Nixops command to invoke")
+     --                            <*> ???)) -- should we switch to optparse-applicative?
+     ("create",                 "Create the whole cluster",                                         pure Create)
+   , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
+   , ("deploy",                 "Deploy the whole cluster",                                         pure Deploy)
+   , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
+   , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
+   , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
+   , ("info",                   "Invoke 'nixops info'",                                             pure Info)
+   , ("do",                     "Chain commands",                                                   Do <$> parserDo)]
 
-       <|> subcommandGroup "Live cluster ops:"
-       [ ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
-       , ("start",                  "Start cardano-node service",                                       pure Start)
-       , ("stop",                   "Stop cardano-node service",                                        pure Stop)
-       , ("firewall-block-region",  "Block whole region in firewall",
-                                    FirewallBlock
-                                    <$> (Region <$> optText "from-region" 'f' "AWS Region that won't reach --to")
-                                    <*> (Region <$> optText "to-region"   't' "AWS Region that all nodes will be blocked"))
-       , ("firewall-clear",         "Clear firewall",                                                   pure FirewallClear)
-       , ("runexperiment",          "Deploy cluster and perform measurements",                          RunExperiment <$> parserDeployment)
-       , ("postexperiment",         "Post-experiments logs dumping (if failed)",                        pure PostExperiment)
-       , ("dumplogs",               "Dump logs",
-                                    DumpLogs
-                                    <$> parserDeployment
-                                    <*> switch "prof"         'p' "Dump profiling data as well (requires service stop)")
-       , ("date",                   "Print date/time",                                                  pure PrintDate)]
+   <|> subcommandGroup "Live cluster ops:"
+   [ ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
+   , ("start",                  "Start cardano-node service",                                       pure Start)
+   , ("stop",                   "Stop cardano-node service",                                        pure Stop)
+   , ("firewall-block-region",  "Block whole region in firewall",
+                                FirewallBlock
+                                <$> (Region <$> optText "from-region" 'f' "AWS Region that won't reach --to")
+                                <*> (Region <$> optText "to-region"   't' "AWS Region that all nodes will be blocked"))
+   , ("firewall-clear",         "Clear firewall",                                                   pure FirewallClear)
+   , ("runexperiment",          "Deploy cluster and perform measurements",                          RunExperiment <$> parserDeployment)
+   , ("postexperiment",         "Post-experiments logs dumping (if failed)",                        pure PostExperiment)
+   , ("dumplogs",               "Dump logs",
+                                DumpLogs
+                                <$> parserDeployment
+                                <*> switch "prof"         'p' "Dump profiling data as well (requires service stop)")
+   , ("date",                   "Print date/time",                                                  pure PrintDate)]
 
-       <|> subcommandGroup "Other:"
-        [ ])
+   <|> subcommandGroup "Other:"
+    [ ])
       
 
 main :: IO ()
 main = do
-  (o@Options{..}, topcmd) <- options "Helper CLI around IOHK NixOps" centralCommandParser
+  (o@Options{..}, topcmd) <- options "Helper CLI around IOHK NixOps" $
+                             (,) <$> Ops.parserOptions <*> centralCommandParser
 
   case topcmd of
-    -- * setup 
     Template{..}             -> runTemplate    o topcmd
-    SetCardano  commit       -> runSetCardano  o commit
-    SetExplorer commit       -> runSetExplorer o commit
-    FakeKeys                 -> runFakeKeys
 
-    -- * config-dependent
     _ -> do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
       let cf = flip fromMaybe oConfigFile $
@@ -174,51 +175,56 @@ main = do
       -- dat <- getSmartGenCmd c
       -- TIO.putStrLn $ T.pack $ show dat
 
-      let isNode (T.unpack . Ops.fromNodeName -> ('n':'o':'d':'e':_)) = True
-          isNode _ = False
-          getNodeNames' = filter isNode <$> Ops.getNodeNames o c
-
-      case topcmd of
-        -- * building
-        Genesis                  -> Ops.generateGenesis           o c
-        GenerateIPDHTMappings    -> void $
-                                    Cardano.generateIPDHTMappings o c
-        Build depl               -> Ops.build                     o c depl
-        AMI                      -> Cardano.buildAMI              o c
-        -- * deployment lifecycle
-        Nixops cmd args          -> Ops.nixops                    o c cmd args
-        Create                   -> Ops.create                    o c
-        Modify                   -> Ops.modify                    o c
-        Deploy                   -> Ops.deploy                    o c
-        Destroy                  -> Ops.destroy                   o c
-        Delete                   -> Ops.delete                    o c
-        FromScratch              -> Ops.fromscratch               o c
-        Info                     -> Ops.nixops                    o c "info" []
-        -- * live deployment ops
-        CheckStatus              -> Ops.checkstatus               o c
-        Start                    -> getNodeNames'
-                                    >>= Cardano.startNodes        o c
-        Stop                     -> getNodeNames'
-                                    >>= Cardano.stopNodes         o c
-        FirewallBlock{..}        -> Cardano.firewallBlock         o c from to
-        FirewallClear            -> Cardano.firewallClear         o c
-        RunExperiment Nodes      -> getNodeNames'
-                                    >>= Cardano.runexperiment     o c
-        RunExperiment Timewarp   -> Timewarp.runexperiment        o c
-        RunExperiment x          -> die $ "RunExperiment undefined for deployment " <> showT x
-        PostExperiment           -> Cardano.postexperiment        o c
-        DumpLogs{..}
-          | Nodes        <- depl -> getNodeNames'
-                                    >>= void . Cardano.dumpLogs  o c withProf
-          | Timewarp     <- depl -> getNodeNames'
-                                    >>= void . Timewarp.dumpLogs o c withProf
-          | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
-        PrintDate                -> getNodeNames'
-                                    >>= Cardano.printDate        o c
-        Template{..}             -> error "impossible"
-        SetCardano _             -> error "impossible"
-        SetExplorer _            -> error "impossible"
-        FakeKeys                 -> error "impossible"
+      doCommand o c topcmd
+    where
+        doCommand :: Options -> Ops.NixopsConfig -> Command -> IO ()
+        doCommand o c cmd = do
+          let isNode (T.unpack . Ops.fromNodeName -> ('n':'o':'d':'e':_)) = True
+              isNode _ = False
+              getNodeNames' = filter isNode <$> Ops.getNodeNames o c
+          case cmd of
+            -- * setup
+            SetCardano  commit       -> runSetCardano  o commit
+            SetExplorer commit       -> runSetExplorer o commit
+            FakeKeys                 -> runFakeKeys
+            -- * building
+            Genesis                  -> Ops.generateGenesis           o c
+            GenerateIPDHTMappings    -> void $
+                                        Cardano.generateIPDHTMappings o c
+            Build depl               -> Ops.build                     o c depl
+            AMI                      -> Cardano.buildAMI              o c
+            -- * deployment lifecycle
+            Nixops cmd args          -> Ops.nixops                    o c cmd args
+            Do cmds                  -> sequence_ $ doCommand o c <$> cmds
+            Create                   -> Ops.create                    o c
+            Modify                   -> Ops.modify                    o c
+            Deploy                   -> Ops.deploy                    o c
+            Destroy                  -> Ops.destroy                   o c
+            Delete                   -> Ops.delete                    o c
+            FromScratch              -> Ops.fromscratch               o c
+            Info                     -> Ops.nixops                    o c "info" []
+            -- * live deployment ops
+            CheckStatus              -> Ops.checkstatus               o c
+            Start                    -> getNodeNames'
+                                        >>= Cardano.startNodes        o c
+            Stop                     -> getNodeNames'
+                                        >>= Cardano.stopNodes         o c
+            FirewallBlock{..}        -> Cardano.firewallBlock         o c from to
+            FirewallClear            -> Cardano.firewallClear         o c
+            RunExperiment Nodes      -> getNodeNames'
+                                        >>= Cardano.runexperiment     o c
+            RunExperiment Timewarp   -> Timewarp.runexperiment        o c
+            RunExperiment x          -> die $ "RunExperiment undefined for deployment " <> showT x
+            PostExperiment           -> Cardano.postexperiment        o c
+            DumpLogs{..}
+              | Nodes        <- depl -> getNodeNames'
+                                        >>= void . Cardano.dumpLogs  o c withProf
+              | Timewarp     <- depl -> getNodeNames'
+                                        >>= void . Timewarp.dumpLogs o c withProf
+              | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
+            PrintDate                -> getNodeNames'
+                                        >>= Cardano.printDate        o c
+            Template{..}             -> error "impossible"
 
 
 runTemplate :: Options -> Command -> IO ()
