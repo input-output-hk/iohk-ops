@@ -2,8 +2,10 @@ language: nix
 
 install:
   - source scripts/set_nixpath.sh
-  - echo "binary-caches = https://cache.nixos.org https://hydra.iohk.io" | sudo tee -a /etc/nix/nix.conf
-  - echo "binary-cache-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" | sudo tee -a /etc/nix/nix.conf
+  - cat /etc/nix/nix.conf > ~/nix.conf
+  - echo "binary-caches = https://cache.nixos.org https://hydra.iohk.io" >> ~/nix.conf
+  - echo "binary-cache-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" >> ~/nix.conf
+  - export NIX_CONF_DIR=~
   - nix-env -iA nixopsUnstable -f '<nixpkgs>'
   - touch static/datadog-{api,application}.secret
   - echo "secret" > static/tarsnap-cardano-deployer.secret
