@@ -62,7 +62,7 @@ data Command where
                            } -> Command
   SetCardano            :: Commit -> Command
   SetExplorer           :: Commit -> Command
-  FakeKeys              :: Command
+  MiniKeys              :: Command
 
   -- * building
   Genesis               :: Command
@@ -108,7 +108,7 @@ centralCommandParser =
                                 SetCardano  <$> parserCommit "Commit to set 'cardano-sl' version to")
     , ("set-explorer",          "Set cardano-sl-explorer commit to COMMIT",
                                 SetExplorer <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
-    , ("fake-keys",             "Fake keys necessary for a deployment",                             pure FakeKeys) ]
+    , ("mini-keys",             "Fake/enter minimum set of keys necessary for a basic deployment",  pure MiniKeys) ]
 
    <|> subcommandGroup "Build-related:"
     [ ("genesis",               "Generate genesis",                                                 pure Genesis)
@@ -186,7 +186,7 @@ main = do
             -- * setup
             SetCardano  commit       -> runSetCardano  o commit
             SetExplorer commit       -> runSetExplorer o commit
-            FakeKeys                 -> runFakeKeys
+            MiniKeys                 -> runMiniKeys
             -- * building
             Genesis                  -> Ops.generateGenesis           o c
             GenerateIPDHTMappings    -> void $
@@ -259,13 +259,18 @@ runSetExplorer o rev = do
   spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlExplorerURL, fromCommit rev]
   writeFile "cardano-sl-explorer-src.json" $ T.unpack spec
 
-runFakeKeys :: IO ()
-runFakeKeys = do
+runMiniKeys :: IO ()
+runMiniKeys = do
   echo "Faking keys/key*.sk"
   testdir "keys"
     >>= flip unless (mkdir "keys")
   forM_ (41:[1..14]) $
     (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
-  echo "Faking static/datadog-*.secret"
-  touch "static/datadog-api.secret"
-  touch "static/datadog-application.secret"
+  echo "DataDog secrets cannot be faked, and must be provided:"
+  printf "Enter static/datadog-api.secret: "
+  Just apiKey <- readline
+  writeTextFile "static/datadog-api.secret" $ lineToText apiKey
+  printf "Enter static/datadog-application.secret: "
+  Just appKey <- readline
+  writeTextFile "static/datadog-application.secret" $ lineToText appKey
+  echo "Minimum viable keyset complete."
