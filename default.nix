@@ -44,6 +44,8 @@ in (import pkgs/default.nix { inherit pkgs compiler; }).override {
     # Gold linker fixes
     cryptonite = addConfigureFlags ["--ghc-option=-optl-pthread"] super.cryptonite;
 
+    iohk-ops =  super.callPackage ./iohk/default.nix {};
+
     # sl-explorer
     # TODO: https://issues.serokell.io/issue/CSM-195
     snap = doJailbreak super.snap;
