@@ -19,7 +19,13 @@ ghc           = ghcOrig.override (oldArgs: {
   overrides = with pkgs.haskell.lib; new: old:
   let parent = (oldArgs.overrides or (_: _: {})) new old;
   in with new; parent // {
-      intero         = overGithub  old.intero "commercialhaskell/intero" "e546ea086d72b5bf8556727e2983930621c3cb3c" "1qv7l5ri3nysrpmnzfssw8wvdvz0f6bmymnz1agr66fplazid4pn" { doCheck = false; };
+      intero         = overGithub  old.intero "commercialhaskell/intero"
+                       "e546ea086d72b5bf8556727e2983930621c3cb3c" "1qv7l5ri3nysrpmnzfssw8wvdvz0f6bmymnz1agr66fplazid4pn" { doCheck = false; };
+      cabal2nix      = overGithub compiler.cabal2nix "NixOS/cabal2nix"
+                       "b6834fd420e0223d0d57f8f98caeeb6ac088be88" "1ia2iw137sza655b0hf4hghpmjbsg3gz3galpvr5pbbsljp26m6p" {};
+      stack2nix      = dontCheck
+                       (pkgs.haskellPackages.callCabal2nix "stack2nix"
+                        (githubSrc "input-output-hk/stack2nix" "c27a9faa9ba2a7ffd162a38953a36caad15e6839" "1cmw7zq0sf5fr9sc4daf1jwlnjll9wjxqnww36dl9cbbj9ak0m77") {});
     };
   });
 
@@ -29,6 +35,7 @@ ghc           = ghcOrig.override (oldArgs: {
 drvf =
 { mkDerivation, stdenv, src ? ./.
 ,   aeson, base, cassava, jq, lens-aeson, nix-prefetch-git, safe, turtle, utf8-string, vector, yaml
+,   stack2nix,  cabal2nix,  cabal-install
 }:
 mkDerivation {
   pname = "iohk-nixops";
@@ -50,10 +57,12 @@ mkDerivation {
 
 drv = (pkgs.haskell.lib.addBuildTools
 (ghc.callPackage drvf { })
-(if intero
- then [ pkgs.cabal-install
-        pkgs.stack
-        ghc.intero ]
- else []));
+([ ghc.stack2nix ghc.cabal2nix pkgs.cabal-install
+ ] ++
+ (if intero
+  then [ pkgs.cabal-install
+         pkgs.stack
+         ghc.intero ]
+  else [])));
 
 in drv.env
