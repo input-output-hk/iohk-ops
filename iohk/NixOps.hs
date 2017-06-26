@@ -342,7 +342,8 @@ deploy o c@NixopsConfig{..} = do
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
   printf ("Deploying cluster "%s%"\n") cName
-  export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
+  when (elem Nodes cElements) $ do
+    export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
   export "SMART_GEN_IP"     =<< incmd o "curl" ["--silent", fromURL awsPublicIPURL]
 
   when (elem Explorer cElements) $ do
