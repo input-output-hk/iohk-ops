@@ -60,8 +60,8 @@ data Command where
                            , tBranch      :: Branch
                            , tDeployments :: [Deployment]
                            } -> Command
-  SetCardano            :: Commit -> Command
-  SetExplorer           :: Commit -> Command
+  SetCardanoRev         :: Commit -> Command
+  SetExplorerRev        :: Commit -> Command
   MiniKeys              :: Command
 
   -- * building
@@ -104,10 +104,10 @@ centralCommandParser =
                                 <*> parserTarget
                                 <*> parserBranch "iohk-nixops branch to check out"
                                 <*> parserDeployments)
-    , ("set-cardano",           "Set cardano-sl commit to COMMIT",
-                                SetCardano  <$> parserCommit "Commit to set 'cardano-sl' version to")
-    , ("set-explorer",          "Set cardano-sl-explorer commit to COMMIT",
-                                SetExplorer <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
+    , ("set-cardano-rev",       "Set cardano-sl commit to COMMIT",
+                                SetCardanoRev  <$> parserCommit "Commit to set 'cardano-sl' version to")
+    , ("set-explorer-rev",      "Set cardano-sl-explorer commit to COMMIT",
+                                SetExplorerRev <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
     , ("mini-keys",             "Fake/enter minimum set of keys necessary for a basic deployment",  pure MiniKeys)
     , ("do",                    "Chain commands",                                                   Do <$> parserDo) ]
 
@@ -184,8 +184,8 @@ main = do
               getNodeNames' = filter isNode <$> Ops.getNodeNames o c
           case cmd of
             -- * setup
-            SetCardano  commit       -> runSetCardano  o commit
-            SetExplorer commit       -> runSetExplorer o commit
+            SetCardanoRev  commit    -> runSetCardanoRev  o commit
+            SetExplorerRev commit    -> runSetExplorerRev o commit
             MiniKeys                 -> runMiniKeys
             -- * building
             Genesis                  -> Ops.generateGenesis           o c
@@ -247,14 +247,14 @@ runTemplate o@Options{..} Template{..} = do
   cmd o "cat" [configFilename]
 runTemplate Options{..} _ = error "impossible"
 
-runSetCardano :: Options -> Commit -> IO ()
-runSetCardano o rev = do
+runSetCardanoRev :: Options -> Commit -> IO ()
+runSetCardanoRev o rev = do
   printf ("Setting cardano-sl commit to "%s%"\n") $ fromCommit rev
   spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlURL, fromCommit rev]
   writeFile "cardano-sl-src.json" $ T.unpack spec
 
-runSetExplorer :: Options -> Commit -> IO ()
-runSetExplorer o rev = do
+runSetExplorerRev :: Options -> Commit -> IO ()
+runSetExplorerRev o rev = do
   printf ("Setting cardano-sl-explorer commit to "%s%"\n") $ fromCommit rev
   spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlExplorerURL, fromCommit rev]
   writeFile "cardano-sl-explorer-src.json" $ T.unpack spec
