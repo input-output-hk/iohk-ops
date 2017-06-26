@@ -62,6 +62,7 @@ data Command where
                            } -> Command
   SetCardanoRev         :: Commit -> Command
   SetExplorerRev        :: Commit -> Command
+  SetStack2NixRev       :: Commit -> Command
   MiniKeys              :: Command
 
   -- * building
@@ -105,9 +106,11 @@ centralCommandParser =
                                 <*> parserBranch "iohk-nixops branch to check out"
                                 <*> parserDeployments)
     , ("set-cardano-rev",       "Set cardano-sl commit to COMMIT",
-                                SetCardanoRev  <$> parserCommit "Commit to set 'cardano-sl' version to")
+                                SetCardanoRev   <$> parserCommit "Commit to set 'cardano-sl' version to")
     , ("set-explorer-rev",      "Set cardano-sl-explorer commit to COMMIT",
-                                SetExplorerRev <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
+                                SetExplorerRev  <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
+    , ("set-stack2nix-rev",     "Set stack2nix commit to COMMIT",
+                                SetStack2NixRev <$> parserCommit "Commit to set 'stack2nix' version to")
     , ("mini-keys",             "Fake/enter minimum set of keys necessary for a basic deployment",  pure MiniKeys)
     , ("do",                    "Chain commands",                                                   Do <$> parserDo) ]
 
@@ -160,7 +163,10 @@ main = do
                              (,) <$> Ops.parserOptions <*> centralCommandParser
 
   case topcmd of
-    Template{..}             -> runTemplate    o topcmd
+    Template{..}             -> runTemplate        o topcmd
+    SetCardanoRev   commit   -> runSetCardanoRev   o commit
+    SetExplorerRev  commit   -> runSetExplorerRev  o commit
+    SetStack2NixRev commit   -> runSetStack2NixRev o commit
 
     _ -> do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
@@ -184,8 +190,6 @@ main = do
               getNodeNames' = filter isNode <$> Ops.getNodeNames o c
           case cmd of
             -- * setup
-            SetCardanoRev  commit    -> runSetCardanoRev  o commit
-            SetExplorerRev commit    -> runSetExplorerRev o commit
             MiniKeys                 -> runMiniKeys
             -- * building
             Genesis                  -> Ops.generateGenesis           o c
@@ -225,6 +229,9 @@ main = do
             PrintDate                -> getNodeNames'
                                         >>= Cardano.printDate        o c
             Template{..}             -> error "impossible"
+            SetCardanoRev   _        -> error "impossible"
+            SetExplorerRev  _        -> error "impossible"
+            SetStack2NixRev _        -> error "impossible"
 
 
 runTemplate :: Options -> Command -> IO ()
@@ -247,17 +254,19 @@ runTemplate o@Options{..} Template{..} = do
   cmd o "cat" [configFilename]
 runTemplate Options{..} _ = error "impossible"
 
-runSetCardanoRev :: Options -> Commit -> IO ()
+runSetCardanoRev, runSetExplorerRev, runSetStack2NixRev :: Options -> Commit -> IO ()
 runSetCardanoRev o rev = do
   printf ("Setting cardano-sl commit to "%s%"\n") $ fromCommit rev
   spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlURL, fromCommit rev]
   writeFile "cardano-sl-src.json" $ T.unpack spec
-
-runSetExplorerRev :: Options -> Commit -> IO ()
 runSetExplorerRev o rev = do
   printf ("Setting cardano-sl-explorer commit to "%s%"\n") $ fromCommit rev
   spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlExplorerURL, fromCommit rev]
   writeFile "cardano-sl-explorer-src.json" $ T.unpack spec
+runSetStack2NixRev o rev = do
+  printf ("Setting stack2nix commit to "%s%"\n") $ fromCommit rev
+  spec <- incmd o "nix-prefetch-git" [fromURL Ops.stack2NixURL, fromCommit rev]
+  writeFile "stack2nix-src.json" $ T.unpack spec
 
 runMiniKeys :: IO ()
 runMiniKeys = do

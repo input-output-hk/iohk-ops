@@ -15,7 +15,7 @@ source ${scriptDir}/../scripts/set_nixpath.sh
 # Generate stack2nix Nix package
 runInShell cabal2nix \
   --no-check \
-  --revision 8f087b92f83be078e8cfe86fb243121dca4601ba \
+  --revision $(jq .rev < ../stack2nix-src.json -r) \
   https://github.com/input-output-hk/stack2nix.git > $scriptDir/stack2nix.nix
 
 # Build stack2nix Nix package

@@ -40,10 +40,11 @@ import qualified Turtle as Turtle
 
 -- * Constants
 --
-iohkNixopsURL, cardanoSlURL, cardanoSlExplorerURL, awsPublicIPURL :: URL
+iohkNixopsURL, cardanoSlURL, cardanoSlExplorerURL, stack2NixURL, awsPublicIPURL :: URL
 iohkNixopsURL        = "https://github.com/input-output-hk/iohk-nixops.git"
 cardanoSlURL         = "https://github.com/input-output-hk/cardano-sl.git"
 cardanoSlExplorerURL = "https://github.com/input-output-hk/cardano-sl-explorer.git"
+stack2NixURL         = "https://github.com/input-output-hk/stack2nix.git"
 awsPublicIPURL       = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
 defaultEnvironment = Development
