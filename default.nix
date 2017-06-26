@@ -10,6 +10,13 @@ let
   addConfigureFlags = flags: drv: overrideCabal drv (drv: {
     configureFlags = flags;
   });
+
+  githubSrc     =      repo: rev: sha256:       pkgs.fetchgit  { url = "https://github.com/" + repo; rev = rev; sha256 = sha256; };
+  overC         =                               pkgs.haskell.lib.overrideCabal;
+  overCabal     = old:                    args: overC old (oldAttrs: (oldAttrs // args));
+  overGithub    = old: repo: rev: sha256: args: overC old ({ src = githubSrc repo rev sha256; }     // args);
+  overHackage   = old: version:   sha256: args: overC old ({ version = version; sha256 = sha256; } // args);
+
   socket-io-src = pkgs.fetchgit (removeAttrs (importJSON ./pkgs/engine-io.json) ["date"]);
 in (import pkgs/default.nix { inherit pkgs compiler; }).override {
   overrides = self: super: {
