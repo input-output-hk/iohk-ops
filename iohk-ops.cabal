@@ -6,13 +6,12 @@ version:             0.1.0.0
 -- synopsis:
 -- description:
 license:             BSD3
-license-file:        LICENSE
 author:              Input Output HK
 maintainer:          serge.kosyrev@iohk.io
 -- copyright:
 category:            Development
 build-type:          Simple
-extra-source-files:  ChangeLog.md, README.md
+extra-source-files:  README.md
 cabal-version:       >=1.10
 
 -- library
