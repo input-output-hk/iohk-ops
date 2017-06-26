@@ -17,7 +17,6 @@ ghc       = ghcOrig.override (oldArgs: {
   let parent = (oldArgs.overrides or (_: _: {})) new old;
   in with new; parent // {
       intero         = overhub  old.intero "commercialhaskell/intero" "e546ea086d72b5bf8556727e2983930621c3cb3c" "1qv7l5ri3nysrpmnzfssw8wvdvz0f6bmymnz1agr66fplazid4pn" { doCheck = false; };
-      turtle_1_3_0   = doJailbreak old.turtle_1_3_0;
     };
   });
 
