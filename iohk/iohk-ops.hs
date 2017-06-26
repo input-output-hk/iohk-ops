@@ -95,7 +95,7 @@ deriving instance Show Command
 
 centralCommandParser :: Parser Command
 centralCommandParser =
-  (    subcommandGroup "Templating:"
+  (    subcommandGroup "General:"
     [ ("template",              "Clone iohk-nixops from git BRANCH, for a specified set of deployments",
                                 Template
                                 <$> (fromMaybe Ops.defaultNodeLimit
@@ -108,7 +108,8 @@ centralCommandParser =
                                 SetCardano  <$> parserCommit "Commit to set 'cardano-sl' version to")
     , ("set-explorer",          "Set cardano-sl-explorer commit to COMMIT",
                                 SetExplorer <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
-    , ("mini-keys",             "Fake/enter minimum set of keys necessary for a basic deployment",  pure MiniKeys) ]
+    , ("mini-keys",             "Fake/enter minimum set of keys necessary for a basic deployment",  pure MiniKeys)
+    , ("do",                    "Chain commands",                                                   Do <$> parserDo) ]
 
    <|> subcommandGroup "Build-related:"
     [ ("genesis",               "Generate genesis",                                                 pure Genesis)
@@ -130,8 +131,7 @@ centralCommandParser =
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
-   , ("info",                   "Invoke 'nixops info'",                                             pure Info)
-   , ("do",                     "Chain commands",                                                   Do <$> parserDo)]
+   , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
 
    <|> subcommandGroup "Live cluster ops:"
    [ ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
