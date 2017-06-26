@@ -42,10 +42,19 @@ in {
     useSubstitutes = true;
     notificationSender = "hi@iohk.io";
     # max output is 4GB because of amis
+    # auth token needs `repo:status`
     extraConfig = ''
       max_output_size = 4294967296
       store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
       binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
+      <github_authorization>
+        input-output-hk = ${builtins.readFile ../static/github_token}
+      </github_authorization>
+      <githubstatus>
+        jobs = serokell:.*
+        inputs = jobsets
+        excludeBuildFromContext = 1
+      </githubstatus>
     '';
     logo = (pkgs.fetchurl {
       url    = "https://iohk.io/images/iohk-share-logo.jpg";
