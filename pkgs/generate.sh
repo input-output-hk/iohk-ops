@@ -10,7 +10,7 @@ scriptDir=$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")
 # Generate stack2nix Nix package
 cabal2nix \
   --no-check \
-  --revision 3f2d4d31b1936dda71ce9a3be145c6407685045e \
+  --revision 59ee4de0223da8ad8ae56adb02f39ec365a20d42 \
   https://github.com/input-output-hk/stack2nix.git > $scriptDir/stack2nix.nix
 
 # Build stack2nix Nix package
