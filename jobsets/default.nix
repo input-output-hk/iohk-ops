@@ -23,7 +23,7 @@ let
     schedulingshares = 42;
     checkinterval = 60;
     inputs = {
-      nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git b9628313300b7c9e4cc88b91b7c98dfe3cfd9fc4";
+      nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git 9b948ea439ddbaa26740ce35543e7e35d2aa6d18";
       jobsets = mkFetchGithub "${iohkNixopsUri} master";
     };
     enableemail = false;
@@ -52,8 +52,8 @@ let
   };
   nixopsPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeNixopsPR nixopsPrs);
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
-    cardano-sl = mkCardano "master" "b9628313300b7c9e4cc88b91b7c98dfe3cfd9fc4";
-    cardano-sl-staging = mkCardano "staging" "7648f528de9917933bc104359c9a507c6622925c";
+    cardano-sl = mkCardano "master" "9b948ea439ddbaa26740ce35543e7e35d2aa6d18";
+    cardano-sl-staging = mkCardano "staging" "9b948ea439ddbaa26740ce35543e7e35d2aa6d18";
     deployments = {
       nixexprpath = "jobsets/deployments.nix";
       description = "Builds for deployments";
