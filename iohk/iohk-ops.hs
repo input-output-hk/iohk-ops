@@ -55,6 +55,7 @@ data Command where
 
   -- * setup 
   Template              :: { tNodeLimit   :: Integer
+                           , tHere        :: Bool
                            , tEnvironment :: Environment
                            , tTarget      :: Target
                            , tBranch      :: Branch
@@ -101,6 +102,8 @@ centralCommandParser =
                                 Template
                                 <$> (fromMaybe Ops.defaultNodeLimit
                                      <$> optional (optInteger "node-limit" 'l' "Limit cardano-node count to N"))
+                                <*> (fromMaybe False
+                                      <$> optional (switch "here" 'h' "Instead of cloning a subdir, operate on a config in the current directory"))
                                 <*> parserEnvironment
                                 <*> parserTarget
                                 <*> parserBranch "iohk-nixops branch to check out"
@@ -240,11 +243,14 @@ runTemplate o@Options{..} Template{..} = do
   let bname     = fromBranch tBranch
       branchDir = homeDir <> (fromText bname)
   exists <- testpath branchDir
-  if exists
-    then echo $ "Using existing git clone ..."
-    else cmd o "git" ["clone", fromURL Ops.iohkNixopsURL, "-b", bname, bname]
-  cd branchDir
-  cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
+  case (exists, tHere) of
+    (_, True) -> pure ()
+    (True, _) -> echo $ "Using existing git clone ..."
+    _         -> cmd o "git" ["clone", fromURL Ops.iohkNixopsURL, "-b", bname, bname]
+
+  unless tHere $ do
+    cd branchDir
+    cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
 
   let config = Ops.mkConfig tBranch tEnvironment tTarget tDeployments tNodeLimit
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig config
