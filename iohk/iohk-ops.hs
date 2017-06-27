@@ -78,7 +78,7 @@ data Command where
   Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
-  Deploy                :: Command
+  Deploy                :: Bool -> Command
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
@@ -135,7 +135,9 @@ centralCommandParser =
      --                            <*> ???)) -- should we switch to optparse-applicative?
      ("create",                 "Create the whole cluster",                                         pure Create)
    , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
-   , ("deploy",                 "Deploy the whole cluster",                                         pure Deploy)
+   , ("deploy",                 "Deploy the whole cluster",
+                                Deploy
+                                <$> switch "evaluate-only" 'e' "Dry-run: pass --evaluate-only to 'nixops'.")
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
@@ -207,7 +209,7 @@ main = do
             Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy                   -> Ops.deploy                    o c
+            Deploy evonly            -> Ops.deploy                    o c evonly
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
