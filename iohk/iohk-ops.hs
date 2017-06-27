@@ -56,6 +56,7 @@ data Command where
   -- * setup 
   Template              :: { tNodeLimit   :: Integer
                            , tHere        :: Bool
+                           , tFile        :: Maybe Turtle.FilePath
                            , tEnvironment :: Environment
                            , tTarget      :: Target
                            , tBranch      :: Branch
@@ -104,6 +105,7 @@ centralCommandParser =
                                      <$> optional (optInteger "node-limit" 'l' "Limit cardano-node count to N"))
                                 <*> (fromMaybe False
                                       <$> optional (switch "here" 'h' "Instead of cloning a subdir, operate on a config in the current directory"))
+                                <*> (optional (optPath "config" 'c' "Override the default, environment-dependent config filename"))
                                 <*> parserEnvironment
                                 <*> parserTarget
                                 <*> parserBranch "iohk-nixops branch to check out"
@@ -255,7 +257,7 @@ runTemplate o@Options{..} Template{..} = do
     cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
 
   let config = Ops.mkConfig tBranch tEnvironment tTarget tDeployments tNodeLimit
-  configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig config
+  configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""
   echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"

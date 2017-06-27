@@ -257,9 +257,9 @@ mkConfig (Branch cName) cEnvironment cTarget cElements nodeLimit =
   in NixopsConfig{..}
 
 -- | Write the config file
-writeConfig :: MonadIO m => NixopsConfig -> m FilePath
-writeConfig c@NixopsConfig{..} = do
-  let configFilename = envConfigFilename cEnvironment
+writeConfig :: MonadIO m => Maybe FilePath -> NixopsConfig -> m FilePath
+writeConfig mFp c@NixopsConfig{..} = do
+  let configFilename = flip fromMaybe mFp $ envConfigFilename cEnvironment
   liftIO $ writeTextFile configFilename $ T.pack $ BUTF8.toString $ YAML.encode c
   pure configFilename
   
