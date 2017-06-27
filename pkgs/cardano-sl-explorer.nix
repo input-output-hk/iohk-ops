@@ -16,8 +16,8 @@ mkDerivation {
   version = "0.1.0";
   src = fetchgit {
     url = "https://github.com/input-output-hk/cardano-sl-explorer.git";
-    sha256 = "0gia9zp5nhyqc4i4say4yf8w4r6im6syrxkd33prl0wq2j3y0337";
-    rev = "982ac2dd3efeca6fd7ebc1df11e9d1bf628c1700";
+    sha256 = "1pycidf8626mgy836w393ram0dzhn87y53mqa3rjsh9kykfc65gd";
+    rev = "1bb82fd04b5af51580b591776c75cebf681cd25d";
   };
   isLibrary = true;
   isExecutable = true;

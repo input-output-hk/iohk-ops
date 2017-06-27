@@ -10,7 +10,7 @@ scriptDir=$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")
 # Generate stack2nix Nix package
 cabal2nix \
   --no-check \
-  --revision 8f087b92f83be078e8cfe86fb243121dca4601ba \
+  --revision 3f2d4d31b1936dda71ce9a3be145c6407685045e \
   https://github.com/input-output-hk/stack2nix.git > $scriptDir/stack2nix.nix
 
 # Build stack2nix Nix package
@@ -19,10 +19,10 @@ nix-build -E "with import <nixpkgs> {}; haskell.packages.ghc802.callPackage ${sc
 # Generate explorer until it's merged with cardano-sl repo
 cabal2nix \
   --no-check \
-  --revision 982ac2dd3efeca6fd7ebc1df11e9d1bf628c1700 \
+  --revision 1bb82fd04b5af51580b591776c75cebf681cd25d \
   https://github.com/input-output-hk/cardano-sl-explorer.git > $scriptDir/cardano-sl-explorer.nix
 
 # Generate cardano-sl package set
 $scriptDir/stack2nix/bin/stack2nix \
-  --revision 4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c \
+  --revision b3fe5e64c06f3931dff4e317504e5c6f37fbda50 \
   https://github.com/input-output-hk/cardano-sl.git > $scriptDir/default.nix
