@@ -99,7 +99,7 @@ deriving instance Show Command
 centralCommandParser :: Parser Command
 centralCommandParser =
   (    subcommandGroup "General:"
-    [ ("template",              "Clone iohk-nixops from git BRANCH, for a specified set of deployments",
+    [ ("template",              "Produce (or update) a checkout of BRANCH with a configuration YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
                                 Template
                                 <$> (fromMaybe Ops.defaultNodeLimit
                                      <$> optional (optInteger "node-limit" 'l' "Limit cardano-node count to N"))
@@ -116,11 +116,11 @@ centralCommandParser =
                                 SetExplorerRev  <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
     , ("set-stack2nix-rev",     "Set stack2nix commit to COMMIT",
                                 SetStack2NixRev <$> parserCommit "Commit to set 'stack2nix' version to")
-    , ("mini-keys",             "Fake/enter minimum set of keys necessary for a basic deployment",  pure MiniKeys)
+    , ("mini-keys",             "Fake/enter minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure MiniKeys)
     , ("do",                    "Chain commands",                                                   Do <$> parserDo) ]
 
    <|> subcommandGroup "Build-related:"
-    [ ("genesis",               "Generate genesis",                                                 pure Genesis)
+    [ ("genesis",               "initiate production of Genesis in cardano-sl/genesis subdir",      pure Genesis)
     , ("generate-ipdht",        "Generate IP/DHT mappings for wallet use",                          pure GenerateIPDHTMappings)
     , ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
     , ("ami",                   "Build ami",                                                        pure AMI) ]
@@ -166,7 +166,7 @@ centralCommandParser =
 
 main :: IO ()
 main = do
-  (o@Options{..}, topcmd) <- options "Helper CLI around IOHK NixOps" $
+  (o@Options{..}, topcmd) <- options "Helper CLI around IOHK NixOps. For example usage see:\n\n  https://github.com/input-output-hk/internal-documentation/wiki/iohk-ops-reference#example-deployment" $
                              (,) <$> Ops.parserOptions <*> centralCommandParser
 
   case topcmd of
