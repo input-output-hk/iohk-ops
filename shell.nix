@@ -37,7 +37,7 @@ ghc           = ghcOrig.override (oldArgs: {
 drvf =
 { mkDerivation, stdenv, src ? ./.
 ,   aeson, base, cassava, jq, lens-aeson, nix-prefetch-git, safe, turtle, utf8-string, vector, yaml
-,   stack2nix, cabal2nix, cabal-install
+,   stack2nix, cabal2nix, cabal-install, intero, interoRequested
 }:
 mkDerivation {
   pname = "iohk-nixops";
@@ -49,7 +49,10 @@ mkDerivation {
   executableHaskellDepends = [
     aeson  base  cassava  jq  lens-aeson  nix-prefetch-git  safe  turtle  utf8-string  vector  yaml
     stack2nix  cabal2nix  cabal-install
-  ];
+  ] ++
+  (if interoRequested
+   then [ pkgs.stack intero ]
+   else []);
   shellHook =
   ''
     export NIX_PATH=nixpkgs=${nixpkgs}
@@ -58,14 +61,6 @@ mkDerivation {
   license      = stdenv.lib.licenses.mit;
 };
 
-drv = (pkgs.haskell.lib.addBuildTools
-(ghc.callPackage drvf { })
-([ ghc.stack2nix ghc.cabal2nix pkgs.cabal-install
- ] ++
- (if intero
-  then [ pkgs.cabal-install
-         pkgs.stack
-         ghc.intero ]
-  else [])));
+drv = ghc.callPackage drvf { interoRequested = intero; };
 
 in drv.env
