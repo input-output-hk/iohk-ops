@@ -239,6 +239,8 @@ main = do
 
 runTemplate :: Options -> Command -> IO ()
 runTemplate o@Options{..} Template{..} = do
+  when (elem (fromBranch tBranch) $ showT <$> Ops.allDeployments) $
+    die $ format ("the branch name "%w%" ambiguously refers to a deployment.  Cannot have that!") (fromBranch tBranch)
   homeDir <- home
   let bname     = fromBranch tBranch
       branchDir = homeDir <> (fromText bname)

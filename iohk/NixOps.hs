@@ -100,7 +100,7 @@ data Deployment
   | Infra
   | ReportServer
   | Timewarp
-  deriving (Eq, Generic, Read, Show)
+  deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Deployment
 
 data Environment
@@ -116,6 +116,9 @@ data Target
   | AWS
   deriving (Eq, Generic, Read, Show)
 instance FromJSON Target
+
+allDeployments :: [Deployment]
+allDeployments = enumFromTo minBound maxBound
 
 envConfigFilename :: IsString s => Environment -> s
 envConfigFilename Any           = "config.yaml"
