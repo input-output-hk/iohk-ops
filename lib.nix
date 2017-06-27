@@ -25,10 +25,7 @@ in lib // (rec {
     ) nodes;
 
   # fetch nixpkgs and give the expected hash
-  fetchNixPkgs = let
-    nixpkgsSrc = builtins.fromJSON (builtins.readFile ./nixpkgs-src.json);
-  #in builtins.fetchTarball { url = "https://github.com/NixOS/nixpkgs/archive/${nixpkgsSrc.rev}.tar.gz"; inherit (nixpkgsSrc) sha256; };
-  in (import <nixpkgs> {}).fetchFromGitHub nixpkgsSrc;
+  fetchNixPkgs = (import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
 
   # Parse peers from a file
   #

@@ -1,5 +1,5 @@
 let
-  fixedNixpkgs = (import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ../nixpkgs-src.json));
+  fixedNixpkgs = (import ../lib.nix).fetchNixPkgs;
 in { pkgs ? (import fixedNixpkgs {}), supportedSystems ? [ "x86_64-linux" ] }:
 
 

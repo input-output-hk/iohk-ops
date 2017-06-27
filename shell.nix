@@ -2,7 +2,8 @@
 , intero   ? false
 }: let
 
-nixpkgs   = (import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
+lib       = import ./lib.nix;
+nixpkgs   = lib.fetchNixPkgs;
 pkgs      = import nixpkgs {};
 compiler  = pkgs.haskell.packages."${ghcVer}";
 
