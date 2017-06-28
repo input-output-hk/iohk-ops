@@ -1,9 +1,11 @@
-{ pkgs     ? import ((import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json))) {}
-, compiler ? pkgs.haskell.packages.ghc802
+{ ghcVer   ? "ghc802"
 , intero   ? false
-}:
+}: let
 
-let
+lib       = import ./lib.nix;
+nixpkgs   = lib.fetchNixPkgs;
+pkgs      = import nixpkgs {};
+compiler  = pkgs.haskell.packages."${ghcVer}";
 
 ghcOrig   = import ./default.nix { inherit pkgs compiler; };
 overcabal = pkgs.haskell.lib.overrideCabal;
@@ -37,8 +39,12 @@ mkDerivation {
   executableHaskellDepends = [
    base turtle cassava vector safe aeson yaml lens-aeson
   ];
-  # description  = "Visual mind assistant";
-  license      = stdenv.lib.licenses.agpl3;
+  shellHook =
+  ''
+    export NIX_PATH=nixpkgs=${nixpkgs}
+    echo   NIX_PATH set to $NIX_PATH
+  '';
+  license      = stdenv.lib.licenses.mit;
 };
 
 drv = (pkgs.haskell.lib.addBuildTools

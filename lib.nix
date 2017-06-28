@@ -24,6 +24,9 @@ in lib // (rec {
       }
     ) nodes;
 
+  # fetch nixpkgs and give the expected hash
+  fetchNixPkgs = (import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
+
   # Parse peers from a file
   #
   # > peersFromFile ./peers.txt
