@@ -1,10 +1,11 @@
 { ghcVer   ? "ghc802"
-, intero   ? false
+, lib      ? import ./lib.nix
+, nixpkgs  ? lib.fetchNixPkgs
+, pkgs     ? import nixpkgs {}
+, iohkpkgs ? import ./default.nix { inherit pkgs; }
+, stack2nix ? iohkpkgs.callPackage ./pkgs/stack2nix.nix {}
 }: let
 
-lib           = import ./lib.nix;
-nixpkgs       = lib.fetchNixPkgs;
-pkgs          = import nixpkgs {};
 compiler      = pkgs.haskell.packages."${ghcVer}";
 
 ghcOrig       = import ./default.nix { inherit pkgs compiler; };
@@ -21,13 +22,10 @@ ghc           = ghcOrig.override (oldArgs: {
   overrides = with pkgs.haskell.lib; new: old:
   let parent = (oldArgs.overrides or (_: _: {})) new old;
   in with new; parent // {
-      intero         = overGithub  old.intero "commercialhaskell/intero"
-                       "e546ea086d72b5bf8556727e2983930621c3cb3c" "1qv7l5ri3nysrpmnzfssw8wvdvz0f6bmymnz1agr66fplazid4pn" { doCheck = false; };
-      cabal2nix      = overGithub compiler.cabal2nix "NixOS/cabal2nix"
-                       "b6834fd420e0223d0d57f8f98caeeb6ac088be88" "1ia2iw137sza655b0hf4hghpmjbsg3gz3galpvr5pbbsljp26m6p" {};
-      stack2nix      = dontCheck
-                       (pkgs.haskellPackages.callCabal2nix "stack2nix"
-                        (githubSrc "input-output-hk/stack2nix" stack2NixSrc.rev stack2NixSrc.sha256) {});
+      # intero         = overGithub  old.intero "commercialhaskell/intero"
+      #                  "e546ea086d72b5bf8556727e2983930621c3cb3c" "1qv7l5ri3nysrpmnzfssw8wvdvz0f6bmymnz1agr66fplazid4pn" { doCheck = false; };
+      inherit stack2nix;
+      iohk-ops       = iohkpkgs.callPackage (import ./iohk) {};
     };
   });
 
@@ -35,24 +33,24 @@ ghc           = ghcOrig.override (oldArgs: {
 ###
 ###
 drvf =
-{ mkDerivation, stdenv, src ? ./.
+{ mkDerivation, stdenv
 ,   aeson, base, cassava, jq, lens-aeson, nix-prefetch-git, safe, turtle, utf8-string, vector, yaml
-,   stack2nix, cabal2nix, cabal-install, intero, interoRequested
+,   stack2nix, cabal2nix, cabal-install, intero
+,   iohk-ops
 }:
 mkDerivation {
-  pname = "iohk-nixops";
+  pname = "iohk-shell-env";
   version = "0.0.1";
-  src = src;
+  src = ./.;
   isLibrary = false;
   isExecutable = true;
   doHaddock = false;
   executableHaskellDepends = [
     aeson  base  cassava  jq  lens-aeson  nix-prefetch-git  safe  turtle  utf8-string  vector  yaml
-    stack2nix  cabal2nix  cabal-install
-  ] ++
-  (if interoRequested
-   then [ pkgs.stack intero ]
-   else []);
+    stack2nix  cabal2nix  cabal-install  intero
+    pkgs.stack
+    iohk-ops
+  ];
   shellHook =
   ''
     export NIX_PATH=nixpkgs=${nixpkgs}
@@ -61,6 +59,6 @@ mkDerivation {
   license      = stdenv.lib.licenses.mit;
 };
 
-drv = ghc.callPackage drvf { interoRequested = intero; };
+drv = ghc.callPackage drvf {};
 
-in drv.env
+in if pkgs.lib.inNixShell then drv.env else drv

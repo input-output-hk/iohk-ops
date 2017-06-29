@@ -7,6 +7,7 @@ let
   iohkpkgs = import ./../default.nix { inherit pkgs; };
 in with pkgs; rec {
   inherit (iohkpkgs) cardano-report-server-static cardano-sl-static cardano-sl-explorer-static cardano-sl iohk-ops;
-  stack2nix = iohkpkgs.callPackage ./../pkgs/stack2nix.nix {};
-  tests = import ./../tests { inherit pkgs supportedSystems; };
+  stack2nix      = iohkpkgs.callPackage ./../pkgs/stack2nix.nix {};
+  tests          = import ./../tests     { inherit pkgs supportedSystems; };
+  iohk-shell-env = import ./../shell.nix { inherit pkgs iohkpkgs stack2nix; };
 }
