@@ -26,12 +26,12 @@ script:
   - iohk-ops template --here --environment staging    --config 'csl-explorer-staging.yaml' 'csl-explorer-staging'       Explorer
   - iohk-ops template --here                          --config 'tw.yaml'                   'tw'          Timewarp
   - iohk-ops template --here --environment production --config 'inf.yaml'                  'inf'         Infra
-  - iohk-ops                                          --config 'csl-production.yaml'       do create deploy --evaluate-only
-  - iohk-ops                                          --config 'csl-staging.yaml'          do create deploy --evaluate-only
-  - iohk-ops                                          --config 'csl.yaml'                  do create deploy --evaluate-only
-  - iohk-ops                                          --config 'csl-explorer-staging.yaml' do create deploy --evaluate-only
-  - iohk-ops                                          --config 'tw.yaml'                   do create deploy --evaluate-only
-  - iohk-ops                                          --config 'inf.yaml'                  do create deploy --evaluate-only
+  - iohk-ops                                --verbose --config 'csl-production.yaml'       do create deploy --evaluate-only
+  - iohk-ops                                --verbose --config 'csl-staging.yaml'          do create deploy --evaluate-only
+  - iohk-ops                                --verbose --config 'csl.yaml'                  do create deploy --evaluate-only
+  - iohk-ops                                --verbose --config 'csl-explorer-staging.yaml' do create deploy --evaluate-only
+  - iohk-ops                                --verbose --config 'tw.yaml'                   do create deploy --evaluate-only
+  - iohk-ops                                --verbose --config 'inf.yaml'                  do create deploy --evaluate-only
 
 notifications:
   email: false
