@@ -2,7 +2,9 @@
 
 with (import ./../lib.nix);
 
-{
+let
+  iohk-pkgs = import ../default.nix {};
+in {
   imports = [
     ./cardano-node.nix
   ];
@@ -10,7 +12,7 @@ with (import ./../lib.nix);
   environment.systemPackages = with pkgs;
     # nixopsUnstable: wait for 1.5.1 release
     [ git tmux vim sysstat nixopsUnstable lsof ncdu tree mosh tig
-      cabal2nix stack iptables graphviz ];
+      cabal2nix stack iptables graphviz iohk-pkgs.iohk-ops ];
 
   services.openssh.passwordAuthentication = true;
   services.openssh.enable = true;
