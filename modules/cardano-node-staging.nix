@@ -12,7 +12,7 @@ with (import ./../lib.nix);
 
   deployment.ec2.elasticIPv4 = resources.elasticIPs.${"nodeip" + toString config.services.cardano-node.testIndex};
 
-  deployment.route53.accessKeyId = resources.ec2KeyPairs.${keypairFor region}.accessKeyId;
+  deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
   deployment.route53.hostName = "cardano-node-${toString config.services.cardano-node.testIndex}.aws.iohkdev.io";
 
   services.dd-agent.tags = ["env:staging"];

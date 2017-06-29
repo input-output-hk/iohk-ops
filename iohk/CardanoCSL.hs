@@ -1,12 +1,10 @@
-#!/usr/bin/env nix-shell
-#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle cassava vector safe aeson yaml lens-aeson ])'
-#! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/f2c4af4e3bd9ecd4b1cf494270eae5fd3ca9e68c.tar.gz
-
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections   #-}
 {-# LANGUAGE ViewPatterns   #-}
+
+module CardanoCSL where
 
 import Control.Monad.Except (ExceptT (..), runExceptT)
 import Turtle hiding (printf)
@@ -28,148 +26,69 @@ import GHC.Generics
 import Text.Printf
 import qualified Data.Map as M
 
-import NixOps
+import           NixOps                           (Branch(..), Environment(..), Deployment(..), DeploymentInfo(..), Target(..)
+                                                  ,Options(..), NixopsConfig(..), NodeName(..), Region(..), URL(..)
+                                                  ,showT, cmd, cmd', parallelIO, ssh, ssh', sshForEach)
+import qualified NixOps                        as Ops
 
+
+buildAMI :: Options -> NixopsConfig -> IO ()
+buildAMI o c = do
+  cmd o "nix-build" ["jobsets/cardano.nix", "-A", "cardano-node-image", "-o", "image"]
+  cmd o "./scripts/create-amis.sh" []
 
--- CLI Parser
+firewallClear :: Options -> NixopsConfig -> IO ()
+firewallClear o c = sshForEach o c ["iptables", "-F"]
 
-data Command =
-    Deploy
-  | Create
-  | Destroy
-  | FromScratch
-  | CheckStatus
-  | RunExperiment
-  | PostExperiment
-  | Build
-  | DumpLogs { withProf :: Bool }
-  | Start
-  | Stop
-  | FirewallBlock { fromRegion :: Text, toRegion :: Text }
-  | FirewallClear
-  | AMI
-  | PrintDate
-  | GenerateIPDHTMappings
-  deriving (Show)
-
-subparser :: Parser Command
-subparser =
-      subcommand "deploy" "Deploy the whole cluster" (pure Deploy)
-  <|> subcommand "create" "Create the whole cluster" (pure Create)
-  <|> subcommand "destroy" "Destroy the whole cluster" (pure Destroy)
-  <|> subcommand "build" "Build the application" (pure Build)
-  <|> subcommand "fromscratch" "Destroy, Delete, Create, Deploy" (pure FromScratch)
-  <|> subcommand "checkstatus" "Check if nodes are accessible via ssh and reboot if they timeout" (pure CheckStatus)
-  <|> subcommand "runexperiment" "Deploy cluster and perform measurements" (pure RunExperiment)
-  <|> subcommand "postexperiment" "Post-experiments logs dumping (if failed)" (pure PostExperiment)
-  <|> subcommand "dumplogs" "Dump logs" (DumpLogs <$> switch "prof" 'p' "Dump profiling data as well (requires service stop)")
-  <|> subcommand "stop" "Stop cardano-node service" (pure Stop)
-  <|> subcommand "start" "Start cardano-node service" (pure Start)
-  <|> subcommand "date" "Print date/time" (pure PrintDate)
-  <|> subcommand "firewall-block-region" "Block whole region in firewall" (FirewallBlock <$> optText "from-region" 'f' "AWS Region that won't reach --to" <*> optText "to-region" 't' "AWS Region that all nodes will be blocked")
-  <|> subcommand "firewall-clear" "Clear firewall" (pure FirewallClear)
-  <|> subcommand "ami" "Build ami" (pure AMI)
-  <|> subcommand "generate-ipdht" "Generate IP/DHT mappings for wallet use" (pure GenerateIPDHTMappings)
-
-parser :: Parser (Options, Command)
-parser = (,) <$> optionsParser
-             <*> subparser
-
-main :: IO ()
-main = do
-  (opts@Options{..}, command) <- options "Helper CLI around NixOps to run experiments" parser
-  Just c <- decodeFile $ encodeString oConfigFile
-  --dat <- fmap toNodesInfo <$> info c
-  dat <- getSmartGenCmd c
-  TIO.putStrLn $ T.pack $ show dat
-  let isNode (T.unpack . getNodeName -> ('n':'o':'d':'e':_)) = True
-      isNode _ = False
-      getNodeNames' = filter isNode <$> getNodeNames c
-  case command of
-    Deploy         -> deploy      opts c
-    Create         -> create      opts c
-    Destroy        -> destroy     opts c
-    FromScratch    -> fromscratch opts c
-    CheckStatus    -> checkstatus c
-    RunExperiment  -> getNodeNames' >>= runexperiment c
-    PostExperiment -> postexperiment c
-    Build -> build c
-    DumpLogs {..} -> getNodeNames' >>= void . dumpLogs c withProf
-    Start -> getNodeNames' >>= startCardanoNodes c
-    Stop -> getNodeNames' >>= stopCardanoNodes c
-    AMI -> buildAMI c
-    PrintDate -> getNodeNames' >>= printDate c
-    FirewallBlock from to -> firewallBlock c from to
-    FirewallClear -> firewallClear c
-    GenerateIPDHTMappings -> void $ generateIPDHTMappings c
-    -- TODO: invoke nixops with passed parameters
-
-
--- CLI Commands
-
-
-buildAMI :: NixOpsConfig -> IO ()
-buildAMI c = do
-  shells ("nix-build jobsets/cardano.nix -A cardano-node-image -o image -I " <> nixPath c) empty
-  shells "./scripts/create-amis.sh" empty
-
-build :: NixOpsConfig -> IO ()
-build c = do
-  TIO.putStrLn "Building derivation..."
-  shells ("nix-build -j 4 --cores 2 default.nix -A cardano-sl-static -I " <> nixPath c) empty
-
-firewallClear ::  NixOpsConfig -> IO ()
-firewallClear c = sshForEach c "iptables -F"
-
-firewallBlock ::  NixOpsConfig -> Text -> Text -> IO ()
-firewallBlock c from to = do
-  nodes <- getNodes c
-  let fromNodes = filter (f from) nodes
-  let toNodes = filter (f to) nodes
-  TIO.putStrLn $ "Blocking nodes: " <> (T.intercalate ", " $ fmap (getNodeName . diName) toNodes)
-  TIO.putStrLn $ "Applying on nodes: " <> (T.intercalate ", " $ fmap (getNodeName . diName) fromNodes)
-  parallelIO $ fmap (g toNodes) fromNodes
+firewallBlock :: Options -> NixopsConfig -> Region -> Region -> IO ()
+firewallBlock o c from to = do
+  nodes <- Ops.getNodes o c
+  let fromNodes = filter (f $ fromRegion from) nodes
+      toNodes   = filter (f $ fromRegion to)   nodes
+  TIO.putStrLn $ "Blocking nodes: "    <> (T.intercalate ", " $ fmap (fromNodeName . diName) toNodes)
+  TIO.putStrLn $ "Applying on nodes: " <> (T.intercalate ", " $ fmap (fromNodeName . diName) fromNodes)
+  parallelIO o $ fmap (g toNodes) fromNodes
     where
       f s node = T.isInfixOf ("[" <> s) (diType node)
-      g toNodes node = ssh c ("'for ip in " <> ips toNodes <> "; do iptables -A INPUT -s $ip -j DROP;done'") $ diName node
-      ips = T.intercalate " " . fmap (getIP . diPublicIP)
+      g toNodes node = ssh o c ["'for ip in " <> ips toNodes <> "; do iptables -A INPUT -s $ip -j DROP; done'"] $ diName node
+      ips = T.intercalate " " . fmap (Ops.getIP . diPublicIP)
 
-runexperiment :: NixOpsConfig -> [NodeName] -> IO ()
-runexperiment c nodes = do
+runexperiment :: Options -> NixopsConfig -> [NodeName] -> IO ()
+runexperiment o c nodes = do
   -- build
   echo "Checking nodes' status, rebooting failed"
-  checkstatus c
+  Ops.checkstatus o c
   --deploy
   echo "Stopping nodes..."
-  stopCardanoNodes c nodes
+  stopNodes o c nodes
   echo "Starting nodes..."
-  startCardanoNodes c nodes
+  startNodes o c nodes
   echo "Delaying... (40s)"
   sleep 40
   config <- either error id <$> getConfig
   when (enableDelegation config) $ do
     echo "Launching wallet to send delegation certs"
-    shells "rm -f wallet.log wallet.json" empty
-    cliCmd <- getWalletDelegationCmd c
+    cmd o "rm" ["-f", "wallet.log", "wallet.json"]
+    cliCmd <- getWalletDelegationCmd o c
     shells (cliCmd <> " | awk '{print}; /Command execution finished/ {exit}'") empty
     echo "Delaying... (40s)"
     sleep 40
   echo "Launching txgen"
   shells "rm -f timestampsTxSender.json txgen.log txgen.json smart-gen-verifications*.csv smart-gen-tps.csv" empty
-  cliCmd <- getSmartGenCmd c
+  cliCmd <- getSmartGenCmd o c
   shells cliCmd empty
   echo "Delaying... (150s)"
   sleep 150
-  postexperiment c
+  postexperiment o c
 
-postexperiment :: NixOpsConfig -> IO ()
-postexperiment c = do
-  nodes <- getNodeNames c
+postexperiment :: Options -> NixopsConfig -> IO ()
+postexperiment o c = do
+  nodes <- Ops.getNodeNames o c
   echo "Checking nodes' status, rebooting failed"
-  checkstatus c
+  Ops.checkstatus o c
   echo "Retreive logs..."
-  dt <- dumpLogs c True nodes
-  cliCmd <- getSmartGenCmd c
+  dt <- dumpLogs o c True nodes
+  cliCmd <- getSmartGenCmd o c
   let dirname = "./experiments/" <> dt
   shells ("echo \"" <> cliCmd <> "\" > " <> dirname <> "/txCommandLine") empty
   shells ("echo -n \"cardano-sl revision: \" > " <> dirname <> "/revisions.info") empty
@@ -181,24 +100,24 @@ postexperiment c = do
   --shells (foldl (\s n -> s <> " --file " <> n <> ".json") ("sh -c 'cd " <> workDir <> "; ./result/bin/cardano-analyzer --tx-file timestampsTxSender.json") nodes <> "'") empty
   shells ("tar -czf experiments/" <> dt <> ".tgz experiments/" <> dt) empty
 
-dumpLogs :: NixOpsConfig -> Bool -> [NodeName] -> IO Text
-dumpLogs c withProf nodes = do
+dumpLogs :: Options -> NixopsConfig -> Bool -> [NodeName] -> IO Text
+dumpLogs o c withProf nodes = do
     TIO.putStrLn $ "WithProf: " <> T.pack (show withProf)
     when withProf $ do
         echo "Stopping nodes..."
-        stopCardanoNodes c nodes
+        stopNodes o c nodes
         sleep 2
         echo "Dumping logs..."
-    (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
+    (_, dt) <- fmap T.strip <$> cmd' o "date" ["+%F_%H%M%S"]
     let workDir = "experiments/" <> dt
     TIO.putStrLn workDir
-    shell ("mkdir -p " <> workDir) empty
-    parallelIO $ fmap (dump workDir) nodes
+    cmd o "mkdir" ["-p", workDir]
+    parallelIO o $ fmap (dump workDir) nodes
     return dt
   where
     dump workDir node =
         forM_ logs $ \(rpath, fname) -> do
-          scpFromNode c node rpath (workDir <> "/" <> fname (getNodeName node))
+          Ops.scpFromNode o c node rpath (workDir <> "/" <> fname (fromNodeName node))
     logs = mconcat
              [ if withProf
                   then profLogs
@@ -206,21 +125,21 @@ dumpLogs c withProf nodes = do
              , defLogs
              ]
 
-generateIPDHTMappings :: NixOpsConfig -> IO Text
-generateIPDHTMappings c = runError $ do
-  nodes <- ExceptT $ getNodesMap c
-  config@Config{..} <- ExceptT $ getConfig
+generateIPDHTMappings :: Options -> NixopsConfig -> IO Text
+generateIPDHTMappings o c = runError $ do
+  nodes <- ExceptT $ getNodesMap o c
+  config@CardanoConfig{..} <- ExceptT $ getConfig
   let peers = genPeers nodePort (M.toList nodes)
   lift $ TIO.putStrLn $ T.unlines peers
   return $ T.unlines peers
 -- Rest
 
 
-getNodesMap :: NixOpsConfig -> IO (Either String (M.Map Int DeploymentInfo))
-getNodesMap c = fmap (toMap . toNodesInfo) <$> info c
+getNodesMap :: Options -> NixopsConfig -> IO (Either String (M.Map Int DeploymentInfo))
+getNodesMap o c = fmap (toMap . Ops.toNodesInfo) <$> Ops.info o c
   where
     toMap :: [DeploymentInfo] -> M.Map Int DeploymentInfo
-    toMap = M.fromList . catMaybes . map (\d -> (,d) <$> extractName (T.unpack . getNodeName $ diName d))
+    toMap = M.fromList . catMaybes . map (\d -> (,d) <$> extractName (T.unpack . fromNodeName $ diName d))
     extractName ('n':'o':'d':'e':rest) = Just $ read rest
     extractName _ = Nothing
 
@@ -231,13 +150,13 @@ runError action = runExceptT action >>=
 show' :: Show a => a -> Text
 show' = T.pack . show
 
-getSmartGenCmd :: NixOpsConfig -> IO Text
-getSmartGenCmd c = runError $ do
-  nodes <- ExceptT $ getNodesMap c
-  config@Config{..} <- ExceptT $ getConfig
+getSmartGenCmd :: Options -> NixopsConfig -> IO Text
+getSmartGenCmd o c = runError $ do
+  nodes <- ExceptT $ getNodesMap o c
+  config@CardanoConfig{..} <- ExceptT $ getConfig
   dhtfile <- lift $ Prelude.readFile "static/dht.json"
   peers <- ExceptT $ return $ getPeers c config dhtfile nodes
-  (_, sgIp) <- fmap T.strip <$> shellStrict ("curl " <> myIpUrl) empty
+  (_, sgIp) <- fmap T.strip <$> shellStrict ("curl " <> fromURL Ops.awsPublicIPURL) empty
   let sgDhtKey = fromJust $ dhtfile ^? key "node100" . _String
 
   let bot = if bitcoinOverFlat then "bitcoin" else "flat"
@@ -269,9 +188,9 @@ genDhtKey i = "MHdrsP-oPf7UWl" <> (T.pack $ printf "%.3d" i) <> "7QuXnLK5RD="
 genPeers :: Int -> [(Int, DeploymentInfo)] -> [Text]
 genPeers port = map impl
   where
-    impl (i, getIP . diPublicIP -> ip) = ip <> ":" <> show' port 
+    impl (i, Ops.getIP . diPublicIP -> ip) = ip <> ":" <> show' port 
 
-getPeers :: NixOpsConfig -> Config -> String -> M.Map Int DeploymentInfo -> Either String Text
+getPeers :: NixopsConfig -> CardanoConfig -> String -> M.Map Int DeploymentInfo -> Either String Text
 getPeers c config dhtfile nodes = do
   case M.lookup 0 nodes of
     Nothing -> Left "Node0 retrieval failed"
@@ -279,10 +198,10 @@ getPeers c config dhtfile nodes = do
                       infos = if enableP2P config then [(0, node0)] else M.toList nodes
                   in Right $ mconcat $ map (\p -> " --kademlia-peer " <> p) $ genPeers port infos
 
-getWalletDelegationCmd :: NixOpsConfig -> IO Text
-getWalletDelegationCmd c = runError $ do
-  nodes <- ExceptT $ getNodesMap c
-  config@Config{..} <- ExceptT $ getConfig
+getWalletDelegationCmd :: Options -> NixopsConfig -> IO Text
+getWalletDelegationCmd o c = runError $ do
+  nodes <- ExceptT $ getNodesMap o c
+  config@CardanoConfig{..} <- ExceptT $ getConfig
   dhtfile <- lift $ Prelude.readFile "static/dht.json"
   peers <- ExceptT $ return $ getPeers c config dhtfile nodes
 
@@ -318,28 +237,29 @@ profLogs =
     , ("/var/lib/cardano-node/cardano-node.eventlog", (<> ".eventlog"))
     ]
 
-
-printDate :: NixOpsConfig -> [NodeName] -> IO ()
-printDate c nodes = parallelIO $ fmap f nodes
+printDate :: Options -> NixopsConfig -> [NodeName] -> IO ()
+printDate o c nodes = parallelIO o $ fmap f nodes
   where
-    f n = ssh' c (\s -> TIO.putStrLn $ "Date on " <> getNodeName n <> ": " <> s) "date" n
+    f n = ssh' o c (\s -> TIO.putStrLn $ "Date on " <> fromNodeName n <> ": " <> s) ["date"] n
 
-stopCardanoNodes :: NixOpsConfig -> [NodeName] -> IO ()
-stopCardanoNodes c nodes = parallelIO $ fmap (ssh c "systemctl stop cardano-node") nodes
+stopNodes :: Options -> NixopsConfig -> [NodeName] -> IO ()
+stopNodes o c nodes =
+  parallelIO o $ flip fmap nodes $
+  ssh o c ["systemctl", "stop", "cardano-node"]
 
-startCardanoNodes :: NixOpsConfig -> [NodeName] -> IO ()
-startCardanoNodes c nodes =
-  parallelIO $ fmap (ssh c $ "'" <> rmCmd <> ";" <> startCmd <> "'") nodes
+startNodes :: Options -> NixopsConfig -> [NodeName] -> IO ()
+startNodes o c nodes =
+  parallelIO o $ flip fmap nodes $
+  ssh o c ["bash", "-c", "'" <> rmCmd <> "; " <> startCmd <> "'"]
   where
     rmCmd = foldl (\s (f, _) -> s <> " " <> f) "rm -f" logs
     startCmd = "systemctl start cardano-node"
     logs = mconcat [ defLogs, profLogs ]
 
-
--- Cardano Config
-
-
-data Config = Config
+
+-- * Cardano Config
+--
+data CardanoConfig = CardanoConfig
   { bitcoinOverFlat :: Bool
   , totalMoneyAmount :: Int
   , nodePort :: Int
@@ -359,9 +279,9 @@ data Config = Config
   , delegationNode :: Int
   } deriving (Generic, Show)
 
-instance FromJSON Config
+instance FromJSON CardanoConfig
 
-getConfig :: IO (Either String Config)
+getConfig :: IO (Either String CardanoConfig)
 getConfig = do
   (exitcode, output) <- shellStrict "nix-instantiate --eval --strict --json config.nix" empty
   return $ eitherDecode (encodeUtf8 $ fromStrict output)

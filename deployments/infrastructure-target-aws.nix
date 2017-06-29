@@ -1,5 +1,6 @@
-with (import ./../lib.nix);
+{ accessKeyId, ... }:
 
+with (import ./../lib.nix);
 {
   network.description = "IOHK infrastructure";
 
@@ -10,6 +11,8 @@ with (import ./../lib.nix);
     ];
 
     deployment.ec2 = {
+      inherit accessKeyId;
+
       instanceType = mkForce "r3.2xlarge";
       ebsInitialRootDiskSize = mkForce 200;
       associatePublicIpAddress = true;
@@ -27,6 +30,8 @@ with (import ./../lib.nix);
     };
 
     deployment.ec2 = {
+      inherit accessKeyId;
+
       instanceType = mkForce "r3.2xlarge";
       ebsInitialRootDiskSize = mkForce 50;
       associatePublicIpAddress = true;

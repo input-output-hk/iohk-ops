@@ -1,5 +1,6 @@
-with (import ./../lib.nix);
+{ accessKeyId, ... }:
 
+with (import ./../lib.nix);
 {
   network.description = "IOHK infrastructure production";
 

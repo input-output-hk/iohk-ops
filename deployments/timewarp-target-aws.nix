@@ -1,7 +1,10 @@
-with (import ./../lib.nix);
+{ accessKeyId, ... }:
 
+with (import ./../lib.nix);
 let
   timeWarpNode = region: keypair: { pkgs, resources, ... }: {
+    inherit accessKeyId;
+
     imports = [ ./../modules/amazon-base.nix ];
 
     deployment.ec2.region = mkForce region;
