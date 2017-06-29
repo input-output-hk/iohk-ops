@@ -16,7 +16,7 @@ script:
   - ./scripts/find-all-revisions.sh
   - nixops --version
   # check all scripts compile
-  - ./iohk/iohk-ops.hs --help
+  - iohk-ops --help
   # check all packages build
   - nix-instantiate jobsets/cardano.nix --show-trace
   - nix-shell --run "echo it works"
