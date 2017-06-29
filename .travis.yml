@@ -19,7 +19,6 @@ script:
   - iohk-ops --help
   # check all packages build
   - nix-instantiate jobsets/cardano.nix --show-trace
-  - nix-shell --run "echo it works"
   # check deploy evaluations
   - iohk-ops template --here --environment production --config 'csl-production.yaml'       'csl-production'       Nodes Explorer ReportServer
   - iohk-ops template --here --environment staging    --config 'csl-staging.yaml'          'csl-staging'          Nodes Explorer ReportServer
