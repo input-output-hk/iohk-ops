@@ -24,5 +24,5 @@ cabal2nix \
 
 # Generate cardano-sl package set
 $scriptDir/stack2nix/bin/stack2nix \
-  --revision 33837c19e594d44fe83e5101db5174373b7746e9 \
+  --revision faedde9ba7cde28571f88be8912f6bbb1acf5672 \
   https://github.com/input-output-hk/cardano-sl.git > $scriptDir/default.nix
