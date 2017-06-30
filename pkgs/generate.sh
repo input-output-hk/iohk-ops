@@ -6,6 +6,7 @@ function runInShell {
 }
 
 set -xe
+set -v
 
 # Get relative path to script directory
 scriptDir=$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")
@@ -15,23 +16,26 @@ source ${scriptDir}/../scripts/set_nixpath.sh
 # Generate stack2nix Nix package
 runInShell cabal2nix \
   --no-check \
-  --revision $(jq .rev < ../stack2nix-src.json -r) \
+  --revision $(jq .rev <  ${scriptDir}/../stack2nix-src.json -r) \
   https://github.com/input-output-hk/stack2nix.git > $scriptDir/stack2nix.nix
 
 # Build stack2nix Nix package
-nix-build -E "with import <nixpkgs> {}; haskell.packages.ghc802.callPackage ${scriptDir}/stack2nix.nix {}" -o $scriptDir/stack2nix
+nix-build ${scriptDir}/.. -A stack2nix -o $scriptDir/stack2nix
 
 # Generate explorer until it's merged with cardano-sl repo
 runInShell cabal2nix \
   --no-check \
-  --revision $(jq .rev < ../cardano-sl-explorer-src.json -r) \
+  --revision $(jq .rev < ${scriptDir}/../cardano-sl-explorer-src.json -r) \
   https://github.com/input-output-hk/cardano-sl-explorer.git > $scriptDir/cardano-sl-explorer.nix
 
 # Generate cardano-sl package set
 runInShell $scriptDir/stack2nix/bin/stack2nix \
-  --revision $(jq .rev < ../cardano-sl-src.json -r) \
-  https://github.com/input-output-hk/cardano-sl.git > $scriptDir/default.nix
+  --revision $(jq .rev < ${scriptDir}/../cardano-sl-src.json -r) \
+  https://github.com/input-output-hk/cardano-sl.git > $scriptDir/default.nix.new
+mv $scriptDir/default.nix.new $scriptDir/default.nix
 
 # Generate iohk-ops expression for Hydra
 # Manual build with: nix-build --no-build-output --cores 0 -E "with import <nixpkgs> {}; haskell.packages.ghc802.callPackage iohk/default.nix {}"
+pushd $scriptDir
 runInShell cabal2nix ./.. > $scriptDir/../iohk/default.nix
+popd
