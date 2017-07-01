@@ -1320,8 +1320,8 @@ self: {
           version = "1.0.0";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-crypto";
-            sha256 = "1nxm0vlg9w841cc4gyy87jk4hvc3iimpjv2a9q6d99ri7v4ynnb4";
-            rev = "96adbd5aa9a906859deddf170f8762a9ed85c0c9";
+            sha256 = "0k8gm7fh0bypbd4mjb1kqwjp7mz2chl87haqx42av7z502gayy8w";
+            rev = "84f8c358463bbf6bb09168aac5ad990faa9d310a";
           };
           libraryHaskellDepends = [
             base
@@ -1425,14 +1425,14 @@ self: {
           description = "Reporting server for CSL";
           license = stdenv.lib.licenses.bsd3;
         }) {};
-      cardano-sl = callPackage ({ Glob, IfElse, QuickCheck, acid-state, aeson, ansi-terminal, ansi-wl-pprint, array, async, attoparsec, base, base58-bytestring, base64-bytestring, binary, binary-conduit, binary-orphans, bytestring, cardano-crypto, cardano-report-server, cardano-sl-core, cardano-sl-db, cardano-sl-godtossing, cardano-sl-infra, cardano-sl-lrc, cardano-sl-ssc, cardano-sl-txp, cardano-sl-update, cereal, conduit, containers, cpphs, criterion, cryptonite, cryptonite-openssl, data-default, deepseq, derive, deriving-compat, digest, directory, dlist, ed25519, either, ekg, ekg-core, ether, exceptions, fetchgit, file-embed, filelock, filepath, focus, foldl, formatting, gitrev, hashable, hashtables, hspec, http-client, http-client-tls, http-conduit, http-types, kademlia, lens, lifted-async, list-t, log-warper, lrucache, memory, mkDerivation, mmorph, monad-control, monad-loops, mono-traversable, mtl, neat-interpolation, network-info, network-transport, network-transport-tcp, node-sketch, optparse-applicative, optparse-simple, optparse-text, parsec, plutus-prototype, process, purescript-bridge, pvss, quickcheck-instances, random, random-shuffle, reflection, regex-tdfa, regex-tdfa-text, resourcet, rocksdb, safecopy, serokell-util, servant-multipart, servant-server_0_10, servant-swagger-ui, servant-swagger_1_1_2_1, servant_0_10, stdenv, stm, stm-containers, string-qq, swagger2, system-filepath, tagged, tar, template-haskell, temporary, text, text-format, th-lift-instances, time, time-units, transformers, transformers-base, transformers-lift, turtle, universum, unix, unordered-containers, vector, wai, wai-extra, wai-websockets, warp, websockets, wreq, yaml }:
+      cardano-sl = callPackage ({ Glob, IfElse, QuickCheck, acid-state, aeson, ansi-terminal, ansi-wl-pprint, array, async, attoparsec, base, base58-bytestring, base64-bytestring, binary, binary-conduit, binary-orphans, bytestring, cardano-crypto, cardano-report-server, cardano-sl-core, cardano-sl-db, cardano-sl-godtossing, cardano-sl-infra, cardano-sl-lrc, cardano-sl-ssc, cardano-sl-txp, cardano-sl-update, cereal, conduit, containers, cpphs, criterion, cryptonite, cryptonite-openssl, data-default, deepseq, derive, deriving-compat, digest, directory, dlist, ed25519, either, ekg, ekg-core, ekg-statsd, ether, exceptions, fetchgit, file-embed, filelock, filepath, focus, foldl, formatting, gitrev, hashable, hashtables, hspec, http-client, http-client-tls, http-conduit, http-types, kademlia, lens, lifted-async, list-t, log-warper, lrucache, memory, mkDerivation, mmorph, monad-control, monad-loops, mono-traversable, mtl, neat-interpolation, network-info, network-transport, network-transport-tcp, node-sketch, optparse-applicative, optparse-simple, optparse-text, parsec, plutus-prototype, process, purescript-bridge, pvss, quickcheck-instances, random, random-shuffle, reflection, regex-tdfa, regex-tdfa-text, resourcet, rocksdb, safecopy, serokell-util, servant-multipart, servant-server_0_10, servant-swagger-ui, servant-swagger_1_1_2_1, servant_0_10, stdenv, stm, stm-containers, string-qq, swagger2, system-filepath, tagged, tar, template-haskell, temporary, text, text-format, th-lift-instances, time, time-units, transformers, transformers-base, transformers-lift, turtle, universum, unix, unordered-containers, vector, versions, wai, wai-extra, wai-websockets, warp, websockets, wreq, yaml }:
       mkDerivation {
           pname = "cardano-sl";
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1li70k82mvyn4psmwcjjdhvcbrdliq0mcxx3g7q8r1cpam77c27k";
-            rev = "4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c";
+            sha256 = "09l50wq641r0x3b7g9v286s25hswjkm2dfcq0rajhfrcpd8ad32w";
+            rev = "86ab2c4dd5cfec64a0eca4ff996c02a40bbe733d";
           };
           isLibrary = true;
           isExecutable = true;
@@ -1473,6 +1473,7 @@ self: {
             ed25519
             ekg
             ekg-core
+            ekg-statsd
             ether
             exceptions
             file-embed
@@ -1537,6 +1538,7 @@ self: {
             unix
             unordered-containers
             vector
+            versions
             wai
             wai-extra
             wai-websockets
@@ -1688,8 +1690,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1li70k82mvyn4psmwcjjdhvcbrdliq0mcxx3g7q8r1cpam77c27k";
-            rev = "4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c";
+            sha256 = "09l50wq641r0x3b7g9v286s25hswjkm2dfcq0rajhfrcpd8ad32w";
+            rev = "86ab2c4dd5cfec64a0eca4ff996c02a40bbe733d";
           };
           postUnpack = "sourceRoot+=/core; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1762,8 +1764,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1li70k82mvyn4psmwcjjdhvcbrdliq0mcxx3g7q8r1cpam77c27k";
-            rev = "4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c";
+            sha256 = "09l50wq641r0x3b7g9v286s25hswjkm2dfcq0rajhfrcpd8ad32w";
+            rev = "86ab2c4dd5cfec64a0eca4ff996c02a40bbe733d";
           };
           postUnpack = "sourceRoot+=/db; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1800,8 +1802,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1li70k82mvyn4psmwcjjdhvcbrdliq0mcxx3g7q8r1cpam77c27k";
-            rev = "4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c";
+            sha256 = "09l50wq641r0x3b7g9v286s25hswjkm2dfcq0rajhfrcpd8ad32w";
+            rev = "86ab2c4dd5cfec64a0eca4ff996c02a40bbe733d";
           };
           postUnpack = "sourceRoot+=/godtossing; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1842,19 +1844,20 @@ self: {
           description = "Cardano SL - GodTossing implementation of SSC";
           license = stdenv.lib.licenses.mit;
         }) {};
-      cardano-sl-infra = callPackage ({ aeson, base, binary, bytestring, cardano-report-server, cardano-sl-core, cardano-sl-db, containers, cpphs, data-default, directory, ether, exceptions, fetchgit, filepath, formatting, hashable, kademlia, lens, list-t, log-warper, mkDerivation, mmorph, monad-control, mtl, network-info, network-transport-tcp, node-sketch, optparse-simple, parsec, reflection, serokell-util, stdenv, stm, stm-containers, tagged, template-haskell, temporary, text, text-format, time, time-units, transformers, transformers-base, transformers-lift, universum, unordered-containers, wreq }:
+      cardano-sl-infra = callPackage ({ aeson, base, base64-bytestring, binary, bytestring, cardano-report-server, cardano-sl-core, cardano-sl-db, containers, cpphs, data-default, directory, ether, exceptions, fetchgit, filepath, formatting, hashable, kademlia, lens, list-t, log-warper, mkDerivation, mmorph, monad-control, mtl, network-info, network-transport-tcp, node-sketch, optparse-simple, parsec, reflection, serokell-util, stdenv, stm, stm-containers, tagged, template-haskell, temporary, text, text-format, time, time-units, transformers, transformers-base, transformers-lift, universum, unordered-containers, wreq }:
       mkDerivation {
           pname = "cardano-sl-infra";
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1li70k82mvyn4psmwcjjdhvcbrdliq0mcxx3g7q8r1cpam77c27k";
-            rev = "4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c";
+            sha256 = "09l50wq641r0x3b7g9v286s25hswjkm2dfcq0rajhfrcpd8ad32w";
+            rev = "86ab2c4dd5cfec64a0eca4ff996c02a40bbe733d";
           };
           postUnpack = "sourceRoot+=/infra; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
             aeson
             base
+            base64-bytestring
             binary
             bytestring
             cardano-report-server
@@ -1910,8 +1913,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1li70k82mvyn4psmwcjjdhvcbrdliq0mcxx3g7q8r1cpam77c27k";
-            rev = "4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c";
+            sha256 = "09l50wq641r0x3b7g9v286s25hswjkm2dfcq0rajhfrcpd8ad32w";
+            rev = "86ab2c4dd5cfec64a0eca4ff996c02a40bbe733d";
           };
           postUnpack = "sourceRoot+=/lrc; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1940,8 +1943,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1li70k82mvyn4psmwcjjdhvcbrdliq0mcxx3g7q8r1cpam77c27k";
-            rev = "4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c";
+            sha256 = "09l50wq641r0x3b7g9v286s25hswjkm2dfcq0rajhfrcpd8ad32w";
+            rev = "86ab2c4dd5cfec64a0eca4ff996c02a40bbe733d";
           };
           postUnpack = "sourceRoot+=/ssc; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1971,17 +1974,18 @@ self: {
           description = "Cardano SL - the SSC class";
           license = stdenv.lib.licenses.mit;
         }) {};
-      cardano-sl-txp = callPackage ({ base, bytestring, cardano-sl-core, cardano-sl-db, cardano-sl-infra, cardano-sl-update, containers, cpphs, data-default, derive, ether, fetchgit, formatting, hashable, lens, log-warper, mkDerivation, mtl, neat-interpolation, plutus-prototype, rocksdb, serokell-util, stdenv, stm, tagged, template-haskell, text, text-format, transformers, universum, unordered-containers, vector }:
+      cardano-sl-txp = callPackage ({ aeson, base, bytestring, cardano-sl-core, cardano-sl-db, cardano-sl-infra, cardano-sl-update, containers, cpphs, data-default, derive, ether, fetchgit, formatting, hashable, lens, lifted-base, log-warper, mkDerivation, monad-control, mtl, neat-interpolation, plutus-prototype, rocksdb, serokell-util, stdenv, stm, tagged, template-haskell, text, text-format, transformers, universum, unordered-containers, vector }:
       mkDerivation {
           pname = "cardano-sl-txp";
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1li70k82mvyn4psmwcjjdhvcbrdliq0mcxx3g7q8r1cpam77c27k";
-            rev = "4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c";
+            sha256 = "09l50wq641r0x3b7g9v286s25hswjkm2dfcq0rajhfrcpd8ad32w";
+            rev = "86ab2c4dd5cfec64a0eca4ff996c02a40bbe733d";
           };
           postUnpack = "sourceRoot+=/txp; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
+            aeson
             base
             bytestring
             cardano-sl-core
@@ -1995,7 +1999,9 @@ self: {
             formatting
             hashable
             lens
+            lifted-base
             log-warper
+            monad-control
             mtl
             neat-interpolation
             plutus-prototype
@@ -2023,8 +2029,8 @@ self: {
           version = "0.4.4";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1li70k82mvyn4psmwcjjdhvcbrdliq0mcxx3g7q8r1cpam77c27k";
-            rev = "4bcf1e6b601d531f753ebdb6aec23e19d4b08e6c";
+            sha256 = "09l50wq641r0x3b7g9v286s25hswjkm2dfcq0rajhfrcpd8ad32w";
+            rev = "86ab2c4dd5cfec64a0eca4ff996c02a40bbe733d";
           };
           postUnpack = "sourceRoot+=/update; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -3345,6 +3351,26 @@ self: {
           description = "JSON encoding of ekg metrics";
           license = stdenv.lib.licenses.bsd3;
         }) {};
+      ekg-statsd = callPackage ({ base, bytestring, ekg-core, mkDerivation, network, stdenv, text, time, unordered-containers }:
+      mkDerivation {
+          pname = "ekg-statsd";
+          version = "0.2.1.0";
+          sha256 = "04bpdmk3ma4fnylipg4hkq3jfkrw5f009vbns6vah0znawkpjhnh";
+          libraryHaskellDepends = [
+            base
+            bytestring
+            ekg-core
+            network
+            text
+            time
+            unordered-containers
+          ];
+          doHaddock = false;
+          doCheck = false;
+          homepage = "https://github.com/tibbe/ekg-statsd";
+          description = "Push metrics to statsd";
+          license = stdenv.lib.licenses.bsd3;
+        }) {};
       entropy = callPackage ({ Cabal, base, bytestring, directory, filepath, mkDerivation, process, stdenv, unix }:
       mkDerivation {
           pname = "entropy";
@@ -3448,8 +3474,8 @@ self: {
           pname = "exceptions";
           version = "0.8.3";
           sha256 = "1gl7xzffsqmigam6zg0jsglncgzxqafld2p6kb7ccp9xirzdjsjd";
-          revision = "1";
-          editedCabalFile = "fc13261461399b8610d60468757f2fc0a62ed660dee998f4329e33dd76d2191b";
+          revision = "2";
+          editedCabalFile = "dc2b4ed2a3de646d8ff599ff972e25b3a1a5165ead3a46ff84a3d443814c85ee";
           libraryHaskellDepends = [
             base
             mtl
@@ -4510,8 +4536,8 @@ self: {
           pname = "insert-ordered-containers";
           version = "0.2.1.0";
           sha256 = "1612f455dw37da9g7bsd1s5kyi84mnr1ifnjw69892amyimi47fp";
-          revision = "2";
-          editedCabalFile = "972f14c0cf96728583b054eb2b26c2555438094685b562357ef12e1dc4cfc3eb";
+          revision = "3";
+          editedCabalFile = "6fdce987672b006226243aa17522b57ec7a9e1cab247802eddbdaa9dc5b06446";
           libraryHaskellDepends = [
             aeson
             base
@@ -5169,6 +5195,50 @@ self: {
           description = "Special functions and Chebyshev polynomials";
           license = stdenv.lib.licenses.bsd3;
         }) {};
+      megaparsec = callPackage ({ QuickCheck, base, bytestring, containers, criterion, deepseq, exceptions, hspec, hspec-expectations, mkDerivation, mtl, scientific, stdenv, text, transformers, weigh }:
+      mkDerivation {
+          pname = "megaparsec";
+          version = "5.2.0";
+          sha256 = "0204x5bklgvfydap1a2y76aicnjfs33jh786y7w6vsb54fpafl62";
+          revision = "1";
+          editedCabalFile = "6faae587ac65280ee855936319116bbc3015bd96eadb1a5ea107852fa5c905aa";
+          libraryHaskellDepends = [
+            base
+            bytestring
+            containers
+            deepseq
+            exceptions
+            mtl
+            QuickCheck
+            scientific
+            text
+            transformers
+          ];
+          testHaskellDepends = [
+            base
+            bytestring
+            containers
+            exceptions
+            hspec
+            hspec-expectations
+            mtl
+            QuickCheck
+            scientific
+            text
+            transformers
+          ];
+          benchmarkHaskellDepends = [
+            base
+            criterion
+            deepseq
+            weigh
+          ];
+          doHaddock = false;
+          doCheck = false;
+          homepage = "https://github.com/mrkkrp/megaparsec";
+          description = "Monadic parser combinators";
+          license = stdenv.lib.licenses.bsd2;
+        }) {};
       memory = callPackage ({ base, bytestring, deepseq, foundation, ghc-prim, mkDerivation, stdenv, tasty, tasty-hunit, tasty-quickcheck }:
       mkDerivation {
           pname = "memory";
@@ -5454,6 +5524,8 @@ self: {
           pname = "natural-transformation";
           version = "0.4";
           sha256 = "1by8xwjc23l6pa9l4iv7zp82dykpll3vc3hgxk0pgva724n8xhma";
+          revision = "1";
+          editedCabalFile = "83bedd2c7b0e4f8819753d2075036d99483d33bfdd3ba8889cf61fa05fa89ce9";
           libraryHaskellDepends = [
             base
           ];
@@ -5608,18 +5680,19 @@ self: {
           description = "URI manipulation";
           license = stdenv.lib.licenses.bsd3;
         }) {};
-      node-sketch = callPackage ({ QuickCheck, async, attoparsec, base, binary, bytestring, containers, criterion, data-default, deepseq, ekg, ekg-core, exceptions, fetchgit, formatting, hashable, hspec, kademlia, lens, log-warper, mkDerivation, mmorph, monad-control, mtl, mwc-random, network, network-transport, network-transport-inmemory, network-transport-tcp, quickcheck-instances, random, semigroups, serokell-util, statistics, stdenv, stm, text, text-format, time, time-units, transformers, transformers-base, universum, unordered-containers, vector }:
+      node-sketch = callPackage ({ QuickCheck, aeson, async, attoparsec, base, binary, bytestring, containers, criterion, data-default, deepseq, ekg, ekg-core, ether, exceptions, fetchgit, formatting, hashable, hspec, kademlia, lens, log-warper, mkDerivation, mmorph, monad-control, mtl, mwc-random, network, network-transport, network-transport-inmemory, network-transport-tcp, quickcheck-instances, random, semigroups, serokell-util, statistics, stdenv, stm, text, text-format, time, time-units, transformers, transformers-base, transformers-lift, universum, unordered-containers, vector }:
       mkDerivation {
           pname = "node-sketch";
           version = "0.1.2.0";
           src = fetchgit {
             url = "https://github.com/serokell/time-warp-nt.git";
-            sha256 = "1gb9zxc2xk48swjrwdqkhmqx6jiprfm49rhxjnl19r9in61xsz4i";
-            rev = "3fa7ccea4031a7424e77b63fd1f29e4d69b70b98";
+            sha256 = "1j3jys0ql62kd0dlpcd7c9i6ql4jw77n9lridyzwbyvcc2pw201b";
+            rev = "52969ff1e14385a9fa0e7de1593969f8b5e52a1b";
           };
           isLibrary = true;
           isExecutable = true;
           libraryHaskellDepends = [
+            aeson
             async
             attoparsec
             base
@@ -5630,6 +5703,7 @@ self: {
             deepseq
             ekg
             ekg-core
+            ether
             exceptions
             formatting
             hashable
@@ -5654,6 +5728,7 @@ self: {
             time-units
             transformers
             transformers-base
+            transformers-lift
             universum
             unordered-containers
             vector
@@ -7919,6 +7994,8 @@ self: {
           pname = "time-parsers";
           version = "0.1.2.0";
           sha256 = "091wpcqj1kjvyjgj1y1invn0g5lhdxc92az2bcbwbrpq2c7x8l2f";
+          revision = "1";
+          editedCabalFile = "f2a522da59c7dab618b37126dcd5e183658e0d46e13c7a56243b10b1541873bb";
           libraryHaskellDepends = [
             base
             parsers
@@ -8588,6 +8665,30 @@ self: {
           doHaddock = false;
           doCheck = false;
           description = "Deriver for Data.Vector.Unboxed using Template Haskell";
+          license = stdenv.lib.licenses.bsd3;
+        }) {};
+      versions = callPackage ({ base, either, megaparsec, microlens, mkDerivation, semigroups, stdenv, tasty, tasty-hunit, text }:
+      mkDerivation {
+          pname = "versions";
+          version = "3.0.0";
+          sha256 = "0f7wvsjavv9hkrm5pgwg99w78apsqbrw4hk559cww83k3bbbg3j6";
+          libraryHaskellDepends = [
+            base
+            megaparsec
+            semigroups
+            text
+          ];
+          testHaskellDepends = [
+            base
+            either
+            microlens
+            tasty
+            tasty-hunit
+            text
+          ];
+          doHaddock = false;
+          doCheck = false;
+          description = "Types and parsers for software version numbers";
           license = stdenv.lib.licenses.bsd3;
         }) {};
       void = callPackage ({ base, mkDerivation, stdenv }:
