@@ -38,7 +38,7 @@ drvf =
 mkDerivation {
   pname = "iohk-shell-env";
   version = "0.0.1";
-  src = ./.;
+  src = ./iohk;
   isLibrary = false;
   isExecutable = true;
   doHaddock = false;

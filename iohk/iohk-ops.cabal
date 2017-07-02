@@ -20,7 +20,6 @@ cabal-version:       >=1.10
 --   exposed-modules:
 
 executable iohk-ops
-  hs-source-dirs:      iohk
   main-is:             iohk-ops.hs
   default-language:    Haskell2010
   other-extensions:    DeriveGeneric, GeneralizedNewtypeDeriving, OverloadedStrings, RecordWildCards, TupleSections, ViewPatterns
