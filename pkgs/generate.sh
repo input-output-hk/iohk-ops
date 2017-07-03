@@ -34,8 +34,3 @@ runInShell $scriptDir/stack2nix/bin/stack2nix \
   https://github.com/input-output-hk/cardano-sl.git > $scriptDir/default.nix.new
 mv $scriptDir/default.nix.new $scriptDir/default.nix
 
-# Generate iohk-ops expression for Hydra
-# Manual build with: nix-build --no-build-output --cores 0 -E "with import <nixpkgs> {}; haskell.packages.ghc802.callPackage iohk/default.nix {}"
-pushd $scriptDir
-runInShell cabal2nix ./.. > $scriptDir/../iohk/default.nix
-popd
