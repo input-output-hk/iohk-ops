@@ -10,6 +10,7 @@ let
   addConfigureFlags = flags: drv: overrideCabal drv (drv: {
     configureFlags = flags;
   });
+
   socket-io-src = pkgs.fetchgit (removeAttrs (importJSON ./pkgs/engine-io.json) ["date"]);
 in (import pkgs/default.nix { inherit pkgs compiler; }).override {
   overrides = self: super: {
@@ -36,6 +37,8 @@ in (import pkgs/default.nix { inherit pkgs compiler; }).override {
 
     # Gold linker fixes
     cryptonite = addConfigureFlags ["--ghc-option=-optl-pthread"] super.cryptonite;
+
+    iohk-ops =  super.callPackage ./iohk/default.nix {};
 
     # sl-explorer
     # TODO: https://issues.serokell.io/issue/CSM-195

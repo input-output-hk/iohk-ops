@@ -2,7 +2,9 @@
 
 with (import ./../lib.nix);
 
-{
+let
+  iohk-pkgs = import ../default.nix {};
+in {
   imports = [
     ./cardano-node.nix
   ];
@@ -10,7 +12,7 @@ with (import ./../lib.nix);
   environment.systemPackages = with pkgs;
     # nixopsUnstable: wait for 1.5.1 release
     [ git tmux vim sysstat nixopsUnstable lsof ncdu tree mosh tig
-      cabal2nix stack iptables graphviz ];
+      cabal2nix stack iptables graphviz iohk-pkgs.iohk-ops ];
 
   services.openssh.passwordAuthentication = true;
   services.openssh.enable = true;
@@ -41,13 +43,18 @@ with (import ./../lib.nix);
 
     buildCores = 0;
 
-    nixPath = ["nixpkgs=http://nixos.org/channels/nixos-17.03/nixexprs.tar.xz"];
+    nixPath = [ "nixpkgs=/run/current-system/nixpkgs" ];
 
     # use our hydra builds
     trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
     binaryCaches = trustedBinaryCaches;
     binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
   };
+  system.extraSystemBuilderCmds = let
+    setNixpkgs = pkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./../nixpkgs-src.json));
+  in ''
+    ln -sv ${setNixpkgs} $out/nixpkgs
+  '';
 
   # Mosh
   networking.firewall.allowedUDPPortRanges = [

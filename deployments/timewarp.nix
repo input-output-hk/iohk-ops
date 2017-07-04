@@ -1,5 +1,6 @@
-with (import ./../lib.nix);
+{ ... }:
 
+with (import ./../lib.nix);
 let
   timeWarpReceiver = { pkgs, ... }: {
     imports = [ ./../modules/timewarp-node.nix ];

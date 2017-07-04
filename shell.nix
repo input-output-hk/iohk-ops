@@ -1,22 +1,31 @@
-{ pkgs     ? import ((import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json))) {}
-, compiler ? pkgs.haskell.packages.ghc802
-, intero   ? false
-}:
+{ ghcVer   ? "ghc802"
+, lib      ? import ./lib.nix
+, nixpkgs  ? lib.fetchNixPkgs
+, pkgs     ? import nixpkgs {}
+, iohkpkgs ? import ./default.nix { inherit pkgs; }
+, stack2nix ? iohkpkgs.callPackage ./pkgs/stack2nix.nix {}
+}: let
 
-let
+compiler      = pkgs.haskell.packages."${ghcVer}";
 
-ghcOrig   = import ./default.nix { inherit pkgs compiler; };
-overcabal = pkgs.haskell.lib.overrideCabal;
-hubsrc    =      repo: rev: sha256:       pkgs.fetchgit { url = "https://github.com/" + repo; rev = rev; sha256 = sha256; };
-overc     = old:                    args: overcabal old (oldAttrs: (oldAttrs // args));
-overhub   = old: repo: rev: sha256: args: overc old ({ src = hubsrc repo rev sha256; }       // args);
-overhage  = old: version:   sha256: args: overc old ({ version = version; sha256 = sha256; } // args);
-ghc       = ghcOrig.override (oldArgs: {
+ghcOrig       = import ./default.nix { inherit pkgs compiler; };
+
+githubSrc     =      repo: rev: sha256:       pkgs.fetchgit  { url = "https://github.com/" + repo; rev = rev; sha256 = sha256; };
+overC         =                               pkgs.haskell.lib.overrideCabal;
+overCabal     = old:                    args: overC old (oldAttrs: (oldAttrs // args));
+overGithub    = old: repo: rev: sha256: args: overC old ({ src = githubSrc repo rev sha256; }     // args);
+overHackage   = old: version:   sha256: args: overC old ({ version = version; sha256 = sha256; } // args);
+
+stack2NixSrc  = builtins.fromJSON (builtins.readFile ./stack2nix-src.json);
+
+ghc           = ghcOrig.override (oldArgs: {
   overrides = with pkgs.haskell.lib; new: old:
   let parent = (oldArgs.overrides or (_: _: {})) new old;
   in with new; parent // {
-      intero         = overhub  old.intero "commercialhaskell/intero" "e546ea086d72b5bf8556727e2983930621c3cb3c" "1qv7l5ri3nysrpmnzfssw8wvdvz0f6bmymnz1agr66fplazid4pn" { doCheck = false; };
-      turtle_1_3_0   = doJailbreak old.turtle_1_3_0;
+      # intero         = overGithub  old.intero "commercialhaskell/intero"
+      #                  "e546ea086d72b5bf8556727e2983930621c3cb3c" "1qv7l5ri3nysrpmnzfssw8wvdvz0f6bmymnz1agr66fplazid4pn" { doCheck = false; };
+      inherit stack2nix;
+      iohk-ops       = iohkpkgs.callPackage (import ./iohk) {};
     };
   });
 
@@ -24,29 +33,32 @@ ghc       = ghcOrig.override (oldArgs: {
 ###
 ###
 drvf =
-{ mkDerivation, stdenv, src ? ./.
-, base, turtle, cassava, vector, safe, aeson, yaml, lens-aeson
+{ mkDerivation, stdenv
+,   aeson, base, cassava, jq, lens-aeson, nix-prefetch-git, safe, turtle, utf8-string, vector, yaml
+,   stack2nix, cabal2nix, cabal-install, intero
+,   iohk-ops
 }:
 mkDerivation {
-  pname = "iohk-nixops";
+  pname = "iohk-shell-env";
   version = "0.0.1";
-  src = src;
+  src = ./.;
   isLibrary = false;
   isExecutable = true;
   doHaddock = false;
   executableHaskellDepends = [
-   base turtle cassava vector safe aeson yaml lens-aeson
+    aeson  base  cassava  jq  lens-aeson  nix-prefetch-git  safe  turtle  utf8-string  vector  yaml
+    stack2nix  cabal2nix  cabal-install  intero
+    pkgs.stack
+    iohk-ops
   ];
-  # description  = "Visual mind assistant";
-  license      = stdenv.lib.licenses.agpl3;
+  shellHook =
+  ''
+    export NIX_PATH=nixpkgs=${nixpkgs}
+    echo   NIX_PATH set to $NIX_PATH >&2
+  '';
+  license      = stdenv.lib.licenses.mit;
 };
 
-drv = (pkgs.haskell.lib.addBuildTools
-(ghc.callPackage drvf { })
-(if intero
- then [ pkgs.cabal-install
-        pkgs.stack
-        ghc.intero ]
- else []));
+drv = ghc.callPackage drvf {};
 
-in drv.env
+in if pkgs.lib.inNixShell then drv.env else drv

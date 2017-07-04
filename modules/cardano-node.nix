@@ -182,6 +182,13 @@ in {
       description   = "cardano node service";
       after         = [ "network.target" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
+      script = let
+        keyId = "key" + toString (cfg.testIndex + 1);
+        key = keyId + ".sk";
+      in ''
+        [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}${key}
+        exec ${command}
+      '';
       serviceConfig = {
         User = "cardano-node";
         Group = "cardano-node";
@@ -193,14 +200,6 @@ in {
         KillSignal = "SIGINT";
         WorkingDirectory = stateDir;
         PrivateTmp = true;
-        ExecStart = let
-            keyId = "key" + toString (cfg.testIndex + 1);
-            key = keyId + ".sk";
-          in pkgs.writeScript "cardano-node.sh" ''
-          #!/bin/sh
-          [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}${key}
-          exec ${command}
-        '';
       };
     };
   };

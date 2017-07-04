@@ -1,5 +1,6 @@
-with (import ./../lib.nix);
+{ accessKeyId, ... }:
 
+with (import ./../lib.nix);
 let
   nodeProdConf = import ./../modules/cardano-node-prod.nix;
 in {

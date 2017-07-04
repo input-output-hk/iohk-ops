@@ -1,5 +1,6 @@
-with (import ./../lib.nix);
+{ ... }:
 
+with (import ./../lib.nix);
 {
   network.description = "Cardano Explorer";
 

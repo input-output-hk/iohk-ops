@@ -1,5 +1,6 @@
 *~
 *#
+.#*
 .stack-work
 result
 logs/
@@ -14,5 +15,6 @@ txgen.json
 smart-gen-*
 static/id_buildfarm
 *prof
+keys/*.key
 static/*.secret
 pkgs/stack2nix

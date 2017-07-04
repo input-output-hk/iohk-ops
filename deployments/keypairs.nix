@@ -1,5 +1,6 @@
-with (import ./../lib.nix);
+{ accessKeyId, ... }:
 
+with (import ./../lib.nix);
 let
   regions = [
     "eu-central-1"
@@ -13,7 +14,7 @@ let
   genSG = sgs: mergeAttrs (map sgs regions);
 in {
   resources = {
-    inherit ec2KeyPairs;
+    ec2KeyPairs = ec2KeyPairs accessKeyId;
     ec2SecurityGroups = genSG (region: {
       /*"allow-cardano-${region}" = {
         inherit region accessKeyId;

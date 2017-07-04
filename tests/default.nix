@@ -1,7 +1,7 @@
 { pkgs ? (import <nixpkgs> {}), supportedSystems ? [ "x86_64-linux" ] }:
 
 with pkgs;
-with lib;
+with pkgs.lib;
 
 let
   forAllSystems = genAttrs supportedSystems;

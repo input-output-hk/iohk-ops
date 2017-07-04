@@ -10,7 +10,10 @@ in lib // (rec {
 
   # Given a list of integers and a function,
   # generate an attribute set with that many nodes and call the function with node index
-  genNodes = ids: f: genAttrs' ids (i: "node${toString i}") f;
+  genNodes = nodeLimit: ids: f:
+             genAttrs' (lib.flip builtins.filter ids
+                          (id: id < nodeLimit))
+                       (i: "node${toString i}") f;
 
   # TODO: sanity check there's no duplicate nodes for same index
   # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
@@ -23,6 +26,9 @@ in lib // (rec {
         value = { inherit (value) region; inherit accessKeyId;};
       }
     ) nodes;
+
+  # fetch nixpkgs and give the expected hash
+  fetchNixPkgs = (import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
 
   # Parse peers from a file
   #
@@ -46,14 +52,13 @@ in lib // (rec {
   # Function to generate DHT key
   genDhtKey = i: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
 
-  accessKeyId = "iohk";
   region = "eu-central-1";
 
   # Given a region, returns it's keypair
   # TODO: meaningful error if keypair for region doesn't exist
-  keypairFor = region: lib.head (lib.attrNames (lib.filterAttrs (n: v: v.region == region) ec2KeyPairs));
+  keypairFor = accessKeyId: region: lib.head (lib.attrNames (lib.filterAttrs (n: v: v.region == region) (ec2KeyPairs accessKeyId)));
 
-  ec2KeyPairs = {
+  ec2KeyPairs = accessKeyId: {
     cardano-test-eu-central = { inherit accessKeyId; region = "eu-central-1"; };
     cardano-test-eu-west-1 = { inherit accessKeyId; region = "eu-west-1"; };
     cardano-test-eu-west-2 = { inherit accessKeyId; region = "eu-west-2"; };
