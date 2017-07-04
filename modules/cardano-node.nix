@@ -89,7 +89,7 @@ in {
       networkDiameter = mkOption { type = types.int; };
       mpcRelayInterval = mkOption { type = types.int; };
       statsdServer = mkOption {
-        type = types.str;
+        type = types.nullOr types.str;
         description = "IP:Port of the EKG telemetry sink";
         default = null;
       };
