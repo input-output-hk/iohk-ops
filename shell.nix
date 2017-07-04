@@ -3,7 +3,6 @@
 , nixpkgs  ? lib.fetchNixPkgs
 , pkgs     ? import nixpkgs {}
 , iohkpkgs ? import ./default.nix { inherit pkgs; }
-, stack2nix ? iohkpkgs.callPackage ./pkgs/stack2nix.nix {}
 }: let
 
 compiler      = pkgs.haskell.packages."${ghcVer}";
@@ -24,8 +23,6 @@ ghc           = ghcOrig.override (oldArgs: {
   in with new; parent // {
       # intero         = overGithub  old.intero "commercialhaskell/intero"
       #                  "e546ea086d72b5bf8556727e2983930621c3cb3c" "1qv7l5ri3nysrpmnzfssw8wvdvz0f6bmymnz1agr66fplazid4pn" { doCheck = false; };
-      inherit stack2nix;
-      iohk-ops       = iohkpkgs.callPackage (import ./iohk) {};
     };
   });
 
@@ -41,7 +38,7 @@ drvf =
 mkDerivation {
   pname = "iohk-shell-env";
   version = "0.0.1";
-  src = ./.;
+  src = ./iohk;
   isLibrary = false;
   isExecutable = true;
   doHaddock = false;
@@ -59,6 +56,6 @@ mkDerivation {
   license      = stdenv.lib.licenses.mit;
 };
 
-drv = ghc.callPackage drvf {};
+drv = pkgs.haskellPackages.callPackage drvf { inherit (iohkpkgs) stack2nix iohk-ops; };
 
 in if pkgs.lib.inNixShell then drv.env else drv

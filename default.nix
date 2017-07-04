@@ -12,7 +12,7 @@ let
   });
 
   socket-io-src = pkgs.fetchgit (removeAttrs (importJSON ./pkgs/engine-io.json) ["date"]);
-in (import pkgs/default.nix { inherit pkgs compiler; }).override {
+  iohkpkgs = ((import pkgs/default.nix { inherit pkgs compiler; }).override {
   overrides = self: super: {
     cardano-sl-core = prodMode super.cardano-sl-core;
     cardano-sl = overrideCabal super.cardano-sl (drv: {
@@ -38,7 +38,6 @@ in (import pkgs/default.nix { inherit pkgs compiler; }).override {
     # Gold linker fixes
     cryptonite = addConfigureFlags ["--ghc-option=-optl-pthread"] super.cryptonite;
 
-    iohk-ops =  super.callPackage ./iohk/default.nix {};
 
     # sl-explorer
     # TODO: https://issues.serokell.io/issue/CSM-195
@@ -55,4 +54,10 @@ in (import pkgs/default.nix { inherit pkgs compiler; }).override {
     #enableLibraryProfiling = false;
     #});
   };
-}
+});
+  cabal2nixpkgs = rec {
+    # extra packages to expose, that have no relation to pkgs/default.nix
+    stack2nix = compiler.callPackage ./pkgs/stack2nix.nix {};
+    iohk-ops =  compiler.callCabal2nix "iohk-ops" ./iohk {};
+  };
+in iohkpkgs // cabal2nixpkgs
