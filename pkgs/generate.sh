@@ -1,5 +1,5 @@
-
-#!/bin/sh
+#!/usr/bin/env nix-shell
+#! nix-shell -p jq -i bash
 
 function runInShell {
   nix-shell -j 4 -p cabal2nix nix-prefetch-scripts coreutils cabal-install stack --run "$*"
