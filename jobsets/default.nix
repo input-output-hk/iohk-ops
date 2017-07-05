@@ -30,6 +30,7 @@ let
     emailoverride = "";
   };
   mkCardano = nixopsBranch: nixpkgsRev: {
+    checkinterval = 3600;
     nixexprpath = "jobsets/cardano.nix";
     description = "Cardano SL";
     inputs = {
