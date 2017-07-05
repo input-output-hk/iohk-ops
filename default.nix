@@ -12,7 +12,7 @@ let
   });
 
   socket-io-src = pkgs.fetchgit (removeAttrs (importJSON ./pkgs/engine-io.json) ["date"]);
-  iohkpkgs = ((import pkgs/default.nix { inherit pkgs compiler; }).override {
+  iohkpkgs = compiler.override {
   overrides = self: super: {
     cardano-sl-core = prodMode super.cardano-sl-core;
     cardano-sl = overrideCabal super.cardano-sl (drv: {
@@ -54,7 +54,7 @@ let
     #enableLibraryProfiling = false;
     #});
   };
-});
+};
   cabal2nixpkgs = rec {
     # extra packages to expose, that have no relation to pkgs/default.nix
     stack2nix = compiler.callPackage ./pkgs/stack2nix.nix {};
