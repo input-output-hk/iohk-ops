@@ -1,5 +1,5 @@
 { mkDerivation, aeson, base, bytestring, cassava, containers, lens
-, lens-aeson, mtl, optional-args, safe, stdenv, system-filepath
+, lens-aeson, mtl, nix-prefetch-scripts, optional-args, safe, stdenv, system-filepath
 , text, turtle, utf8-string, vector, yaml
 , awscli, nix-prefetch-scripts, wget
 }:
@@ -10,7 +10,7 @@ mkDerivation {
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
-    aeson base bytestring cassava containers lens lens-aeson mtl
+    aeson base bytestring cassava containers lens lens-aeson mtl nix-prefetch-scripts
     optional-args safe system-filepath text turtle utf8-string vector
     yaml
     awscli nix-prefetch-scripts wget

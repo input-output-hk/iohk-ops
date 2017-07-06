@@ -55,9 +55,20 @@ let
     #});
   };
 });
+  iohk-ops-extra-runtime-deps = [
+    pkgs.git pkgs.nix-prefetch-scripts
+  ];
   cabal2nixpkgs = rec {
     # extra packages to expose, that have no relation to pkgs/default.nix
     stack2nix = compiler.callPackage ./pkgs/stack2nix.nix {};
-    iohk-ops =  compiler.callCabal2nix "iohk-ops" ./iohk {};
+    iohk-ops = pkgs.haskell.lib.overrideCabal
+               (compiler.callCabal2nix "iohk-ops" ./iohk {})
+               (drv: {
+                  executableToolDepends = [ pkgs.makeWrapper ];
+                  postInstall = ''
+                    wrapProgram $out/bin/iohk-ops \
+                    --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
+                  '';
+               });
   };
 in iohkpkgs // cabal2nixpkgs
