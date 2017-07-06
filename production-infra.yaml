@@ -1,8 +1,17 @@
-deploymentName: iohk-infra
-nixopsExecutable: nixops
-nixPath: nixpkgs=https://github.com/NixOS/nixpkgs/archive/9b948ea439ddbaa26740ce35543e7e35d2aa6d18.tar.gz
-deploymentFiles:
+args:
+  nodeLimit:
+    tag: NixInt
+    contents: 14
+  accessKeyId:
+    tag: NixStr
+    contents: cardano-deployer
+environment: Production
+name: iohk-infra
+files:
 - deployments/keypairs.nix
 - deployments/infrastructure.nix
-- deployments/infrastructure-target-aws.nix
 - deployments/infrastructure-env-production.nix
+- deployments/infrastructure-target-aws.nix
+elements:
+- Infra
+target: AWS
