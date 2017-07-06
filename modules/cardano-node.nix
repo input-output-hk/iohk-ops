@@ -169,7 +169,7 @@ in {
       getDailyTime = testIndex: let
           # how many minutes between each node restarting
           minute = mod (testIndex * 4) 60;
-        in "0/4:${toString minute}";
+        in "0/2:${toString minute}";
     in {
       script = ''
         /run/current-system/sw/bin/systemctl restart cardano-node
