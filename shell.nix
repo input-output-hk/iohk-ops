@@ -31,9 +31,10 @@ ghc           = ghcOrig.override (oldArgs: {
 ###
 drvf =
 { mkDerivation, stdenv
-,   aeson, base, cassava, jq, lens-aeson, nix-prefetch-git, safe, turtle, utf8-string, vector, yaml
+,   aeson, base, cassava, jq, lens-aeson, safe, turtle, utf8-string, vector, yaml
+### non-haskell
 ,   stack2nix, cabal2nix, cabal-install, intero
-,   iohk-ops
+,   iohk-ops, awscli, nix-prefetch-scripts, wget
 }:
 mkDerivation {
   pname = "iohk-shell-env";
@@ -43,10 +44,11 @@ mkDerivation {
   isExecutable = true;
   doHaddock = false;
   executableHaskellDepends = [
-    aeson  base  cassava  jq  lens-aeson  nix-prefetch-git  safe  turtle  utf8-string  vector  yaml
+    aeson  base  cassava  jq  lens-aeson  safe  turtle  utf8-string  vector  yaml
+### non-haskell
     stack2nix  cabal2nix  cabal-install  intero
     pkgs.stack
-    iohk-ops
+    iohk-ops  awscli  nix-prefetch-scripts  wget
   ];
   shellHook =
   ''
