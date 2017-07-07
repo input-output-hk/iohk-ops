@@ -77,6 +77,12 @@ data NixGitSource
   } deriving (Generic, Show)
 instance FromJSON NixGitSource
 
+readNixGitSource :: String -> IO NixGitSource
+readNixGitSource path = do
+  bs <- BL.readFile path
+  pure $ flip fromMaybe (AE.decode bs) $
+    errorT $ format ("File doesn't parse as NixGitSource: "%s) (T.pack path)
+
 -- | The set of first-class types present in Nix
 data NixValue
   = NixBool Bool
@@ -388,9 +394,7 @@ generateGenesis :: Options -> NixopsConfig -> IO ()
 generateGenesis o c = do
   let cardanoSLSrcSpecFile = "cardano-sl-src.json"
       cardanoSLDir         = "cardano-sl"
-  bs    <- BL.readFile cardanoSLSrcSpecFile
-  let NixGitSource{..} = flip fromMaybe (AE.decode bs) $
-                         errorT $ format ("Version spec for 'cardano-sl' doesn't parse as NixGitSource: "%s) (T.pack cardanoSLSrcSpecFile)
+  NixGitSource{..} <- readNixGitSource cardanoSLSrcSpecFile
   printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit rev
   exists <- testpath cardanoSLDir
   unless exists $
