@@ -8,8 +8,8 @@ mkDerivation {
   version = "0.1.3.0";
   src = fetchgit {
     url = "https://github.com/input-output-hk/stack2nix.git";
-    sha256 = "0p16b07d2xij9rbgpp1i7ckv9k3r1b3wzkprcdwxfsmxcwfch3ra";
-    rev = "4af251173831da7525b432cd566b3127c2c6751f";
+    sha256 = "10d83s7kg73fzycd18m0z4zvw8c844h21kdkfp2rl55fjp7gnf33";
+    rev = "379b4daa5281dd65982ffe6a150fac11fd8cb901";
   };
   isLibrary = true;
   isExecutable = true;
