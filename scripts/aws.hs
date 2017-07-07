@@ -1,6 +1,4 @@
-#!/usr/bin/env nix-shell
-#! nix-shell -j 4 -i runhaskell -p 'pkgs.haskellPackages.ghcWithPackages (hp: with hp; [ turtle ])'
-#! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/f2c4af4e3bd9ecd4b1cf494270eae5fd3ca9e68c.tar.gz
+#!/usr/bin/env runhaskell
 
 {-# LANGUAGE OverloadedStrings, UnicodeSyntax #-}
 

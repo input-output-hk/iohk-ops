@@ -1,6 +1,7 @@
 { mkDerivation, aeson, base, bytestring, cassava, containers, lens
 , lens-aeson, mtl, optional-args, safe, stdenv, system-filepath
 , text, turtle, utf8-string, vector, yaml
+, awscli, nix-prefetch-scripts, wget
 }:
 mkDerivation {
   pname = "iohk-ops";
@@ -12,6 +13,7 @@ mkDerivation {
     aeson base bytestring cassava containers lens lens-aeson mtl
     optional-args safe system-filepath text turtle utf8-string vector
     yaml
+    awscli nix-prefetch-scripts wget
   ];
   license = stdenv.lib.licenses.bsd3;
 }
