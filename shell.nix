@@ -34,7 +34,7 @@ drvf =
 ,   aeson, base, cassava, jq, lens-aeson, safe, turtle, utf8-string, vector, yaml
 ### non-haskell
 ,   stack2nix, cabal2nix, cabal-install, intero
-,   iohk-ops, awscli, nix-prefetch-scripts, wget
+,   iohk-ops, awscli, git, nix-prefetch-scripts, wget
 }:
 mkDerivation {
   pname = "iohk-shell-env";
@@ -45,10 +45,11 @@ mkDerivation {
   doHaddock = false;
   executableHaskellDepends = [
     aeson  base  cassava  jq  lens-aeson  safe  turtle  utf8-string  vector  yaml
+    aeson  base  cassava  jq  lens-aeson  nix-prefetch-scripts  safe  turtle  utf8-string  vector  yaml
 ### non-haskell
     stack2nix  cabal2nix  cabal-install  intero
     pkgs.stack
-    iohk-ops  awscli  nix-prefetch-scripts  wget
+    iohk-ops  awscli  git  nix-prefetch-scripts  wget
   ];
   shellHook =
   ''
