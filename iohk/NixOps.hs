@@ -54,6 +54,7 @@ defaultNodeLimit   = 14
 data Project
   = Cardanosl
   | CardanoExplorer
+  | Nixpkgs
   | Stack2nix
   deriving (Bounded, Enum, Eq, Read, Show)
 
@@ -63,11 +64,13 @@ allProjects = enumFromTo minBound maxBound
 projectURL     :: Project -> URL
 projectURL     Cardanosl       = "https://github.com/input-output-hk/cardano-sl.git"
 projectURL     CardanoExplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
+projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
 projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
 
 projectSrcFile :: Project -> FilePath
 projectSrcFile Cardanosl       = "cardano-sl-src.json"
 projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
+projectSrcFile Nixpkgs         = "nixpkgs-src.json"
 projectSrcFile Stack2nix       = "stack2nix-src.json"
 
 -- * Primitive types
@@ -542,13 +545,6 @@ toNodesInfo vector =
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
 getNodePublicIP name vector =
     headMay $ V.toList $ fmap (getIP . diPublicIP) $ V.filter (\di -> fromNodeName (diName di) == name) vector
-
-
--- * Unused
-nixpkgsBaseURL = "https://github.com/NixOS/nixpkgs/archive/"
-
-nixpkgsURL :: Commit -> URL
-nixpkgsURL = URL . (\c-> nixpkgsBaseURL <> c <> ".tar.gz") . fromCommit
 
 
 -- * Utils
