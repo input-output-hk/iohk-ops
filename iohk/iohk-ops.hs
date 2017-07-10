@@ -255,7 +255,9 @@ runTemplate o@Options{..} Template{..} = do
     cd branchDir
     cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
 
-  let config = Ops.mkConfig tBranch tEnvironment tTarget tDeployments tNodeLimit
+  Ops.NixGitSource{..} <- Ops.readNixGitSource Nixpkgs
+
+  let config = Ops.mkConfig tBranch rev tEnvironment tTarget tDeployments tNodeLimit
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

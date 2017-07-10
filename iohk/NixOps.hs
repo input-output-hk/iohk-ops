@@ -73,17 +73,18 @@ projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
 projectSrcFile Nixpkgs         = "nixpkgs-src.json"
 projectSrcFile Stack2nix       = "stack2nix-src.json"
 
+
 -- * Primitive types
 --
 newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixParam  = NixParam  { fromNixParam :: Text } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
 newtype Machine   = Machine   { fromMachine :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 
 
 -- * A bit of Nix types
@@ -245,6 +246,7 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
 
 data NixopsConfig = NixopsConfig
   { cName             :: Text
+  , cNixpkgsCommit    :: Commit
   , cEnvironment      :: Environment
   , cTarget           :: Target
   , cElements         :: [Deployment]
@@ -254,6 +256,7 @@ data NixopsConfig = NixopsConfig
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
+        <*> v .: "nixpkgs"
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "elements"
@@ -265,6 +268,7 @@ instance ToJSON Deployment
 instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
    [ "name"        .= cName
+   , "nixpkgs    " .= fromCommit cNixpkgsCommit
    , "environment" .= showT cEnvironment
    , "target"      .= showT cTarget
    , "elements"    .= cElements
@@ -277,8 +281,8 @@ deploymentFiles cEnvironment cTarget cElements =
   concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Branch -> Environment -> Target -> [Deployment] -> Integer -> NixopsConfig
-mkConfig (Branch cName) cEnvironment cTarget cElements nodeLimit =
+mkConfig :: Branch -> Commit -> Environment -> Target -> [Deployment] -> Integer -> NixopsConfig
+mkConfig (Branch cName) cNixpkgsCommit cEnvironment cTarget cElements nodeLimit =
   let cFiles    = deploymentFiles cEnvironment cTarget cElements
       cDeplArgs = selectDeploymentArgs cEnvironment cElements nodeLimit
   in NixopsConfig{..}
