@@ -40,11 +40,8 @@ import qualified Turtle as Turtle
 
 -- * Constants
 --
-iohkNixopsURL, cardanoSlURL, cardanoSlExplorerURL, stack2NixURL, awsPublicIPURL :: URL
+awsPublicIPURL, iohkNixopsURL :: URL
 iohkNixopsURL        = "https://github.com/input-output-hk/iohk-nixops.git"
-cardanoSlURL         = "https://github.com/input-output-hk/cardano-sl.git"
-cardanoSlExplorerURL = "https://github.com/input-output-hk/cardano-sl-explorer.git"
-stack2NixURL         = "https://github.com/input-output-hk/stack2nix.git"
 awsPublicIPURL       = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
 defaultEnvironment = Development
@@ -52,6 +49,27 @@ defaultTarget      = AWS
 defaultNodeLimit   = 14
 
 
+-- * Projects
+--
+data Project
+  = Cardanosl
+  | CardanoExplorer
+  | Stack2nix
+  deriving (Bounded, Enum, Eq, Read, Show)
+
+allProjects :: [Project]
+allProjects = enumFromTo minBound maxBound
+
+projectURL     :: Project -> URL
+projectURL     Cardanosl       = "https://github.com/input-output-hk/cardano-sl.git"
+projectURL     CardanoExplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
+projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
+
+projectSrcFile :: Project -> FilePath
+projectSrcFile Cardanosl       = "cardano-sl-src.json"
+projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
+projectSrcFile Stack2nix       = "stack2nix-src.json"
+
 -- * Primitive types
 --
 newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generic, Show, IsString)
@@ -77,11 +95,11 @@ data NixGitSource
   } deriving (Generic, Show)
 instance FromJSON NixGitSource
 
-readNixGitSource :: String -> IO NixGitSource
-readNixGitSource path = do
-  bs <- BL.readFile path
+readNixGitSource :: Project -> IO NixGitSource
+readNixGitSource (projectSrcFile -> path) = do
+  bs <- BL.readFile (T.unpack $ format fp path)
   pure $ flip fromMaybe (AE.decode bs) $
-    errorT $ format ("File doesn't parse as NixGitSource: "%s) (T.pack path)
+    errorT $ format ("File doesn't parse as NixGitSource: "%fp) path
 
 -- | The set of first-class types present in Nix
 data NixValue
@@ -392,13 +410,12 @@ fromscratch o c = do
 --
 generateGenesis :: Options -> NixopsConfig -> IO ()
 generateGenesis o c = do
-  let cardanoSLSrcSpecFile = "cardano-sl-src.json"
-      cardanoSLDir         = "cardano-sl"
-  NixGitSource{..} <- readNixGitSource cardanoSLSrcSpecFile
+  let cardanoSLDir         = "cardano-sl"
+  NixGitSource{..} <- readNixGitSource Cardanosl
   printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit rev
   exists <- testpath cardanoSLDir
   unless exists $
-    cmd o "git" ["clone", fromURL cardanoSlURL, "cardano-sl"]
+    cmd o "git" ["clone", fromURL $ projectURL Cardanosl, "cardano-sl"]
   cd "cardano-sl"
   cmd o "git" ["fetch"]
   cmd o "git" ["reset", "--hard", fromCommit rev]

@@ -12,8 +12,8 @@ import           Text.Read                        (readMaybe)
 import           Turtle                    hiding (procs, shells)
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
-                                                  ,Options(..), NixopsCmd(..), Region(..), URL(..)
-                                                  ,showT, cmd, incmd)
+                                                  ,Options(..), NixopsCmd(..), Project(..), Region(..), URL(..)
+                                                  ,showT, cmd, incmd, projectURL)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import qualified Timewarp                      as Timewarp
@@ -23,6 +23,8 @@ import qualified Timewarp                      as Timewarp
 --
 optReadLower :: Read a => ArgName -> ShortName -> Optional HelpMessage -> Parser a
 optReadLower = opt (readMaybe . T.unpack . T.toTitle)
+argReadLower :: Read a => ArgName -> Optional HelpMessage -> Parser a
+argReadLower = arg (readMaybe . T.unpack . T.toTitle)
 
 parserBranch :: Optional HelpMessage -> Parser Branch
 parserBranch desc = Branch <$> argText "branch" desc
@@ -35,6 +37,9 @@ parserEnvironment = fromMaybe Ops.defaultEnvironment <$> optional (optReadLower 
 
 parserTarget      :: Parser Target
 parserTarget      = fromMaybe Ops.defaultTarget      <$> optional (optReadLower "target"      't' "Target: AWS, All;  defaults to AWS")
+
+parserProject     :: Parser Project
+parserProject     = argReadLower "project" $ pure $ Turtle.HelpMessage ("Project to set version of: " <> T.intercalate ", " (showT <$> Ops.allProjects))
 
 parserDeployment  :: Parser Deployment
 parserDeployment  = argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'"
@@ -62,9 +67,7 @@ data Command where
                            , tBranch      :: Branch
                            , tDeployments :: [Deployment]
                            } -> Command
-  SetCardanoRev         :: Commit -> Command
-  SetExplorerRev        :: Commit -> Command
-  SetStack2NixRev       :: Commit -> Command
+  SetRev                :: Project -> Commit -> Command
   MiniKeys              :: Command
 
   -- * building
@@ -110,12 +113,10 @@ centralCommandParser =
                                 <*> parserTarget
                                 <*> parserBranch "iohk-nixops branch to check out"
                                 <*> parserDeployments)
-    , ("set-cardano-rev",       "Set cardano-sl commit to COMMIT",
-                                SetCardanoRev   <$> parserCommit "Commit to set 'cardano-sl' version to")
-    , ("set-explorer-rev",      "Set cardano-sl-explorer commit to COMMIT",
-                                SetExplorerRev  <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
-    , ("set-stack2nix-rev",     "Set stack2nix commit to COMMIT",
-                                SetStack2NixRev <$> parserCommit "Commit to set 'stack2nix' version to")
+    , ("set-rev",               "Set commit of PROJECT dependency to COMMIT",
+                                SetRev
+                                <$> parserProject
+                                <*> parserCommit "Commit to set PROJECT's version to")
     , ("mini-keys",             "Fake/enter minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure MiniKeys)
     , ("do",                    "Chain commands",                                                   Do <$> parserDo) ]
 
@@ -170,10 +171,8 @@ main = do
                              (,) <$> Ops.parserOptions <*> centralCommandParser
 
   case topcmd of
-    Template{..}             -> runTemplate        o topcmd
-    SetCardanoRev   commit   -> runSetCardanoRev   o commit
-    SetExplorerRev  commit   -> runSetExplorerRev  o commit
-    SetStack2NixRev commit   -> runSetStack2NixRev o commit
+    Template{..}                -> runTemplate        o topcmd
+    SetRev       project commit -> runSetRev          o project commit
 
     _ -> do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
@@ -236,9 +235,7 @@ main = do
             PrintDate                -> getNodeNames'
                                         >>= Cardano.printDate        o c
             Template{..}             -> error "impossible"
-            SetCardanoRev   _        -> error "impossible"
-            SetExplorerRev  _        -> error "impossible"
-            SetStack2NixRev _        -> error "impossible"
+            SetRev   _ _             -> error "impossible"
 
 
 runTemplate :: Options -> Command -> IO ()
@@ -266,19 +263,11 @@ runTemplate o@Options{..} Template{..} = do
   cmd o "cat" [configFilename]
 runTemplate Options{..} _ = error "impossible"
 
-runSetCardanoRev, runSetExplorerRev, runSetStack2NixRev :: Options -> Commit -> IO ()
-runSetCardanoRev o rev = do
-  printf ("Setting cardano-sl commit to "%s%"\n") $ fromCommit rev
-  spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlURL, fromCommit rev]
-  writeFile "cardano-sl-src.json" $ T.unpack spec
-runSetExplorerRev o rev = do
-  printf ("Setting cardano-sl-explorer commit to "%s%"\n") $ fromCommit rev
-  spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlExplorerURL, fromCommit rev]
-  writeFile "cardano-sl-explorer-src.json" $ T.unpack spec
-runSetStack2NixRev o rev = do
-  printf ("Setting stack2nix commit to "%s%"\n") $ fromCommit rev
-  spec <- incmd o "nix-prefetch-git" [fromURL Ops.stack2NixURL, fromCommit rev]
-  writeFile "stack2nix-src.json" $ T.unpack spec
+runSetRev :: Options -> Project -> Commit -> IO ()
+runSetRev o proj rev = do
+  printf ("Setting "%w%" commit to "%s%"\n") proj (fromCommit rev)
+  spec <- incmd o "nix-prefetch-git" ["--no-deepClone", fromURL $ projectURL proj, fromCommit rev]
+  writeFile (T.unpack $ format fp $ Ops.projectSrcFile proj) $ T.unpack spec
 
 runMiniKeys :: IO ()
 runMiniKeys = do
