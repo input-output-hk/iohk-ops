@@ -77,7 +77,7 @@ in {
         description = "Executable to run as the daemon.";
         default = "${cardano}/bin/cardano-node";
       };
-      autoStart = mkOption { type = types.bool; default = false; };
+      autoStart = mkOption { type = types.bool; default = true; };
       initialPeers = mkOption {
         type = types.nullOr (types.listOf types.str);
         description = "A file with peer/dht mappings";
