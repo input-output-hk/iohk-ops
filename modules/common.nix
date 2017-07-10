@@ -53,7 +53,7 @@ in {
     binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
   };
   system.extraSystemBuilderCmds = let
-    setNixpkgs = pkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./../nixpkgs-src.json));
+    setNixpkgs = fetchNixpkgsWithNixpkgs pkgs;
   in ''
     ln -sv ${setNixpkgs} $out/nixpkgs
   '';

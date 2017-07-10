@@ -29,9 +29,10 @@ in lib // (rec {
     ) nodes;
 
   # fetch nixpkgs and give the expected hash
+  fetchNixpkgsWithNixpkgs = nixpkgs: nixpkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
   fetchNixPkgs = if builtins.getEnv "NIX_PATH_LOCKED" == "1"
     then builtins.trace "using host nixpkgs" <nixpkgs>
-    else builtins.trace "fetching nixpkgs" hostPkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
+    else builtins.trace "fetching nixpkgs"   fetchNixpkgsWithNixpkgs hostPkgs;
 
   # Parse peers from a file
   #
