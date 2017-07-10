@@ -68,7 +68,7 @@ data Command where
                            , tDeployments :: [Deployment]
                            } -> Command
   SetRev                :: Project -> Commit -> Command
-  MiniKeys              :: Command
+  FakeKeys              :: Command
 
   -- * building
   Genesis               :: Command
@@ -117,7 +117,7 @@ centralCommandParser =
                                 SetRev
                                 <$> parserProject
                                 <*> parserCommit "Commit to set PROJECT's version to")
-    , ("mini-keys",             "Fake/enter minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure MiniKeys)
+    , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
     , ("do",                    "Chain commands",                                                   Do <$> parserDo) ]
 
    <|> subcommandGroup "Build-related:"
@@ -196,7 +196,7 @@ main = do
               getNodeNames' = filter isNode <$> Ops.getNodeNames o c
           case cmd of
             -- * setup
-            MiniKeys                 -> runMiniKeys
+            FakeKeys                 -> runFakeKeys
             -- * building
             Genesis                  -> Ops.generateGenesis           o c
             GenerateIPDHTMappings    -> void $
@@ -271,18 +271,11 @@ runSetRev o proj rev = do
   spec <- incmd o "nix-prefetch-git" ["--no-deepClone", fromURL $ projectURL proj, fromCommit rev]
   writeFile (T.unpack $ format fp $ Ops.projectSrcFile proj) $ T.unpack spec
 
-runMiniKeys :: IO ()
-runMiniKeys = do
+runFakeKeys :: IO ()
+runFakeKeys = do
   echo "Faking keys/key*.sk"
   testdir "keys"
     >>= flip unless (mkdir "keys")
   forM_ (41:[1..14]) $
     (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
-  echo "DataDog secrets cannot be faked, and must be provided:"
-  printf "Enter static/datadog-api.secret: "
-  Just apiKey <- readline
-  writeTextFile "static/datadog-api.secret" $ lineToText apiKey
-  printf "Enter static/datadog-application.secret: "
-  Just appKey <- readline
-  writeTextFile "static/datadog-application.secret" $ lineToText appKey
   echo "Minimum viable keyset complete."
