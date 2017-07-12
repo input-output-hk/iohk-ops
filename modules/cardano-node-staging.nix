@@ -10,6 +10,10 @@ with (import ./../lib.nix);
   # DEVOPS-64: disable log bursting
   services.journald.rateLimitBurst = 0;
 
+  services.cardano-node = {
+    saveCoreDumps = true;
+  };
+
   deployment.ec2.elasticIPv4 = resources.elasticIPs.${"nodeip" + toString config.services.cardano-node.testIndex};
 
   deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;

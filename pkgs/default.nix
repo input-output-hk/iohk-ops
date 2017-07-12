@@ -3859,8 +3859,8 @@ self: {
           pname = "hashable";
           version = "1.2.6.0";
           sha256 = "0lhadvg4l18iff2hg4d5akn5f3lrg9pfwxpkn1j2zxbsh8y6d6s2";
-          revision = "1";
-          editedCabalFile = "8f8a4f7b788fb1ea04636634c7e1c9cd0a4a6cfe66cdb808dc24f56c187451df";
+          revision = "2";
+          editedCabalFile = "184445663ed46f30b4a7ca415a7482b5b0e0b1ddb31c5bb1b012a3b6490a4087";
           isLibrary = true;
           isExecutable = true;
           libraryHaskellDepends = [
