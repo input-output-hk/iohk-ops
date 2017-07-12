@@ -2,7 +2,8 @@
 # nix-repl lib.nix
 
 let
-  lib = (import <nixpkgs> {}).lib;
+  hostPkgs = import <nixpkgs> {};
+  lib = hostPkgs.lib;
 in lib // (rec {
   # Allows to also generate the key compared to upstream genAttrs
   genAttrs' = names: fkey: fname:
@@ -28,7 +29,9 @@ in lib // (rec {
     ) nodes;
 
   # fetch nixpkgs and give the expected hash
-  fetchNixPkgs = (import <nixpkgs> {}).fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
+  fetchNixPkgs = if builtins.getEnv "NIX_PATH_LOCKED" == "1"
+    then builtins.trace "using host nixpkgs" <nixpkgs>
+    else builtins.trace "fetching nixpkgs" hostPkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
 
   # Parse peers from a file
   #

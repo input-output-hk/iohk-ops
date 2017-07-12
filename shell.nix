@@ -54,6 +54,7 @@ mkDerivation {
   shellHook =
   ''
     export NIX_PATH=nixpkgs=${nixpkgs}
+    export NIX_PATH_LOCKED=1
     echo   NIX_PATH set to $NIX_PATH >&2
   '';
   license      = stdenv.lib.licenses.mit;
