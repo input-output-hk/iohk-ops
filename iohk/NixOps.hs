@@ -98,17 +98,12 @@ data NixGitSource
   , fetchSubmodules :: Bool
   } deriving (Generic, Show)
 instance FromJSON NixGitSource
-instance ToJSON NixGitSource
 
 readNixGitSource :: Project -> IO NixGitSource
 readNixGitSource (projectSrcFile -> path) = do
   bs <- BL.readFile (T.unpack $ format fp path)
   pure $ flip fromMaybe (AE.decode bs) $
     errorT $ format ("File doesn't parse as NixGitSource: "%fp) path
-
-writeNixGitSource :: Project -> NixGitSource -> IO ()
-writeNixGitSource (projectSrcFile -> path) src = do
-  BL.writeFile (T.unpack $ format fp path) $ AE.encode src
 
 nixpkgsNixosURL :: Commit -> URL
 nixpkgsNixosURL (Commit rev) = URL $
@@ -377,6 +372,8 @@ create o c@NixopsConfig{..} = do
   when clusterExists $
     die $ format ("Cluster already exists?: '"%s%"'") cName
   printf ("Creating cluster "%s%"\n") cName
+  export "NIX_PATH_LOCKED" "1"
+  export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   nixops o c "create" $ deploymentFiles cEnvironment cTarget cElements
 
 modify :: Options -> NixopsConfig -> IO ()
