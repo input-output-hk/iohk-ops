@@ -110,6 +110,10 @@ writeNixGitSource :: Project -> NixGitSource -> IO ()
 writeNixGitSource (projectSrcFile -> path) src = do
   BL.writeFile (T.unpack $ format fp path) $ AE.encode src
 
+nixpkgsNixosURL :: Commit -> URL
+nixpkgsNixosURL (Commit rev) = URL $
+  "https://github.com/NixOS/nixpkgs/archive/" <> rev <> ".tar.gz"
+
 -- | The set of first-class types present in Nix
 data NixValue
   = NixBool Bool
@@ -246,7 +250,9 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--debug"   | oDebug]   <>
   ["--confirm" | oConfirm] <>
   ["--show-trace"
-  ,"--deployment", cName ]
+  ,"--deployment", cName
+  ,"-I", "nixpkgs=" <> (fromURL $ nixpkgsNixosURL cNixpkgsCommit)
+  ]
 
 
 data NixopsConfig = NixopsConfig
