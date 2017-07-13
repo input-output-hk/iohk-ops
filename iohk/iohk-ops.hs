@@ -81,7 +81,7 @@ data Command where
   Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
-  Deploy                :: Bool -> Command
+  Deploy                :: Bool -> Bool -> Command
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
@@ -138,7 +138,8 @@ centralCommandParser =
    , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> switch "evaluate-only" 'e' "Dry-run: pass --evaluate-only to 'nixops'.")
+                                <$> switch "evaluate-only" 'e' "Pass --evaluate-only to 'nixops'."
+                                <*> switch "build-only"    'b' "Pass --build-only to 'nixops'.")
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
@@ -208,7 +209,7 @@ main = do
             Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy evonly            -> Ops.deploy                    o c evonly
+            Deploy evonly buonly     -> Ops.deploy                    o c evonly buonly
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
