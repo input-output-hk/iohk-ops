@@ -24,6 +24,8 @@ in {
 
   environment.variables.TERM = "xterm-256color";
 
+  systemd.coredump.enable = config.services.cardano-node.saveCoreDumps;
+
   services.cron.enable = true;
   #services.cron.systemCronJobs = [
   #  "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 2 29 /var/log/saALL"

@@ -71,6 +71,11 @@ in {
         type = types.bool;
         default = false;
       };
+      saveCoreDumps = mkOption {
+        type = types.bool;
+        default = false;
+        description = "automatically save coredumps when cardano-node segfaults";
+      };
 
       executable = mkOption {
         type = types.str;
@@ -187,6 +192,10 @@ in {
         key = keyId + ".sk";
       in ''
         [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}${key}
+        ${optionalString (cfg.saveCoreDumps) ''
+          # only a process with non-zero coresize can coredump (the default is 0)
+          ulimit -c unlimited
+        ''}
         exec ${command}
       '';
       serviceConfig = {
