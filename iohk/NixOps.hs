@@ -245,13 +245,16 @@ parserOptions = Options
                 <*> switch  "serial"  's' "Disable parallelisation"
                 <*> switch  "verbose" 'v' "Print all commands that are being run"
 
+nixpkgsCommitPath :: Commit -> Text
+nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
+
 nixopsCmdOptions :: Options -> NixopsConfig -> [Text]
 nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--debug"   | oDebug]   <>
   ["--confirm" | oConfirm] <>
   ["--show-trace"
   ,"--deployment", cName
-  ,"-I", "nixpkgs=" <> (fromURL $ nixpkgsNixosURL cNixpkgsCommit)
+  ,"-I", nixpkgsCommitPath cNixpkgsCommit
   ]
 
 
@@ -390,6 +393,7 @@ deploy o c@NixopsConfig{..} evonly buonly = do
 
   printf ("Deploying cluster "%s%"\n") cName
   export "NIX_PATH_LOCKED" "1"
+  export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   when (not evonly) $ do
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
