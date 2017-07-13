@@ -178,7 +178,7 @@ main = do
     _ -> do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
       let cf = flip fromMaybe oConfigFile $
-               error $ "Sub-command " <> show topcmd <> " requires -c <config-file> to be specified."
+               Ops.envConfigFilename Any
       c <- Ops.readConfig cf
       
       when oVerbose $
