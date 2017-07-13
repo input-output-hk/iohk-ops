@@ -1,5 +1,9 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -89,21 +93,45 @@ newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generi
 
 -- * A bit of Nix types
 --
--- | The output of 'nix-prefetch-git'
-data NixGitSource
-  = NixGitSource
-  { url             :: URL
-  , rev             :: Commit
-  , sha256          :: NixHash
-  , fetchSubmodules :: Bool
-  } deriving (Generic, Show)
-instance FromJSON NixGitSource
+data SourceKind = Git | Github
 
-readNixGitSource :: Project -> IO NixGitSource
-readNixGitSource (projectSrcFile -> path) = do
-  bs <- BL.readFile (T.unpack $ format fp path)
-  pure $ flip fromMaybe (AE.decode bs) $
-    errorT $ format ("File doesn't parse as NixGitSource: "%fp) path
+data NixSource (a :: SourceKind) where
+  -- | The output of 'nix-prefetch-git'
+  GitSource ::
+    { gUrl             :: URL
+    , gRev             :: Commit
+    , gSha256          :: NixHash
+    , gFetchSubmodules :: Bool
+    } -> NixSource Git
+  GithubSource ::
+    { ghOwner           :: Text
+    , ghRepo            :: Text
+    , ghRev             :: Commit
+    , ghSha256          :: NixHash
+    } -> NixSource Github
+deriving instance Show (NixSource a)
+instance FromJSON (NixSource Git) where
+  parseJSON = AE.withObject "GitSource" $ \v -> GitSource
+      <$> v .: "url"
+      <*> v .: "rev"
+      <*> v .: "sha256"
+      <*> v .: "fetchSubmodules"
+instance FromJSON (NixSource Github) where
+  parseJSON = AE.withObject "GithubSource" $ \v -> GithubSource
+      <$> v .: "owner"
+      <*> v .: "repo"
+      <*> v .: "rev"
+      <*> v .: "sha256"
+
+githubSource :: ByteString -> Maybe (NixSource Github)
+githubSource = AE.decode
+gitSource    :: ByteString -> Maybe (NixSource Git)
+gitSource    = AE.decode
+
+readSource :: (ByteString -> Maybe (NixSource a)) -> Project -> IO (NixSource a)
+readSource parser (projectSrcFile -> path) =
+  (fromMaybe (errorT $ format ("File doesn't parse as NixSource: "%fp) path) . parser)
+  <$> BL.readFile (T.unpack $ format fp path)
 
 nixpkgsNixosURL :: Commit -> URL
 nixpkgsNixosURL (Commit rev) = URL $
@@ -433,14 +461,14 @@ fromscratch o c = do
 generateGenesis :: Options -> NixopsConfig -> IO ()
 generateGenesis o c = do
   let cardanoSLDir         = "cardano-sl"
-  NixGitSource{..} <- readNixGitSource Cardanosl
-  printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit rev
+  GitSource{..} <- readSource gitSource Cardanosl
+  printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit gRev
   exists <- testpath cardanoSLDir
   unless exists $
     cmd o "git" ["clone", fromURL $ projectURL Cardanosl, "cardano-sl"]
   cd "cardano-sl"
   cmd o "git" ["fetch"]
-  cmd o "git" ["reset", "--hard", fromCommit rev]
+  cmd o "git" ["reset", "--hard", fromCommit gRev]
   cd ".."
   export "M" "14"
   cmd o "cardano-sl/scripts/generate/genesis.sh" ["genesis"]
