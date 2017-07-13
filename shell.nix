@@ -1,6 +1,6 @@
 { ghcVer   ? "ghc802"
 , lib      ? import ./lib.nix
-, nixpkgs  ? lib.fetchNixpkgs
+, nixpkgs  ? lib.fetchNixPkgs
 , pkgs     ? import nixpkgs {}
 , iohkpkgs ? import ./default.nix { inherit pkgs; }
 }: let

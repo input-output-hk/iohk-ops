@@ -279,7 +279,7 @@ instance ToJSON Deployment
 instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
    [ "name"        .= cName
-   , "nixpkgs    " .= fromCommit cNixpkgsCommit
+   , "nixpkgs"     .= fromCommit cNixpkgsCommit
    , "environment" .= showT cEnvironment
    , "target"      .= showT cTarget
    , "elements"    .= cElements
@@ -312,6 +312,7 @@ readConfig cf = do
   let c@NixopsConfig{..}
         = case cfParse of
             Right c -> c
+            -- TODO: catch and suggest versioning
             Left  e -> error $ T.unpack $ format ("Failed to parse config file "%fp%": "%s)
                        cf (T.pack $ YAML.prettyPrintParseException e)
       storedFileSet  = Set.fromList cFiles

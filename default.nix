@@ -1,6 +1,7 @@
 let
   localLib = import ./lib.nix;
-in { pkgs ? (import (localLib.fetchNixPkgs) {})
+in
+{ pkgs ? (import (localLib.fetchNixPkgs) {})
 , compiler ? pkgs.haskell.packages.ghc802
 }:
 
