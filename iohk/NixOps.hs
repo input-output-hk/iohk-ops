@@ -389,6 +389,7 @@ deploy o c@NixopsConfig{..} evonly buonly = do
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
   printf ("Deploying cluster "%s%"\n") cName
+  export "NIX_PATH_LOCKED" "1"
   when (not evonly) $ do
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
