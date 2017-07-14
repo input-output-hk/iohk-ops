@@ -12,8 +12,8 @@ import           Text.Read                        (readMaybe)
 import           Turtle                    hiding (procs, shells)
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
-                                                  ,Options(..), NixopsCmd(..), Region(..), URL(..)
-                                                  ,showT, cmd, incmd)
+                                                  ,Options(..), NixopsCmd(..), Project(..), Region(..), URL(..)
+                                                  ,showT, cmd, incmd, projectURL)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import qualified Timewarp                      as Timewarp
@@ -23,6 +23,8 @@ import qualified Timewarp                      as Timewarp
 --
 optReadLower :: Read a => ArgName -> ShortName -> Optional HelpMessage -> Parser a
 optReadLower = opt (readMaybe . T.unpack . T.toTitle)
+argReadLower :: Read a => ArgName -> Optional HelpMessage -> Parser a
+argReadLower = arg (readMaybe . T.unpack . T.toTitle)
 
 parserBranch :: Optional HelpMessage -> Parser Branch
 parserBranch desc = Branch <$> argText "branch" desc
@@ -35,6 +37,9 @@ parserEnvironment = fromMaybe Ops.defaultEnvironment <$> optional (optReadLower 
 
 parserTarget      :: Parser Target
 parserTarget      = fromMaybe Ops.defaultTarget      <$> optional (optReadLower "target"      't' "Target: AWS, All;  defaults to AWS")
+
+parserProject     :: Parser Project
+parserProject     = argReadLower "project" $ pure $ Turtle.HelpMessage ("Project to set version of: " <> T.intercalate ", " (showT <$> Ops.allProjects))
 
 parserDeployment  :: Parser Deployment
 parserDeployment  = argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'"
@@ -62,10 +67,8 @@ data Command where
                            , tBranch      :: Branch
                            , tDeployments :: [Deployment]
                            } -> Command
-  SetCardanoRev         :: Commit -> Command
-  SetExplorerRev        :: Commit -> Command
-  SetStack2NixRev       :: Commit -> Command
-  MiniKeys              :: Command
+  SetRev                :: Project -> Commit -> Command
+  FakeKeys              :: Command
 
   -- * building
   Genesis               :: Command
@@ -78,7 +81,7 @@ data Command where
   Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
-  Deploy                :: Bool -> Command
+  Deploy                :: Bool -> Bool -> Command
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
@@ -110,13 +113,11 @@ centralCommandParser =
                                 <*> parserTarget
                                 <*> parserBranch "iohk-nixops branch to check out"
                                 <*> parserDeployments)
-    , ("set-cardano-rev",       "Set cardano-sl commit to COMMIT",
-                                SetCardanoRev   <$> parserCommit "Commit to set 'cardano-sl' version to")
-    , ("set-explorer-rev",      "Set cardano-sl-explorer commit to COMMIT",
-                                SetExplorerRev  <$> parserCommit "Commit to set 'cardano-sl-explorer' version to")
-    , ("set-stack2nix-rev",     "Set stack2nix commit to COMMIT",
-                                SetStack2NixRev <$> parserCommit "Commit to set 'stack2nix' version to")
-    , ("mini-keys",             "Fake/enter minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure MiniKeys)
+    , ("set-rev",               "Set commit of PROJECT dependency to COMMIT",
+                                SetRev
+                                <$> parserProject
+                                <*> parserCommit "Commit to set PROJECT's version to")
+    , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
     , ("do",                    "Chain commands",                                                   Do <$> parserDo) ]
 
    <|> subcommandGroup "Build-related:"
@@ -137,7 +138,8 @@ centralCommandParser =
    , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> switch "evaluate-only" 'e' "Dry-run: pass --evaluate-only to 'nixops'.")
+                                <$> switch "evaluate-only" 'e' "Pass --evaluate-only to 'nixops'."
+                                <*> switch "build-only"    'b' "Pass --build-only to 'nixops'.")
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
@@ -170,15 +172,13 @@ main = do
                              (,) <$> Ops.parserOptions <*> centralCommandParser
 
   case topcmd of
-    Template{..}             -> runTemplate        o topcmd
-    SetCardanoRev   commit   -> runSetCardanoRev   o commit
-    SetExplorerRev  commit   -> runSetExplorerRev  o commit
-    SetStack2NixRev commit   -> runSetStack2NixRev o commit
+    Template{..}                -> runTemplate        o topcmd
+    SetRev       project commit -> runSetRev          o project commit
 
     _ -> do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
       let cf = flip fromMaybe oConfigFile $
-               error $ "Sub-command " <> show topcmd <> " requires -c <config-file> to be specified."
+               Ops.envConfigFilename Any
       c <- Ops.readConfig cf
       
       when oVerbose $
@@ -197,7 +197,7 @@ main = do
               getNodeNames' = filter isNode <$> Ops.getNodeNames o c
           case cmd of
             -- * setup
-            MiniKeys                 -> runMiniKeys
+            FakeKeys                 -> runFakeKeys
             -- * building
             Genesis                  -> Ops.generateGenesis           o c
             GenerateIPDHTMappings    -> void $
@@ -209,7 +209,7 @@ main = do
             Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy evonly            -> Ops.deploy                    o c evonly
+            Deploy evonly buonly     -> Ops.deploy                    o c evonly buonly
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
@@ -236,9 +236,7 @@ main = do
             PrintDate                -> getNodeNames'
                                         >>= Cardano.printDate        o c
             Template{..}             -> error "impossible"
-            SetCardanoRev   _        -> error "impossible"
-            SetExplorerRev  _        -> error "impossible"
-            SetStack2NixRev _        -> error "impossible"
+            SetRev   _ _             -> error "impossible"
 
 
 runTemplate :: Options -> Command -> IO ()
@@ -252,13 +250,15 @@ runTemplate o@Options{..} Template{..} = do
   case (exists, tHere) of
     (_, True) -> pure ()
     (True, _) -> echo $ "Using existing git clone ..."
-    _         -> cmd o "git" ["clone", fromURL Ops.iohkNixopsURL, "-b", bname, bname]
+    _         -> cmd o "git" ["clone", fromURL $ projectURL Nixpkgs, "-b", bname, bname]
 
   unless tHere $ do
     cd branchDir
     cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
 
-  let config = Ops.mkConfig tBranch tEnvironment tTarget tDeployments tNodeLimit
+  Ops.GithubSource{..} <- Ops.readSource Ops.githubSource Nixpkgs
+
+  let config = Ops.mkConfig tBranch ghRev tEnvironment tTarget tDeployments tNodeLimit
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""
@@ -266,32 +266,17 @@ runTemplate o@Options{..} Template{..} = do
   cmd o "cat" [configFilename]
 runTemplate Options{..} _ = error "impossible"
 
-runSetCardanoRev, runSetExplorerRev, runSetStack2NixRev :: Options -> Commit -> IO ()
-runSetCardanoRev o rev = do
-  printf ("Setting cardano-sl commit to "%s%"\n") $ fromCommit rev
-  spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlURL, fromCommit rev]
-  writeFile "cardano-sl-src.json" $ T.unpack spec
-runSetExplorerRev o rev = do
-  printf ("Setting cardano-sl-explorer commit to "%s%"\n") $ fromCommit rev
-  spec <- incmd o "nix-prefetch-git" [fromURL Ops.cardanoSlExplorerURL, fromCommit rev]
-  writeFile "cardano-sl-explorer-src.json" $ T.unpack spec
-runSetStack2NixRev o rev = do
-  printf ("Setting stack2nix commit to "%s%"\n") $ fromCommit rev
-  spec <- incmd o "nix-prefetch-git" [fromURL Ops.stack2NixURL, fromCommit rev]
-  writeFile "stack2nix-src.json" $ T.unpack spec
+runSetRev :: Options -> Project -> Commit -> IO ()
+runSetRev o proj rev = do
+  printf ("Setting "%w%" commit to "%s%"\n") proj (fromCommit rev)
+  spec <- incmd o "nix-prefetch-git" ["--no-deepClone", fromURL $ projectURL proj, fromCommit rev]
+  writeFile (T.unpack $ format fp $ Ops.projectSrcFile proj) $ T.unpack spec
 
-runMiniKeys :: IO ()
-runMiniKeys = do
+runFakeKeys :: IO ()
+runFakeKeys = do
   echo "Faking keys/key*.sk"
   testdir "keys"
     >>= flip unless (mkdir "keys")
   forM_ (41:[1..14]) $
     (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
-  echo "DataDog secrets cannot be faked, and must be provided:"
-  printf "Enter static/datadog-api.secret: "
-  Just apiKey <- readline
-  writeTextFile "static/datadog-api.secret" $ lineToText apiKey
-  printf "Enter static/datadog-application.secret: "
-  Just appKey <- readline
-  writeTextFile "static/datadog-application.secret" $ lineToText appKey
   echo "Minimum viable keyset complete."

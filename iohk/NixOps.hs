@@ -1,5 +1,9 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -40,11 +44,8 @@ import qualified Turtle as Turtle
 
 -- * Constants
 --
-iohkNixopsURL, cardanoSlURL, cardanoSlExplorerURL, stack2NixURL, awsPublicIPURL :: URL
+awsPublicIPURL, iohkNixopsURL :: URL
 iohkNixopsURL        = "https://github.com/input-output-hk/iohk-nixops.git"
-cardanoSlURL         = "https://github.com/input-output-hk/cardano-sl.git"
-cardanoSlExplorerURL = "https://github.com/input-output-hk/cardano-sl-explorer.git"
-stack2NixURL         = "https://github.com/input-output-hk/stack2nix.git"
 awsPublicIPURL       = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
 defaultEnvironment = Development
@@ -52,30 +53,89 @@ defaultTarget      = AWS
 defaultNodeLimit   = 14
 
 
+-- * Projects
+--
+data Project
+  = Cardanosl
+  | CardanoExplorer
+  | Nixpkgs
+  | Stack2nix
+  deriving (Bounded, Enum, Eq, Read, Show)
+
+allProjects :: [Project]
+allProjects = enumFromTo minBound maxBound
+
+projectURL     :: Project -> URL
+projectURL     Cardanosl       = "https://github.com/input-output-hk/cardano-sl.git"
+projectURL     CardanoExplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
+projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
+projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
+
+projectSrcFile :: Project -> FilePath
+projectSrcFile Cardanosl       = "cardano-sl-src.json"
+projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
+projectSrcFile Nixpkgs         = "nixpkgs-src.json"
+projectSrcFile Stack2nix       = "stack2nix-src.json"
+
+
 -- * Primitive types
 --
 newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixParam  = NixParam  { fromNixParam :: Text } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
 newtype Machine   = Machine   { fromMachine :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 
 
 -- * A bit of Nix types
 --
--- | The output of 'nix-prefetch-git'
-data NixGitSource
-  = NixGitSource
-  { url             :: URL
-  , rev             :: Commit
-  , sha256          :: NixHash
-  , fetchSubmodules :: Bool
-  } deriving (Generic, Show)
-instance FromJSON NixGitSource
+data SourceKind = Git | Github
+
+data NixSource (a :: SourceKind) where
+  -- | The output of 'nix-prefetch-git'
+  GitSource ::
+    { gUrl             :: URL
+    , gRev             :: Commit
+    , gSha256          :: NixHash
+    , gFetchSubmodules :: Bool
+    } -> NixSource Git
+  GithubSource ::
+    { ghOwner           :: Text
+    , ghRepo            :: Text
+    , ghRev             :: Commit
+    , ghSha256          :: NixHash
+    } -> NixSource Github
+deriving instance Show (NixSource a)
+instance FromJSON (NixSource Git) where
+  parseJSON = AE.withObject "GitSource" $ \v -> GitSource
+      <$> v .: "url"
+      <*> v .: "rev"
+      <*> v .: "sha256"
+      <*> v .: "fetchSubmodules"
+instance FromJSON (NixSource Github) where
+  parseJSON = AE.withObject "GithubSource" $ \v -> GithubSource
+      <$> v .: "owner"
+      <*> v .: "repo"
+      <*> v .: "rev"
+      <*> v .: "sha256"
+
+githubSource :: ByteString -> Maybe (NixSource Github)
+githubSource = AE.decode
+gitSource    :: ByteString -> Maybe (NixSource Git)
+gitSource    = AE.decode
+
+readSource :: (ByteString -> Maybe (NixSource a)) -> Project -> IO (NixSource a)
+readSource parser (projectSrcFile -> path) =
+  (fromMaybe (errorT $ format ("File doesn't parse as NixSource: "%fp) path) . parser)
+  <$> BL.readFile (T.unpack $ format fp path)
+
+nixpkgsNixosURL :: Commit -> URL
+nixpkgsNixosURL (Commit rev) = URL $
+  "https://github.com/NixOS/nixpkgs/archive/" <> rev <> ".tar.gz"
 
 -- | The set of first-class types present in Nix
 data NixValue
@@ -208,16 +268,22 @@ parserOptions = Options
                 <*> switch  "serial"  's' "Disable parallelisation"
                 <*> switch  "verbose" 'v' "Print all commands that are being run"
 
+nixpkgsCommitPath :: Commit -> Text
+nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
+
 nixopsCmdOptions :: Options -> NixopsConfig -> [Text]
 nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--debug"   | oDebug]   <>
   ["--confirm" | oConfirm] <>
   ["--show-trace"
-  ,"--deployment", cName ]
+  ,"--deployment", cName
+  ,"-I", nixpkgsCommitPath cNixpkgsCommit
+  ]
 
 
 data NixopsConfig = NixopsConfig
   { cName             :: Text
+  , cNixpkgsCommit    :: Commit
   , cEnvironment      :: Environment
   , cTarget           :: Target
   , cElements         :: [Deployment]
@@ -227,6 +293,7 @@ data NixopsConfig = NixopsConfig
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
+        <*> v .: "nixpkgs"
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "elements"
@@ -238,6 +305,7 @@ instance ToJSON Deployment
 instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
    [ "name"        .= cName
+   , "nixpkgs"     .= fromCommit cNixpkgsCommit
    , "environment" .= showT cEnvironment
    , "target"      .= showT cTarget
    , "elements"    .= cElements
@@ -250,8 +318,8 @@ deploymentFiles cEnvironment cTarget cElements =
   concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Branch -> Environment -> Target -> [Deployment] -> Integer -> NixopsConfig
-mkConfig (Branch cName) cEnvironment cTarget cElements nodeLimit =
+mkConfig :: Branch -> Commit -> Environment -> Target -> [Deployment] -> Integer -> NixopsConfig
+mkConfig (Branch cName) cNixpkgsCommit cEnvironment cTarget cElements nodeLimit =
   let cFiles    = deploymentFiles cEnvironment cTarget cElements
       cDeplArgs = selectDeploymentArgs cEnvironment cElements nodeLimit
   in NixopsConfig{..}
@@ -270,6 +338,7 @@ readConfig cf = do
   let c@NixopsConfig{..}
         = case cfParse of
             Right c -> c
+            -- TODO: catch and suggest versioning
             Left  e -> error $ T.unpack $ format ("Failed to parse config file "%fp%": "%s)
                        cf (T.pack $ YAML.prettyPrintParseException e)
       storedFileSet  = Set.fromList cFiles
@@ -331,6 +400,8 @@ create o c@NixopsConfig{..} = do
   when clusterExists $
     die $ format ("Cluster already exists?: '"%s%"'") cName
   printf ("Creating cluster "%s%"\n") cName
+  export "NIX_PATH_LOCKED" "1"
+  export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   nixops o c "create" $ deploymentFiles cEnvironment cTarget cElements
 
 modify :: Options -> NixopsConfig -> IO ()
@@ -338,14 +409,16 @@ modify o c@NixopsConfig{..} = do
   printf ("Syncing Nix->state for cluster "%s%"\n") cName
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
 
-deploy :: Options -> NixopsConfig -> Bool -> IO ()
-deploy o c@NixopsConfig{..} evonly = do
+deploy :: Options -> NixopsConfig -> Bool -> Bool -> IO ()
+deploy o c@NixopsConfig{..} evonly buonly = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
   printf ("Deploying cluster "%s%"\n") cName
+  export "NIX_PATH_LOCKED" "1"
+  export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   when (not evonly) $ do
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
@@ -360,6 +433,7 @@ deploy o c@NixopsConfig{..} evonly = do
   nixops o c "deploy" $
     [ "--max-concurrent-copy", "50", "-j", "4" ]
     ++ [ "--evaluate-only" | evonly ]
+    ++ [ "--build-only"    | buonly ]
   echo "Done."
 
 destroy :: Options -> NixopsConfig -> IO ()
@@ -379,25 +453,22 @@ fromscratch o c = do
   destroy o c
   delete o c
   create o c
-  deploy o c False
+  deploy o c False False
 
 
 -- * Building
 --
 generateGenesis :: Options -> NixopsConfig -> IO ()
 generateGenesis o c = do
-  let cardanoSLSrcSpecFile = "cardano-sl-src.json"
-      cardanoSLDir         = "cardano-sl"
-  bs    <- BL.readFile cardanoSLSrcSpecFile
-  let NixGitSource{..} = flip fromMaybe (AE.decode bs) $
-                         errorT $ format ("Version spec for 'cardano-sl' doesn't parse as NixGitSource: "%s) (T.pack cardanoSLSrcSpecFile)
-  printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit rev
+  let cardanoSLDir         = "cardano-sl"
+  GitSource{..} <- readSource gitSource Cardanosl
+  printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit gRev
   exists <- testpath cardanoSLDir
   unless exists $
-    cmd o "git" ["clone", fromURL cardanoSlURL, "cardano-sl"]
+    cmd o "git" ["clone", fromURL $ projectURL Cardanosl, "cardano-sl"]
   cd "cardano-sl"
   cmd o "git" ["fetch"]
-  cmd o "git" ["reset", "--hard", fromCommit rev]
+  cmd o "git" ["reset", "--hard", fromCommit gRev]
   cd ".."
   export "M" "14"
   cmd o "cardano-sl/scripts/generate/genesis.sh" ["genesis"]
@@ -521,13 +592,6 @@ toNodesInfo vector =
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
 getNodePublicIP name vector =
     headMay $ V.toList $ fmap (getIP . diPublicIP) $ V.filter (\di -> fromNodeName (diName di) == name) vector
-
-
--- * Unused
-nixpkgsBaseURL = "https://github.com/NixOS/nixpkgs/archive/"
-
-nixpkgsURL :: Commit -> URL
-nixpkgsURL = URL . (\c-> nixpkgsBaseURL <> c <> ".tar.gz") . fromCommit
 
 
 -- * Utils
