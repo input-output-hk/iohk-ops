@@ -1,7 +1,9 @@
 let
   localLib = import ./lib.nix;
 in
-{ pkgs ? (import (localLib.fetchNixPkgs) {})
+{ system ? builtins.currentSystem
+, config ? {}
+, pkgs ? (import (localLib.fetchNixPkgs) { inherit system config; })
 , compiler ? pkgs.haskell.packages.ghc802
 }:
 
@@ -46,9 +48,9 @@ let
     # TODO: https://issues.serokell.io/issue/CSM-195
     snap = doJailbreak super.snap;
     # TODO: https://github.com/input-output-hk/stack2nix/issues/10
-    socket-io = super.callCabal2nix "socket-io" "${socket-io-src}/socket-io" {};
-    engine-io = super.callCabal2nix "engine-io" "${socket-io-src}/engine-io" {};
-    engine-io-wai = super.callCabal2nix "engine-io-wai" "${socket-io-src}/engine-io-wai" {};
+    socket-io = self.callPackage ./pkgs/socket-io.nix {};
+    engine-io = self.callPackage ./pkgs/engine-io.nix {};
+    engine-io-wai = self.callPackage ./pkgs/engine-io-wai.nix {};
 
     cardano-sl-explorer = prodMode (super.callPackage ./pkgs/cardano-sl-explorer.nix { });
     cardano-sl-explorer-static = justStaticExecutables self.cardano-sl-explorer;
@@ -65,7 +67,7 @@ let
     # extra packages to expose, that have no relation to pkgs/default.nix
     stack2nix = compiler.callPackage ./pkgs/stack2nix.nix {};
     iohk-ops = pkgs.haskell.lib.overrideCabal
-               (compiler.callCabal2nix "iohk-ops" ./iohk {})
+               (compiler.callPackage ./pkgs/iohk-ops.nix {})
                (drv: {
                   executableToolDepends = [ pkgs.makeWrapper ];
                   postInstall = ''

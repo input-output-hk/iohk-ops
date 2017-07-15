@@ -10,6 +10,13 @@ let
     system = "x86_64-linux";
     supportedFeatures = [ "kvm" "nixos-test" ];
   };
+  mkMac = hostName: commonBuildMachineOpt // {
+    inherit hostName;
+    maxJobs = 1;
+    system = "x86_64-darwin";
+    sshUser = "builder";
+    supportedFeatures = [];
+  };
 in {
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
@@ -26,6 +33,8 @@ in {
         hostName = "localhost";
         maxJobs = 4;
       })
+      (mkMac "de302.macincloud.com")
+      (mkMac "du516.macincloud.com")
     ];
     extraOptions = "auto-optimise-store = true";
   };
