@@ -1,0 +1,14 @@
+{
+  "42": {
+    "title": "Pull request title",
+    "head": {
+      "repo": {
+        "owner": {
+          "login": "githubuser"
+        },
+        "name": "reponame"
+      },
+      "ref": "pr-branch"
+    }
+  }
+}

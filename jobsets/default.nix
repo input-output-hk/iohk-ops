@@ -1,4 +1,4 @@
-{ nixopsPrsJSON, cardanoPrsJSON, nixpkgs ? <nixpkgs>, declInput ? {} }:
+{ nixopsPrsJSON ? ./simple-pr-dummy.json, cardanoPrsJSON ? ./simple-pr-dummy.json, nixpkgs ? <nixpkgs>, declInput ? {} }:
 
 # Followed by https://github.com/NixOS/hydra/pull/418/files
 
@@ -27,9 +27,9 @@ let
     enableemail = false;
     emailoverride = "";
   };
-  mkCardano = nixopsBranch: nixpkgsRev: {
+  mkNixops = nixopsBranch: nixpkgsRev: {
     nixexprpath = "jobsets/cardano.nix";
-    description = "Cardano SL";
+    description = "IOHK-nixops";
     inputs = {
       nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgsRev}";
       jobsets = mkFetchGithub "${iohkNixopsUri} ${nixopsBranch}";
@@ -48,6 +48,15 @@ let
       };
     };
   };
+  mkCardano = cardanoBranch: nixpkgsRev: {
+    nixexprpath = "release.nix";
+    nixexprinput = "cardano";
+    description = "Cardano SL";
+    inputs = {
+      cardano = mkFetchGithub "https://github.com/input-output-hk/cardano-sl.git ${cardanoBranch}";
+      nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgsRev}";
+    };
+  };
   makeCardanoPR = num: info: {
     name = "cardano-pr-${num}";
     value = defaultSettings // {
@@ -64,7 +73,8 @@ let
   cardanoPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeCardanoPR cardanoPrs);
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
     cardano-sl = mkCardano "master" nixpkgs-src.rev;
-    cardano-sl-staging = mkCardano "staging" nixpkgs-src.rev;
+    iohk-nixops = mkNixops "master" nixpkgs-src.rev;
+    iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
     deployments = {
       nixexprpath = "jobsets/deployments.nix";
       description = "Builds for deployments";
