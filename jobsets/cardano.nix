@@ -12,6 +12,6 @@ let
   jobs = mapTestOn (packagePlatforms iohkpkgs);
 in with pkgs; rec {
   inherit (jobs) cardano-report-server-static cardano-sl-static cardano-sl-explorer-static cardano-sl iohk-ops stack2nix;
-  tests          = import ./../tests     { inherit pkgs supportedSystems; };
+  tests          = import ./../tests     { inherit pkgs; supportedSystems = [ "x86_64-linux" ]; };
   iohk-shell-env = import ./../shell.nix { inherit pkgs iohkpkgs; };
 }
