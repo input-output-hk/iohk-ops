@@ -27,7 +27,7 @@ import Text.Printf
 import qualified Data.Map as M
 
 import           NixOps                           (Branch(..), Environment(..), Deployment(..), DeploymentInfo(..), Target(..)
-                                                  ,Options(..), NixopsConfig(..), NodeName(..), Region(..), URL(..)
+                                                  ,Options(..), NixopsConfig(..), NodeName(..), URL(..)
                                                   ,showT, cmd, cmd', parallelIO, ssh, ssh', sshForEach)
 import qualified NixOps                        as Ops
 
@@ -40,18 +40,18 @@ buildAMI o c = do
 firewallClear :: Options -> NixopsConfig -> IO ()
 firewallClear o c = sshForEach o c ["iptables", "-F"]
 
-firewallBlock :: Options -> NixopsConfig -> Region -> Region -> IO ()
-firewallBlock o c from to = do
-  nodes <- Ops.getNodes o c
-  let fromNodes = filter (f $ fromRegion from) nodes
-      toNodes   = filter (f $ fromRegion to)   nodes
-  TIO.putStrLn $ "Blocking nodes: "    <> (T.intercalate ", " $ fmap (fromNodeName . diName) toNodes)
-  TIO.putStrLn $ "Applying on nodes: " <> (T.intercalate ", " $ fmap (fromNodeName . diName) fromNodes)
-  parallelIO o $ fmap (g toNodes) fromNodes
-    where
-      f s node = T.isInfixOf ("[" <> s) (diType node)
-      g toNodes node = ssh o c ["'for ip in " <> ips toNodes <> "; do iptables -A INPUT -s $ip -j DROP; done'"] $ diName node
-      ips = T.intercalate " " . fmap (Ops.getIP . diPublicIP)
+-- firewallBlock :: Options -> NixopsConfig -> Region -> Region -> IO ()
+-- firewallBlock o c from to = do
+--   nodes <- Ops.getNodes o c
+--   let fromNodes = filter (f $ fromRegion from) nodes
+--       toNodes   = filter (f $ fromRegion to)   nodes
+--   TIO.putStrLn $ "Blocking nodes: "    <> (T.intercalate ", " $ fmap (fromNodeName . diName) toNodes)
+--   TIO.putStrLn $ "Applying on nodes: " <> (T.intercalate ", " $ fmap (fromNodeName . diName) fromNodes)
+--   parallelIO o $ fmap (g toNodes) fromNodes
+--     where
+--       f s node = T.isInfixOf ("[" <> s) (diType node)
+--       g toNodes node = ssh o c ["'for ip in " <> ips toNodes <> "; do iptables -A INPUT -s $ip -j DROP; done'"] $ diName node
+--       ips = T.intercalate " " . fmap (Ops.getIP . diPublicIP)
 
 runexperiment :: Options -> NixopsConfig -> [NodeName] -> IO ()
 runexperiment o c nodes = do
