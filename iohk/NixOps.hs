@@ -91,7 +91,6 @@ newtype NodeName  = NodeName  { fromNodeName :: Text } deriving (FromJSON, Gener
 newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 
 
