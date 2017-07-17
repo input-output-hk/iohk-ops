@@ -12,7 +12,7 @@ let
   };
   mkMac = hostName: commonBuildMachineOpt // {
     inherit hostName;
-    maxJobs = 1;
+    maxJobs = 2;
     system = "x86_64-darwin";
     sshUser = "builder";
     supportedFeatures = [];
