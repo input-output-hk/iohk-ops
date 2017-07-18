@@ -4,6 +4,9 @@
 function runInShell {
   nix-shell -j 4 -p cabal2nix nix-prefetch-scripts coreutils cabal-install stack --run "$*"
 }
+function c2n {
+  runInShell cabal2nix "$*"
+}
 
 set -xe
 set -v
@@ -27,6 +30,13 @@ runInShell cabal2nix \
   --no-check \
   --revision $(jq .rev < ${scriptDir}/../cardano-sl-explorer-src.json -r) \
   https://github.com/input-output-hk/cardano-sl-explorer.git > $scriptDir/cardano-sl-explorer.nix
+
+c2n --no-check --revision $(jq .rev < "${scriptDir}/engine-io.json") $(jq .url < "${scriptDir}/engine-io.json") --subpath socket-io > "${scriptDir}/socket-io.nix"
+c2n --no-check --revision $(jq .rev < "${scriptDir}/engine-io.json") $(jq .url < "${scriptDir}/engine-io.json") --subpath engine-io > "${scriptDir}/engine-io.nix"
+c2n --no-check --revision $(jq .rev < "${scriptDir}/engine-io.json") $(jq .url < "${scriptDir}/engine-io.json") --subpath engine-io-wai > "${scriptDir}/engine-io-wai.nix"
+pushd "${scriptDir}"
+c2n --no-check ../iohk > "${scriptDir}/iohk-ops.nix"
+popd
 
 # Generate cardano-sl package set
 runInShell $scriptDir/stack2nix/bin/stack2nix \
