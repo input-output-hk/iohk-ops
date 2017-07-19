@@ -29,8 +29,8 @@ runInShell cabal2nix \
   https://github.com/input-output-hk/cardano-sl-explorer.git > $scriptDir/cardano-sl-explorer.nix
 
 # Generate cardano-sl package set
-runInShell $scriptDir/stack2nix/bin/stack2nix \
+runInShell $scriptDir/stack2nix/bin/stack2nix -j7 \
   --revision $(jq .rev < ${scriptDir}/../cardano-sl-src.json -r) \
-  https://github.com/input-output-hk/cardano-sl.git > $scriptDir/default.nix.new
+  https://github.com/adinapoli-iohk/cardano-sl.git > $scriptDir/default.nix.new
 mv $scriptDir/default.nix.new $scriptDir/default.nix
 
