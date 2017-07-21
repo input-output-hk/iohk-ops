@@ -9,6 +9,14 @@ in lib // (rec {
   # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
   mergeAttrs = nodes: lib.foldAttrs (a: b: a) [] nodes;
 
+  nodeByName   = nodes: x: let xs = filter (n: n.config.services.cardano-node.enable   == true
+                                     && n.config.services.cardano-node.nodeName == x) (attrValues nodes);
+                           in if xs != [] then builtins.elemAt xs 0
+                              else throw "nodeById: no node with name '${toString x}'";
+  nodePublicIP = n: let ip = n.config.services.cardano-node.publicIP;
+                    in if ip != null then ip
+                       else throw "nodePublicIP: node '${n.config.services.cardano-node.nodeName}' has no public IP configured.";
+
   mkNodesUsing = constructor: nodes: lib.mapAttrs  (name: nodeParams: constructor nodeParams) nodes;
   mkNodeIPs = nodes: accessKeyId: lib.mapAttrs' (name: value:
       { name = "nodeip${toString value.i}";

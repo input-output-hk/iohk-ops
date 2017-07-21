@@ -11,14 +11,7 @@ params:
     services.cardano-node =
     let
       neighbourNames       = flatten params.static-routes;
-      nodeByName           = x: let xs = filter (n: n.config.services.cardano-node.enable   == true
-                                                 && n.config.services.cardano-node.nodeName == x) (attrValues nodes);
-                                in if xs != [] then builtins.elemAt xs 0
-                                   else throw "nodeById: no node with name '${toString x}'";
-      nodePublicIP         = n: let ip = n.config.services.cardano-node.publicIP;
-                                in if ip != null then ip
-                                   else throw "nodePublicIP: node '${n.config.services.cardano-node.nodeName}' has no public IP configured.";
-      nodeNameToPublicIP   = name: nodePublicIP (nodeByName name);
+      nodeNameToPublicIP   = name: cardanoAttr "publicIP" nodes.${name}.config.services.cardano-node;
       neighbourPairs       = map (n: { name = n; ip = nodeNameToPublicIP n; })
                                  (builtins.trace "${params.name}: role '${params.type}'" neighbourNames);
       ppNeighbour          = n: "${n.name}: ${n.ip}";
