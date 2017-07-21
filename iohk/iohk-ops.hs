@@ -74,8 +74,7 @@ parserDo = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
 data Command where
 
   -- * setup
-  Template              :: { tNodeLimit   :: Integer
-                           , tHere        :: Bool
+  Template              :: { tHere        :: Bool
                            , tFile        :: Maybe Turtle.FilePath
                            , tEnvironment :: Environment
                            , tTarget      :: Target
@@ -119,9 +118,7 @@ centralCommandParser =
   (    subcommandGroup "General:"
     [ ("template",              "Produce (or update) a checkout of BRANCH with a configuration YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
                                 Template
-                                <$> (fromMaybe Ops.defaultNodeLimit
-                                     <$> optional (optInteger "node-limit" 'l' "Limit cardano-node count to N"))
-                                <*> (fromMaybe False
+                                <$> (fromMaybe False
                                       <$> optional (switch "here" 'h' "Instead of cloning a subdir, operate on a config in the current directory"))
                                 <*> (optional (optPath "config" 'c' "Override the default, environment-dependent config filename"))
                                 <*> parserEnvironment
@@ -275,7 +272,7 @@ runTemplate o@Options{..} Template{..} = do
 
   Ops.GithubSource{..} <- Ops.readSource Ops.githubSource Nixpkgs
 
-  let config = Ops.mkConfig tBranch ghRev tEnvironment tTarget tDeployments tNodeLimit
+  let config = Ops.mkConfig tBranch ghRev tEnvironment tTarget tDeployments
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

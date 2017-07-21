@@ -14,7 +14,7 @@ params:
       nodeByName           = x: let xs = filter (n: n.config.services.cardano-node.enable   == true
                                                  && n.config.services.cardano-node.nodeName == x) (attrValues nodes);
                                 in if xs != [] then builtins.elemAt xs 0
-                                   else throw "nodeById: no node with name '${toString x}'.  Suggestion: 'args.nodeLimit' in 'config.yaml'?";
+                                   else throw "nodeById: no node with name '${toString x}'";
       nodePublicIP         = n: let ip = n.config.services.cardano-node.publicIP;
                                 in if ip != null then ip
                                    else throw "nodePublicIP: node '${n.config.services.cardano-node.nodeName}' has no public IP configured.";

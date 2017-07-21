@@ -1,4 +1,4 @@
-{ nodeLimit, ... }:
+{ accessKeyId, ... }:
 
 with (import ./../lib.nix);
 
@@ -21,5 +21,4 @@ let clusterSpec    = (builtins.fromJSON (builtins.readFile ./../cluster.nix));
     #   static-routes :: [[NodeId, NodeId]] -- here we go, TupleList..
     canonicalNodes = builtins.listToAttrs indexedNodes;
 in
-  filterAttrs (name: node: node.i < nodeLimit)
   canonicalNodes
