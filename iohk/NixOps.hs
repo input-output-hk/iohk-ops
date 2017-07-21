@@ -58,6 +58,7 @@ defaultNodeLimit   = 14
 data Project
   = Cardanosl
   | Cardanoexplorer
+  | Iohk
   | Nixpkgs
   | Stack2Nix
   deriving (Bounded, Enum, Eq, Read, Show)
@@ -68,6 +69,7 @@ allProjects = enumFromTo minBound maxBound
 projectURL     :: Project -> URL
 projectURL     Cardanosl       = "https://github.com/input-output-hk/cardano-sl.git"
 projectURL     Cardanoexplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
+projectURL     Iohk            = "https://github.com/input-output-hk/iohk-nixops.git"
 projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
 projectURL     Stack2Nix       = "https://github.com/input-output-hk/stack2nix.git"
 
@@ -76,6 +78,7 @@ projectSrcFile Cardanosl       = "cardano-sl-src.json"
 projectSrcFile Cardanoexplorer = "cardano-sl-explorer-src.json"
 projectSrcFile Nixpkgs         = "nixpkgs-src.json"
 projectSrcFile Stack2Nix       = "stack2nix-src.json"
+projectSrcFile Iohk            = error "Feeling self-referential?"
 
 
 -- * Primitive types
