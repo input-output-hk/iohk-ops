@@ -48,8 +48,8 @@ awsPublicIPURL, iohkNixopsURL :: URL
 iohkNixopsURL        = "https://github.com/input-output-hk/iohk-nixops.git"
 awsPublicIPURL       = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
-defaultEnvironment = Development
-defaultTarget      = AWS
+defaultEnvironment   = Development
+defaultTarget        = Aws
 defaultNodeLimit   = 14
 
 
@@ -57,9 +57,9 @@ defaultNodeLimit   = 14
 --
 data Project
   = Cardanosl
-  | CardanoExplorer
+  | Cardanoexplorer
   | Nixpkgs
-  | Stack2nix
+  | Stack2Nix
   deriving (Bounded, Enum, Eq, Read, Show)
 
 allProjects :: [Project]
@@ -67,15 +67,15 @@ allProjects = enumFromTo minBound maxBound
 
 projectURL     :: Project -> URL
 projectURL     Cardanosl       = "https://github.com/input-output-hk/cardano-sl.git"
-projectURL     CardanoExplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
+projectURL     Cardanoexplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
 projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
-projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
+projectURL     Stack2Nix       = "https://github.com/input-output-hk/stack2nix.git"
 
 projectSrcFile :: Project -> FilePath
 projectSrcFile Cardanosl       = "cardano-sl-src.json"
-projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
+projectSrcFile Cardanoexplorer = "cardano-sl-explorer-src.json"
 projectSrcFile Nixpkgs         = "nixpkgs-src.json"
-projectSrcFile Stack2nix       = "stack2nix-src.json"
+projectSrcFile Stack2Nix       = "stack2nix-src.json"
 
 
 -- * Primitive types
@@ -158,7 +158,7 @@ data Deployment
   = Explorer
   | Nodes
   | Infra
-  | ReportServer
+  | Reportserver
   | Timewarp
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Deployment
@@ -168,17 +168,21 @@ data Environment
   | Production
   | Staging
   | Development
-  deriving (Eq, Generic, Read, Show)
+  deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Environment
 
 data Target
   = All               -- ^ Wildcard or unspecified, depending on context.
-  | AWS
-  deriving (Eq, Generic, Read, Show)
+  | Aws
+  deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Target
 
-allDeployments :: [Deployment]
-allDeployments = enumFromTo minBound maxBound
+allDeployments  :: [Deployment]
+allDeployments  = enumFromTo minBound maxBound
+allEnvironments :: [Environment]
+allEnvironments = enumFromTo minBound maxBound
+allTargets      :: [Target]
+allTargets      = enumFromTo minBound maxBound
 
 envConfigFilename :: IsString s => Environment -> s
 envConfigFilename Any           = "config.yaml"
@@ -212,24 +216,24 @@ deployments =
       , (Development, All, "deployments/cardano-explorer-env-development.nix")
       , (Production,  All, "deployments/cardano-explorer-env-production.nix")
       , (Staging,     All, "deployments/cardano-explorer-env-staging.nix")
-      , (Any,         AWS, "deployments/cardano-explorer-target-aws.nix") ])
+      , (Any,         Aws, "deployments/cardano-explorer-target-aws.nix") ])
   , (Nodes
     , [ (Any,         All, "deployments/cardano-nodes.nix")
       , (Production,  All, "deployments/cardano-nodes-env-production.nix")
       , (Staging,     All, "deployments/cardano-nodes-env-staging.nix")
-      , (Any,         AWS, "deployments/cardano-nodes-target-aws.nix") ])
+      , (Any,         Aws, "deployments/cardano-nodes-target-aws.nix") ])
   , (Infra
     , [ (Any,         All, "deployments/infrastructure.nix")
       , (Production,  All, "deployments/infrastructure-env-production.nix")
-      , (Any,         AWS, "deployments/infrastructure-target-aws.nix") ])
-  , (ReportServer
+      , (Any,         Aws, "deployments/infrastructure-target-aws.nix") ])
+  , (Reportserver
     , [ (Any,         All, "deployments/report-server.nix")
       , (Production,  All, "deployments/report-server-env-production.nix")
       , (Staging,     All, "deployments/report-server-env-staging.nix")
-      , (Any,         AWS, "deployments/report-server-target-aws.nix") ])
+      , (Any,         Aws, "deployments/report-server-target-aws.nix") ])
   , (Timewarp
     , [ (Any,         All, "deployments/timewarp.nix")
-      , (Any,         AWS, "deployments/timewarp-target-aws.nix") ])
+      , (Any,         Aws, "deployments/timewarp-target-aws.nix") ])
   ]
 
 deploymentSpecs :: Deployment -> [FileSpec]
@@ -597,6 +601,9 @@ getNodePublicIP name vector =
 -- * Utils
 showT :: Show a => a -> Text
 showT = T.pack . show
+
+lowerShowT :: Show a => a -> Text
+lowerShowT = T.toLower . T.pack . show
 
 errorT :: Text -> a
 errorT = error . T.unpack

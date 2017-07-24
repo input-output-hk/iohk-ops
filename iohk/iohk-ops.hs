@@ -13,7 +13,7 @@ import           Turtle                    hiding (procs, shells)
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), Project(..), Region(..), URL(..)
-                                                  ,showT, cmd, incmd, projectURL)
+                                                  ,showT, lowerShowT, cmd, incmd, projectURL)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import qualified Timewarp                      as Timewarp
@@ -33,16 +33,20 @@ parserCommit :: Optional HelpMessage -> Parser Commit
 parserCommit desc = Commit <$> argText "commit" desc
 
 parserEnvironment :: Parser Environment
-parserEnvironment = fromMaybe Ops.defaultEnvironment <$> optional (optReadLower "environment" 'e' "Environment: Development, Staging or Production;  defaults to Development")
+parserEnvironment = fromMaybe Ops.defaultEnvironment <$> optional (optReadLower "environment" 'e' $ pure $
+                                                                   Turtle.HelpMessage $ "Environment: "
+                                                                   <> T.intercalate ", " (lowerShowT <$> Ops.allEnvironments) <> ".  Default: development")
 
 parserTarget      :: Parser Target
-parserTarget      = fromMaybe Ops.defaultTarget      <$> optional (optReadLower "target"      't' "Target: AWS, All;  defaults to AWS")
+parserTarget      = fromMaybe Ops.defaultTarget      <$> optional (optReadLower "target"      't' "Target: aws, all;  defaults to AWS")
 
 parserProject     :: Parser Project
-parserProject     = argReadLower "project" $ pure $ Turtle.HelpMessage ("Project to set version of: " <> T.intercalate ", " (showT <$> Ops.allProjects))
+parserProject     = argReadLower "project" $ pure $ Turtle.HelpMessage ("Project to set version of: " <> T.intercalate ", " (lowerShowT <$> Ops.allProjects))
 
 parserDeployment  :: Parser Deployment
-parserDeployment  = argRead "DEPL" "Deployment: 'Explorer', 'Nodes', 'Infra', 'ReportServer' or 'Timewarp'"
+parserDeployment  = argReadLower "DEPL" (pure $
+                                         Turtle.HelpMessage $ "Deployment, one of: "
+                                         <> T.intercalate ", " (lowerShowT <$> Ops.allDeployments))
 parserDeployments :: Parser [Deployment]
 parserDeployments = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
                     <$> ((,,,)
@@ -268,7 +272,7 @@ runTemplate Options{..} _ = error "impossible"
 
 runSetRev :: Options -> Project -> Commit -> IO ()
 runSetRev o proj rev = do
-  printf ("Setting "%w%" commit to "%s%"\n") proj (fromCommit rev)
+  printf ("Setting '"%s%"' commit to "%s%"\n") (lowerShowT proj) (fromCommit rev)
   spec <- incmd o "nix-prefetch-git" ["--no-deepClone", fromURL $ projectURL proj, fromCommit rev]
   writeFile (T.unpack $ format fp $ Ops.projectSrcFile proj) $ T.unpack spec
 

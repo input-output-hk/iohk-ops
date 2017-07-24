@@ -20,6 +20,6 @@ files:
 - deployments/cardano-explorer-target-aws.nix
 elements:
 - Nodes
-- ReportServer
+- Reportserver
 - Explorer
 target: AWS
