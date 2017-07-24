@@ -2,7 +2,7 @@
 
 with (import ./../lib.nix);
 
-testIndex: region:
+nodeIndex: region:
   { config, resources, pkgs, nodes, options, ... }:
     let
       cfg = config.services.cardano-node;
@@ -30,8 +30,8 @@ testIndex: region:
       deployment.ec2.accessKeyId = accessKeyId;
       deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor accessKeyId region};
       deployment.keys = optionalAttrs (cfg.productionMode && !cfg.hasExplorer) {
-        "key${toString (testIndex + 1)}" = {
-          keyFile = ./. + "/../keys/key${toString (testIndex + 1)}.sk";
+        "key${toString (nodeIndex + 1)}" = {
+          keyFile = ./. + "/../keys/key${toString (nodeIndex + 1)}.sk";
           user = "cardano-node";
         };
       };

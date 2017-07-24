@@ -35,8 +35,8 @@ let
     "--no-ntp" # DEVOPS-160
     (optionalString cfg.stats "--stats")
     (optionalString (!cfg.productionMode) "--rebuild-db")
-    (optionalString (!cfg.productionMode) "--spending-genesis ${toString cfg.testIndex}")
-    (optionalString (!cfg.productionMode) "--vss-genesis ${toString cfg.testIndex}")
+    (optionalString (!cfg.productionMode) "--spending-genesis ${toString cfg.nodeIndex}")
+    (optionalString (!cfg.productionMode) "--vss-genesis ${toString cfg.nodeIndex}")
     (optionalString (cfg.distribution && !cfg.productionMode && cfg.richPoorDistr) (
        "--rich-poor-distr \"${rnpDistributionParam}\""))
     (optionalString (cfg.distribution && !cfg.productionMode && !cfg.richPoorDistr) (
@@ -46,7 +46,7 @@ let
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
     "--kademlia-id ${cfg.dhtKey}"
-    (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.testIndex + 1)}.sk")
+    (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.nodeIndex + 1)}.sk")
     (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
@@ -123,7 +123,7 @@ in {
         description = "Does the node has explorer running?";
       };
 
-      testIndex = mkOption { type = types.int; };
+      nodeIndex = mkOption { type = types.int; };
 
       publicIP = mkOption {
         type = types.nullOr types.str;
@@ -142,8 +142,8 @@ in {
   config = mkIf cfg.enable {
     assertions = [{
       assertion = cfg.initialPeers != null;
-      message = "services.cardano-node.initialPeers must be set, a node needs at least one initial peer (testIndex: ${toString cfg.testIndex})";
     }];
+      message = "services.cardano-node.initialPeers must be set, even if to an empty list (nodeIndex: ${toString cfg.nodeIndex})"; }
 
     users = {
       users.cardano-node = {
@@ -159,7 +159,7 @@ in {
       };
     };
 
-    services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.testIndex);
+    services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.nodeIndex);
 
     networking.firewall = {
       allowedTCPPorts = [ cfg.port ];
@@ -171,16 +171,16 @@ in {
 
     # Workaround for CSL-1320
     systemd.services.cardano-restart = let
-      getDailyTime = testIndex: let
+      getDailyTime = nodeIndex: let
           # how many minutes between each node restarting
-          minute = mod (testIndex * 4) 60;
+          minute = mod (nodeIndex * 4) 60;
         in "0/2:${toString minute}";
     in {
       script = ''
         /run/current-system/sw/bin/systemctl restart cardano-node
       '';
       # Reboot cardano-node every 4h, offset by node id (in ${interval} minute intervals)
-      startAt = getDailyTime cfg.testIndex;
+      startAt = getDailyTime cfg.nodeIndex;
     };
 
     systemd.services.cardano-node = {
@@ -188,7 +188,7 @@ in {
       after         = [ "network.target" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       script = let
-        keyId = "key" + toString (cfg.testIndex + 1);
+        keyId = "key" + toString (cfg.nodeIndex + 1);
         key = keyId + ".sk";
       in ''
         [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}${key}
