@@ -294,6 +294,6 @@ runFakeKeys = do
   echo "Faking keys/key*.sk"
   testdir "keys"
     >>= flip unless (mkdir "keys")
-  forM_ (41:[1..14]) $
+  forM_ ([1..41]) $
     (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
   echo "Minimum viable keyset complete."
