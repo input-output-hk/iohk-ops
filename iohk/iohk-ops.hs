@@ -13,7 +13,7 @@ import           Turtle                    hiding (procs, shells)
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), Project(..), Region(..), URL(..)
-                                                  ,showT, lowerShowT, cmd, incmd, projectURL)
+                                                  ,showT, lowerShowT, errorT, cmd, incmd, projectURL)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import qualified Timewarp                      as Timewarp
@@ -21,10 +21,18 @@ import qualified Timewarp                      as Timewarp
 
 -- * Elementary parsers
 --
-optReadLower :: Read a => ArgName -> ShortName -> Optional HelpMessage -> Parser a
-optReadLower = opt (readMaybe . T.unpack . T.toTitle)
-argReadLower :: Read a => ArgName -> Optional HelpMessage -> Parser a
-argReadLower = arg (readMaybe . T.unpack . T.toTitle)
+diagReadMaybe :: (Bounded a, Enum a, Read a, Show a) => String -> Maybe a
+diagReadMaybe str = diag $ readMaybe str
+  where diag Nothing = head . err . fmap Just $ enumFromTo minBound maxBound
+        diag x       = x
+        err  xs      = (errorT $ format ("Couldn't parse '"%s%"' as one of: "%s%"\n")
+                                        (T.pack str) (T.intercalate ", " $ fmap (showT . fromJust) xs))
+                       ++ xs
+
+optReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> ShortName -> Optional HelpMessage -> Parser a
+optReadLower = opt (diagReadMaybe . T.unpack . T.toTitle)
+argReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> Optional HelpMessage -> Parser a
+argReadLower = arg (diagReadMaybe . T.unpack . T.toTitle)
 
 parserBranch :: Optional HelpMessage -> Parser Branch
 parserBranch desc = Branch <$> argText "branch" desc
