@@ -334,7 +334,7 @@ writeConfig mFp c@NixopsConfig{..} = do
   let configFilename = flip fromMaybe mFp $ envConfigFilename cEnvironment
   liftIO $ writeTextFile configFilename $ T.pack $ BUTF8.toString $ YAML.encode c
   pure configFilename
-  
+
 -- | Read back config, doing validation
 readConfig :: MonadIO m => FilePath -> m NixopsConfig
 readConfig cf = do
@@ -352,7 +352,7 @@ readConfig cf = do
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
   pure c
-  
+
 
 parallelIO :: Options -> [IO a] -> IO ()
 parallelIO Options{..} =
@@ -365,7 +365,7 @@ inprocs cmd args input = do
   (exitCode, stdout) <- liftIO $ procStrict cmd args input
   unless (exitCode == ExitSuccess) $
     liftIO (throwIO (ProcFailed cmd args exitCode))
-  pure stdout 
+  pure stdout
 
 cmd   :: Options -> Text -> [Text] -> IO ()
 cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
@@ -373,7 +373,7 @@ incmd :: Options -> Text -> [Text] -> IO Text
 
 logCmd  cmd args =
   printf ("-- "%s%"\n") $ T.intercalate " " $ cmd:args
-  
+
 cmd   Options{..} cmd args = do
   when oVerbose $ logCmd cmd args
   Turtle.procs      cmd args empty
@@ -498,7 +498,7 @@ build o c d = do
 checkstatus :: Options -> NixopsConfig -> IO ()
 checkstatus o c = do
   nodes <- getNodeNames o c
-  parallelIO o $ fmap (rebootIfDown o c) nodes 
+  parallelIO o $ fmap (rebootIfDown o c) nodes
 
 rebootIfDown :: Options -> NixopsConfig -> NodeName -> IO ()
 rebootIfDown o c (fromNodeName -> node) = do
@@ -529,7 +529,7 @@ scpFromNode o c (fromNodeName -> node) from to = do
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
 
 sshForEach :: Options -> NixopsConfig -> [Text] -> IO ()
-sshForEach o c cmd = 
+sshForEach o c cmd =
   nixops o c "ssh-for-each" ("--": cmd)
 
 
@@ -588,7 +588,7 @@ info o c = do
     ExitSuccess -> return $ decodeWith nixopsDecodeOptions NoHeader (encodeUtf8 $ fromStrict nodes)
 
 toNodesInfo :: V.Vector DeploymentInfo -> [DeploymentInfo]
-toNodesInfo vector = 
+toNodesInfo vector =
   V.toList $ V.filter filterEC2 vector
     where
       filterEC2 di = T.take 4 (diType di) == "ec2 " && diStatus di /= Obsolete

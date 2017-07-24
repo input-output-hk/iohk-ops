@@ -62,7 +62,7 @@ parserDo = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
 --
 data Command where
 
-  -- * setup 
+  -- * setup
   Template              :: { tNodeLimit   :: Integer
                            , tHere        :: Bool
                            , tFile        :: Maybe Turtle.FilePath
