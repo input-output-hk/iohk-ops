@@ -13,7 +13,7 @@ import qualified Data.Text                     as T
 import qualified Filesystem.Path.CurrentOS     as Path
 import           Turtle                    hiding (procs, shells)
 
-import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
+import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..), NodeName(..)
                                                   ,Options(..), NixopsCmd(..), Project(..), Region(..), URL(..)
                                                   ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every)
 import qualified NixOps                        as Ops
@@ -53,6 +53,10 @@ parserTarget      = fromMaybe Ops.defaultTarget      <$> optional (optReadLower 
 
 parserProject     :: Parser Project
 parserProject     = argReadLower "project" $ pure $ Turtle.HelpMessage ("Project to set version of: " <> T.intercalate ", " (lowerShowT <$> (every :: [Project])))
+
+parserNodeName    :: NodeName -> Parser NodeName
+parserNodeName def = (fromMaybe def . (NodeName <$>)) <$> optional (argText "NODE" $ pure $
+                                                                    Turtle.HelpMessage $ "Node to operate on. Defaults to '" <> (fromNodeName $ Ops.defaultNode) <> "'")
 
 parserDeployment  :: Parser Deployment
 parserDeployment  = argReadLower "DEPL" (pure $
@@ -104,6 +108,7 @@ data Command where
   Info                  :: Command
 
   -- * live cluster ops
+  DeployedCommit        :: NodeName -> Command
   CheckStatus           :: Command
   Start                 :: Command
   Stop                  :: Command
@@ -162,7 +167,10 @@ centralCommandParser =
    , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
 
    <|> subcommandGroup "Live cluster ops:"
-   [ ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
+   [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
+                                DeployedCommit
+                                <$> parserNodeName Ops.defaultNode)
+   , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
    , ("start",                  "Start cardano-node service",                                       pure Start)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
    , ("firewall-block-region",  "Block whole region in firewall",
@@ -231,6 +239,7 @@ main = do
             FromScratch              -> Ops.fromscratch               o c
             Info                     -> Ops.nixops                    o c "info" []
             -- * live deployment ops
+            DeployedCommit m         -> Ops.deployed'commit           o c m
             CheckStatus              -> Ops.checkstatus               o c
             Start                    -> getNodeNames'
                                         >>= Cardano.startNodes        o c
