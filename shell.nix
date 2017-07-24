@@ -56,6 +56,12 @@ mkDerivation {
     export NIX_PATH=nixpkgs=${nixpkgs}
     export NIX_PATH_LOCKED=1
     echo   NIX_PATH set to $NIX_PATH >&2
+
+    alias git-rev='git log -n1 --pretty=oneline'
+    echo "Aliases:"                                                                                                        >&2
+    echo                                                                                                                   >&2
+    echo "  git-rev:              git log -n1 --pretty=oneline"                                                            >&2
+    echo                                                                                                                   >&2
   '';
   license      = stdenv.lib.licenses.mit;
 };
