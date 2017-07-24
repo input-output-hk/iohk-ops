@@ -16,7 +16,7 @@ nodeIndex: region:
       services.cardano-node = {
         initialKademliaPeers = genPeersFromConfig (
           if (cfg.enableP2P && !cfg.productionMode)
-          then [head cardanoNodeConfigs]
+          then [(head cardanoNodeConfigs)]
           else cardanoNodeConfigs
         );
         publicIP = if options.networking.publicIPv4.isDefined then config.networking.publicIPv4 else null;
