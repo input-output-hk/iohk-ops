@@ -36,6 +36,8 @@ let
     });
     cardano-sl-static = justStaticExecutables self.cardano-sl;
     cardano-report-server-static = justStaticExecutables self.cardano-report-server;
+    cardano-sl-lwallet-static = justStaticExecutables self.cardano-sl-lwallet;
+    cardano-sl-tools-static = justStaticExecutables self.cardano-sl-tools;
 
     # TODO: https://github.com/input-output-hk/stack2nix/issues/7
     ether = addConfigureFlags ["-fdisable-tup-instances"] super.ether;
