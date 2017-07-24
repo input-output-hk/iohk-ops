@@ -52,7 +52,7 @@ let
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
-    (genPeers cfg.initialPeers)
+    (genPeers cfg.initialKademliaPeers)
   ];
 in {
   options = {
@@ -83,7 +83,7 @@ in {
         default = "${cardano}/bin/cardano-node";
       };
       autoStart = mkOption { type = types.bool; default = true; };
-      initialPeers = mkOption {
+      initialKademliaPeers = mkOption {
         type = types.nullOr (types.listOf types.str);
         description = "A file with peer/dht mappings";
         default = null;
@@ -140,10 +140,10 @@ in {
   };
 
   config = mkIf cfg.enable {
-    assertions = [{
-      assertion = cfg.initialPeers != null;
-    }];
-      message = "services.cardano-node.initialPeers must be set, even if to an empty list (nodeIndex: ${toString cfg.nodeIndex})"; }
+    assertions = [
+    { assertion = cfg.initialKademliaPeers != null;
+      message = "services.cardano-node.initialKademliaPeers must be set, even if to an empty list (nodeIndex: ${toString cfg.nodeIndex})"; }
+    ];
 
     users = {
       users.cardano-node = {
