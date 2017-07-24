@@ -83,7 +83,8 @@ projectSrcFile Stack2Nix       = "stack2nix-src.json"
 newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixParam  = NixParam  { fromNixParam :: Text } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
-newtype Machine   = Machine   { fromMachine :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype IP        = IP        { getIP       :: Text } deriving (Show, Generic, FromField)
+newtype NodeName  = NodeName  { fromNodeName :: Text } deriving (FromJSON, Generic, Show, FromField, IsString)
 newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
@@ -190,7 +191,7 @@ envConfigFilename Development   = "config.yaml"
 envConfigFilename Staging       = "staging.yaml"
 envConfigFilename Production    = "production.yaml"
 
-selectDeployer :: Environment -> [Deployment] -> Machine
+selectDeployer :: Environment -> [Deployment] -> NodeName
 selectDeployer Staging delts | elem Nodes delts = "iohk"
                              | otherwise        = "cardano-deployer"
 selectDeployer _ _                              = "cardano-deployer"
@@ -200,7 +201,7 @@ type DeplArgs = Map.Map NixParam NixValue
 selectDeploymentArgs :: Environment -> [Deployment] -> Integer -> DeplArgs
 selectDeploymentArgs env delts limit = Map.fromList
   [ ("accessKeyId"
-    , NixStr . fromMachine $ selectDeployer env delts)
+    , NixStr . fromNodeName $ selectDeployer env delts)
   , ("nodeLimit"
     , NixInt limit ) ]
 
@@ -535,11 +536,6 @@ sshForEach o c cmd =
 
 -- * Functions for extracting information out of nixops info command
 --
-newtype IP = IP { getIP :: Text }
-   deriving (Show, Generic, FromField)
-newtype NodeName = NodeName { fromNodeName :: Text }
-   deriving (Show, Generic, FromField)
-
 -- | Get all nodes in EC2 cluster
 getNodes :: Options -> NixopsConfig -> IO [DeploymentInfo]
 getNodes o c = do
