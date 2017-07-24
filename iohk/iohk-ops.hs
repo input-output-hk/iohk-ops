@@ -96,7 +96,7 @@ data Command where
   Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
-  Deploy                :: Bool -> Bool -> Command
+  Deploy                :: Bool -> Bool -> Turtle.FilePath -> Command
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
@@ -154,7 +154,9 @@ centralCommandParser =
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
                                 <$> switch "evaluate-only" 'e' "Pass --evaluate-only to 'nixops'."
-                                <*> switch "build-only"    'b' "Pass --build-only to 'nixops'.")
+                                <*> switch "build-only"    'b' "Pass --build-only to 'nixops'."
+                                <*> (fromMaybe Ops.defaultClusterConfig
+                                     <$> optional (optPath "cluster"      't' "Cluster configuration.  Defaults to 'cluster.yaml'")))
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
@@ -224,7 +226,7 @@ main = do
             Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy evonly buonly     -> Ops.deploy                    o c evonly buonly
+            Deploy evo buo clu       -> Ops.deploy                    o c evo buo clu
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
@@ -279,7 +281,7 @@ runTemplate o@Options{..} Template{..} = do
   echo ""
   echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
   cmd o "cat" [configFilename]
-runTemplate Options{..} _ = error "impossible"
+runTemplate _ _ = error "impossible"
 
 runSetRev :: Options -> Project -> Commit -> IO ()
 runSetRev o proj rev = do

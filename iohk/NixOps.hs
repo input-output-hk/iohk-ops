@@ -50,7 +50,9 @@ awsPublicIPURL = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
 defaultEnvironment   = Development
 defaultTarget        = AWS
-defaultNodeLimit     = 14
+defaultNodeLimit     = 1024
+defaultClusterConfig = "cluster.yaml"
+defaultNode          = NodeName "node0"
 
 
 -- * Projects
@@ -416,12 +418,18 @@ modify o c@NixopsConfig{..} = do
   printf ("Syncing Nix->state for cluster "%s%"\n") cName
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
 
-deploy :: Options -> NixopsConfig -> Bool -> Bool -> IO ()
-deploy o c@NixopsConfig{..} evonly buonly = do
+deploy :: Options -> NixopsConfig -> Bool -> Bool -> FilePath -> IO ()
+deploy o c@NixopsConfig{..} evonly buonly config = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
+
+  printf ("Generating 'cluster.nix' from '"%fp%"'..\n") config
+  exists <- testpath config
+  unless exists $
+    die $ format ("Cluster config '"%fp%"' doesn't exist.") config
+  inproc "yaml2json" [format fp config] empty & output "cluster.nix"
 
   printf ("Deploying cluster "%s%"\n") cName
   export "NIX_PATH_LOCKED" "1"
@@ -460,7 +468,7 @@ fromscratch o c = do
   destroy o c
   delete o c
   create o c
-  deploy o c False False
+  deploy o c False False defaultClusterConfig
 
 
 -- * Building
