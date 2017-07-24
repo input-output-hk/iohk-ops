@@ -124,6 +124,7 @@ in {
       };
 
       nodeIndex = mkOption { type = types.int; };
+      nodeName  = mkOption { type = types.str; };
 
       publicIP = mkOption {
         type = types.nullOr types.str;
