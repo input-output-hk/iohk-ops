@@ -15,4 +15,4 @@ in {
       cardano_node_process = mkMonitor cardano_node_process_monitor;
     });
   };
-} // (mkNodes nodes (i: r: nodeProdConf))
+} // (mkNodesUsing (params: nodeProdConf) nodes)

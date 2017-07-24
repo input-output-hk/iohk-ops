@@ -6,4 +6,4 @@ let
   nodes = import ./cardano-nodes-config.nix { inherit nodeLimit; };
 in {
   network.description = "Cardano SL";
-} // (mkNodes nodes nodeConfig)
+} // (mkNodesUsing nodeConfig nodes)

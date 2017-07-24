@@ -27,4 +27,4 @@ in {
       });
     });
   };
-} // (mkNodes nodes (i: r: nodeStagConf))
+} // (mkNodesUsing (params: nodeStagConf) nodes)
