@@ -9,13 +9,17 @@ in lib // (rec {
   # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
   mergeAttrs = nodes: lib.foldAttrs (a: b: a) [] nodes;
 
-  nodeByName   = nodes: x: let xs = filter (n: n.config.services.cardano-node.enable   == true
-                                     && n.config.services.cardano-node.nodeName == x) (attrValues nodes);
-                           in if xs != [] then builtins.elemAt xs 0
+  cardanoByName= x: nodes: let xs = builtins.filter (n: n.config.services.cardano-node.enable == true
+                                     && n.config.services.cardano-node.nodeName == x) nodes;
+                           in if xs != [] then (builtins.elemAt xs 0).config.services.cardano-node
                               else throw "nodeById: no node with name '${toString x}'";
-  nodePublicIP = n: let ip = n.config.services.cardano-node.publicIP;
-                    in if ip != null then ip
-                       else throw "nodePublicIP: node '${n.config.services.cardano-node.nodeName}' has no public IP configured.";
+  nodeCardano  = n: if !(builtins.hasAttr "cardano-node" n.config.services)
+                    then throw "nodeAttr: node has no 'cardano-node' service configured."
+                    else n.config.services.cardano-node;
+  cardanoAttr  = a: c:
+                    if !builtins.hasAttr a c || c."${a}" == null
+                    then throw "nodeAttr: cardano node has no attribute '${a}'."
+                    else c."${a}";
 
   mkNodesUsing = constructor: nodes: lib.mapAttrs  (name: nodeParams: constructor nodeParams) nodes;
   mkNodeIPs = nodes: accessKeyId: lib.mapAttrs' (name: value:
@@ -30,7 +34,9 @@ in lib // (rec {
     then builtins.trace "using host nixpkgs" <nixpkgs>
     else builtins.trace "fetching nixpkgs"   fetchNixpkgsWithNixpkgs hostPkgs;
 
-  traceActually = x: builtins.trace (builtins.deepSeq x x) x;
+  traceF   = f: x: builtins.trace                         (f x)  x;
+  traceSF  = f: x: builtins.trace (builtins.seq     (f x) (f x)) x;
+  traceDSF = f: x: builtins.trace (builtins.deepseq (f x) (f x)) x;
 
   # Parse peers from a file
   #
