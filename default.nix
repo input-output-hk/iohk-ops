@@ -18,7 +18,7 @@ let
 
   socket-io-src = pkgs.fetchgit (removeAttrs (importJSON ./pkgs/engine-io.json) ["date"]);
   iohkpkgs = ((import pkgs/default.nix { inherit pkgs compiler; }).override {
-  overrides = self: super: rec {
+  overrides = self: super: {
     cardano-sl-core = prodMode super.cardano-sl-core;
     cardano-sl = overrideCabal super.cardano-sl (drv: {
       doHaddock = false;
@@ -57,9 +57,17 @@ let
     cardano-sl-explorer = prodMode (super.callPackage ./pkgs/cardano-sl-explorer.nix { });
     cardano-sl-explorer-static = justStaticExecutables self.cardano-sl-explorer;
 
-    iohk-ops-extra-runtime-deps = [
-      pkgs.git pkgs.nix-prefetch-scripts self.yaml
-    ];
+    #mkDerivation = args: super.mkDerivation (args // {
+    #enableLibraryProfiling = false;
+    #});
+  };
+});
+  iohk-ops-extra-runtime-deps = [
+    pkgs.git pkgs.nix-prefetch-scripts compiler.yaml
+  ];
+  cabal2nixpkgs = rec {
+    # extra packages to expose, that have no relation to pkgs/default.nix
+    stack2nix = compiler.callPackage ./pkgs/stack2nix.nix {};
     iohk-ops = pkgs.haskell.lib.overrideCabal
                (compiler.callPackage ./pkgs/iohk-ops.nix {})
                (drv: {
@@ -69,14 +77,5 @@ let
                     --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                   '';
                });
-
-    #mkDerivation = args: super.mkDerivation (args // {
-    #enableLibraryProfiling = false;
-    #});
-  };
-});
-  cabal2nixpkgs = rec {
-    # extra packages to expose, that have no relation to pkgs/default.nix
-    stack2nix = compiler.callPackage ./pkgs/stack2nix.nix {};
   };
 in iohkpkgs // cabal2nixpkgs
