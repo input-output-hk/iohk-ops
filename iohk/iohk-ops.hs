@@ -3,12 +3,14 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 
 import           Control.Monad                    (forM_)
-import           Data.Monoid                      ((<>))
+import           Data.Char                        (toLower)
+import           Data.List
+import qualified Data.Map                      as Map
 import           Data.Maybe
+import           Data.Monoid                      ((<>))
 import           Data.Optional (Optional)
 import qualified Data.Text                     as T
 import qualified Filesystem.Path.CurrentOS     as Path
-import           Text.Read                        (readMaybe)
 import           Turtle                    hiding (procs, shells)
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
@@ -21,18 +23,19 @@ import qualified Timewarp                      as Timewarp
 
 -- * Elementary parsers
 --
-diagReadMaybe :: (Bounded a, Enum a, Read a, Show a) => String -> Maybe a
-diagReadMaybe str = diag $ readMaybe str
-  where diag Nothing = head . err . fmap Just $ enumFromTo minBound maxBound
-        diag x       = x
-        err  xs      = (errorT $ format ("Couldn't parse '"%s%"' as one of: "%s%"\n")
-                                        (T.pack str) (T.intercalate ", " $ fmap (showT . fromJust) xs))
-                       ++ xs
+-- | Given a string, either return a constructor that being 'show'n case-insensitively matches the string,
+--   or raise an error, explaining what went wrong.
+diagReadCaseInsensitive :: (Bounded a, Enum a, Read a, Show a) => String -> Maybe a
+diagReadCaseInsensitive str = diagRead $ toLower <$> str
+  where mapping    = Map.fromList [ (toLower <$> show x, x) | x <- every ]
+        diagRead x = Just $ flip fromMaybe (Map.lookup x mapping)
+                     (errorT $ format ("Couldn't parse '"%s%"' as one of: "%s%"\n")
+                                        (T.pack str) (T.pack $ intercalate ", " $ Map.keys mapping))
 
 optReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> ShortName -> Optional HelpMessage -> Parser a
-optReadLower = opt (diagReadMaybe . T.unpack . T.toTitle)
+optReadLower = opt (diagReadCaseInsensitive . T.unpack)
 argReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> Optional HelpMessage -> Parser a
-argReadLower = arg (diagReadMaybe . T.unpack . T.toTitle)
+argReadLower = arg (diagReadCaseInsensitive . T.unpack)
 
 parserBranch :: Optional HelpMessage -> Parser Branch
 parserBranch desc = Branch <$> argText "branch" desc
