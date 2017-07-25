@@ -49,36 +49,36 @@ iohkNixopsURL        = "https://github.com/input-output-hk/iohk-nixops.git"
 awsPublicIPURL       = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
 defaultEnvironment   = Development
-defaultTarget        = Aws
+defaultTarget        = AWS
 defaultNodeLimit   = 14
 
 
 -- * Projects
 --
 data Project
-  = Cardanosl
-  | Cardanoexplorer
-  | Iohk
+  = CardanoSL
+  | CardanoExplorer
+  | IOHK
   | Nixpkgs
-  | Stack2Nix
+  | Stack2nix
   deriving (Bounded, Enum, Eq, Read, Show)
 
 every :: (Bounded a, Enum a) => [a]
 every = enumFromTo minBound maxBound
 
 projectURL     :: Project -> URL
-projectURL     Cardanosl       = "https://github.com/input-output-hk/cardano-sl.git"
-projectURL     Cardanoexplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
-projectURL     Iohk            = "https://github.com/input-output-hk/iohk-nixops.git"
+projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl.git"
+projectURL     CardanoExplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
+projectURL     IOHK            = "https://github.com/input-output-hk/iohk-nixops.git"
 projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
-projectURL     Stack2Nix       = "https://github.com/input-output-hk/stack2nix.git"
+projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
 
 projectSrcFile :: Project -> FilePath
-projectSrcFile Cardanosl       = "cardano-sl-src.json"
-projectSrcFile Cardanoexplorer = "cardano-sl-explorer-src.json"
+projectSrcFile CardanoSL       = "cardano-sl-src.json"
+projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
 projectSrcFile Nixpkgs         = "nixpkgs-src.json"
-projectSrcFile Stack2Nix       = "stack2nix-src.json"
-projectSrcFile Iohk            = error "Feeling self-referential?"
+projectSrcFile Stack2nix       = "stack2nix-src.json"
+projectSrcFile IOHK            = error "Feeling self-referential?"
 
 
 -- * Primitive types
@@ -162,7 +162,7 @@ data Deployment
   = Explorer
   | Nodes
   | Infra
-  | Reportserver
+  | ReportServer
   | Timewarp
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Deployment
@@ -177,7 +177,7 @@ instance FromJSON Environment
 
 data Target
   = All               -- ^ Wildcard or unspecified, depending on context.
-  | Aws
+  | AWS
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Target
 
@@ -213,24 +213,24 @@ deployments =
       , (Development, All, "deployments/cardano-explorer-env-development.nix")
       , (Production,  All, "deployments/cardano-explorer-env-production.nix")
       , (Staging,     All, "deployments/cardano-explorer-env-staging.nix")
-      , (Any,         Aws, "deployments/cardano-explorer-target-aws.nix") ])
+      , (Any,         AWS, "deployments/cardano-explorer-target-aws.nix") ])
   , (Nodes
     , [ (Any,         All, "deployments/cardano-nodes.nix")
       , (Production,  All, "deployments/cardano-nodes-env-production.nix")
       , (Staging,     All, "deployments/cardano-nodes-env-staging.nix")
-      , (Any,         Aws, "deployments/cardano-nodes-target-aws.nix") ])
+      , (Any,         AWS, "deployments/cardano-nodes-target-aws.nix") ])
   , (Infra
     , [ (Any,         All, "deployments/infrastructure.nix")
       , (Production,  All, "deployments/infrastructure-env-production.nix")
-      , (Any,         Aws, "deployments/infrastructure-target-aws.nix") ])
-  , (Reportserver
+      , (Any,         AWS, "deployments/infrastructure-target-aws.nix") ])
+  , (ReportServer
     , [ (Any,         All, "deployments/report-server.nix")
       , (Production,  All, "deployments/report-server-env-production.nix")
       , (Staging,     All, "deployments/report-server-env-staging.nix")
-      , (Any,         Aws, "deployments/report-server-target-aws.nix") ])
+      , (Any,         AWS, "deployments/report-server-target-aws.nix") ])
   , (Timewarp
     , [ (Any,         All, "deployments/timewarp.nix")
-      , (Any,         Aws, "deployments/timewarp-target-aws.nix") ])
+      , (Any,         AWS, "deployments/timewarp-target-aws.nix") ])
   ]
 
 deploymentSpecs :: Deployment -> [FileSpec]
@@ -462,11 +462,11 @@ fromscratch o c = do
 generateGenesis :: Options -> NixopsConfig -> IO ()
 generateGenesis o c = do
   let cardanoSLDir         = "cardano-sl"
-  GitSource{..} <- readSource gitSource Cardanosl
+  GitSource{..} <- readSource gitSource CardanoSL
   printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit gRev
   exists <- testpath cardanoSLDir
   unless exists $
-    cmd o "git" ["clone", fromURL $ projectURL Cardanosl, "cardano-sl"]
+    cmd o "git" ["clone", fromURL $ projectURL CardanoSL, "cardano-sl"]
   cd "cardano-sl"
   cmd o "git" ["fetch"]
   cmd o "git" ["reset", "--hard", fromCommit gRev]
