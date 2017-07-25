@@ -48,9 +48,9 @@ import qualified Turtle as Turtle
 awsPublicIPURL :: URL
 awsPublicIPURL = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
-defaultEnvironment = Development
-defaultTarget      = AWS
-defaultNodeLimit   = 14
+defaultEnvironment   = Development
+defaultTarget        = AWS
+defaultNodeLimit     = 14
 
 
 -- * Projects
