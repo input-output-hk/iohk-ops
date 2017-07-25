@@ -37,19 +37,19 @@ import Data.ByteString.Lazy.Char8 (ByteString, pack)
 import qualified Filesystem.Path.CurrentOS     as Path
 import GHC.Generics
 import Safe (headMay)
+import qualified System.IO                     as Sys
 import           Text.Read                        (readMaybe)
-import Turtle hiding (procs)
+import Turtle hiding (procs, inproc)
 import qualified Turtle as Turtle
 
 
 -- * Constants
 --
-awsPublicIPURL, iohkNixopsURL :: URL
-iohkNixopsURL        = "https://github.com/input-output-hk/iohk-nixops.git"
-awsPublicIPURL       = "http://169.254.169.254/latest/meta-data/public-ipv4"
+awsPublicIPURL :: URL
+awsPublicIPURL = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
-defaultEnvironment   = Development
-defaultTarget        = AWS
+defaultEnvironment = Development
+defaultTarget      = AWS
 defaultNodeLimit   = 14
 
 
@@ -357,6 +357,15 @@ parallelIO Options{..} =
   then sequence_
   else sh . parallel
 
+logCmd  cmd args = do
+  printf ("-- "%s%"\n") $ T.intercalate " " $ cmd:args
+  Sys.hFlush Sys.stdout
+
+inproc :: Text -> [Text] -> Shell Line -> Shell Line
+inproc cmd args input = do
+  liftIO $ logCmd cmd args
+  Turtle.inproc cmd args input
+
 inprocs :: MonadIO m => Text -> [Text] -> Shell Line -> m Text
 inprocs cmd args input = do
   (exitCode, stdout) <- liftIO $ procStrict cmd args input
@@ -367,9 +376,6 @@ inprocs cmd args input = do
 cmd   :: Options -> Text -> [Text] -> IO ()
 cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
 incmd :: Options -> Text -> [Text] -> IO Text
-
-logCmd  cmd args =
-  printf ("-- "%s%"\n") $ T.intercalate " " $ cmd:args
 
 cmd   Options{..} cmd args = do
   when oVerbose $ logCmd cmd args
