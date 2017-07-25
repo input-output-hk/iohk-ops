@@ -1431,8 +1431,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "13jyby1gh05qjd7a565kq77cpjczxiqsympnkgmnjrhknf74178m";
-            rev = "97850b14ca8e6a4d0055e4f8a6a90380967263b0";
+            sha256 = "0660qf76hv0srqwjpz8x0gxyp2asks2mlb387yzmq9aw91hy5a02";
+            rev = "2ed2d6bcaf5d5e7bec1eef806e7d1e965cdd0c0b";
           };
           isLibrary = true;
           isExecutable = true;
@@ -1690,8 +1690,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "13jyby1gh05qjd7a565kq77cpjczxiqsympnkgmnjrhknf74178m";
-            rev = "97850b14ca8e6a4d0055e4f8a6a90380967263b0";
+            sha256 = "0660qf76hv0srqwjpz8x0gxyp2asks2mlb387yzmq9aw91hy5a02";
+            rev = "2ed2d6bcaf5d5e7bec1eef806e7d1e965cdd0c0b";
           };
           postUnpack = "sourceRoot+=/core; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1764,8 +1764,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "13jyby1gh05qjd7a565kq77cpjczxiqsympnkgmnjrhknf74178m";
-            rev = "97850b14ca8e6a4d0055e4f8a6a90380967263b0";
+            sha256 = "0660qf76hv0srqwjpz8x0gxyp2asks2mlb387yzmq9aw91hy5a02";
+            rev = "2ed2d6bcaf5d5e7bec1eef806e7d1e965cdd0c0b";
           };
           postUnpack = "sourceRoot+=/db; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1802,8 +1802,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "13jyby1gh05qjd7a565kq77cpjczxiqsympnkgmnjrhknf74178m";
-            rev = "97850b14ca8e6a4d0055e4f8a6a90380967263b0";
+            sha256 = "0660qf76hv0srqwjpz8x0gxyp2asks2mlb387yzmq9aw91hy5a02";
+            rev = "2ed2d6bcaf5d5e7bec1eef806e7d1e965cdd0c0b";
           };
           postUnpack = "sourceRoot+=/godtossing; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1850,8 +1850,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "13jyby1gh05qjd7a565kq77cpjczxiqsympnkgmnjrhknf74178m";
-            rev = "97850b14ca8e6a4d0055e4f8a6a90380967263b0";
+            sha256 = "0660qf76hv0srqwjpz8x0gxyp2asks2mlb387yzmq9aw91hy5a02";
+            rev = "2ed2d6bcaf5d5e7bec1eef806e7d1e965cdd0c0b";
           };
           postUnpack = "sourceRoot+=/infra; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1913,8 +1913,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "13jyby1gh05qjd7a565kq77cpjczxiqsympnkgmnjrhknf74178m";
-            rev = "97850b14ca8e6a4d0055e4f8a6a90380967263b0";
+            sha256 = "0660qf76hv0srqwjpz8x0gxyp2asks2mlb387yzmq9aw91hy5a02";
+            rev = "2ed2d6bcaf5d5e7bec1eef806e7d1e965cdd0c0b";
           };
           postUnpack = "sourceRoot+=/lrc; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1943,8 +1943,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "13jyby1gh05qjd7a565kq77cpjczxiqsympnkgmnjrhknf74178m";
-            rev = "97850b14ca8e6a4d0055e4f8a6a90380967263b0";
+            sha256 = "0660qf76hv0srqwjpz8x0gxyp2asks2mlb387yzmq9aw91hy5a02";
+            rev = "2ed2d6bcaf5d5e7bec1eef806e7d1e965cdd0c0b";
           };
           postUnpack = "sourceRoot+=/ssc; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1980,8 +1980,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "13jyby1gh05qjd7a565kq77cpjczxiqsympnkgmnjrhknf74178m";
-            rev = "97850b14ca8e6a4d0055e4f8a6a90380967263b0";
+            sha256 = "0660qf76hv0srqwjpz8x0gxyp2asks2mlb387yzmq9aw91hy5a02";
+            rev = "2ed2d6bcaf5d5e7bec1eef806e7d1e965cdd0c0b";
           };
           postUnpack = "sourceRoot+=/txp; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -2031,8 +2031,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "13jyby1gh05qjd7a565kq77cpjczxiqsympnkgmnjrhknf74178m";
-            rev = "97850b14ca8e6a4d0055e4f8a6a90380967263b0";
+            sha256 = "0660qf76hv0srqwjpz8x0gxyp2asks2mlb387yzmq9aw91hy5a02";
+            rev = "2ed2d6bcaf5d5e7bec1eef806e7d1e965cdd0c0b";
           };
           postUnpack = "sourceRoot+=/update; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -6848,8 +6848,8 @@ self: {
           pname = "servant-server";
           version = "0.10";
           sha256 = "0g87g48p179v1j3ki3vsvkk5gidqfp5yb9xwnh0j90v7x8ilvlcr";
-          revision = "1";
-          editedCabalFile = "4332581ae3248c16017f88461abf6eef9fbad2ca86e86a2e8a013f9adc665973";
+          revision = "2";
+          editedCabalFile = "39175e589dfcbd833cb9a244b8516a2357d143c10b872f52ae8bd5c3c66d6b1a";
           isLibrary = true;
           isExecutable = true;
           setupHaskellDepends = [
@@ -7033,8 +7033,8 @@ self: {
           pname = "servant";
           version = "0.10";
           sha256 = "07ik9ddaj1vmq37dl4mg00rawa9phfapm8a52cs1b5km5fxaknp1";
-          revision = "2";
-          editedCabalFile = "6808bd35e2105f94f1290066a773cd302eb0c01c987e6e933de1fc5fb05f398f";
+          revision = "3";
+          editedCabalFile = "c7bf0617bf1399ae156312c24258df7571c87ac8a15e2d0a1ea23f7d4edfae80";
           setupHaskellDepends = [
             base
             Cabal
