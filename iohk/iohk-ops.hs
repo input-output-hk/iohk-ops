@@ -13,7 +13,7 @@ import           Turtle                    hiding (procs, shells)
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), Project(..), Region(..), URL(..)
-                                                  ,showT, lowerShowT, errorT, cmd, incmd, projectURL)
+                                                  ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import qualified Timewarp                      as Timewarp
@@ -43,18 +43,18 @@ parserCommit desc = Commit <$> argText "commit" desc
 parserEnvironment :: Parser Environment
 parserEnvironment = fromMaybe Ops.defaultEnvironment <$> optional (optReadLower "environment" 'e' $ pure $
                                                                    Turtle.HelpMessage $ "Environment: "
-                                                                   <> T.intercalate ", " (lowerShowT <$> Ops.allEnvironments) <> ".  Default: development")
+                                                                   <> T.intercalate ", " (lowerShowT <$> (every :: [Environment])) <> ".  Default: development")
 
 parserTarget      :: Parser Target
 parserTarget      = fromMaybe Ops.defaultTarget      <$> optional (optReadLower "target"      't' "Target: aws, all;  defaults to AWS")
 
 parserProject     :: Parser Project
-parserProject     = argReadLower "project" $ pure $ Turtle.HelpMessage ("Project to set version of: " <> T.intercalate ", " (lowerShowT <$> Ops.allProjects))
+parserProject     = argReadLower "project" $ pure $ Turtle.HelpMessage ("Project to set version of: " <> T.intercalate ", " (lowerShowT <$> (every :: [Project])))
 
 parserDeployment  :: Parser Deployment
 parserDeployment  = argReadLower "DEPL" (pure $
                                          Turtle.HelpMessage $ "Deployment, one of: "
-                                         <> T.intercalate ", " (lowerShowT <$> Ops.allDeployments))
+                                         <> T.intercalate ", " (lowerShowT <$> (every :: [Deployment])))
 parserDeployments :: Parser [Deployment]
 parserDeployments = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
                     <$> ((,,,)
@@ -253,7 +253,7 @@ main = do
 
 runTemplate :: Options -> Command -> IO ()
 runTemplate o@Options{..} Template{..} = do
-  when (elem (fromBranch tBranch) $ showT <$> Ops.allDeployments) $
+  when (elem (fromBranch tBranch) $ showT <$> (every :: [Deployment])) $
     die $ format ("the branch name "%w%" ambiguously refers to a deployment.  Cannot have that!") (fromBranch tBranch)
   homeDir <- home
   let bname     = fromBranch tBranch

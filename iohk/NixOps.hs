@@ -63,8 +63,8 @@ data Project
   | Stack2Nix
   deriving (Bounded, Enum, Eq, Read, Show)
 
-allProjects :: [Project]
-allProjects = enumFromTo minBound maxBound
+every :: (Bounded a, Enum a) => [a]
+every = enumFromTo minBound maxBound
 
 projectURL     :: Project -> URL
 projectURL     Cardanosl       = "https://github.com/input-output-hk/cardano-sl.git"
@@ -180,13 +180,6 @@ data Target
   | Aws
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Target
-
-allDeployments  :: [Deployment]
-allDeployments  = enumFromTo minBound maxBound
-allEnvironments :: [Environment]
-allEnvironments = enumFromTo minBound maxBound
-allTargets      :: [Target]
-allTargets      = enumFromTo minBound maxBound
 
 envConfigFilename :: IsString s => Environment -> s
 envConfigFilename Any           = "config.yaml"
