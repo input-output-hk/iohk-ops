@@ -215,6 +215,7 @@ deployments =
       , (Any,         AWS, "deployments/cardano-explorer-target-aws.nix") ])
   , (Nodes
     , [ (Any,         All, "deployments/cardano-nodes.nix")
+      , (Development, All, "deployments/cardano-nodes-env-development.nix")
       , (Production,  All, "deployments/cardano-nodes-env-production.nix")
       , (Staging,     All, "deployments/cardano-nodes-env-staging.nix")
       , (Any,         AWS, "deployments/cardano-nodes-target-aws.nix") ])
