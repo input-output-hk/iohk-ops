@@ -68,21 +68,21 @@ data S3Command
   | SetDaedalusReleaseBuild (RSpec OSX) (RSpec Win64)
   deriving (Show)
 
-parserBuildId :: Parser BuildId
-parserBuildId =
-  (BuildId         <$> argText "build-id"      "Daedalus build id.  Example: '0.3.1526'")
+parserBuildId :: ArgName -> Parser BuildId
+parserBuildId metavar =
+  (BuildId    <$> argText metavar       "Daedalus build id.  Example: '0.3.1526'")
 
 parserAppveyorId :: Parser AppveyorId
 parserAppveyorId =
-  (AppveyorId <$> argText "appveyor-path" "AppVeyor build subpath.  Example: 'iw5m0firsneia7k2/artifacts/installers/daedalus-win64-0.3.1451.0'")
+  (AppveyorId <$> argText "APPVEYOR-ID" "AppVeyor build subpath.  Example: 'iw5m0firsneia7k2'")
 
 parser ∷ Parser Command
 parser =
   subcommand "s3" "Control the S3-related AWS-ities."
   (S3 <$> (subcommand "set-daedalus-release-build" "Set the S3 daedalus-<OS>-latest.<EXT> redirect to a particular version."
             (SetDaedalusReleaseBuild
-             <$> (R_OSX   <$> parserBuildId)
-             <*> (R_Win64 <$> parserBuildId <*> parserAppveyorId))
+             <$> (R_OSX   <$> parserBuildId "OSX-BUILD-ID")
+             <*> (R_Win64 <$> parserBuildId "WIN64-BUILD-ID" <*> parserAppveyorId))
            <|>
            subcommand "check-daedalus-release-urls" "Check the Daedalus release URLs." (pure CheckDaedalusReleaseURLs))
       <*> (fromMaybe default'bucket
