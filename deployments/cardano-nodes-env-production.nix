@@ -2,7 +2,7 @@
 
 with (import ./../lib.nix);
 let
-  nodes = import ./cardano-nodes-config.nix { };
+  nodes = import ./cardano-nodes-config.nix { inherit accessKeyId; };
   nodeProdConf = import ./../modules/cardano-node-prod.nix;
 in {
   resources = {
