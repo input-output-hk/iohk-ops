@@ -2,33 +2,33 @@
 
 with (import ./../lib.nix);
 
-let cluster'spec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nodes; # Strip the outer "nodes:" shell of cluster.yaml
-    cluster'list   = builtins.sort (l: r: l.name < r.name)
-                                   (mapAttrsToList (k: v: { name = k; value = v; }) cluster'spec);
-    region'list    = unique (map (n: n.value.region) cluster'list);
-    indexed        = imap (i: x: with x.value;
-          { name = x.name; value = {
-                               i = i - 1;
-                            name = x.name; # This is an important identity, let's not break it.
-                          region = region;
-                            type = type;
-                   static-routes = if builtins.hasAttr "static-routes" x.value then x.value.static-routes else [];
-                             }; } ) cluster'list;
-    by'name        = name: let xs = filter (n: n.name == name) indexed;
-                           in if xs != [] then builtins.elemAt xs 0
-                              else throw "No indexed'node by name '${name}'.";
+let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nodes; # Strip the outer "nodes:" shell of cluster.yaml
+    clusterList   = builtins.sort (l: r: l.name < r.name)
+                                   (mapAttrsToList (k: v: { name = k; value = v; }) clusterSpec);
+    regionList    = unique (map (n: n.value.region) clusterList);
+    indexed       = imap (i: x: with x.value;
+           { name = x.name; value = {
+                                i = i - 1;
+                             name = x.name; # This is an important identity, let's not break it.
+                           region = region;
+                             type = type;
+                    static-routes = if builtins.hasAttr "static-routes" x.value then x.value.static-routes else [];
+                             }; } ) clusterList;
+    byName        = name: let xs = filter (n: n.name == name) indexed;
+                          in if xs != [] then builtins.elemAt xs 0
+                             else throw "No indexedNode by name '${name}'.";
     # Canonical node parameter format is:
     #   i             :: Int
     #   region        :: String
-    #   type          :: String             -- one of: 'core', 'relay'
+    #   type          :: String               -- one of: 'core', 'relay'
     #   static-routes :: [['nodeId, 'nodeId]] -- here we go, TupleList..
     canonical       = builtins.listToAttrs indexed;
     cores           = filter (x: x.value.type == "core") indexed;
     ##
     ##
-    region'open'SG'name = region:
+    regionOpenSGName = region:
         "allow-open-${region}";
-    region'open'SG      = region: {
+    regionOpenSG      = region: {
         "allow-open-${region}" = {
           inherit region accessKeyId;
           description = "Everything goes";
@@ -40,9 +40,9 @@ let cluster'spec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).no
           }];
         };
       };
-    region'ssh'SG'name = region:
+    regionSshSGName = region:
         "allow-ssh-${region}";
-    region'ssh'SG      = region: {
+    regionSshSG      = region: {
         "allow-ssh-${region}" = {
           inherit region accessKeyId;
           description = "SSH";
@@ -53,9 +53,9 @@ let cluster'spec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).no
           }];
         };
       };
-    region'kademlia'public'tcp'SG'name = region:
+    regionKademliaPublicTcpSGName = region:
         "allow-kademlia-public-udp-${region}";
-    region'kademlia'public'tcp'SG      = region: {
+    regionKademliaPublicTcpSG      = region: {
         "allow-kademlia-public-udp-${region}" = {
           inherit region accessKeyId;
           description = "Kademlia UDP public";
@@ -67,9 +67,9 @@ let cluster'spec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).no
           }];
         };
       };
-    region'cardano'public'tcp'SG'name = region:
+    regionCardanoPublicTcpSGName = region:
         "allow-cardano-public-tcp-${region}";
-    region'cardano'public'tcp'SG      = port: region: {
+    regionCardanoPublicTcpSG      = port: region: {
         "allow-cardano-public-tcp-${region}" = {
           inherit region accessKeyId;
           description = "Cardano TCP public";
@@ -80,11 +80,11 @@ let cluster'spec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).no
           }];
         };
       };
-    core'cardano'static'peers'SG'name = core:
+    coreCardanoStaticPeersSGName = core:
         "allow-cardano-static-peers-${core.name}-${core.value.region}";
-    core'cardano'static'peers'SG      = port: ips: core:
-      let neighbour'names = flatten core.value.static-routes;
-          neighbours = map by'name neighbour'names;
+    coreCardanoStaticPeersSG      = port: ips: core:
+      let neighbourNames = flatten core.value.static-routes;
+          neighbours = map byName neighbourNames;
           neigh'rule =
           neigh:
           let
@@ -101,25 +101,25 @@ let cluster'spec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).no
           rules = map neigh'rule neighbours;
         };
       };
-    security'group'names =
-     (    map  region'open'SG'name                                      region'list
-      ++  map  region'ssh'SG'name                                       region'list
-      ++  map  core'cardano'static'peers'SG'name                        cores
-      ++  map  region'kademlia'public'tcp'SG'name                       region'list
-      ++  map  region'cardano'public'tcp'SG'name                        region'list
+    securityGroupNames =
+     (    map  regionOpenSGName                                     regionList
+      ++  map  regionSshSGName                                      regionList
+      ++  map  coreCardanoStaticPeersSGName                         cores
+      ++  map  regionKademliaPublicTcpSGName                        regionList
+      ++  map  regionCardanoPublicTcpSGName                         regionList
      );
-    elastic'ips'security'groups =
-     elastic'ips:
+    elasticIPsSecurityGroups =
+     elasticIPs:
      (fold (x: y: x // y) {}
-     (    map  region'open'SG                                           region'list
-      ++  map  region'ssh'SG                                            region'list
-      ++  map (core'cardano'static'peers'SG cconf.nodePort elastic'ips) cores
-      ++  map  region'kademlia'public'tcp'SG                            region'list
-      ++  map (region'cardano'public'tcp'SG cconf.nodePort)             region'list
+     (    map  regionOpenSG                                         regionList
+      ++  map  regionSshSG                                          regionList
+      ++  map (coreCardanoStaticPeersSG cconf.nodePort elasticIPs)  cores
+      ++  map  regionKademliaPublicTcpSG                            regionList
+      ++  map (regionCardanoPublicTcpSG cconf.nodePort)             regionList
      ));
 in
 {
   nodeArgs           = canonical;
-  securityGroupNames = security'group'names;
-  securityGroups     = elastic'ips'security'groups;
+  securityGroupNames = securityGroupNames;
+  securityGroups     = elasticIPsSecurityGroups;
 }
