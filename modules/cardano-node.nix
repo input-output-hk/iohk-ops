@@ -64,6 +64,8 @@ in {
       port = mkOption { type = types.int; default = 3000; };
       systemStart = mkOption { type = types.int; default = 0; };
 
+      type      = mkOption { type = types.enum [ "core" "relay" "other" ]; default = null; };
+
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
       dhtKey = mkOption {
@@ -153,6 +155,8 @@ in {
     assertions = [
     { assertion = cfg.initialKademliaPeers != null;
       message = "services.cardano-node.initialKademliaPeers must be set, even if to an empty list (nodeIndex: ${toString cfg.nodeIndex})"; }
+    { assertion = cfg.type != null;
+      message = "services.cardano-node.type must be set to one of: core relay other"; }
     ];
 
     users = {
