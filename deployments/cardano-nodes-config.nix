@@ -118,4 +118,8 @@ let cluster'spec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).no
       ++  map (region'cardano'public'tcp'SG cconf.nodePort)             region'list
      ));
 in
-  canonical
+{
+  nodeArgs           = canonical;
+  securityGroupNames = security'group'names;
+  securityGroups     = elastic'ips'security'groups;
+}

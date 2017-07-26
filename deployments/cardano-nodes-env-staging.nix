@@ -2,11 +2,11 @@
 
 with (import ./../lib.nix);
 let
-  nodes = import ./cardano-nodes-config.nix { inherit accessKeyId; };
-  nodeStagConf = import ./../modules/cardano-node-staging.nix;
+  nodeArgs    = (import ./cardano-nodes-config.nix { inherit accessKeyId; }).nodeArgs;
+  nodeEnvConf = import ./../modules/cardano-node-staging.nix;
 in {
   resources = {
-    elasticIPs = mkNodeIPs nodes accessKeyId;
+    elasticIPs = mkNodeIPs nodeArgs accessKeyId;
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       cpu = mkMonitor (cpu_monitor // {
         message = pagerDutyPolicy.nonCritical;
@@ -27,4 +27,4 @@ in {
       });
     });
   };
-} // (mkNodesUsing (params: nodeStagConf) nodes)
+} // (mkNodesUsing (params: nodeEnvConf) nodeArgs)

@@ -2,7 +2,7 @@
 
 with (import ./../lib.nix);
 let
-  nodeAWSConfig = (import ./../modules/cardano-node-aws.nix) { inherit accessKeyId; };
-  nodes         = import ./cardano-nodes-config.nix { inherit accessKeyId; };
+  nodeArgs    = (import ./cardano-nodes-config.nix         { inherit accessKeyId; }).nodeArgs;
+  nodeTgtConf = (import ./../modules/cardano-node-aws.nix) { inherit accessKeyId; };
 in
-  mkNodesUsing nodeAWSConfig nodes
+  mkNodesUsing nodeTgtConf nodeArgs
