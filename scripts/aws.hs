@@ -1,6 +1,6 @@
 #!/usr/bin/env runhaskell
 
-{-# LANGUAGE OverloadedStrings, UnicodeSyntax #-}
+{-# LANGUAGE DataKinds, GADTs, OverloadedStrings, StandaloneDeriving, UnicodeSyntax #-}
 
 import Control.Monad (forM_)
 import Data.Maybe
@@ -27,25 +27,35 @@ ppURL (URL pro ho ke) = pro <> "://" <> ho <> "/" <> ke
 -- * Buckets
 data Bucket     = Bucket { fromBucket ∷ T.Text } deriving (Show)
 
-defaultBucket = Bucket "daedalus-travis"
+default'bucket = Bucket "daedalus-travis"
+
+daedalus'versions'key :: Text
+daedalus'versions'key = "daedalus-latest-version.json"
 
 
 -- * Build/release logic
 --
-data RSpecOSX     = OSX   BuildId       deriving (Show)
-data RSpecWin64   = Win64 AppveyorPath  deriving (Show)
+data OS = Linux | OSX | Win64
 
-data AppveyorPath = AppveyorPath T.Text deriving (Show)
-data BuildId      = BuildId      T.Text deriving (Show)
+data RSpec a where
+  R_Linux :: BuildId               -> RSpec Linux
+  R_OSX   :: BuildId               -> RSpec OSX
+  R_Win64 :: BuildId -> AppveyorId -> RSpec Win64
+deriving instance Show (RSpec a)
 
-buildURL ∷ BuildId → URL
-buildURL (BuildId id) =
+data AppveyorId = AppveyorId                  T.Text   deriving (Show)
+data BuildId    = BuildId    { fromBuildId :: T.Text } deriving (Show)
+
+buildURL ∷ RSpec a → URL
+buildURL (R_Linux (BuildId bid)) =
   URL "https" "s3.eu-central-1.amazonaws.com" $
-  mconcat ["daedalus-travis/Daedalus-installer-", id, ".pkg"]
-avpathURL ∷ AppveyorPath → URL
-avpathURL (AppveyorPath avp) =
+  error "Sorry, no Linux support just yet."
+buildURL (R_OSX   (BuildId bid)) =
+  URL "https" "s3.eu-central-1.amazonaws.com" $
+  mconcat ["daedalus-travis/Daedalus-installer-", bid, ".pkg"]
+buildURL (R_Win64 (BuildId bid) (AppveyorId avid)) =
   URL "https" "ci.appveyor.com" $
-  mconcat ["api/buildjobs/", avp, "-installer.exe"]
+  mconcat ["api/buildjobs/", avid, "/artifacts/installers/daedalus-win64-", bid,"-installer.exe"]
 
 
 -- * Parametrisation & Main
@@ -55,20 +65,28 @@ data Command =
 
 data S3Command
   = CheckDaedalusReleaseURLs
-  | SetDaedalusReleaseBuild RSpecOSX RSpecWin64
+  | SetDaedalusReleaseBuild (RSpec OSX) (RSpec Win64)
   deriving (Show)
+
+parserBuildId :: Parser BuildId
+parserBuildId =
+  (BuildId         <$> argText "build-id"      "Daedalus build id.  Example: '0.3.1526'")
+
+parserAppveyorId :: Parser AppveyorId
+parserAppveyorId =
+  (AppveyorId <$> argText "appveyor-path" "AppVeyor build subpath.  Example: 'iw5m0firsneia7k2/artifacts/installers/daedalus-win64-0.3.1451.0'")
 
 parser ∷ Parser Command
 parser =
   subcommand "s3" "Control the S3-related AWS-ities."
   (S3 <$> (subcommand "set-daedalus-release-build" "Set the S3 daedalus-<OS>-latest.<EXT> redirect to a particular version."
             (SetDaedalusReleaseBuild
-             <$> (OSX   <$> (BuildId      <$> argText "build-id"      "Travis build id.  Example: '0.3.1526'"))
-             <*> (Win64 <$> (AppveyorPath <$> argText "appveyor-path" "AppVeyor build subpath.  Example: 'iw5m0firsneia7k2/artifacts/installers/daedalus-win64-0.3.1451.0'")))
+             <$> (R_OSX   <$> parserBuildId)
+             <*> (R_Win64 <$> parserBuildId <*> parserAppveyorId))
            <|>
            subcommand "check-daedalus-release-urls" "Check the Daedalus release URLs." (pure CheckDaedalusReleaseURLs))
-      <*> (fromMaybe defaultBucket
-           <$> optional (Bucket <$> (argText "bucket" "The S3 bucket to operate on.  Defaults to 'daedalus-travis'."))))
+      <*> (fromMaybe default'bucket
+           <$> optional (Bucket <$> (argText "bucket" (pure $ Turtle.HelpMessage $ "The S3 bucket to operate on.  Defaults to '" <> fromBucket default'bucket <> "'.")))))
 
 main ∷ IO ()
 main = do
@@ -105,9 +123,10 @@ runS3 CheckDaedalusReleaseURLs bucket = do
   printf ("  OS X:   "%s%"\n") (ppURL $ osxLive bucket)
   printf ("  Win64:  "%s%"\n") (ppURL $ w64Live bucket)
 
-runS3 (SetDaedalusReleaseBuild rsOSX@(OSX id) rsWin64@(Win64 avPath)) bucket = do
-  let (osxurl@(URL osxpr osxcn osxpath), w64url@(URL w64pr w64cn w64path)) =
-        (buildURL id, avpathURL avPath)
+runS3 (SetDaedalusReleaseBuild rsOSX@(R_OSX osx'bid) rsWin64@(R_Win64 w64'bid avId)) bucket = do
+  let (   osxurl@(URL osxpr osxcn osxpath)
+        , w64url@(URL w64pr w64cn w64path)) =
+        (buildURL rsOSX, buildURL rsWin64)
 
   echo $ unsafeTextToLine $ mconcat [ "Setting Daedalus release redirects to: "]
   echo $ unsafeTextToLine $ mconcat [ "  OS X:   ", ppURL osxurl]
@@ -120,43 +139,59 @@ runS3 (SetDaedalusReleaseBuild rsOSX@(OSX id) rsWin64@(Win64 avPath)) bucket = d
   echo $ unsafeTextToLine $ mconcat [ "  Win64: ", ppURL w64url]
   echo ""
 
-  with (mktempfile "/tmp" "awstmp.json") $ \tmpfile → do
-    writeTextFile tmpfile . T.unlines $
-      [ "{",
-        "    \"IndexDocument\": {",
-        "        \"Suffix\":                   \"index.html\"",
-        "    },",
-        "    \"RoutingRules\": [",
-        "        {",
-        "            \"Condition\": {",
-        "                \"KeyPrefixEquals\":  \"daedalus-osx-latest.pkg\"",
-        "            },",
-        "            \"Redirect\": {",
-        "                \"HttpRedirectCode\": \"303\",",
-        ["                \"Protocol\":         \"", osxpr, "\","] & mconcat,
-        ["                \"HostName\":         \"", osxcn, "\","] & mconcat,
-        ["                \"ReplaceKeyWith\":   \"", osxpath, "\""] & mconcat,
-        "            }",
-        "        },",
-        "        {",
-        "            \"Condition\": {",
-        "                \"KeyPrefixEquals\":  \"daedalus-win64-latest.exe\"",
-        "            },",
-        "            \"Redirect\": {",
-        "                \"HttpRedirectCode\": \"303\",",
-        ["                \"Protocol\":         \"", w64pr, "\","] & mconcat,
-        ["                \"HostName\":         \"", w64cn, "\","] & mconcat,
-        ["                \"ReplaceKeyWith\":   \"", w64path, "\""] & mconcat,
-        "            }",
-        "        }",
-        "    ]",
-        "}"]
+  with   (mktempfile "/tmp" "awsbucketcfg.json")   $ \bucket'cfg → do
+    with (mktempfile "/tmp" "awsversionfile.json") $ \version'file → do
+      writeTextFile version'file $
+        (    "{ "
+          <> "\"linux\": \"" <> ""                  <> "\","
+          <> "\"macos\": \"" <> fromBuildId osx'bid <> "\","
+          <> "\"win64\": \"" <> fromBuildId w64'bid <> "\""
+          <> " }" )
+      writeTextFile bucket'cfg . T.unlines $
+        [ "{",
+          "    \"IndexDocument\": {",
+          "        \"Suffix\":                   \"index.html\"",
+          "    },",
+          "    \"RoutingRules\": [",
+          "        {",
+          "            \"Condition\": {",
+          "                \"KeyPrefixEquals\":  \"daedalus-osx-latest.pkg\"",
+          "            },",
+          "            \"Redirect\": {",
+          "                \"HttpRedirectCode\": \"303\",",
+          ["                \"Protocol\":         \"", osxpr,  "\","] & mconcat,
+          ["                \"HostName\":         \"", osxcn,  "\","] & mconcat,
+          ["                \"ReplaceKeyWith\":   \"", osxpath, "\""] & mconcat,
+          "            }",
+          "        },",
+          "        {",
+          "            \"Condition\": {",
+          "                \"KeyPrefixEquals\":  \"daedalus-win64-latest.exe\"",
+          "            },",
+          "            \"Redirect\": {",
+          "                \"HttpRedirectCode\": \"303\",",
+          ["                \"Protocol\":         \"", w64pr,  "\","] & mconcat,
+          ["                \"HostName\":         \"", w64cn,  "\","] & mconcat,
+          ["                \"ReplaceKeyWith\":   \"", w64path, "\""] & mconcat,
+          "            }",
+          "        }",
+          "    ]",
+          "}"]
 
-    -- shells ("cat " <> format fp tmpfile) empty
-    shells ("aws s3api put-bucket-website --bucket " <> fromBucket bucket <> " --website-configuration file://" <> format fp tmpfile) empty
-    echo "Done.  Following URLs should be live within a minute:"
-    echo ""
-    printf ("  OS X:   "%s%"\n") (ppURL $ osxLive bucket)
-    printf ("  Win64:  "%s%"\n") (ppURL $ w64Live bucket)
+      shells ("cat " <> format fp bucket'cfg)   empty
+      shells ("cat " <> format fp version'file) empty
+      shells ("aws s3api put-bucket-website"
+              <> " --bucket "                       <> fromBucket bucket
+              <> " --website-configuration file://" <> format fp bucket'cfg)
+        empty
+      shells ("aws s3api put-object"
+              <> " --bucket "                       <> fromBucket bucket
+              <> " --key "                          <> daedalus'versions'key
+              <> " --data "                         <> (format fp version'file))
+        empty
+      echo "Done.  Following URLs should be live within a minute:"
+      echo ""
+      printf ("  OS X:   "%s%"\n") (ppURL $ osxLive bucket)
+      printf ("  Win64:  "%s%"\n") (ppURL $ w64Live bucket)
 
   pure ()
