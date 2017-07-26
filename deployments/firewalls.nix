@@ -6,6 +6,6 @@ with (import ./../lib.nix);
     let config   = (import ./cardano-nodes-config.nix { inherit accessKeyId; });
         SGList   = flip map config.securityGroupNames
                    (name: { name  = name;
-                            value = { resources, ... }: (config.securityGroups (traceF builtins.attrNames resources.elasticIPs))."${name}"; });
+                            value = { resources, ... }: (config.securityGroups resources.elasticIPs)."${name}"; });
     in listToAttrs SGList;
 }
