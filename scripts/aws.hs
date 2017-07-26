@@ -65,7 +65,7 @@ data Command =
 
 data S3Command
   = CheckDaedalusReleaseURLs
-  | SetDaedalusReleaseBuild (RSpec OSX) (RSpec Win64)
+  | SetDaedalusReleaseBuild Bool (RSpec OSX) (RSpec Win64)
   deriving (Show)
 
 parserBuildId :: ArgName -> Parser BuildId
@@ -81,12 +81,14 @@ parser =
   subcommand "s3" "Control the S3-related AWS-ities."
   (S3 <$> (subcommand "set-daedalus-release-build" "Set the S3 daedalus-<OS>-latest.<EXT> redirect to a particular version."
             (SetDaedalusReleaseBuild
-             <$> (R_OSX   <$> parserBuildId "OSX-BUILD-ID")
+             <$> (fromMaybe False <$> (optional
+                                       (switch "debug" 'd' "Dump internal state, and crucially -- DON'T reach AWS.")))
+             <*> (R_OSX   <$> parserBuildId "OSX-BUILD-ID")
              <*> (R_Win64 <$> parserBuildId "WIN64-BUILD-ID" <*> parserAppveyorId))
            <|>
            subcommand "check-daedalus-release-urls" "Check the Daedalus release URLs." (pure CheckDaedalusReleaseURLs))
       <*> (fromMaybe default'bucket
-           <$> optional (Bucket <$> (argText "bucket" (pure $ Turtle.HelpMessage $ "The S3 bucket to operate on.  Defaults to '" <> fromBucket default'bucket <> "'.")))))
+           <$> optional (Bucket <$> (optText "bucket" 'b' (pure $ Turtle.HelpMessage $ "The S3 bucket to operate on.  Defaults to '" <> fromBucket default'bucket <> "'.")))))
 
 main ∷ IO ()
 main = do
@@ -123,7 +125,7 @@ runS3 CheckDaedalusReleaseURLs bucket = do
   printf ("  OS X:   "%s%"\n") (ppURL $ osxLive bucket)
   printf ("  Win64:  "%s%"\n") (ppURL $ w64Live bucket)
 
-runS3 (SetDaedalusReleaseBuild rsOSX@(R_OSX osx'bid) rsWin64@(R_Win64 w64'bid avId)) bucket = do
+runS3 (SetDaedalusReleaseBuild debug'mode rsOSX@(R_OSX osx'bid) rsWin64@(R_Win64 w64'bid avId)) bucket = do
   let (   osxurl@(URL osxpr osxcn osxpath)
         , w64url@(URL w64pr w64cn w64path)) =
         (buildURL rsOSX, buildURL rsWin64)
@@ -178,18 +180,24 @@ runS3 (SetDaedalusReleaseBuild rsOSX@(R_OSX osx'bid) rsWin64@(R_Win64 w64'bid av
           "    ]",
           "}"]
 
-      shells ("cat " <> format fp bucket'cfg)   empty
-      shells ("cat " <> format fp version'file) empty
-      shells ("aws s3api put-bucket-website"
-              <> " --bucket "                       <> fromBucket bucket
-              <> " --website-configuration file://" <> format fp bucket'cfg)
-        empty
-      shells ("aws s3api put-object"
-              <> " --bucket "                       <> fromBucket bucket
-              <> " --key "                          <> daedalus'versions'key
-              <> " --data "                         <> (format fp version'file))
-        empty
-      echo "Done.  Following URLs should be live within a minute:"
+      if debug'mode
+      then do
+        shells ("cat " <> format fp bucket'cfg)   empty
+        shells ("cat " <> format fp version'file) empty
+        echo "" >> echo ""
+        echo "URLs we were supposed to touch:"
+      else do
+        shells ("aws s3api put-bucket-website"
+                <> " --bucket "                       <> fromBucket bucket
+                <> " --website-configuration file://" <> format fp bucket'cfg)
+          empty
+        shells ("aws s3api put-object"
+                <> " --bucket "                       <> fromBucket bucket
+                <> " --key "                          <> daedalus'versions'key
+                <> " --acl "                          <> "public-read"
+                <> " --body "                         <> (format fp version'file))
+          empty
+        echo "Done.  Following URLs should be live within a minute:"
       echo ""
       printf ("  OS X:   "%s%"\n") (ppURL $ osxLive bucket)
       printf ("  Win64:  "%s%"\n") (ppURL $ w64Live bucket)
