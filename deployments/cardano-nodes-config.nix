@@ -26,9 +26,13 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
     cores           = filter (x: x.value.type == "core") indexed;
     ##
     ##
-    regionOpenSGName = region:
-        "allow-open-${region}";
-    regionOpenSG      = region: {
+    regionSGNames = region:
+        [ "allow-open-${region}"
+          "allow-ssh-${region}"
+          "allow-kademlia-public-udp-${region}"
+          "allow-cardano-public-tcp-${region}"
+        ];
+    regionSGs      = nodePort: region: {
         "allow-open-${region}" = {
           inherit region accessKeyId;
           description = "Everything goes";
@@ -39,10 +43,6 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
             toPort   = 65535;
           }];
         };
-      };
-    regionSshSGName = region:
-        "allow-ssh-${region}";
-    regionSshSG      = region: {
         "allow-ssh-${region}" = {
           inherit region accessKeyId;
           description = "SSH";
@@ -52,10 +52,6 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
             sourceIp = "0.0.0.0/0"; # TODO: move ssh to use $SMART_GEN_IP
           }];
         };
-      };
-    regionKademliaPublicTcpSGName = region:
-        "allow-kademlia-public-udp-${region}";
-    regionKademliaPublicTcpSG      = region: {
         "allow-kademlia-public-udp-${region}" = {
           inherit region accessKeyId;
           description = "Kademlia UDP public";
@@ -66,23 +62,19 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
             toPort   = 65535;
           }];
         };
-      };
-    regionCardanoPublicTcpSGName = region:
-        "allow-cardano-public-tcp-${region}";
-    regionCardanoPublicTcpSG      = port: region: {
         "allow-cardano-public-tcp-${region}" = {
           inherit region accessKeyId;
           description = "Cardano TCP public";
           rules = [{
-            fromPort = port;
-            toPort   = port;
+            fromPort = nodePort;
+            toPort   = nodePort;
             sourceIp = "0.0.0.0/0";
           }];
         };
       };
-    coreCardanoStaticPeersSGName = core:
-        "allow-cardano-static-peers-${core.name}-${core.value.region}";
-    coreCardanoStaticPeersSG      = port: ips: core:
+    coreSGNames = core:
+        [ "allow-cardano-static-peers-${core.name}-${core.value.region}" ];
+    coreSGs     = nodePort: ips: core:
       let neighbourNames = flatten core.value.static-routes;
           neighbours = map byName neighbourNames;
           neigh'rule =
@@ -90,8 +82,8 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
           let
             ip = ips."nodeip${toString neigh.value.i}".address;
           in {
-              fromPort = port;
-              toPort   = port;
+              fromPort = nodePort;
+              toPort   = nodePort;
               sourceIp = ip + "/32";
             };
       in {
@@ -102,20 +94,14 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
         };
       };
     securityGroupNames =
-     (    map  regionOpenSGName                                     regionList
-      ++  map  regionSshSGName                                      regionList
-      ++  map  coreCardanoStaticPeersSGName                         cores
-      ++  map  regionKademliaPublicTcpSGName                        regionList
-      ++  map  regionCardanoPublicTcpSGName                         regionList
+     (    concatMap  regionSGNames                             regionList
+      ++  concatMap  coreSGNames                               cores
      );
     elasticIPsSecurityGroups =
      elasticIPs:
      (fold (x: y: x // y) {}
-     (    map  regionOpenSG                                         regionList
-      ++  map  regionSshSG                                          regionList
-      ++  map (coreCardanoStaticPeersSG cconf.nodePort elasticIPs)  cores
-      ++  map  regionKademliaPublicTcpSG                            regionList
-      ++  map (regionCardanoPublicTcpSG cconf.nodePort)             regionList
+     (    map       (regionSGs     cconf.nodePort)             regionList
+      ++  map       (coreSGs       cconf.nodePort elasticIPs)  cores
      ));
 in
 {
