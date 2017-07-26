@@ -19,7 +19,8 @@ let
   #
   # > genPeers ["ip:port/dht" "ip:port/dht" ...]
   # "--kademlia-peer ip:port/dht --peer ip:port/dht ..."
-  genPeers = peers: toString (map (p: "--kademlia-peer " + p) peers);
+  genInitialKademliaPeers = peers: toString (map (p: "--kademlia-peer " + p) peers);
+  genNeighbours           = peers: toString (map (p: "--neighbour " + p.name + ":" + p.ip) peers);
 
   command = toString [
     cfg.executable
@@ -52,7 +53,9 @@ let
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
-    (genPeers cfg.initialKademliaPeers)
+    "--cluster /run/keys/cluster.yaml"
+    "--node-id ${cfg.nodeName}"
+    (genNeighbours  cfg.neighbours)
   ];
 in {
   options = {
@@ -136,6 +139,12 @@ in {
         type = types.str;
         description = "Private IP to bind to";
         default = "0.0.0.0";
+      };
+
+      neighbours = mkOption {
+        default = [];
+        # type = types.list;
+        description = ''List of name:ip pairs of neighbours.'';
       };
     };
   };
