@@ -27,10 +27,10 @@ ppURL (URL pro ho ke) = pro <> "://" <> ho <> "/" <> ke
 -- * Buckets
 data Bucket     = Bucket { fromBucket ∷ T.Text } deriving (Show)
 
-default'bucket = Bucket "daedalus-travis"
+defaultBucket = Bucket "daedalus-travis"
 
-daedalus'versions'key :: Text
-daedalus'versions'key = "daedalus-latest-version.json"
+daedalusVersionsKey :: Text
+daedalusVersionsKey = "daedalus-latest-version.json"
 
 
 -- * Build/release logic
@@ -87,8 +87,8 @@ parser =
              <*> (R_Win64 <$> parserBuildId "WIN64-BUILD-ID" <*> parserAppveyorId))
            <|>
            subcommand "check-daedalus-release-urls" "Check the Daedalus release URLs." (pure CheckDaedalusReleaseURLs))
-      <*> (fromMaybe default'bucket
-           <$> optional (Bucket <$> (optText "bucket" 'b' (pure $ Turtle.HelpMessage $ "The S3 bucket to operate on.  Defaults to '" <> fromBucket default'bucket <> "'.")))))
+      <*> (fromMaybe defaultBucket
+           <$> optional (Bucket <$> (optText "bucket" 'b' (pure $ Turtle.HelpMessage $ "The S3 bucket to operate on.  Defaults to '" <> fromBucket defaultBucket <> "'.")))))
 
 main ∷ IO ()
 main = do
@@ -125,9 +125,9 @@ runS3 CheckDaedalusReleaseURLs bucket = do
   printf ("  OS X:   "%s%"\n") (ppURL $ osxLive bucket)
   printf ("  Win64:  "%s%"\n") (ppURL $ w64Live bucket)
 
-runS3 (SetDaedalusReleaseBuild debug'mode rsOSX@(R_OSX osx'bid) rsWin64@(R_Win64 w64'bid avId)) bucket = do
-  let (   osxurl@(URL osxpr osxcn osxpath)
-        , w64url@(URL w64pr w64cn w64path)) =
+runS3 (SetDaedalusReleaseBuild debugMode rsOSX@(R_OSX osxBuildid) rsWin64@(R_Win64 w64Buildid avId)) bucket = do
+  let (   osxurl@(URL osxProto osxDNS osxPath)
+        , w64url@(URL w64Proto w64DNS w64Path)) =
         (buildURL rsOSX, buildURL rsWin64)
 
   echo $ unsafeTextToLine $ mconcat [ "Setting Daedalus release redirects to: "]
@@ -141,15 +141,15 @@ runS3 (SetDaedalusReleaseBuild debug'mode rsOSX@(R_OSX osx'bid) rsWin64@(R_Win64
   echo $ unsafeTextToLine $ mconcat [ "  Win64: ", ppURL w64url]
   echo ""
 
-  with   (mktempfile "/tmp" "awsbucketcfg.json")   $ \bucket'cfg → do
-    with (mktempfile "/tmp" "awsversionfile.json") $ \version'file → do
-      writeTextFile version'file $
+  with   (mktempfile "/tmp" "awsbucketcfg.json")   $ \bucketCfg → do
+    with (mktempfile "/tmp" "awsversionfile.json") $ \versionFile → do
+      writeTextFile versionFile $
         (    "{ "
           <> "\"linux\": \"" <> ""                  <> "\","
-          <> "\"macos\": \"" <> fromBuildId osx'bid <> "\","
-          <> "\"win64\": \"" <> fromBuildId w64'bid <> "\""
+          <> "\"macos\": \"" <> fromBuildId osxBuildid <> "\","
+          <> "\"win64\": \"" <> fromBuildId w64Buildid <> "\""
           <> " }" )
-      writeTextFile bucket'cfg . T.unlines $
+      writeTextFile bucketCfg . T.unlines $
         [ "{",
           "    \"IndexDocument\": {",
           "        \"Suffix\":                   \"index.html\"",
@@ -161,9 +161,9 @@ runS3 (SetDaedalusReleaseBuild debug'mode rsOSX@(R_OSX osx'bid) rsWin64@(R_Win64
           "            },",
           "            \"Redirect\": {",
           "                \"HttpRedirectCode\": \"303\",",
-          ["                \"Protocol\":         \"", osxpr,  "\","] & mconcat,
-          ["                \"HostName\":         \"", osxcn,  "\","] & mconcat,
-          ["                \"ReplaceKeyWith\":   \"", osxpath, "\""] & mconcat,
+          ["                \"Protocol\":         \"", osxProto, "\","] & mconcat,
+          ["                \"HostName\":         \"", osxDNS,   "\","] & mconcat,
+          ["                \"ReplaceKeyWith\":   \"", osxPath,  "\""]  & mconcat,
           "            }",
           "        },",
           "        {",
@@ -172,30 +172,30 @@ runS3 (SetDaedalusReleaseBuild debug'mode rsOSX@(R_OSX osx'bid) rsWin64@(R_Win64
           "            },",
           "            \"Redirect\": {",
           "                \"HttpRedirectCode\": \"303\",",
-          ["                \"Protocol\":         \"", w64pr,  "\","] & mconcat,
-          ["                \"HostName\":         \"", w64cn,  "\","] & mconcat,
-          ["                \"ReplaceKeyWith\":   \"", w64path, "\""] & mconcat,
+          ["                \"Protocol\":         \"", w64Proto, "\","] & mconcat,
+          ["                \"HostName\":         \"", w64DNS,   "\","] & mconcat,
+          ["                \"ReplaceKeyWith\":   \"", w64Path,  "\""]  & mconcat,
           "            }",
           "        }",
           "    ]",
           "}"]
 
-      if debug'mode
+      if debugMode
       then do
-        shells ("cat " <> format fp bucket'cfg)   empty
-        shells ("cat " <> format fp version'file) empty
+        shells ("cat " <> format fp bucketCfg)   empty
+        shells ("cat " <> format fp versionFile) empty
         echo "" >> echo ""
         echo "URLs we were supposed to touch:"
       else do
         shells ("aws s3api put-bucket-website"
                 <> " --bucket "                       <> fromBucket bucket
-                <> " --website-configuration file://" <> format fp bucket'cfg)
+                <> " --website-configuration file://" <> format fp bucketCfg)
           empty
         shells ("aws s3api put-object"
                 <> " --bucket "                       <> fromBucket bucket
-                <> " --key "                          <> daedalus'versions'key
+                <> " --key "                          <> daedalusVersionsKey
                 <> " --acl "                          <> "public-read"
-                <> " --body "                         <> (format fp version'file))
+                <> " --body "                         <> (format fp versionFile))
           empty
         echo "Done.  Following URLs should be live within a minute:"
       echo ""
