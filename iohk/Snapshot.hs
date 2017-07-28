@@ -7,7 +7,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Main (main) where
+module Snapshot where
 
 import           Control.Lens
 import           Control.Monad.Catch
@@ -15,6 +15,7 @@ import           Control.Monad.Reader
 import           Control.Monad.State
 import           Data.Conduit
 import qualified Data.Conduit.List as CL
+import           Data.Data
 import           Data.List ((\\), groupBy, intersperse, nub, sort, sortBy)
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -30,7 +31,6 @@ import           Data.Time
 import qualified Network.AWS as AWS
 import           Network.AWS hiding (Info)
 import           Network.AWS.EC2
-import           System.Console.CmdArgs
 import           System.Exit
 import           System.IO
 import qualified System.Logger as SL
@@ -107,28 +107,28 @@ data Args = Args
 
 -- | Get the instances from the region - if instances are supplied on the
 --   command line, restrict the action to those instances mentioned
-main :: IO ()
-main = do
-  -- process the command line arguments
-  args' <- cmdArgs default'args
-  when (null $ _argsCredsFP args') $ do
-    hPutStrLn stderr "you must supply a credentials file, try -? for help"
-    exitFailure
+-- main :: IO ()
+-- main = do
+--   -- process the command line arguments
+--   args' <- cmdArgs default'args
+--   when (null $ _argsCredsFP args') $ do
+--     hPutStrLn stderr "you must supply a credentials file, try -? for help"
+--     exitFailure
 
-  -- set up a default logger for the Aws
-  lgr'  <- newLogger AWS.Info stdout
+--   -- set up a default logger for the Aws
+--   lgr'  <- newLogger AWS.Info stdout
 
-  -- create the AWS execution enviroment for the specified region
-  env  <- newEnv (FromFile "default" $ _argsCredsFP args')
-                  <&> envLogger .~ lgr' <&> envRegion .~ (_argsRegion args')
+--   -- create the AWS execution enviroment for the specified region
+--   env  <- newEnv (FromFile "default" $ _argsCredsFP args')
+--                   <&> envLogger .~ lgr' <&> envRegion .~ (_argsRegion args')
 
-  -- with logger for non-aws - run the system
-  lgr <- SL.new (userLogSettings (_argsLogLevel args'))
-  runResourceT . runAWS env
-               . evalStateT (runReaderT main' args')
-               $ lgr
-  where
-    userLogSettings l = Log.setDelimiter "|" $ Log.setLogLevel l Log.defSettings
+--   -- with logger for non-aws - run the system
+--   lgr <- SL.new (userLogSettings (_argsLogLevel args'))
+--   runResourceT . runAWS env
+--                . evalStateT (runReaderT main' args')
+--                $ lgr
+--   where
+--     userLogSettings l = Log.setDelimiter "|" $ Log.setLogLevel l Log.defSettings
 
 main' :: EnvM ()
 main' = do
@@ -463,19 +463,19 @@ logFlush = get >>= Log.flush
 
 deriving instance Data Log.Level
 
-default'args :: Args
-default'args = Args
-  { _argsCredsFP = ""
-                  &= typFile &= name "c" &= name "creds-file" &= explicit
-                  &= help "path to aws credentials file"
-  , _argsRegion  = Ireland &= explicit
-                  &= name "r" &= name "region"
-                  &= typ "AWS-REGION" &= help "AWS region (default Ireland)"
-  , _argsDefaultSchedule
-                = default'schedule &= ignore
-  , _argsOnlyInstances
-                = def &= args &= typ "INSTANCE-IDs"
-  , _argsLogLevel
-                = Log.Info &= name "v" &= explicit &= help "Log level (default Info)"
-  } &= summary "Interrogate an AWS region and snapshot all the marked (in AWS) instances,\nsupply instance-ids to restrict."
-    &= program "awsSnapshotRegion"
+-- default'args :: Args
+-- default'args = Args
+--   { _argsCredsFP = ""
+--                   &= typFile &= name "c" &= name "creds-file" &= explicit
+--                   &= help "path to aws credentials file"
+--   , _argsRegion  = Ireland &= explicit
+--                   &= name "r" &= name "region"
+--                   &= typ "AWS-REGION" &= help "AWS region (default Ireland)"
+--   , _argsDefaultSchedule
+--                 = default'schedule &= ignore
+--   , _argsOnlyInstances
+--                 = def &= args &= typ "INSTANCE-IDs"
+--   , _argsLogLevel
+--                 = Log.Info &= name "v" &= explicit &= help "Log level (default Info)"
+--   } &= summary "Interrogate an AWS region and snapshot all the marked (in AWS) instances,\nsupply instance-ids to restrict."
+--     &= program "awsSnapshotRegion"

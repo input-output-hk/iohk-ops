@@ -1,0 +1,17 @@
+args:
+  nodeLimit:
+    tag: NixInt
+    contents: 3
+  accessKeyId:
+    tag: NixStr
+    contents: cardano-deployer
+environment: Development
+nixpkgs: 9b948ea439ddbaa26740ce35543e7e35d2aa6d18
+name: devops-120-backups
+files:
+- deployments/keypairs.nix
+- deployments/cardano-nodes.nix
+- deployments/cardano-nodes-target-aws.nix
+elements:
+- Nodes
+target: AWS
