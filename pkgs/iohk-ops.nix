@@ -1,6 +1,8 @@
-{ mkDerivation, aeson, base, bytestring, cassava, containers, lens
-, lens-aeson, mtl, optional-args, safe, stdenv, system-filepath
-, text, turtle, utf8-string, vector, yaml
+{ mkDerivation, aeson, amazonka, amazonka-core, amazonka-ec2
+, amazonka-iam, base, bytestring, cassava, conduit, containers
+, exceptions, lens, lens-aeson, mtl, optional-args, random, safe
+, stdenv, system-filepath, text, text-format, time, tinylog, turtle
+, unordered-containers, utf8-string, vector, yaml
 }:
 mkDerivation {
   pname = "iohk-ops";
@@ -9,10 +11,12 @@ mkDerivation {
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
-    aeson base bytestring cassava containers lens lens-aeson mtl
-    optional-args safe system-filepath text turtle utf8-string vector
-    yaml
+    aeson amazonka amazonka-core amazonka-ec2 amazonka-iam base
+    bytestring cassava conduit containers exceptions lens lens-aeson
+    mtl optional-args random safe system-filepath text text-format time
+    tinylog turtle unordered-containers utf8-string vector yaml
   ];
+  doHaddock = false;
   doCheck = false;
   license = stdenv.lib.licenses.bsd3;
 }
