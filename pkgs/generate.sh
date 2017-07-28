@@ -35,7 +35,7 @@ c2n --no-check --revision $(jq .rev < "${scriptDir}/engine-io.json") $(jq .url <
 c2n --no-check --revision $(jq .rev < "${scriptDir}/engine-io.json") $(jq .url < "${scriptDir}/engine-io.json") --subpath engine-io > "${scriptDir}/engine-io.nix"
 c2n --no-check --revision $(jq .rev < "${scriptDir}/engine-io.json") $(jq .url < "${scriptDir}/engine-io.json") --subpath engine-io-wai > "${scriptDir}/engine-io-wai.nix"
 pushd "${scriptDir}"
-c2n --no-check ../iohk > "${scriptDir}/iohk-ops.nix"
+c2n --no-check --no-haddock ../iohk > "${scriptDir}/iohk-ops.nix"
 popd
 
 # Generate cardano-sl package set
