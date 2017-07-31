@@ -80,11 +80,11 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
           neigh'rule =
           neigh:
           let
-            ip = ips."nodeip${toString neigh.value.i}".address;
+            ip = ips."nodeip${toString neigh.value.i}";
           in {
               fromPort = nodePort;
               toPort   = nodePort;
-              sourceIp = ip + "/32";
+              sourceIp = ip;
             };
       in {
         "allow-cardano-static-peers-${core.name}-${core.value.region}" = {
