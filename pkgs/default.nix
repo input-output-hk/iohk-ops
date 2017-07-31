@@ -8325,8 +8325,8 @@ self: {
           pname = "unix-compat";
           version = "0.4.3.1";
           sha256 = "09vykw89x981fywy0w1pci2v8zy3ajyjwh9z2n610vjacmd1v03j";
-          revision = "1";
-          editedCabalFile = "6c1914a5322b96837ac47296bf0ce287ce9c89cc131f844483f5d9784e36910a";
+          revision = "2";
+          editedCabalFile = "a291f209e9c9723204c49c978ed2c53997dbc9666e53fe7bf7a3548b2c8bb22c";
           libraryHaskellDepends = [
             base
             unix

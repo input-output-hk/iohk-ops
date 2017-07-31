@@ -37,45 +37,48 @@ import Data.ByteString.Lazy.Char8 (ByteString, pack)
 import qualified Filesystem.Path.CurrentOS     as Path
 import GHC.Generics
 import Safe (headMay)
+import qualified System.IO                     as Sys
 import           Text.Read                        (readMaybe)
-import Turtle hiding (procs)
+import Turtle hiding (procs, inproc)
 import qualified Turtle as Turtle
 
 
 -- * Constants
 --
-awsPublicIPURL, iohkNixopsURL :: URL
-iohkNixopsURL        = "https://github.com/input-output-hk/iohk-nixops.git"
-awsPublicIPURL       = "http://169.254.169.254/latest/meta-data/public-ipv4"
+awsPublicIPURL :: URL
+awsPublicIPURL = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
-defaultEnvironment = Development
-defaultTarget      = AWS
-defaultNodeLimit   = 14
+defaultEnvironment   = Development
+defaultTarget        = AWS
+defaultNodeLimit     = 14
 
 
 -- * Projects
 --
 data Project
-  = Cardanosl
+  = CardanoSL
   | CardanoExplorer
+  | IOHK
   | Nixpkgs
   | Stack2nix
   deriving (Bounded, Enum, Eq, Read, Show)
 
-allProjects :: [Project]
-allProjects = enumFromTo minBound maxBound
+every :: (Bounded a, Enum a) => [a]
+every = enumFromTo minBound maxBound
 
 projectURL     :: Project -> URL
-projectURL     Cardanosl       = "https://github.com/input-output-hk/cardano-sl.git"
+projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl.git"
 projectURL     CardanoExplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
+projectURL     IOHK            = "https://github.com/input-output-hk/iohk-nixops.git"
 projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
 projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
 
 projectSrcFile :: Project -> FilePath
-projectSrcFile Cardanosl       = "cardano-sl-src.json"
+projectSrcFile CardanoSL       = "cardano-sl-src.json"
 projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
 projectSrcFile Nixpkgs         = "nixpkgs-src.json"
 projectSrcFile Stack2nix       = "stack2nix-src.json"
+projectSrcFile IOHK            = error "Feeling self-referential?"
 
 
 -- * Primitive types
@@ -83,7 +86,8 @@ projectSrcFile Stack2nix       = "stack2nix-src.json"
 newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixParam  = NixParam  { fromNixParam :: Text } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
-newtype Machine   = Machine   { fromMachine :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype IP        = IP        { getIP       :: Text } deriving (Show, Generic, FromField)
+newtype NodeName  = NodeName  { fromNodeName :: Text } deriving (FromJSON, Generic, Show, FromField, IsString)
 newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
@@ -168,17 +172,14 @@ data Environment
   | Production
   | Staging
   | Development
-  deriving (Eq, Generic, Read, Show)
+  deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Environment
 
 data Target
   = All               -- ^ Wildcard or unspecified, depending on context.
   | AWS
-  deriving (Eq, Generic, Read, Show)
+  deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Target
-
-allDeployments :: [Deployment]
-allDeployments = enumFromTo minBound maxBound
 
 envConfigFilename :: IsString s => Environment -> s
 envConfigFilename Any           = "config.yaml"
@@ -186,7 +187,7 @@ envConfigFilename Development   = "config.yaml"
 envConfigFilename Staging       = "staging.yaml"
 envConfigFilename Production    = "production.yaml"
 
-selectDeployer :: Environment -> [Deployment] -> Machine
+selectDeployer :: Environment -> [Deployment] -> NodeName
 selectDeployer Staging delts | elem Nodes delts = "iohk"
                              | otherwise        = "cardano-deployer"
 selectDeployer _ _                              = "cardano-deployer"
@@ -196,7 +197,7 @@ type DeplArgs = Map.Map NixParam NixValue
 selectDeploymentArgs :: Environment -> [Deployment] -> Integer -> DeplArgs
 selectDeploymentArgs env delts limit = Map.fromList
   [ ("accessKeyId"
-    , NixStr . fromMachine $ selectDeployer env delts)
+    , NixStr . fromNodeName $ selectDeployer env delts)
   , ("nodeLimit"
     , NixInt limit ) ]
 
@@ -330,7 +331,7 @@ writeConfig mFp c@NixopsConfig{..} = do
   let configFilename = flip fromMaybe mFp $ envConfigFilename cEnvironment
   liftIO $ writeTextFile configFilename $ T.pack $ BUTF8.toString $ YAML.encode c
   pure configFilename
-  
+
 -- | Read back config, doing validation
 readConfig :: MonadIO m => FilePath -> m NixopsConfig
 readConfig cf = do
@@ -348,7 +349,7 @@ readConfig cf = do
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
   pure c
-  
+
 
 parallelIO :: Options -> [IO a] -> IO ()
 parallelIO Options{..} =
@@ -356,20 +357,26 @@ parallelIO Options{..} =
   then sequence_
   else sh . parallel
 
+logCmd  cmd args = do
+  printf ("-- "%s%"\n") $ T.intercalate " " $ cmd:args
+  Sys.hFlush Sys.stdout
+
+inproc :: Text -> [Text] -> Shell Line -> Shell Line
+inproc cmd args input = do
+  liftIO $ logCmd cmd args
+  Turtle.inproc cmd args input
+
 inprocs :: MonadIO m => Text -> [Text] -> Shell Line -> m Text
 inprocs cmd args input = do
   (exitCode, stdout) <- liftIO $ procStrict cmd args input
   unless (exitCode == ExitSuccess) $
     liftIO (throwIO (ProcFailed cmd args exitCode))
-  pure stdout 
+  pure stdout
 
 cmd   :: Options -> Text -> [Text] -> IO ()
 cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
 incmd :: Options -> Text -> [Text] -> IO Text
 
-logCmd  cmd args =
-  printf ("-- "%s%"\n") $ T.intercalate " " $ cmd:args
-  
 cmd   Options{..} cmd args = do
   when oVerbose $ logCmd cmd args
   Turtle.procs      cmd args empty
@@ -461,11 +468,11 @@ fromscratch o c = do
 generateGenesis :: Options -> NixopsConfig -> IO ()
 generateGenesis o c = do
   let cardanoSLDir         = "cardano-sl"
-  GitSource{..} <- readSource gitSource Cardanosl
+  GitSource{..} <- readSource gitSource CardanoSL
   printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit gRev
   exists <- testpath cardanoSLDir
   unless exists $
-    cmd o "git" ["clone", fromURL $ projectURL Cardanosl, "cardano-sl"]
+    cmd o "git" ["clone", fromURL $ projectURL CardanoSL, "cardano-sl"]
   cd "cardano-sl"
   cmd o "git" ["fetch"]
   cmd o "git" ["reset", "--hard", fromCommit gRev]
@@ -494,7 +501,7 @@ build o c d = do
 checkstatus :: Options -> NixopsConfig -> IO ()
 checkstatus o c = do
   nodes <- getNodeNames o c
-  parallelIO o $ fmap (rebootIfDown o c) nodes 
+  parallelIO o $ fmap (rebootIfDown o c) nodes
 
 rebootIfDown :: Options -> NixopsConfig -> NodeName -> IO ()
 rebootIfDown o c (fromNodeName -> node) = do
@@ -525,17 +532,12 @@ scpFromNode o c (fromNodeName -> node) from to = do
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
 
 sshForEach :: Options -> NixopsConfig -> [Text] -> IO ()
-sshForEach o c cmd = 
+sshForEach o c cmd =
   nixops o c "ssh-for-each" ("--": cmd)
 
 
 -- * Functions for extracting information out of nixops info command
 --
-newtype IP = IP { getIP :: Text }
-   deriving (Show, Generic, FromField)
-newtype NodeName = NodeName { fromNodeName :: Text }
-   deriving (Show, Generic, FromField)
-
 -- | Get all nodes in EC2 cluster
 getNodes :: Options -> NixopsConfig -> IO [DeploymentInfo]
 getNodes o c = do
@@ -584,7 +586,7 @@ info o c = do
     ExitSuccess -> return $ decodeWith nixopsDecodeOptions NoHeader (encodeUtf8 $ fromStrict nodes)
 
 toNodesInfo :: V.Vector DeploymentInfo -> [DeploymentInfo]
-toNodesInfo vector = 
+toNodesInfo vector =
   V.toList $ V.filter filterEC2 vector
     where
       filterEC2 di = T.take 4 (diType di) == "ec2 " && diStatus di /= Obsolete
@@ -597,6 +599,9 @@ getNodePublicIP name vector =
 -- * Utils
 showT :: Show a => a -> Text
 showT = T.pack . show
+
+lowerShowT :: Show a => a -> Text
+lowerShowT = T.toLower . T.pack . show
 
 errorT :: Text -> a
 errorT = error . T.unpack
