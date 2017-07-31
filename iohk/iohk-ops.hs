@@ -21,13 +21,16 @@ import           Network.AWS.EC2           hiding (DeleteTag, Snapshot, Stop)
 import           Network.AWS.IAM           hiding (Any)
 import           System.IO                     as Sys
 import qualified System.Logger.Class           as Log
+import qualified System.Logger as SL
+import           System.Logger.Class              (MonadLogger (..))
+import           System.Logger.Message
 import qualified Text.Printf                   as T
 import           Text.Read                        (readMaybe)
 import           Turtle                    hiding (find, procs, shells)
 
 
 -- * Local imports
-import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
+import           NixOps                           (Branch(..), Commit(..), Context(..), Environment(..), Deployment(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), Project(..), URL(..)
                                                   ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every)
 import qualified NixOps                        as Ops
@@ -283,7 +286,7 @@ main = do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
       let cf = flip fromMaybe oConfigFile $
                Ops.envConfigFilename Any
-      c <- Ops.readConfig cf
+      ctxConfig <- Ops.readConfig cf
 
       when oVerbose $
         printf ("-- config '"%fp%"'\n"%w%"\n") cf c
@@ -292,10 +295,12 @@ main = do
       -- dat <- getSmartGenCmd c
       -- TIO.putStrLn $ T.pack $ show dat
 
-      doCommand o c topcmd
+      let ctx = Ctx{..}
+
+      flip runReaderT ctx topCmdDispatch o c topcmd
     where
-        doCommand :: Options -> Ops.NixopsConfig -> Command Top -> IO ()
-        doCommand o c cmd = do
+        topCmdDispatch :: Options -> Ops.NixopsConfig -> Command Top -> ReaderT Ctx IO ()
+        topCmdDispatch o c cmd = do
           let isNode (T.unpack . Ops.fromNodeName -> ('n':'o':'d':'e':_)) = True
               isNode _ = False
               getNodeNames' = filter isNode <$> Ops.getNodeNames o c
@@ -310,7 +315,7 @@ main = do
             AMI                      -> Cardano.buildAMI              o c
             -- * deployment lifecycle
             Nixops cmd args          -> Ops.nixops                    o c cmd args
-            Do cmds                  -> sequence_ $ doCommand o c <$> cmds
+            Do cmds                  -> sequence_ $ topCmdDispatch o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
             Deploy evonly buonly     -> Ops.deploy                    o c evonly buonly

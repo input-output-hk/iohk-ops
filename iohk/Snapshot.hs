@@ -4,6 +4,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -13,6 +14,7 @@ import           Control.Lens
 import           Control.Monad.Catch
 import           Control.Monad.Reader
 import           Control.Monad.State
+import           Control.Monad.Trans.AWS
 import           Data.Conduit
 import qualified Data.Conduit.List as CL
 import           Data.Data
@@ -29,7 +31,7 @@ import           Data.Text.Lazy (toStrict)
 import qualified Data.Text.Lazy as TL
 import           Data.Time
 import qualified Network.AWS as AWS
-import           Network.AWS hiding (Info)
+import           Network.AWS hiding (Info, send, paginate)
 import           Network.AWS.EC2
 import           System.Exit
 import           System.IO
@@ -39,6 +41,7 @@ import qualified System.Logger.Class as Log
 import           System.Logger.Message
 import           System.Random
 
+import           Types
 
 -- for defaults see end of file
 
@@ -86,24 +89,10 @@ lastsnapshot'tag = "AutoSnapshotLastTaken"
 -- This permit the system to detect that between to snapshot times the
 -- system was run then stopped.
 
-type EnvM a = ReaderT Args (StateT Log.Logger a)
-
-instance MonadAWS a => MonadLogger (EnvM a) where
-  log lvl m = get >>= \l -> SL.log l lvl m
-
-data Schedule = Schedule
-    { minGenerations  :: Int
-    , minAge          :: NominalDiffTime
-    } deriving (Data, Typeable, Show)
-
-
-data Args = Args
-    { _argsCredsFP         :: FilePath
-    , _argsRegion          :: Region
-    , _argsDefaultSchedule :: Schedule
-    , _argsOnlyInstances   :: [Text]
-    , _argsLogLevel        :: Log.Level
-    } deriving (Data, Typeable, Show)
+instance (AWSConstraint r m) => MonadLogger (EnvM m) where
+  log lvl m = do
+    (env :: _) <- ask
+    SL.log (env ^. envLogger) lvl m
 
 -- | Get the instances from the region - if instances are supplied on the
 --   command line, restrict the action to those instances mentioned
@@ -460,8 +449,6 @@ logTrace x = Log.trace x >> logFlush
 
 logFlush :: MonadAWS m => EnvM m ()
 logFlush = get >>= Log.flush
-
-deriving instance Data Log.Level
 
 -- default'args :: Args
 -- default'args = Args
