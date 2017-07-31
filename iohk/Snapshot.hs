@@ -42,7 +42,7 @@ import           System.Random
 
 -- for defaults see end of file
 
--- 1) go to the instance and add a tag of
+-- 1 go to the instance and add a tag of
 
 schedule'tag :: Text
 schedule'tag = "AutoSnapshotSchedule"
@@ -86,9 +86,9 @@ lastsnapshot'tag = "AutoSnapshotLastTaken"
 -- This permit the system to detect that between to snapshot times the
 -- system was run then stopped.
 
-type EnvM = ReaderT Args (StateT Log.Logger AWS)
+type EnvM a = ReaderT Args (StateT Log.Logger a)
 
-instance MonadLogger EnvM where
+instance MonadAWS a => MonadLogger (EnvM a) where
   log lvl m = get >>= \l -> SL.log l lvl m
 
 data Schedule = Schedule
@@ -130,7 +130,7 @@ data Args = Args
 --   where
 --     userLogSettings l = Log.setDelimiter "|" $ Log.setLogLevel l Log.defSettings
 
-main' :: EnvM ()
+main' :: MonadAWS m => EnvM m ()
 main' = do
   is <- selectInstances >>= liftIO . randomise
   when (null is) $ do
@@ -141,7 +141,7 @@ main' = do
 
 
 -- select the instances
-selectInstances :: EnvM [Instance]
+selectInstances :: MonadAWS m => EnvM m [Instance]
 selectInstances = do
   a'is <- getManagedInstances
   Log.debug . field "available instances" . T.concat . intersperse ","
@@ -159,7 +159,7 @@ selectInstances = do
 
 
 -- process all the instances, trapping any failures
-processAllInstances :: Int -> [(Int, Instance)] -> EnvM ()
+processAllInstances :: MonadAWS m => Int -> [(Int, Instance)] -> EnvM m ()
 processAllInstances total iss =
  mapM_ runOne iss
  where
@@ -180,7 +180,7 @@ processAllInstances total iss =
 
 
 -- process a single instance
-processSingleInstance :: Instance -> EnvM ()
+processSingleInstance :: MonadAWS m => Instance -> EnvM m ()
 processSingleInstance ins = do
   -- get schedule (note only default schedule currently returned)
   sched <- extractSchedule ins
@@ -200,7 +200,7 @@ processSingleInstance ins = do
 
 -- == Snapshot processing ==
 -- clean the snapshots
-cleanSnapshots :: Schedule -> Instance -> EnvM (Maybe UTCTime, [Volume])
+cleanSnapshots :: MonadAWS m => Schedule -> Instance -> EnvM m (Maybe UTCTime, [Volume])
 cleanSnapshots sched i = do
   vols' <- getAttachedVolumeIds (view insInstanceId i)
   vols  <- filterVolumes vols'
@@ -307,8 +307,8 @@ deleteVolSnapshot s = do
        <- try . send $ deleteSnapshot (view sSnapshotId s)
     return $! either (Just . show) (const Nothing) r
 
-instanceNeedsSnapshot :: Instance -> Maybe UTCTime
-                      -> EnvM (Maybe (Maybe UTCTime))
+instanceNeedsSnapshot :: MonadAWS m => Instance -> Maybe UTCTime
+                      -> EnvM m (Maybe (Maybe UTCTime))
 instanceNeedsSnapshot i last'snap
   |  view isName (view (insState) i) == ISNRunning
     = do Log.info $ field "instance" (view insInstanceId i)
@@ -341,7 +341,7 @@ instanceNeedsSnapshot i last'snap
 
 
 -- take a snapshot of an instance
-snapshotInstance :: Instance -> Maybe UTCTime -> [Volume] -> EnvM ()
+snapshotInstance :: MonadAWS m => Instance -> Maybe UTCTime -> [Volume] -> EnvM m ()
 snapshotInstance i launch't snapshot'set = do
    (snap'time, results) <- snapshotVolumes snapshot'set
    forM_ results $ \(s,r) ->
@@ -373,7 +373,7 @@ snapshotInstance i launch't snapshot'set = do
      Right _ -> return ()
 
 -- snapshot all the volumes for this instance with same timestamp
-snapshotVolumes :: [Volume] -> EnvM (UTCTime, [(Snapshot, Maybe String)])
+snapshotVolumes :: MonadAWS m => [Volume] -> EnvM m (UTCTime, [(Snapshot, Maybe String)])
 snapshotVolumes vs = do
   now <- liftIO getCurrentTime
   let now' = formatTime defaultTimeLocale "%Y%m%dT%H%M%S%Q" now
@@ -381,7 +381,7 @@ snapshotVolumes vs = do
   return (now, rs)
 
 -- launch a snapshot for a single volume
-snapshotSingleVolume :: String -> Volume -> EnvM (Snapshot, Maybe String)
+snapshotSingleVolume :: MonadAWS m => String -> Volume -> EnvM m (Snapshot, Maybe String)
 snapshotSingleVolume now vol = do
   let vol'name' = extractTagValue "Name" (view vTags vol)
       vol'name  = fromJust vol'name'
@@ -434,7 +434,7 @@ randomise as
                     return $ head y : y'
 
 -- extract the schedule
-extractSchedule :: Instance -> EnvM Schedule
+extractSchedule :: MonadAWS m => Instance -> EnvM m Schedule
 extractSchedule i = do
   let s = extractTagValueI schedule'tag i
   dft <- asks _argsDefaultSchedule
@@ -455,10 +455,10 @@ extractTagValue k tgs
 extractTagValueI :: Text -> Instance -> Maybe Text
 extractTagValueI k = extractTagValue k . view insTags
 
-logTrace :: (Msg -> Msg) -> EnvM ()
+logTrace :: MonadAWS m => (Msg -> Msg) -> EnvM m ()
 logTrace x = Log.trace x >> logFlush
 
-logFlush :: EnvM ()
+logFlush :: MonadAWS m => EnvM m ()
 logFlush = get >>= Log.flush
 
 deriving instance Data Log.Level

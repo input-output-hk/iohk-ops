@@ -3,6 +3,8 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-orphans -Wno-type-defaults -Wno-unused-imports -Wno-unticked-promoted-constructors #-}
 
 import           Control.Monad                    (forM, forM_)
+import           Control.Monad.Reader
+import           Control.Monad.State
 import           Control.Monad.Trans.AWS   hiding (IAM, send)
 import           Control.Lens              hiding ()
 import           Data.Char                        (toLower)
@@ -575,7 +577,7 @@ runEC2 o _c _r ListSnapshottable = do
                       isJust . flip instTag Snapshot.schedule'tag
   printInstsTags False snapshottable
 
-runEC2 o _c _r (Snapshot go) = do
+runEC2 o c _r (Snapshot go) = do
   echo "Querying global instance list."
   allInsts <- getInstsGlobal o
 
@@ -601,6 +603,9 @@ runEC2 o _c _r (Snapshot go) = do
     Go  -> pure ()
 
   forAWSRegions_ o regions $
-    \_region-> do
+    \region-> do
       liftIO $ echo "Initiating snapshotting"
-      Snapshot.processAllInstances (length snapshottable) $ zip [1..] snapshottable
+      -- lgr <- get
+      runReaderT (Snapshot.processAllInstances (length snapshottable) $ zip [1..] snapshottable) (snapshotArgs o c snapshotSchedule region)
+      -- evalStateT (runReaderT (Snapshot.processAllInstances (length snapshottable) $ zip [1..] snapshottable) (snapshotArgs o c snapshotSchedule region))
+      --            lgr

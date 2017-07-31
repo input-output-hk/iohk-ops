@@ -46,6 +46,7 @@ executable iohk-ops
                      , text-format
                      , time
                      , tinylog
+                     , transformers
                      , turtle >=1.3
                      , unordered-containers
                      , utf8-string
