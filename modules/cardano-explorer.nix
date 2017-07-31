@@ -16,7 +16,7 @@ with (import ./../lib.nix);
 
   config = {
     services.cardano-node = {
-      executable = "${(import ./../default.nix {}).cardano-sl-explorer-static}/bin/cardano-explorer";
+      executable = "${explorer}/bin/cardano-explorer";
       hasExplorer = true;
     };
 

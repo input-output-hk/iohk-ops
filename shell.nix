@@ -7,8 +7,7 @@ in
 
 { ... }:
 let
-  default = import ./pkgs/iohk-ops.nix;
-  drv     = iohkpkgs.callPackage default {};
+  drv     = iohkpkgs.callPackage ./pkgs/iohk-ops.nix {};
   drv'    = pkgs.haskell.lib.overrideCabal
             drv
             (old: {
