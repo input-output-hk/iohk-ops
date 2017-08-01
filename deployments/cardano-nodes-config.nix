@@ -99,7 +99,8 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
             };
       in {
         "allow-cardano-static-peers-${core.name}-${core.value.region}" = {
-          inherit region accessKeyId;
+          inherit accessKeyId;
+          region = core.value.region;
           description = "Cardano TCP static peers of ${core.name}";
           rules = map neigh'rule neighbours;
         };
