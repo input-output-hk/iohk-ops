@@ -51,7 +51,6 @@ awsPublicIPURL = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
 defaultEnvironment   = Development
 defaultTarget        = AWS
-defaultClusterConfig = "cluster.yaml"
 defaultNode          = NodeName "node0"
 
 
@@ -200,6 +199,10 @@ selectDeployer Staging delts | elem Nodes delts = "iohk"
                              | otherwise        = "cardano-deployer"
 selectDeployer _ _                              = "cardano-deployer"
 
+selectClusterConfig :: Environment -> [Deployment] -> FilePath
+selectClusterConfig Development _ = "cluster-development.yaml"
+selectClusterConfig _           _ = "cluster.yaml"
+
 type DeplArgs = Map.Map NixParam NixValue
 
 selectDeploymentArgs :: Environment -> [Deployment] -> DeplArgs
@@ -293,6 +296,7 @@ data NixopsConfig = NixopsConfig
   { cName             :: Text
   , cNixops           :: Maybe FilePath
   , cNixpkgsCommit    :: Commit
+  , cCluster          :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
   , cElements         :: [Deployment]
@@ -304,6 +308,7 @@ instance FromJSON NixopsConfig where
         <$> v .: "name"
         <*> v .: "nixops"
         <*> v .: "nixpkgs"
+        <*> v .: "cluster"
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "elements"
@@ -317,6 +322,7 @@ instance ToJSON NixopsConfig where
    [ "name"        .= cName
    , "nixops"      .= cNixops
    , "nixpkgs"     .= fromCommit cNixpkgsCommit
+   , "cluster"     .= cCluster
    , "environment" .= showT cEnvironment
    , "target"      .= showT cTarget
    , "elements"    .= cElements
@@ -330,10 +336,12 @@ deploymentFiles cEnvironment cTarget cElements =
   concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Branch -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> NixopsConfig
-mkConfig (Branch cName) cNixops cNixpkgsCommit cEnvironment cTarget cElements =
-  let cFiles    = deploymentFiles cEnvironment cTarget cElements
-      cDeplArgs = selectDeploymentArgs cEnvironment cElements
+mkConfig :: Branch -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> NixopsConfig
+mkConfig (Branch cName) cNixops mCluster cNixpkgsCommit cEnvironment cTarget cElements =
+  let cFiles    = deploymentFiles              cEnvironment cTarget cElements
+      cDeplArgs = selectDeploymentArgs         cEnvironment         cElements
+      cCluster  = flip fromMaybe mCluster $
+                  selectClusterConfig cEnvironment cElements
   in NixopsConfig{..}
 
 -- | Write the config file
@@ -434,18 +442,18 @@ modify o c@NixopsConfig{..} = do
   printf ("Syncing Nix->state for cluster "%s%"\n") cName
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
 
-deploy :: Options -> NixopsConfig -> Bool -> Bool -> FilePath -> IO ()
-deploy o c@NixopsConfig{..} evonly buonly config = do
+deploy :: Options -> NixopsConfig -> Bool -> Bool -> IO ()
+deploy o c@NixopsConfig{..} evonly buonly = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
-  printf ("Generating 'cluster.nix' from '"%fp%"'..\n") config
-  exists <- testpath config
+  printf ("Generating 'cluster.nix' from '"%fp%"'..\n") cCluster
+  exists <- testpath cCluster
   unless exists $
-    die $ format ("Cluster config '"%fp%"' doesn't exist.") config
-  inproc "yaml2json" [format fp config] empty & output "cluster.nix"
+    die $ format ("Cluster config '"%fp%"' doesn't exist.") cCluster
+  inproc "yaml2json" [format fp cCluster] empty & output "cluster.nix"
 
   printf ("Deploying cluster "%s%"\n") cName
   export "NIX_PATH_LOCKED" "1"
@@ -484,7 +492,7 @@ fromscratch o c = do
   destroy o c
   delete o c
   create o c
-  deploy o c False False defaultClusterConfig
+  deploy o c False False
 
 
 -- * Building

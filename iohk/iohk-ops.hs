@@ -77,6 +77,7 @@ data Command where
   Template              :: { tHere        :: Bool
                            , tFile        :: Maybe Turtle.FilePath
                            , tNixops      :: Maybe Turtle.FilePath
+                           , tCluster     :: Maybe Turtle.FilePath
                            , tEnvironment :: Environment
                            , tTarget      :: Target
                            , tBranch      :: Branch
@@ -96,7 +97,7 @@ data Command where
   Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
-  Deploy                :: Bool -> Bool -> Turtle.FilePath -> Command
+  Deploy                :: Bool -> Bool -> Command
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
@@ -121,8 +122,9 @@ centralCommandParser =
                                 Template
                                 <$> (fromMaybe False
                                       <$> optional (switch "here" 'h' "Instead of cloning a subdir, operate on a config in the current directory"))
-                                <*> (optional (optPath "config" 'c' "Override the default, environment-dependent config filename"))
-                                <*> (optional (optPath "nixops" 'n' "Use a specific Nixops binary for this cluster"))
+                                <*> optional (optPath "config"    'c' "Override the default, environment-dependent config filename")
+                                <*> optional (optPath "nixops"    'n' "Use a specific Nixops binary for this cluster")
+                                <*> optional (optPath "cluster"   't' "Cluster configuration.  Defaults to 'cluster.yaml'")
                                 <*> parserEnvironment
                                 <*> parserTarget
                                 <*> parserBranch "iohk-nixops branch to check out"
@@ -153,9 +155,7 @@ centralCommandParser =
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
                                 <$> switch "evaluate-only" 'e' "Pass --evaluate-only to 'nixops'."
-                                <*> switch "build-only"    'b' "Pass --build-only to 'nixops'."
-                                <*> (fromMaybe Ops.defaultClusterConfig
-                                     <$> optional (optPath "cluster"      't' "Cluster configuration.  Defaults to 'cluster.yaml'")))
+                                <*> switch "build-only"    'b' "Pass --build-only to 'nixops'.")
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
@@ -225,7 +225,7 @@ main = do
             Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy evo buo clu       -> Ops.deploy                    o c evo buo clu
+            Deploy evo buo           -> Ops.deploy                    o c evo buo
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
@@ -274,7 +274,7 @@ runTemplate o@Options{..} Template{..} = do
 
   Ops.GithubSource{..} <- Ops.readSource Ops.githubSource Nixpkgs
 
-  let config = Ops.mkConfig tBranch tNixops ghRev tEnvironment tTarget tDeployments
+  let config = Ops.mkConfig tBranch tNixops tCluster ghRev tEnvironment tTarget tDeployments
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""
