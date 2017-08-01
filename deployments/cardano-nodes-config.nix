@@ -6,13 +6,24 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
     clusterList   = builtins.sort (l: r: l.name < r.name)
                                    (mapAttrsToList (k: v: { name = k; value = v; }) clusterSpec);
     regionList    = unique (map (n: n.value.region) clusterList);
-    indexed       = imap (i: x: with x.value;
-           { name = x.name; value = {
-                                i = i - 1;
+    indexed       = imap (n: x:
+           let spec = x.value; in
+           { name = x.name; value = rec {
+                                i = n - 1;
                              name = x.name; # This is an important identity, let's not break it.
-                           region = region;
-                             type = type;
-                    static-routes = if builtins.hasAttr "static-routes" x.value then x.value.static-routes else [];
+                           region = spec.region;
+                             type = spec.type;
+                    static-routes = if builtins.hasAttr "static-routes" spec then spec.static-routes else [];
+                         sg-names = if      spec.type == "other" then
+                                      [ "allow-open-${region}" ]
+                                    else if spec.type == "core"  then
+                                      [ "allow-ssh-${region}"
+                                        "allow-cardano-static-peers-${name}-${region}" ]
+                                    else if spec.type == "relay" then
+                                      [ "allow-ssh-${region}"
+                                        "allow-kademlia-public-udp-${region}"
+                                        "allow-cardano-public-tcp-${region}" ]
+                                    else throw "While computing EC2 SGs: unhandled cardano-node type: '${type}'";
                              }; } ) clusterList;
     byName        = name: let xs = filter (n: n.name == name) indexed;
                           in if xs != [] then builtins.elemAt xs 0

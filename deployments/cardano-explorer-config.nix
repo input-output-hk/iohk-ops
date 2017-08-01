@@ -5,5 +5,6 @@
            region = "eu-central-1";
              type = "relay";
     static-routes = [];
+         sg-names = ["allow-open-eu-central-1"];
   };
 }
