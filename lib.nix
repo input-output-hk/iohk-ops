@@ -36,7 +36,7 @@ in lib // (rec {
 
   traceF   = f: x: builtins.trace                         (f x)  x;
   traceSF  = f: x: builtins.trace (builtins.seq     (f x) (f x)) x;
-  traceDSF = f: x: builtins.trace (builtins.deepseq (f x) (f x)) x;
+  traceDSF = f: x: builtins.trace (builtins.deepSeq (f x) (f x)) x;
 
   # Parse peers from a file
   #
