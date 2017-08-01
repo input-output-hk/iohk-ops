@@ -188,10 +188,12 @@ runS3 (SetDaedalusReleaseBuild debugMode rsOSX@(R_OSX osxBuildid) rsWin64@(R_Win
         echo "URLs we were supposed to touch:"
       else do
         shells ("aws s3api put-bucket-website"
+                <> " --region "                       <> "eu-central-1 "
                 <> " --bucket "                       <> fromBucket bucket
                 <> " --website-configuration file://" <> format fp bucketCfg)
           empty
         shells ("aws s3api put-object"
+                <> " --region "                       <> "eu-central-1 "
                 <> " --bucket "                       <> fromBucket bucket
                 <> " --key "                          <> daedalusVersionsKey
                 <> " --acl "                          <> "public-read"
