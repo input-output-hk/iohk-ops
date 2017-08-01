@@ -21,6 +21,7 @@ import qualified Data.ByteString.UTF8          as BUTF8
 import Data.Char (ord)
 import qualified Data.Yaml                     as YAML
 import Data.Yaml (FromJSON(..), ToJSON(..))
+import           Data.Either
 import           Data.Maybe
 import qualified Data.Map                      as Map
 import Data.Monoid ((<>))
@@ -94,6 +95,12 @@ newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generi
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+
+
+-- * Some orphan instances..
+--
+instance FromJSON FilePath where parseJSON = AE.withText "filepath" $ \v -> pure $ fromText v
+instance ToJSON   FilePath where toJSON (toText -> Right v) = AE.String $ v
 
 
 -- * A bit of Nix types
@@ -284,6 +291,7 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
 
 data NixopsConfig = NixopsConfig
   { cName             :: Text
+  , cNixops           :: Maybe FilePath
   , cNixpkgsCommit    :: Commit
   , cEnvironment      :: Environment
   , cTarget           :: Target
@@ -294,6 +302,7 @@ data NixopsConfig = NixopsConfig
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
+        <*> v .: "nixops"
         <*> v .: "nixpkgs"
         <*> v .: "environment"
         <*> v .: "target"
@@ -306,6 +315,7 @@ instance ToJSON Deployment
 instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
    [ "name"        .= cName
+   , "nixops"      .= cNixops
    , "nixpkgs"     .= fromCommit cNixpkgsCommit
    , "environment" .= showT cEnvironment
    , "target"      .= showT cTarget
@@ -320,8 +330,8 @@ deploymentFiles cEnvironment cTarget cElements =
   concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Branch -> Commit -> Environment -> Target -> [Deployment] -> NixopsConfig
-mkConfig (Branch cName) cNixpkgsCommit cEnvironment cTarget cElements =
+mkConfig :: Branch -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> NixopsConfig
+mkConfig (Branch cName) cNixops cNixpkgsCommit cEnvironment cTarget cElements =
   let cFiles    = deploymentFiles cEnvironment cTarget cElements
       cDeplArgs = selectDeploymentArgs cEnvironment cElements
   in NixopsConfig{..}
@@ -388,11 +398,18 @@ incmd Options{..} cmd args = do
   when oVerbose $ logCmd cmd args
   inprocs cmd args empty
 
+
+-- * Invoking nixops
+--
+nixopsPath :: NixopsConfig -> FilePath
+nixopsPath (cNixops -> Nothing) = "nixops"
+nixopsPath (cNixops -> Just x)  = x
+
 nixops  :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO ()
 nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO (ExitCode, Text)
 
-nixops  o c (NixopsCmd com) args = cmd  o "nixops" (com : nixopsCmdOptions o c <> args)
-nixops' o c (NixopsCmd com) args = cmd' o "nixops" (com : nixopsCmdOptions o c <> args)
+nixops  o c (NixopsCmd com) args = cmd  o (format fp $ nixopsPath c) (com : nixopsCmdOptions o c <> args)
+nixops' o c (NixopsCmd com) args = cmd' o (format fp $ nixopsPath c) (com : nixopsCmdOptions o c <> args)
 
 
 -- * Deployment lifecycle
