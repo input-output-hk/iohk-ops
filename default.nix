@@ -42,10 +42,6 @@ let
     # TODO: https://github.com/input-output-hk/stack2nix/issues/7
     ether = addConfigureFlags ["-fdisable-tup-instances"] super.ether;
 
-    # Gold linker fixes
-    cryptonite = addConfigureFlags ["--ghc-option=-optl-pthread"] super.cryptonite;
-
-
     # sl-explorer
     # TODO: https://issues.serokell.io/issue/CSM-195
     snap = doJailbreak super.snap;
