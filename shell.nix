@@ -12,7 +12,10 @@ let
             drv
             (old: {
               libraryHaskellDepends =
-                 [ pkgs.cabal-install pkgs.stack iohkpkgs.intero ];
+                 [ pkgs.cabal-install pkgs.stack iohkpkgs.intero
+                   # scripts/aws.hs dependencies:
+                   pkgs.wget pkgs.awscli
+                 ];
              });
   drv''   = pkgs.lib.overrideDerivation
             drv'.env

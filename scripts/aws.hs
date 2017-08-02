@@ -1,6 +1,6 @@
 #!/usr/bin/env runhaskell
 
-{-# LANGUAGE DataKinds, GADTs, OverloadedStrings, StandaloneDeriving, UnicodeSyntax #-}
+{-# LANGUAGE DataKinds, GADTs, OverloadedStrings, StandaloneDeriving #-}
 
 import Control.Monad (forM_)
 import Data.Maybe
@@ -15,17 +15,17 @@ import Turtle
 -- * URLs
 data URL =
   URL
-  { proto ∷ T.Text
-  , host  ∷ T.Text
-  , key   ∷ T.Text
+  { proto :: T.Text
+  , host  :: T.Text
+  , key   :: T.Text
   } deriving (Show)
 
-ppURL∷ URL → T.Text
+ppURL:: URL -> T.Text
 ppURL (URL pro ho ke) = pro <> "://" <> ho <> "/" <> ke
 
 
 -- * Buckets
-data Bucket     = Bucket { fromBucket ∷ T.Text } deriving (Show)
+data Bucket     = Bucket { fromBucket :: T.Text } deriving (Show)
 
 defaultBucket = Bucket "daedalus-travis"
 
@@ -46,7 +46,7 @@ deriving instance Show (RSpec a)
 data AppveyorId = AppveyorId                  T.Text   deriving (Show)
 data BuildId    = BuildId    { fromBuildId :: T.Text } deriving (Show)
 
-buildURL ∷ RSpec a → URL
+buildURL :: RSpec a -> URL
 buildURL (R_Linux (BuildId bid)) =
   URL "https" "s3.eu-central-1.amazonaws.com" $
   error "Sorry, no Linux support just yet."
@@ -76,7 +76,7 @@ parserAppveyorId :: Parser AppveyorId
 parserAppveyorId =
   (AppveyorId <$> argText "APPVEYOR-ID" "AppVeyor build subpath.  Example: 'iw5m0firsneia7k2'")
 
-parser ∷ Parser Command
+parser :: Parser Command
 parser =
   subcommand "s3" "Control the S3-related AWS-ities."
   (S3 <$> (subcommand "set-daedalus-release-build" "Set the S3 daedalus-<OS>-latest.<EXT> redirect to a particular version."
@@ -89,20 +89,20 @@ parser =
            subcommand "check-daedalus-release-urls" "Check the Daedalus release URLs." (pure CheckDaedalusReleaseURLs))
       <*> (fromMaybe defaultBucket
            <$> optional (Bucket <$> (optText "bucket" 'b' (pure $ Turtle.HelpMessage $ "The S3 bucket to operate on.  Defaults to '" <> fromBucket defaultBucket <> "'.")))))
-
-main ∷ IO ()
+  
+main :: IO ()
 main = do
-  top ← options "Helper CLI around IOHK AWS functionality" parser
+  top <- options "Helper CLI around IOHK AWS functionality" parser
   case top of
-    S3 cmd bucket → runS3 cmd bucket
+    S3 cmd bucket -> runS3 cmd bucket
 
 
 
-osxLive, w64Live ∷ Bucket → URL
+osxLive, w64Live :: Bucket -> URL
 osxLive (Bucket b) = URL "http" (b <> ".s3-website.eu-central-1.amazonaws.com") "daedalus-osx-latest.pkg"
 w64Live (Bucket b) = URL "http" (b <> ".s3-website.eu-central-1.amazonaws.com") "daedalus-win64-latest.exe"
 
-checkURL ∷ Text → URL → IO ()
+checkURL :: Text -> URL -> IO ()
 checkURL desc url = do
   echo ""
   printf ("============== Checking if "%s%" URL is live:") desc
@@ -115,7 +115,7 @@ checkURL desc url = do
 -- Sadly, neither 'curl' nor 'wget --spider' seem to be able to test AppVeyor URLs
 -- for liveness.  Which sounds sort of amazing, indeed.
 ---
-runS3 ∷ S3Command → Bucket → IO ()
+runS3 :: S3Command -> Bucket -> IO ()
 runS3 CheckDaedalusReleaseURLs bucket = do
   checkURL "OSX release" (osxLive bucket)
   -- checkURL "W64 release" w64Live -- See Note Appveyor URL checking broken
@@ -141,8 +141,8 @@ runS3 (SetDaedalusReleaseBuild debugMode rsOSX@(R_OSX osxBuildid) rsWin64@(R_Win
   echo $ unsafeTextToLine $ mconcat [ "  Win64: ", ppURL w64url]
   echo ""
 
-  with   (mktempfile "/tmp" "awsbucketcfg.json")   $ \bucketCfg → do
-    with (mktempfile "/tmp" "awsversionfile.json") $ \versionFile → do
+  with   (mktempfile "/tmp" "awsbucketcfg.json")   $ \bucketCfg -> do
+    with (mktempfile "/tmp" "awsversionfile.json") $ \versionFile -> do
       writeTextFile versionFile $
         (    "{ "
           <> "\"linux\": \"" <> ""                  <> "\","
@@ -188,10 +188,12 @@ runS3 (SetDaedalusReleaseBuild debugMode rsOSX@(R_OSX osxBuildid) rsWin64@(R_Win
         echo "URLs we were supposed to touch:"
       else do
         shells ("aws s3api put-bucket-website"
+                <> " --region "                       <> "eu-central-1 "
                 <> " --bucket "                       <> fromBucket bucket
                 <> " --website-configuration file://" <> format fp bucketCfg)
           empty
         shells ("aws s3api put-object"
+                <> " --region "                       <> "eu-central-1 "
                 <> " --bucket "                       <> fromBucket bucket
                 <> " --key "                          <> daedalusVersionsKey
                 <> " --acl "                          <> "public-read"
