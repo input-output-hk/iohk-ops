@@ -24,6 +24,7 @@ let
       doHaddock = false;
       patchPhase = ''
        export CSL_SYSTEM_TAG=linux64
+       sed -i 's/>= 0.23 && <= 0.23/== 0.24/' cardano-sl.cabal
       '';
       # production full nodes shouldn't use wallet as it means different constants
       configureFlags = [
