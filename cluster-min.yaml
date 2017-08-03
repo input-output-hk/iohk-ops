@@ -1,0 +1,11 @@
+nodes:
+  'left':
+    type: core
+    region: eu-central-1
+    static-routes: [["right"]]
+    port: 3000
+  'right':
+    type: core
+    region: ap-southeast-1
+    static-routes: [["left"]]
+    port: 3000
