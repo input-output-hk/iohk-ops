@@ -274,7 +274,7 @@ runTemplate o@Options{..} Template{..} = do
 
   Ops.GithubSource{..} <- Ops.readSource Ops.githubSource Nixpkgs
 
-  let config = Ops.mkConfig tBranch tNixops tCluster ghRev tEnvironment tTarget tDeployments
+  config <- Ops.mkConfig o tBranch tNixops tCluster ghRev tEnvironment tTarget tDeployments
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

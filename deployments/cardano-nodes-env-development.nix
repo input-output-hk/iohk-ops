@@ -1,8 +1,8 @@
-{ accessKeyId, ... }:
+{ accessKeyId, deployerIP, ... }:
 
 with (import ./../lib.nix);
 let
-  nodeArgs = (import ./cardano-nodes-config.nix { inherit accessKeyId; }).nodeArgs;
+  nodeArgs = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP; }).nodeArgs;
   nodeConf = import ./../modules/cardano-node-development.nix;
 in {
   resources = rec {

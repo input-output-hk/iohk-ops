@@ -1,4 +1,4 @@
-{ accessKeyId, ... }:
+{ accessKeyId, deployerIP, ... }:
 
 with (import ./../lib.nix);
 
@@ -17,10 +17,10 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
                          sg-names = if      spec.type == "other" then
                                       [ "allow-open-${region}" ]
                                     else if spec.type == "core"  then
-                                      [ "allow-ssh-${region}"
+                                      [ "allow-deployer-ssh-${region}"
                                         "allow-cardano-static-peers-${name}-${region}" ]
                                     else if spec.type == "relay" then
-                                      [ "allow-ssh-${region}"
+                                      [ "allow-deployer-ssh-${region}"
                                         "allow-kademlia-public-udp-${region}"
                                         "allow-cardano-public-tcp-${region}" ]
                                     else throw "While computing EC2 SGs: unhandled cardano-node type: '${type}'";
@@ -39,7 +39,7 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
     ##
     regionSGNames = region:
         [ "allow-open-${region}"
-          "allow-ssh-${region}"
+          "allow-deployer-ssh-${region}"
           "allow-kademlia-public-udp-${region}"
           "allow-cardano-public-tcp-${region}"
         ];
@@ -54,13 +54,14 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
             toPort   = 65535;
           }];
         };
-        "allow-ssh-${region}" = {
+        "allow-deployer-ssh-${region}" = {
           inherit region accessKeyId;
           description = "SSH";
           rules = [{
+            protocol = "6"; # TCP
             fromPort = 22;
             toPort   = 22;
-            sourceIp = "0.0.0.0/0"; # TODO: move ssh to use $SMART_GEN_IP
+            sourceIp = deployerIP + "/32";
           }];
         };
         "allow-kademlia-public-udp-${region}" = {
@@ -77,6 +78,7 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
           inherit region accessKeyId;
           description = "Cardano TCP public";
           rules = [{
+            protocol = "6"; # TCP
             fromPort = nodePort;
             toPort   = nodePort;
             sourceIp = "0.0.0.0/0";

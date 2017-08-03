@@ -205,10 +205,15 @@ selectClusterConfig _           _ = "cluster.yaml"
 
 type DeplArgs = Map.Map NixParam NixValue
 
-selectDeploymentArgs :: Environment -> [Deployment] -> DeplArgs
-selectDeploymentArgs env delts = Map.fromList
-  [ ("accessKeyId"
-    , NixStr . fromNodeName $ selectDeployer env delts) ]
+deployerIP :: Options -> IO IP
+deployerIP o = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+
+selectDeploymentArgs :: Options -> Environment -> [Deployment] -> IO DeplArgs
+selectDeploymentArgs o env delts = do
+    let staticArgs = [ ("accessKeyId"
+                       , NixStr . fromNodeName $ selectDeployer env delts) ]
+    (IP deployerIp) <- deployerIP o
+    pure $ Map.fromList $ staticArgs <> [ ("deployerIP", NixStr deployerIp) ]
 
 
 -- * Deployment structure
@@ -336,13 +341,13 @@ deploymentFiles cEnvironment cTarget cElements =
   concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Branch -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> NixopsConfig
-mkConfig (Branch cName) cNixops mCluster cNixpkgsCommit cEnvironment cTarget cElements =
-  let cFiles    = deploymentFiles              cEnvironment cTarget cElements
-      cDeplArgs = selectDeploymentArgs         cEnvironment         cElements
+mkConfig :: Options -> Branch -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> IO NixopsConfig
+mkConfig o (Branch cName) cNixops mCluster cNixpkgsCommit cEnvironment cTarget cElements = do
+  let cFiles    = deploymentFiles           cEnvironment cTarget cElements
       cCluster  = flip fromMaybe mCluster $
-                  selectClusterConfig cEnvironment cElements
-  in NixopsConfig{..}
+                  selectClusterConfig       cEnvironment         cElements
+  cDeplArgs <- selectDeploymentArgs o       cEnvironment         cElements
+  pure NixopsConfig{..}
 
 -- | Write the config file
 writeConfig :: MonadIO m => Maybe FilePath -> NixopsConfig -> m FilePath
@@ -461,7 +466,7 @@ deploy o c@NixopsConfig{..} evonly buonly = do
   when (not evonly) $ do
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
-    export "SMART_GEN_IP"     =<< incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+    export "SMART_GEN_IP"     =<< getIP <$> deployerIP o
     when (elem Explorer cElements) $ do
       cmd o "scripts/generate-explorer-frontend.sh" []
 
