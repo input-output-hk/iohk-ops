@@ -188,9 +188,8 @@ envConfigFilename Staging       = "staging.yaml"
 envConfigFilename Production    = "production.yaml"
 
 selectDeployer :: Environment -> [Deployment] -> NodeName
-selectDeployer Staging delts | elem Nodes delts = "iohk"
-                             | otherwise        = "cardano-deployer"
-selectDeployer _ _                              = "cardano-deployer"
+selectDeployer _ depl | elem Infra depl = "cardano-deployer"
+selectDeployer _ _                       = "iohk"
 
 type DeplArgs = Map.Map NixParam NixValue
 
