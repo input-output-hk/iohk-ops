@@ -2,21 +2,31 @@ nodes:
   'a1':
     type: core
     region: eu-central-1
-    static-routes: [[b1,c1], [r1,r1]]
+    static-routes: [["b1","c1"], ["r1"]]
+    host: a1-ip
+    port: 3000
   'b1':
     type: core
     region: eu-west-1
-    static-routes: [[a1,c1], [r2,r2]]
+    static-routes: [["a1","c1"], ["r2"]]
+    host: b1-ip
+    port: 3000
   'c1':
     type: core
     region: ap-southeast-1
-    static-routes: [[a1,b1]]
+    static-routes: [["a1","b1"]]
+    host: c1-ip
+    port: 3000
 
   'r1':
     type: relay
     region: ap-southeast-1
-    static-routes: [[a1, a1]]
+    static-routes: [["a1"]]
+    host: r1-ip
+    port: 3000
   'r2':
     type: relay
     region: eu-central-1
-    static-routes: [[b1, b1]]
+    static-routes: [["b1"]]
+    host: r2-ip
+    port: 3000
