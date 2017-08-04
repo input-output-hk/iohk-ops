@@ -26,10 +26,10 @@ runInShell cabal2nix \
 nix-build ${scriptDir}/.. -A stack2nix -o $scriptDir/stack2nix
 
 # Generate explorer until it's merged with cardano-sl repo
-runInShell cabal2nix \
-  --no-check \
-  --revision $(jq .rev < ${scriptDir}/../cardano-sl-explorer-src.json -r) \
-  https://github.com/input-output-hk/cardano-sl-explorer.git > $scriptDir/cardano-sl-explorer.nix
+# runInShell cabal2nix \
+#   --no-check \
+#   --revision $(jq .rev < ${scriptDir}/../cardano-sl-explorer-src.json -r) \
+#   https://github.com/input-output-hk/cardano-sl-explorer.git > $scriptDir/cardano-sl-explorer.nix
 
 c2n --no-check --revision $(jq .rev < "${scriptDir}/engine-io.json") $(jq .url < "${scriptDir}/engine-io.json") --subpath socket-io > "${scriptDir}/socket-io.nix"
 c2n --no-check --revision $(jq .rev < "${scriptDir}/engine-io.json") $(jq .url < "${scriptDir}/engine-io.json") --subpath engine-io > "${scriptDir}/engine-io.nix"

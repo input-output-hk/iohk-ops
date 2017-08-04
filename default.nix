@@ -65,7 +65,7 @@ let
   ];
   cabal2nixpkgs = rec {
     # extra packages to expose, that have no relation to pkgs/default.nix
-    stack2nix = compiler.callPackage ./pkgs/stack2nix.nix {};
+    stack2nix = import (fetchTarball "https://github.com/input-output-hk/stack2nix/tarball/05420f3efb38834700a3da8a5245fecc50b01139");
     iohk-ops = pkgs.haskell.lib.overrideCabal
                (compiler.callPackage ./pkgs/iohk-ops.nix {})
                (drv: {
