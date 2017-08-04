@@ -19,6 +19,7 @@ let
   socket-io-src = pkgs.fetchgit (removeAttrs (importJSON ./pkgs/engine-io.json) ["date"]);
   iohkpkgs = ((import pkgs/default.nix { inherit pkgs compiler; }).override {
   overrides = self: super: {
+    cpphs = compiler.cpphs;
     cardano-sl-core = prodMode super.cardano-sl-core;
     cardano-sl = overrideCabal super.cardano-sl (drv: {
       doHaddock = false;
