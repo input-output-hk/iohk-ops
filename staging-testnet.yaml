@@ -15,11 +15,7 @@ files:
 - deployments/report-server.nix
 - deployments/report-server-env-staging.nix
 - deployments/report-server-target-aws.nix
-- deployments/cardano-explorer.nix
-- deployments/cardano-explorer-env-staging.nix
-- deployments/cardano-explorer-target-aws.nix
 elements:
 - Nodes
 - ReportServer
-- Explorer
 target: AWS
