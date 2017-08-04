@@ -93,7 +93,7 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
           neigh'rule =
           neigh:
           let
-            ip = ips."nodeip${toString neigh.value.i}";
+            ip = ips."${toString neigh.value.name}-ip";
           in {
               fromPort = nodePort;
               toPort   = nodePort;

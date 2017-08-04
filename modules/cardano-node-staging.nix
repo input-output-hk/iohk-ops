@@ -14,7 +14,7 @@ with (import ./../lib.nix);
     saveCoreDumps = true;
   };
 
-  deployment.ec2.elasticIPv4 = resources.elasticIPs.${"nodeip" + toString config.services.cardano-node.nodeIndex};
+  deployment.ec2.elasticIPv4 = resources.elasticIPs.${toString config.services.cardano-node.nodeName + "-ip"};
 
   deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
   deployment.route53.hostName = "cardano-node-${toString config.services.cardano-node.nodeIndex}.aws.iohkdev.io";

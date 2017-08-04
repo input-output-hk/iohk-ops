@@ -23,7 +23,7 @@ in lib // (rec {
 
   mkNodesUsing = constructor: nodes: lib.mapAttrs  (name: nodeParams: constructor nodeParams) nodes;
   mkNodeIPs = nodes: accessKeyId: lib.mapAttrs' (name: value:
-      { name = "nodeip${toString value.i}";
+      { name = "${toString value.name}-ip";
         value = { inherit (value) region; inherit accessKeyId;};
       }
     ) nodes;

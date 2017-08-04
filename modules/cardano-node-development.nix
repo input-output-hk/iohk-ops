@@ -12,5 +12,5 @@ with (import ./../lib.nix);
     saveCoreDumps = true;
   };
 
-  deployment.ec2.elasticIPv4 = resources.elasticIPs.${"nodeip" + toString config.services.cardano-node.nodeIndex};
+  deployment.ec2.elasticIPv4 = resources.elasticIPs.${toString config.services.cardano-node.nodeName + "-ip"};
 }
