@@ -44,7 +44,7 @@ params:
         };
       }) // optionalAttrs (config.services.cardano-node.enable) {
         "cluster.yaml" = {
-          keyFile = ./. + "/../cluster.yaml";
+          keyFile = ./. + "/../cluster-development.yaml";
           user = "cardano-node";
         };
       };
