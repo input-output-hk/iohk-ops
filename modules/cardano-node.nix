@@ -173,6 +173,10 @@ in {
 
     services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.nodeIndex);
 
+    networking.extraResolvconfConf =
+    ''
+    search_domains=cardano
+    '';
     networking.extraHosts =
     let hostList = cfg.neighbours
                    ++ [ { name = cfg.nodeName;
