@@ -12,7 +12,7 @@ let
             drv
             (old: {
               libraryHaskellDepends =
-                 [ pkgs.cabal-install pkgs.stack iohkpkgs.intero ];
+                 [ pkgs.cabal-install pkgs.stack pkgs.haskell.packages.ghc802.intero ];
              });
   drv''   = pkgs.lib.overrideDerivation
             drv'.env
