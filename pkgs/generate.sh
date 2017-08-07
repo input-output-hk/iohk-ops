@@ -16,12 +16,6 @@ scriptDir=$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")
 
 source ${scriptDir}/../scripts/set_nixpath.sh
 
-# Generate stack2nix Nix package
-runInShell cabal2nix \
-  --no-check \
-  --revision $(jq .rev <  ${scriptDir}/../stack2nix-src.json -r) \
-  https://github.com/input-output-hk/stack2nix.git > $scriptDir/stack2nix.nix
-
 # Build stack2nix Nix package
 nix-build ${scriptDir}/.. -A stack2nix -o $scriptDir/stack2nix
 

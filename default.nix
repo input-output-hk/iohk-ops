@@ -69,8 +69,8 @@ let
     stack2nix = import (pkgs.fetchFromGitHub {
       owner = "input-output-hk";
       repo = "stack2nix";
-      rev = "05420f3efb38834700a3da8a5245fecc50b01139";
-      sha256 = "1sdrsqc0xz7xn4knf47qaj3xxs9jns8izcqnx6cn84gpv76hhiqf";
+      rev = "c2a9c293d92790054fa1d3299341cfd4fac741b3";
+      sha256 = "18k4yh9b1115h0x30fzfs8a4zb3dav57ywn5wx2axh5r2ybfm6v8";
     });
     iohk-ops = pkgs.haskell.lib.overrideCabal
                (compiler.callPackage ./pkgs/iohk-ops.nix {})
