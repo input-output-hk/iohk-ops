@@ -173,6 +173,15 @@ in {
 
     services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.nodeIndex);
 
+    networking.extraHosts =
+    let hostList = cfg.neighbours
+                   ++ [ { name = cfg.nodeName;
+                          ip   = cfg.publicIP; } ];
+    in
+    ''
+    ${concatStringsSep "\n" (map (host: "${host.ip} ${host.name}.cardano") hostList)}
+    '';
+
     networking.firewall = {
       allowedTCPPorts = [ cfg.port ];
 
