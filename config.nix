@@ -26,6 +26,6 @@ rec {
   #enableDelegation = true;
   delegationNode = 0;
 
-  productionMode = false;
+  productionMode = true;
   systemStart = 1499246772;
 }
