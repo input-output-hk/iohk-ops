@@ -8,6 +8,9 @@ params:
       ./common.nix
     ];
 
+    services.dnsmasq.enable = true;
+    services.dnsmasq.servers = [ "127.0.0.1" ];
+
     services.cardano-node =
     let
       neighbourNames       = flatten params.static-routes;
