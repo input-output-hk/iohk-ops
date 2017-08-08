@@ -3,7 +3,15 @@
 with (import ./../lib.nix);
 
 params:
-  { pkgs, nodes, ...}: {
+  { pkgs, nodes, ...}:
+  let
+    neighbourNames       = flatten params.static-routes;
+    nodeNameToPublicIP   = name: cardanoAttr "publicIP" nodes.${name}.config.services.cardano-node;
+    neighbourPairs       = map (n: { name = n; ip = nodeNameToPublicIP n; })
+                               (builtins.trace "${params.name}: role '${params.type}'" neighbourNames);
+    ppNeighbour          = n: "${n.name}: ${n.ip}";
+    sep                  = ", ";
+  in {
     imports = [
       ./common.nix
     ];
@@ -11,15 +19,20 @@ params:
     services.dnsmasq.enable = true;
     services.dnsmasq.servers = [ "127.0.0.1" ];
 
-    services.cardano-node =
-    let
-      neighbourNames       = flatten params.static-routes;
-      nodeNameToPublicIP   = name: cardanoAttr "publicIP" nodes.${name}.config.services.cardano-node;
-      neighbourPairs       = map (n: { name = n; ip = nodeNameToPublicIP n; })
-                                 (builtins.trace "${params.name}: role '${params.type}'" neighbourNames);
-      ppNeighbour          = n: "${n.name}: ${n.ip}";
-      sep                  = ", ";
-    in {
+    networking.extraHosts =
+    let hostList = neighbourPairs
+                   ++ (map (x:
+                        { name = x.name;
+                          ip   = nodeNameToPublicIP x.name; })
+                        (filter (x: x.name != params.name) params.relays))
+                   ++ [ { name = params.name;
+                          ip   = nodeNameToPublicIP params.name; } ];
+    in
+    ''
+    ${concatStringsSep "\n" (map (host: "${host.ip} ${host.name}.cardano") hostList)}
+    '';
+
+    services.cardano-node = {
       enable     = true;
       nodeName   = params.name;
       type       = params.type;
