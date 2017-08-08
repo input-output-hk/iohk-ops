@@ -1,4 +1,4 @@
-## NOTE: this file should be kept in structural sync with 'srcroot://cluster.yaml'
+## NOTE: this file should be kept in structural sync with 'srcroot://topology.yaml'
 { sl-explorer = {
                 i = 40;
              name = "sl-explorer"; # This is an important identity, let's not break it.

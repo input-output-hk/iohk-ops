@@ -81,7 +81,7 @@ data Command where
   Template              :: { tHere        :: Bool
                            , tFile        :: Maybe Turtle.FilePath
                            , tNixops      :: Maybe Turtle.FilePath
-                           , tCluster     :: Maybe Turtle.FilePath
+                           , tTopology    :: Maybe Turtle.FilePath
                            , tEnvironment :: Environment
                            , tTarget      :: Target
                            , tBranch      :: Branch
@@ -129,7 +129,7 @@ centralCommandParser =
                                       <$> optional (switch "here" 'h' "Instead of cloning a subdir, operate on a config in the current directory"))
                                 <*> optional (optPath "config"    'c' "Override the default, environment-dependent config filename")
                                 <*> optional (optPath "nixops"    'n' "Use a specific Nixops binary for this cluster")
-                                <*> optional (optPath "cluster"   't' "Cluster configuration.  Defaults to 'cluster.yaml'")
+                                <*> optional (optPath "topology"  't' "Cluster configuration.  Defaults to 'topology.yaml'")
                                 <*> parserEnvironment
                                 <*> parserTarget
                                 <*> parserBranch "iohk-nixops branch to check out"
@@ -283,7 +283,7 @@ runTemplate o@Options{..} Template{..} = do
 
   Ops.GithubSource{..} <- Ops.readSource Ops.githubSource Nixpkgs
 
-  config <- Ops.mkConfig o tBranch tNixops tCluster ghRev tEnvironment tTarget tDeployments
+  config <- Ops.mkConfig o tBranch tNixops tTopology ghRev tEnvironment tTarget tDeployments
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

@@ -199,9 +199,9 @@ selectDeployer Staging delts | elem Nodes delts = "iohk"
                              | otherwise        = "cardano-deployer"
 selectDeployer _ _                              = "cardano-deployer"
 
-selectClusterConfig :: Environment -> [Deployment] -> FilePath
-selectClusterConfig Development _ = "cluster-development.yaml"
-selectClusterConfig _           _ = "cluster.yaml"
+selectTopologyConfig :: Environment -> [Deployment] -> FilePath
+selectTopologyConfig Development _ = "topology-development.yaml"
+selectTopologyConfig _           _ = "topology.yaml"
 
 type DeplArgs = Map.Map NixParam NixValue
 
@@ -301,7 +301,7 @@ data NixopsConfig = NixopsConfig
   { cName             :: Text
   , cNixops           :: Maybe FilePath
   , cNixpkgsCommit    :: Commit
-  , cCluster          :: FilePath
+  , cTopology          :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
   , cElements         :: [Deployment]
@@ -313,7 +313,7 @@ instance FromJSON NixopsConfig where
         <$> v .: "name"
         <*> v .: "nixops"
         <*> v .: "nixpkgs"
-        <*> v .: "cluster"
+        <*> v .: "topology"
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "elements"
@@ -327,7 +327,7 @@ instance ToJSON NixopsConfig where
    [ "name"        .= cName
    , "nixops"      .= cNixops
    , "nixpkgs"     .= fromCommit cNixpkgsCommit
-   , "cluster"     .= cCluster
+   , "topology"    .= cTopology
    , "environment" .= showT cEnvironment
    , "target"      .= showT cTarget
    , "elements"    .= cElements
@@ -342,10 +342,10 @@ deploymentFiles cEnvironment cTarget cElements =
 
 -- | Interpret inputs into a NixopsConfig
 mkConfig :: Options -> Branch -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> IO NixopsConfig
-mkConfig o (Branch cName) cNixops mCluster cNixpkgsCommit cEnvironment cTarget cElements = do
+mkConfig o (Branch cName) cNixops mTopology cNixpkgsCommit cEnvironment cTarget cElements = do
   let cFiles    = deploymentFiles           cEnvironment cTarget cElements
-      cCluster  = flip fromMaybe mCluster $
-                  selectClusterConfig       cEnvironment         cElements
+      cTopology  = flip fromMaybe mTopology $
+                  selectTopologyConfig       cEnvironment         cElements
   cDeplArgs <- selectDeploymentArgs o       cEnvironment         cElements
   pure NixopsConfig{..}
 
@@ -434,17 +434,17 @@ exists o c@NixopsConfig{..} = do
 
 create :: Options -> NixopsConfig -> IO ()
 create o c@NixopsConfig{..} = do
-  clusterExists <- exists o c
-  when clusterExists $
-    die $ format ("Cluster already exists?: '"%s%"'") cName
-  printf ("Creating cluster "%s%"\n") cName
+  deplExists <- exists o c
+  when deplExists $
+    die $ format ("Deployment already exists?: '"%s%"'") cName
+  printf ("Creating deployment "%s%"\n") cName
   export "NIX_PATH_LOCKED" "1"
   export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   nixops o c "create" $ deploymentFiles cEnvironment cTarget cElements
 
 modify :: Options -> NixopsConfig -> IO ()
 modify o c@NixopsConfig{..} = do
-  printf ("Syncing Nix->state for cluster "%s%"\n") cName
+  printf ("Syncing Nix->state for deployment "%s%"\n") cName
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
 
 deploy :: Options -> NixopsConfig -> Bool -> Bool -> IO ()
@@ -454,11 +454,11 @@ deploy o c@NixopsConfig{..} evonly buonly = do
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
-  printf ("Generating 'cluster.nix' from '"%fp%"'..\n") cCluster
-  exists <- testpath cCluster
+  printf ("Generating 'topology.nix' from '"%fp%"'..\n") cTopology
+  exists <- testpath cTopology
   unless exists $
-    die $ format ("Cluster config '"%fp%"' doesn't exist.") cCluster
-  inproc "yaml2json" [format fp cCluster] empty & output "cluster.nix"
+    die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
+  inproc "yaml2json" [format fp cTopology] empty & output "topology.nix"
 
   printf ("Deploying cluster "%s%"\n") cName
   export "NIX_PATH_LOCKED" "1"

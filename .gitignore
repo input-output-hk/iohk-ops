@@ -7,7 +7,6 @@ logs/
 logs-analyze/
 image/
 image
-cluster.nix
 ec2-image/
 smart-gen.log
 experiments/

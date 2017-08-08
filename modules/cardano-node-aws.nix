@@ -43,8 +43,8 @@ params:
           user = "cardano-node";
         };
       }) // optionalAttrs (config.services.cardano-node.enable) {
-        "cluster.yaml" = {
           keyFile = ./. + "/../cluster-development.yaml";
+        "topology.yaml" = {
           user = "cardano-node";
           permissions = "0400";
         };

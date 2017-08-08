@@ -2,10 +2,10 @@
 
 with (import ./../lib.nix);
 
-let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nodes; # Strip the outer "nodes:" shell of cluster.yaml
-    clusterList   = builtins.sort (l: r: l.name < r.name)
-                                   (mapAttrsToList (k: v: { name = k; value = v; }) clusterSpec);
-    regionList    = unique (map (n: n.value.region) clusterList);
+let topologySpec  = (builtins.fromJSON (builtins.readFile ./../topology.nix)).nodes; # Strip the outer "nodes:" shell of topology.yaml
+    topologyList  = builtins.sort (l: r: l.name < r.name)
+                                   (mapAttrsToList (k: v: { name = k; value = v; }) topologySpec);
+    regionList    = unique (map (n: n.value.region) topologyList);
     indexed       = imap (n: x:
            let spec = x.value; in
            { name = x.name; value = rec {
@@ -25,7 +25,7 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
                                         "allow-kademlia-public-udp-${region}"
                                         "allow-cardano-public-tcp-${region}" ]
                                     else throw "While computing EC2 SGs: unhandled cardano-node type: '${type}'";
-                             }; } ) clusterList;
+                             }; } ) topologyList;
     byName        = name: let xs = filter (n: n.name == name) indexed;
                           in if xs != [] then builtins.elemAt xs 0
                              else throw "No indexedNode by name '${name}'.";
