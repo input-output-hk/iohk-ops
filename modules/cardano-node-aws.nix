@@ -1,4 +1,4 @@
-{ accessKeyId }:
+{ accessKeyId, relays }:
 
 with (import ./../lib.nix);
 
@@ -46,6 +46,24 @@ params:
         "cluster.yaml" = {
           keyFile = ./. + "/../cluster-development.yaml";
           user = "cardano-node";
+          permissions = "0400";
+        };
+      } // optionalAttrs (config.services.cardano-node.enable && params.type == "relay") {
+        "kademlia.yaml" = {
+          user = "cardano-node";
+          permissions = "0400";
+          text =
+          ''
+identifier: '${config.services.cardano-node.dhtKey}'
+peers:
+${concatStringsSep "\n" (map (r: "  - host: '${r.value.name}.cardano'\n    port: ${toString config.services.cardano-node.port}") relays)}
+address:
+  host: '0.0.0.0'
+  port: ${toString config.services.cardano-node.port}
+externalAddress:
+  host: '${params.name}.cardano'
+  port: ${toString config.services.cardano-node.port}
+          '';
         };
       };
     }

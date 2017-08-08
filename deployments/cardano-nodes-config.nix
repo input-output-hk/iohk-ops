@@ -9,6 +9,7 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
     indexed       = imap (n: x:
            let spec = x.value; in
            { name = x.name; value = rec {
+                            inherit relays;
                                 i = n - 1;
                              name = x.name; # This is an important identity, let's not break it.
                            region = spec.region;
@@ -34,7 +35,8 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
     #   type          :: String               -- one of: 'core', 'relay'
     #   static-routes :: [['nodeId, 'nodeId]] -- here we go, TupleList..
     canonical       = builtins.listToAttrs indexed;
-    cores           = filter (x: x.value.type == "core") indexed;
+    cores           = filter (x: x.value.type == "core")  indexed;
+    relays          = filter (x: x.value.type == "relay") indexed;
     ##
     ##
     regionSGNames = region:
@@ -120,6 +122,7 @@ let clusterSpec   = (builtins.fromJSON (builtins.readFile ./../cluster.nix)).nod
 in
 {
   nodeArgs           = canonical;
+  relays             = relays;
   securityGroupNames = securityGroupNames;
   securityGroups     = elasticIPsSecurityGroups;
 }
