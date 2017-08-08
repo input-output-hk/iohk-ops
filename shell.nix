@@ -2,12 +2,17 @@ let
   localLib = import ./lib.nix;
   nixpkgs  = localLib.fetchNixPkgs;
   pkgs     = import nixpkgs {};
-  iohkpkgs = import ./default.nix {};
+  hpkgs    = pkgs.haskell.packages.ghc802;
+  hpkgs'   =
+  hpkgs.override {
+    overrides = self: super: {
+    };
+  };
 in
 
 { ... }:
 let
-  drv     = iohkpkgs.callPackage ./pkgs/iohk-ops.nix {};
+  drv     = hpkgs.callPackage ./pkgs/iohk-ops.nix {};
   drv'    = pkgs.haskell.lib.overrideCabal
             drv
             (old: {
