@@ -30,3 +30,9 @@ nodes:
     static-routes: [["b1"]]
     addr: r2.cardano
     port: 3000
+  'r3':
+    type: relay
+    region: eu-central-1
+    static-routes: [["c1"]]
+    addr: r3.cardano
+    port: 3000
