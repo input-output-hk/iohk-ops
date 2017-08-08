@@ -1,4 +1,4 @@
-{ accessKeyId, relays }:
+{ accessKeyId, relays, topologyYaml }:
 
 with (import ./../lib.nix);
 
@@ -43,8 +43,8 @@ params:
           user = "cardano-node";
         };
       }) // optionalAttrs (config.services.cardano-node.enable) {
-          keyFile = ./. + "/../cluster-development.yaml";
         "topology.yaml" = {
+          keyFile = topologyYaml;
           user = "cardano-node";
           permissions = "0400";
         };

@@ -153,14 +153,18 @@ data NixValue
   = NixBool Bool
   | NixInt  Integer
   | NixStr  Text
+  | NixFile FilePath
   deriving (Generic, Show)
 instance FromJSON NixValue
 instance ToJSON NixValue
 
 nixArgCmdline :: NixParam -> NixValue -> [Text]
 nixArgCmdline (NixParam name) (NixBool bool) = ["--arg",    name, T.toLower $ showT bool]
-nixArgCmdline (NixParam name) (NixInt int)   = ["--arg",    name, showT int]
-nixArgCmdline (NixParam name) (NixStr str)   = ["--argstr", name, str]
+nixArgCmdline (NixParam name) (NixInt  int)  = ["--arg",    name, showT int]
+nixArgCmdline (NixParam name) (NixStr  str)  = ["--argstr", name, str]
+nixArgCmdline (NixParam name) (NixFile f)    = ["--arg",    name, let txt = format fp f
+                                                                  in if T.isPrefixOf "/" txt
+                                                                     then txt else ("./" <> txt)]
 
 
 -- * Domain
@@ -208,12 +212,14 @@ type DeplArgs = Map.Map NixParam NixValue
 deployerIP :: Options -> IO IP
 deployerIP o = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
 
-selectDeploymentArgs :: Options -> Environment -> [Deployment] -> IO DeplArgs
-selectDeploymentArgs o env delts = do
+selectDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> IO DeplArgs
+selectDeploymentArgs o cTopology env delts = do
     let staticArgs = [ ("accessKeyId"
                        , NixStr . fromNodeName $ selectDeployer env delts) ]
     (IP deployerIp) <- deployerIP o
-    pure $ Map.fromList $ staticArgs <> [ ("deployerIP", NixStr deployerIp) ]
+    pure $ Map.fromList $
+      staticArgs
+      <> [ ("deployerIP",   NixStr deployerIp) ]
 
 
 -- * Deployment structure
@@ -343,10 +349,10 @@ deploymentFiles cEnvironment cTarget cElements =
 -- | Interpret inputs into a NixopsConfig
 mkConfig :: Options -> Branch -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> IO NixopsConfig
 mkConfig o (Branch cName) cNixops mTopology cNixpkgsCommit cEnvironment cTarget cElements = do
-  let cFiles    = deploymentFiles           cEnvironment cTarget cElements
-      cTopology  = flip fromMaybe mTopology $
-                  selectTopologyConfig       cEnvironment         cElements
-  cDeplArgs <- selectDeploymentArgs o       cEnvironment         cElements
+  let cFiles    = deploymentFiles                cEnvironment cTarget cElements
+      cTopology = flip fromMaybe mTopology $
+                  selectTopologyConfig           cEnvironment         cElements
+  cDeplArgs <- selectDeploymentArgs  o cTopology cEnvironment         cElements
   pure NixopsConfig{..}
 
 -- | Write the config file
@@ -470,7 +476,9 @@ deploy o c@NixopsConfig{..} evonly buonly = do
     when (elem Explorer cElements) $ do
       cmd o "scripts/generate-explorer-frontend.sh" []
 
-  nixops o c "set-args" $ concat $ uncurry nixArgCmdline <$> Map.toList cDeplArgs
+  let deplArgs = Map.toList cDeplArgs
+                 <> [("topologyYaml", NixFile $ cTopology)] -- A special case, to avoid duplication.
+  nixops o c "set-args" $ concat $ uncurry nixArgCmdline <$> deplArgs
 
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
 
