@@ -10,22 +10,11 @@ let
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
-  smartGenPeer =
-    if (smartGenIP != "")
-    then "--kademlia-peer ${smartGenIP}:24962"
-    else "";
-
-  # Given a list of dht/ip mappings, generate peers line
-  #
-  # > genPeers ["ip:port/dht" "ip:port/dht" ...]
-  # "--kademlia-peer ip:port/dht --peer ip:port/dht ..."
-  genInitialKademliaPeers = peers: toString (map (p: "--kademlia-peer " + p) peers);
 
   command = toString [
     cfg.executable
     (optionalString (cfg.publicIP != null) "--address ${cfg.publicIP}:${toString cfg.port}")
     "--listen ${cfg.privateIP}:${toString cfg.port}"
-    "--kademlia-address ${cfg.privateIP}:${toString cfg.port}"
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
@@ -45,7 +34,6 @@ let
        else "--flat-distr \"${distributionParam}\""))
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
-    "--kademlia-id ${cfg.dhtKey}"
     (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.nodeIndex + 1)}.sk")
     (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (optionalString cfg.supporter "--supporter")
@@ -173,19 +161,6 @@ in {
     };
 
     services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.nodeIndex);
-
-    networking.extraResolvconfConf =
-    ''
-    search_domains=cardano
-    '';
-    networking.extraHosts =
-    let hostList = cfg.neighbours
-                   ++ [ { name = cfg.nodeName;
-                          ip   = cfg.publicIP; } ];
-    in
-    ''
-    ${concatStringsSep "\n" (map (host: "${host.ip} ${host.name}.cardano") hostList)}
-    '';
 
     networking.firewall = {
       allowedTCPPorts = [ cfg.port ];
