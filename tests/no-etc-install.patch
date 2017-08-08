@@ -1,0 +1,11 @@
+--- a/Makefile	2017-08-07 23:21:48.605530249 +0300
++++ b/Makefile	2017-08-07 23:22:16.153389115 +0300
+@@ -603,7 +603,7 @@
+ endif
+ 
+ 
+-install: all $(if $(BUILD_DOCS),install-doc) install-datadir install-localstatedir
++install: all $(if $(BUILD_DOCS),install-doc) install-datadir
+ ifneq ($(TOOLS),)
+ 	$(call install-prog,$(subst qemu-ga,qemu-ga$(EXESUF),$(TOOLS)),$(DESTDIR)$(bindir))
+ endif

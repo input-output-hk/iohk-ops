@@ -1,4 +1,4 @@
-import <nixpkgs/nixos/tests/make-test.nix> ({ pkgs, ... }: {
+import <nixpkgs/nixos/tests/make-test.nix> ({ pkgs, config, ... }: {
   name = "simple-node";
   nodes = {
     machine = { config, pkgs, ... }: {
