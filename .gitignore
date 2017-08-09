@@ -18,3 +18,4 @@ static/id_buildfarm
 keys/*.key
 static/*.secret
 pkgs/stack2nix
+scripts/iohk-nixpkgs
