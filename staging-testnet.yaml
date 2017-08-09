@@ -4,8 +4,12 @@ args:
     contents: iohk
 environment: Staging
 name: staging
+nixops: /nix/store/02wks5g6q1syblz98b3z7d0442gj73iq-nixops-1.6pre0_abcdef/bin/nixops
+nixpkgs: 9b948ea439ddbaa26740ce35543e7e35d2aa6d18
+topology: topology-staging.yaml
 files:
 - deployments/keypairs.nix
+- deployments/firewalls.nix
 - deployments/cardano-nodes.nix
 - deployments/cardano-nodes-env-staging.nix
 - deployments/cardano-nodes-target-aws.nix
