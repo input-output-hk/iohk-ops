@@ -31,6 +31,7 @@ params:
                        else [ { name = params.name;
                                 ip   = nodeNameToPublicIP params.name; } ]);
     in
+    if params ? noExtraHosts && params.noExtraHosts then "" else
     ''
     ${concatStringsSep "\n" (map (host: "${host.ip} ${host.name}.cardano") hostList)}
     '';
