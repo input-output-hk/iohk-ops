@@ -1128,8 +1128,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           isLibrary = true;
           isExecutable = true;
@@ -1287,8 +1287,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/core; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1365,8 +1365,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/db; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1408,8 +1408,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/godtossing; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1459,8 +1459,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/infra; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1529,8 +1529,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/lrc; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1563,8 +1563,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/lwallet; echo source root reset to \$sourceRoot";
           isLibrary = false;
@@ -1630,8 +1630,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/ssc; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1669,8 +1669,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/tools; echo source root reset to \$sourceRoot";
           isLibrary = false;
@@ -1757,8 +1757,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/txp; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1811,8 +1811,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "1wvlxnhjzlsrjd5dkgpidi5gil2rcnbiliiqrp1haxyz6lhw0pq3";
-            rev = "7539a96575315d3c0b24791c148f3ac01a5cd3a5";
+            sha256 = "1qbfrpsxk21zqsfw6c0abnd9qy6r6hn2yv55ab7lmhvsl8mj5rkv";
+            rev = "cd29fc4af7bda7552c3f4f7dece54f25307bf382";
           };
           postUnpack = "sourceRoot+=/update; echo source root reset to \$sourceRoot";
           libraryHaskellDepends = [
@@ -1875,32 +1875,6 @@ self: {
           doCheck = false;
           homepage = "https://github.com/basvandijk/case-insensitive";
           description = "Case insensitive string comparison";
-          license = stdenv.lib.licenses.bsd3;
-        }) {};
-      cassava = callPackage ({ array, attoparsec, base, blaze-builder, bytestring, containers, deepseq, hashable, mkDerivation, stdenv, text, unordered-containers, vector }:
-      mkDerivation {
-          pname = "cassava";
-          version = "0.4.5.1";
-          sha256 = "17wxrwq977nyi225zlg3wj32f0ypyvikznhw59k0hxb4vkljlqkw";
-          revision = "1";
-          editedCabalFile = "c04d2ca56a5c725b3044ccf06c6fd09ff47265e3a1e125ae364363bfed2a0314";
-          libraryHaskellDepends = [
-            array
-            attoparsec
-            base
-            blaze-builder
-            bytestring
-            containers
-            deepseq
-            hashable
-            text
-            unordered-containers
-            vector
-          ];
-          doHaddock = false;
-          doCheck = false;
-          homepage = "https://github.com/hvr/cassava";
-          description = "A CSV parsing and encoding library";
           license = stdenv.lib.licenses.bsd3;
         }) {};
       cborg = callPackage ({ array, base, bytestring, containers, fetchgit, ghc-prim, half, integer-gmp, mkDerivation, primitive, stdenv, text }:
@@ -1996,20 +1970,6 @@ self: {
           doCheck = false;
           homepage = "https://github.com/ndmitchell/cmdargs#readme";
           description = "Command line argument processing";
-          license = stdenv.lib.licenses.bsd3;
-        }) {};
-      code-page = callPackage ({ base, mkDerivation, stdenv }:
-      mkDerivation {
-          pname = "code-page";
-          version = "0.1.3";
-          sha256 = "1491frk4jx6dlhifky9dvcxbsbcfssrz979a5hp5zn061rh8cp76";
-          libraryHaskellDepends = [
-            base
-          ];
-          doHaddock = false;
-          doCheck = false;
-          homepage = "https://github.com/RyanGlScott/code-page";
-          description = "Windows code page library for Haskell";
           license = stdenv.lib.licenses.bsd3;
         }) {};
       colour = callPackage ({ base, mkDerivation, stdenv }:
@@ -2205,47 +2165,6 @@ self: {
           homepage = "http://github.com/snoyberg/cookie";
           description = "HTTP cookie parsing and rendering";
           license = stdenv.lib.licenses.mit;
-        }) {};
-      criterion = callPackage ({ Glob, aeson, ansi-wl-pprint, base, binary, bytestring, cassava, code-page, containers, deepseq, directory, filepath, hastache, js-flot, js-jquery, mkDerivation, mtl, mwc-random, optparse-applicative, parsec, statistics, stdenv, text, time, transformers, transformers-compat, vector, vector-algorithms }:
-      mkDerivation {
-          pname = "criterion";
-          version = "1.1.4.0";
-          sha256 = "0xps7jm8g1bg7a2y4b6mj5nhg3b595k5ysprf4711lwyfpy478jk";
-          revision = "1";
-          editedCabalFile = "61a5386463efe3da9c0bc5d14f6074e500dc76fc62e2dda40eaf81955716fe41";
-          libraryHaskellDepends = [
-            aeson
-            ansi-wl-pprint
-            base
-            binary
-            bytestring
-            cassava
-            code-page
-            containers
-            deepseq
-            directory
-            filepath
-            Glob
-            hastache
-            js-flot
-            js-jquery
-            mtl
-            mwc-random
-            optparse-applicative
-            parsec
-            statistics
-            text
-            time
-            transformers
-            transformers-compat
-            vector
-            vector-algorithms
-          ];
-          doHaddock = false;
-          doCheck = false;
-          homepage = "http://www.serpentine.com/criterion";
-          description = "Robust, reliable performance measurement and analysis";
-          license = stdenv.lib.licenses.bsd3;
         }) {};
       crypto-api = callPackage ({ base, bytestring, cereal, entropy, mkDerivation, stdenv, tagged, transformers }:
       mkDerivation {
@@ -3102,6 +3021,8 @@ self: {
           pname = "fgl";
           version = "5.5.3.1";
           sha256 = "0k1frj6hpiij287sn91qvf1vms1b4zzs3xdq71xbam9cs80p5afy";
+          revision = "1";
+          editedCabalFile = "6f4cd2349fb40c1c81c22b574c7f5e60b959fa06b855922321a8fa93fc417c01";
           libraryHaskellDepends = [
             array
             base
@@ -3491,48 +3412,6 @@ self: {
           description = "A class for types that can be converted to a hash value";
           license = stdenv.lib.licenses.bsd3;
         }) {};
-      hastache = callPackage ({ base, blaze-builder, bytestring, containers, directory, filepath, ieee754, mkDerivation, mtl, process, stdenv, syb, text, transformers }:
-      mkDerivation {
-          pname = "hastache";
-          version = "0.6.1";
-          sha256 = "0r5l8k157pgvz1ck4lfid5x05f2s0nlmwf33f4fj09b1kmk8k3wc";
-          revision = "5";
-          editedCabalFile = "6e645296912c401a73a346c38a6ce2446d42591b3c602f7c657a626d9a0c8d3b";
-          isLibrary = true;
-          isExecutable = true;
-          libraryHaskellDepends = [
-            base
-            blaze-builder
-            bytestring
-            containers
-            directory
-            filepath
-            ieee754
-            mtl
-            syb
-            text
-            transformers
-          ];
-          executableHaskellDepends = [
-            base
-            blaze-builder
-            bytestring
-            containers
-            directory
-            filepath
-            ieee754
-            mtl
-            process
-            syb
-            text
-            transformers
-          ];
-          doHaddock = false;
-          doCheck = false;
-          homepage = "http://github.com/lymar/hastache";
-          description = "Haskell implementation of Mustache templates";
-          license = stdenv.lib.licenses.bsd3;
-        }) {};
       heaps = callPackage ({ Cabal, base, cabal-doctest, mkDerivation, stdenv }:
       mkDerivation {
           pname = "heaps";
@@ -3909,20 +3788,6 @@ self: {
           description = "HTTP/2 library including frames, priority queues and HPACK";
           license = stdenv.lib.licenses.bsd3;
         }) {};
-      ieee754 = callPackage ({ base, mkDerivation, stdenv }:
-      mkDerivation {
-          pname = "ieee754";
-          version = "0.8.0";
-          sha256 = "1lcs521g9lzy9d7337vg4w7q7s8500rfqy7rcifcz6pm6yfgyb8f";
-          libraryHaskellDepends = [
-            base
-          ];
-          doHaddock = false;
-          doCheck = false;
-          homepage = "http://github.com/patperry/hs-ieee754";
-          description = "Utilities for dealing with IEEE floating point numbers";
-          license = stdenv.lib.licenses.bsd3;
-        }) {};
       insert-ordered-containers = callPackage ({ aeson, base, base-compat, hashable, lens, mkDerivation, semigroupoids, semigroups, stdenv, text, transformers, unordered-containers }:
       mkDerivation {
           pname = "insert-ordered-containers";
@@ -4078,34 +3943,6 @@ self: {
           homepage = "https://github.com/peti/jailbreak-cabal#readme";
           description = "Strip version restrictions from build dependencies in Cabal files";
           license = stdenv.lib.licenses.bsd3;
-        }) {};
-      js-flot = callPackage ({ base, mkDerivation, stdenv }:
-      mkDerivation {
-          pname = "js-flot";
-          version = "0.8.3";
-          sha256 = "0yjyzqh3qzhy5h3nql1fckw0gcfb0f4wj9pm85nafpfqp2kg58hv";
-          libraryHaskellDepends = [
-            base
-          ];
-          doHaddock = false;
-          doCheck = false;
-          homepage = "https://github.com/ndmitchell/js-flot#readme";
-          description = "Obtain minified flot code";
-          license = stdenv.lib.licenses.mit;
-        }) {};
-      js-jquery = callPackage ({ base, mkDerivation, stdenv }:
-      mkDerivation {
-          pname = "js-jquery";
-          version = "3.1.1";
-          sha256 = "011adwcf0rx57ld6c75m9rw90zd2qj0d4pf7rmdnf7fp5gbnfbyp";
-          libraryHaskellDepends = [
-            base
-          ];
-          doHaddock = false;
-          doCheck = false;
-          homepage = "https://github.com/ndmitchell/js-jquery#readme";
-          description = "Obtain minified jQuery code";
-          license = stdenv.lib.licenses.mit;
         }) {};
       kademlia = callPackage ({ MonadRandom, base, binary, bytestring, containers, contravariant, cryptonite, data-default, extra, fetchgit, memory, mkDerivation, mtl, network, random, random-shuffle, stdenv, stm, time, transformers, transformers-compat }:
       mkDerivation {
@@ -4799,14 +4636,14 @@ self: {
           description = "A typeclass and set of functions for working with newtypes";
           license = stdenv.lib.licenses.bsd3;
         }) {};
-      node-sketch = callPackage ({ aeson, async, attoparsec, base, binary, bytestring, containers, criterion, cryptonite, data-default, deepseq, ekg, ekg-core, exceptions, fetchgit, formatting, hashable, kademlia, lens, lifted-base, log-warper, mkDerivation, mmorph, monad-control, mtl, mwc-random, network, network-transport, network-transport-tcp, random, resourcet, semigroups, serokell-util, statistics, stdenv, stm, tagged, text, text-format, time, time-units, transformers, transformers-base, transformers-lift, universum, unordered-containers, vector }:
+      node-sketch = callPackage ({ aeson, async, attoparsec, base, binary, bytestring, containers, cryptonite, data-default, deepseq, ekg, ekg-core, exceptions, fetchgit, formatting, hashable, kademlia, lens, lifted-base, log-warper, mkDerivation, mmorph, monad-control, mtl, mwc-random, network, network-transport, network-transport-tcp, random, resourcet, semigroups, serokell-util, statistics, stdenv, stm, tagged, text, text-format, time, time-units, transformers, transformers-base, transformers-lift, universum, unordered-containers, vector }:
       mkDerivation {
           pname = "node-sketch";
           version = "0.2.0.0";
           src = fetchgit {
             url = "https://github.com/serokell/time-warp-nt.git";
-            sha256 = "0q56xsjjm6aw3r39vz86dpi3r3blw5nldscarsmhbvxrgi2xgmvk";
-            rev = "e1bc23f12c388301ceae4de53fe2d513057b62ec";
+            sha256 = "1svhv1qvky5cp2lqpszrcx6rfsgbz5h7l0zy2ll0frn6p8i96kcw";
+            rev = "e78643ff32a069fd7ef98ccc85465cabcbea67dc";
           };
           isLibrary = true;
           isExecutable = true;
@@ -4856,21 +4693,14 @@ self: {
             vector
           ];
           executableHaskellDepends = [
-            async
             base
             binary
             bytestring
             containers
-            criterion
-            mwc-random
-            network-transport
             network-transport-tcp
             random
-            statistics
             stm
-            time
             time-units
-            vector
           ];
           doHaddock = false;
           doCheck = false;
@@ -6085,6 +5915,8 @@ self: {
           pname = "statestack";
           version = "0.2.0.5";
           sha256 = "0rjzx9iy5mx5igir6gvslznnx3gpxlb1xy1n8h4cn54cn3wxrspl";
+          revision = "1";
+          editedCabalFile = "f154a5c54617f59da73c0b8beb697774889ec6d325246117e5d1a5dd6093c14d";
           libraryHaskellDepends = [
             base
             mtl

@@ -13,7 +13,7 @@ with (import ./../lib.nix);
 
   resources = {
     elasticIPs = {
-      nodeip40 = { inherit region accessKeyId; };
+      sl-explorer-ip = { inherit region accessKeyId; };
     };
   };
 }

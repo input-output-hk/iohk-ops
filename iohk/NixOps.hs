@@ -21,6 +21,7 @@ import qualified Data.ByteString.UTF8          as BUTF8
 import Data.Char (ord)
 import qualified Data.Yaml                     as YAML
 import Data.Yaml (FromJSON(..), ToJSON(..))
+import           Data.Either
 import           Data.Maybe
 import qualified Data.Map                      as Map
 import Data.Monoid ((<>))
@@ -37,45 +38,48 @@ import Data.ByteString.Lazy.Char8 (ByteString, pack)
 import qualified Filesystem.Path.CurrentOS     as Path
 import GHC.Generics
 import Safe (headMay)
+import qualified System.IO                     as Sys
 import           Text.Read                        (readMaybe)
-import Turtle hiding (procs)
+import Turtle hiding (procs, inproc)
 import qualified Turtle as Turtle
 
 
 -- * Constants
 --
-awsPublicIPURL, iohkNixopsURL :: URL
-iohkNixopsURL        = "https://github.com/input-output-hk/iohk-nixops.git"
-awsPublicIPURL       = "http://169.254.169.254/latest/meta-data/public-ipv4"
+awsPublicIPURL :: URL
+awsPublicIPURL = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
-defaultEnvironment = Development
-defaultTarget      = AWS
-defaultNodeLimit   = 14
+defaultEnvironment   = Development
+defaultTarget        = AWS
+defaultNode          = NodeName "node0"
 
 
 -- * Projects
 --
 data Project
-  = Cardanosl
+  = CardanoSL
   | CardanoExplorer
+  | IOHK
   | Nixpkgs
   | Stack2nix
   deriving (Bounded, Enum, Eq, Read, Show)
 
-allProjects :: [Project]
-allProjects = enumFromTo minBound maxBound
+every :: (Bounded a, Enum a) => [a]
+every = enumFromTo minBound maxBound
 
 projectURL     :: Project -> URL
-projectURL     Cardanosl       = "https://github.com/input-output-hk/cardano-sl.git"
+projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl.git"
 projectURL     CardanoExplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
+projectURL     IOHK            = "https://github.com/input-output-hk/iohk-nixops.git"
 projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
 projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
 
 projectSrcFile :: Project -> FilePath
-projectSrcFile Cardanosl       = "cardano-sl-src.json"
+projectSrcFile CardanoSL       = "cardano-sl-src.json"
 projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
 projectSrcFile Nixpkgs         = "nixpkgs-src.json"
 projectSrcFile Stack2nix       = "stack2nix-src.json"
+projectSrcFile IOHK            = error "Feeling self-referential?"
 
 
 -- * Primitive types
@@ -83,12 +87,19 @@ projectSrcFile Stack2nix       = "stack2nix-src.json"
 newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixParam  = NixParam  { fromNixParam :: Text } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
-newtype Machine   = Machine   { fromMachine :: Text } deriving (FromJSON, Generic, Show, IsString)
+newtype IP        = IP        { getIP       :: Text } deriving (Show, Generic, FromField)
+newtype NodeName  = NodeName  { fromNodeName :: Text } deriving (FromJSON, Generic, Show, FromField, IsString)
 newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+
+
+-- * Some orphan instances..
+--
+instance FromJSON FilePath where parseJSON = AE.withText "filepath" $ \v -> pure $ fromText v
+instance ToJSON   FilePath where toJSON (toText -> Right v) = AE.String $ v
 
 
 -- * A bit of Nix types
@@ -142,14 +153,18 @@ data NixValue
   = NixBool Bool
   | NixInt  Integer
   | NixStr  Text
+  | NixFile FilePath
   deriving (Generic, Show)
 instance FromJSON NixValue
 instance ToJSON NixValue
 
 nixArgCmdline :: NixParam -> NixValue -> [Text]
 nixArgCmdline (NixParam name) (NixBool bool) = ["--arg",    name, T.toLower $ showT bool]
-nixArgCmdline (NixParam name) (NixInt int)   = ["--arg",    name, showT int]
-nixArgCmdline (NixParam name) (NixStr str)   = ["--argstr", name, str]
+nixArgCmdline (NixParam name) (NixInt  int)  = ["--arg",    name, showT int]
+nixArgCmdline (NixParam name) (NixStr  str)  = ["--argstr", name, str]
+nixArgCmdline (NixParam name) (NixFile f)    = ["--arg",    name, let txt = format fp f
+                                                                  in if T.isPrefixOf "/" txt
+                                                                     then txt else ("./" <> txt)]
 
 
 -- * Domain
@@ -168,17 +183,14 @@ data Environment
   | Production
   | Staging
   | Development
-  deriving (Eq, Generic, Read, Show)
+  deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Environment
 
 data Target
   = All               -- ^ Wildcard or unspecified, depending on context.
   | AWS
-  deriving (Eq, Generic, Read, Show)
+  deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Target
-
-allDeployments :: [Deployment]
-allDeployments = enumFromTo minBound maxBound
 
 envConfigFilename :: IsString s => Environment -> s
 envConfigFilename Any           = "config.yaml"
@@ -186,19 +198,28 @@ envConfigFilename Development   = "config.yaml"
 envConfigFilename Staging       = "staging.yaml"
 envConfigFilename Production    = "production.yaml"
 
-selectDeployer :: Environment -> [Deployment] -> Machine
+selectDeployer :: Environment -> [Deployment] -> NodeName
 selectDeployer Staging delts | elem Nodes delts = "iohk"
                              | otherwise        = "cardano-deployer"
 selectDeployer _ _                              = "cardano-deployer"
 
+selectTopologyConfig :: Environment -> [Deployment] -> FilePath
+selectTopologyConfig Development _ = "topology-development.yaml"
+selectTopologyConfig _           _ = "topology.yaml"
+
 type DeplArgs = Map.Map NixParam NixValue
 
-selectDeploymentArgs :: Environment -> [Deployment] -> Integer -> DeplArgs
-selectDeploymentArgs env delts limit = Map.fromList
-  [ ("accessKeyId"
-    , NixStr . fromMachine $ selectDeployer env delts)
-  , ("nodeLimit"
-    , NixInt limit ) ]
+deployerIP :: Options -> IO IP
+deployerIP o = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+
+selectDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> IO DeplArgs
+selectDeploymentArgs o cTopology env delts = do
+    let staticArgs = [ ("accessKeyId"
+                       , NixStr . fromNodeName $ selectDeployer env delts) ]
+    (IP deployerIp) <- deployerIP o
+    pure $ Map.fromList $
+      staticArgs
+      <> [ ("deployerIP",   NixStr deployerIp) ]
 
 
 -- * Deployment structure
@@ -215,6 +236,7 @@ deployments =
       , (Any,         AWS, "deployments/cardano-explorer-target-aws.nix") ])
   , (Nodes
     , [ (Any,         All, "deployments/cardano-nodes.nix")
+      , (Development, All, "deployments/cardano-nodes-env-development.nix")
       , (Production,  All, "deployments/cardano-nodes-env-production.nix")
       , (Staging,     All, "deployments/cardano-nodes-env-staging.nix")
       , (Any,         AWS, "deployments/cardano-nodes-target-aws.nix") ])
@@ -283,7 +305,9 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
 
 data NixopsConfig = NixopsConfig
   { cName             :: Text
+  , cNixops           :: Maybe FilePath
   , cNixpkgsCommit    :: Commit
+  , cTopology          :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
   , cElements         :: [Deployment]
@@ -293,7 +317,9 @@ data NixopsConfig = NixopsConfig
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
+        <*> v .: "nixops"
         <*> v .: "nixpkgs"
+        <*> v .: "topology"
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "elements"
@@ -305,7 +331,9 @@ instance ToJSON Deployment
 instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
    [ "name"        .= cName
+   , "nixops"      .= cNixops
    , "nixpkgs"     .= fromCommit cNixpkgsCommit
+   , "topology"    .= cTopology
    , "environment" .= showT cEnvironment
    , "target"      .= showT cTarget
    , "elements"    .= cElements
@@ -314,15 +342,18 @@ instance ToJSON NixopsConfig where
 
 deploymentFiles :: Environment -> Target -> [Deployment] -> [Text]
 deploymentFiles cEnvironment cTarget cElements =
+  "deployments/firewalls.nix":
   "deployments/keypairs.nix":
   concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Branch -> Commit -> Environment -> Target -> [Deployment] -> Integer -> NixopsConfig
-mkConfig (Branch cName) cNixpkgsCommit cEnvironment cTarget cElements nodeLimit =
-  let cFiles    = deploymentFiles cEnvironment cTarget cElements
-      cDeplArgs = selectDeploymentArgs cEnvironment cElements nodeLimit
-  in NixopsConfig{..}
+mkConfig :: Options -> Branch -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> IO NixopsConfig
+mkConfig o (Branch cName) cNixops mTopology cNixpkgsCommit cEnvironment cTarget cElements = do
+  let cFiles    = deploymentFiles                cEnvironment cTarget cElements
+      cTopology = flip fromMaybe mTopology $
+                  selectTopologyConfig           cEnvironment         cElements
+  cDeplArgs <- selectDeploymentArgs  o cTopology cEnvironment         cElements
+  pure NixopsConfig{..}
 
 -- | Write the config file
 writeConfig :: MonadIO m => Maybe FilePath -> NixopsConfig -> m FilePath
@@ -330,7 +361,7 @@ writeConfig mFp c@NixopsConfig{..} = do
   let configFilename = flip fromMaybe mFp $ envConfigFilename cEnvironment
   liftIO $ writeTextFile configFilename $ T.pack $ BUTF8.toString $ YAML.encode c
   pure configFilename
-  
+
 -- | Read back config, doing validation
 readConfig :: MonadIO m => FilePath -> m NixopsConfig
 readConfig cf = do
@@ -348,7 +379,7 @@ readConfig cf = do
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
   pure c
-  
+
 
 parallelIO :: Options -> [IO a] -> IO ()
 parallelIO Options{..} =
@@ -356,20 +387,26 @@ parallelIO Options{..} =
   then sequence_
   else sh . parallel
 
+logCmd  cmd args = do
+  printf ("-- "%s%"\n") $ T.intercalate " " $ cmd:args
+  Sys.hFlush Sys.stdout
+
+inproc :: Text -> [Text] -> Shell Line -> Shell Line
+inproc cmd args input = do
+  liftIO $ logCmd cmd args
+  Turtle.inproc cmd args input
+
 inprocs :: MonadIO m => Text -> [Text] -> Shell Line -> m Text
 inprocs cmd args input = do
   (exitCode, stdout) <- liftIO $ procStrict cmd args input
   unless (exitCode == ExitSuccess) $
     liftIO (throwIO (ProcFailed cmd args exitCode))
-  pure stdout 
+  pure stdout
 
 cmd   :: Options -> Text -> [Text] -> IO ()
 cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
 incmd :: Options -> Text -> [Text] -> IO Text
 
-logCmd  cmd args =
-  printf ("-- "%s%"\n") $ T.intercalate " " $ cmd:args
-  
 cmd   Options{..} cmd args = do
   when oVerbose $ logCmd cmd args
   Turtle.procs      cmd args empty
@@ -380,11 +417,18 @@ incmd Options{..} cmd args = do
   when oVerbose $ logCmd cmd args
   inprocs cmd args empty
 
+
+-- * Invoking nixops
+--
+nixopsPath :: NixopsConfig -> FilePath
+nixopsPath (cNixops -> Nothing) = "nixops"
+nixopsPath (cNixops -> Just x)  = x
+
 nixops  :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO ()
 nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO (ExitCode, Text)
 
-nixops  o c (NixopsCmd com) args = cmd  o "nixops" (com : nixopsCmdOptions o c <> args)
-nixops' o c (NixopsCmd com) args = cmd' o "nixops" (com : nixopsCmdOptions o c <> args)
+nixops  o c (NixopsCmd com) args = cmd  o (format fp $ nixopsPath c) (com : nixopsCmdOptions o c <> args)
+nixops' o c (NixopsCmd com) args = cmd' o (format fp $ nixopsPath c) (com : nixopsCmdOptions o c <> args)
 
 
 -- * Deployment lifecycle
@@ -396,17 +440,17 @@ exists o c@NixopsConfig{..} = do
 
 create :: Options -> NixopsConfig -> IO ()
 create o c@NixopsConfig{..} = do
-  clusterExists <- exists o c
-  when clusterExists $
-    die $ format ("Cluster already exists?: '"%s%"'") cName
-  printf ("Creating cluster "%s%"\n") cName
+  deplExists <- exists o c
+  when deplExists $
+    die $ format ("Deployment already exists?: '"%s%"'") cName
+  printf ("Creating deployment "%s%"\n") cName
   export "NIX_PATH_LOCKED" "1"
   export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   nixops o c "create" $ deploymentFiles cEnvironment cTarget cElements
 
 modify :: Options -> NixopsConfig -> IO ()
 modify o c@NixopsConfig{..} = do
-  printf ("Syncing Nix->state for cluster "%s%"\n") cName
+  printf ("Syncing Nix->state for deployment "%s%"\n") cName
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
 
 deploy :: Options -> NixopsConfig -> Bool -> Bool -> IO ()
@@ -416,17 +460,25 @@ deploy o c@NixopsConfig{..} evonly buonly = do
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
+  printf ("Generating 'topology.nix' from '"%fp%"'..\n") cTopology
+  exists <- testpath cTopology
+  unless exists $
+    die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
+  inproc "yaml2json" [format fp cTopology] empty & output "topology.nix"
+
   printf ("Deploying cluster "%s%"\n") cName
   export "NIX_PATH_LOCKED" "1"
   export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   when (not evonly) $ do
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
-    export "SMART_GEN_IP"     =<< incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+    export "SMART_GEN_IP"     =<< getIP <$> deployerIP o
     when (elem Explorer cElements) $ do
       cmd o "scripts/generate-explorer-frontend.sh" []
 
-  nixops o c "set-args" $ concat $ uncurry nixArgCmdline <$> Map.toList cDeplArgs
+  let deplArgs = Map.toList cDeplArgs
+                 <> [("topologyYaml", NixFile $ cTopology)] -- A special case, to avoid duplication.
+  nixops o c "set-args" $ concat $ uncurry nixArgCmdline <$> deplArgs
 
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
 
@@ -461,11 +513,11 @@ fromscratch o c = do
 generateGenesis :: Options -> NixopsConfig -> IO ()
 generateGenesis o c = do
   let cardanoSLDir         = "cardano-sl"
-  GitSource{..} <- readSource gitSource Cardanosl
+  GitSource{..} <- readSource gitSource CardanoSL
   printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit gRev
   exists <- testpath cardanoSLDir
   unless exists $
-    cmd o "git" ["clone", fromURL $ projectURL Cardanosl, "cardano-sl"]
+    cmd o "git" ["clone", fromURL $ projectURL CardanoSL, "cardano-sl"]
   cd "cardano-sl"
   cmd o "git" ["fetch"]
   cmd o "git" ["reset", "--hard", fromCommit gRev]
@@ -494,7 +546,7 @@ build o c d = do
 checkstatus :: Options -> NixopsConfig -> IO ()
 checkstatus o c = do
   nodes <- getNodeNames o c
-  parallelIO o $ fmap (rebootIfDown o c) nodes 
+  parallelIO o $ fmap (rebootIfDown o c) nodes
 
 rebootIfDown :: Options -> NixopsConfig -> NodeName -> IO ()
 rebootIfDown o c (fromNodeName -> node) = do
@@ -525,17 +577,33 @@ scpFromNode o c (fromNodeName -> node) from to = do
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
 
 sshForEach :: Options -> NixopsConfig -> [Text] -> IO ()
-sshForEach o c cmd = 
+sshForEach o c cmd =
   nixops o c "ssh-for-each" ("--": cmd)
+
+deployed'commit :: Options -> NixopsConfig -> NodeName -> IO ()
+deployed'commit o c m = do
+  ssh' o c (\r-> do
+               case cut space r of
+                 (_:path:_) -> do
+                   drv <- incmd o "nix-store" ["--query", "--deriver", T.strip path]
+                   exists <- testpath $ fromText $ T.strip drv
+                   unless exists $
+                     errorT $ "The derivation used to build the package is not present on the system: " <> T.strip drv
+                   sh $ do
+                     x <- inproc "nix-store" ["--query", "--references", T.strip drv] empty &
+                          inproc "egrep"       ["/nix/store/[a-z0-9]*-cardano-sl-[0-9a-f]{7}\\.drv"] &
+                          inproc "sed" ["-E", "s|/nix/store/[a-z0-9]*-cardano-sl-([0-9a-f]{7})\\.drv|\\1|"]
+                     when (x == "") $
+                       errorT $ "Cannot determine commit id for derivation: " <> T.strip drv
+                     echo $ "The 'cardano-sl' process running on '" <> unsafeTextToLine (fromNodeName m) <> "' has commit id " <> x
+                 [""] -> errorT $ "Looks like 'cardano-node' is down on node '" <> fromNodeName m <> "'"
+                 _    -> errorT $ "Unexpected output from 'pgrep -fa cardano-node': '" <> r <> "' / " <> showT (cut space r))
+    ["pgrep", "-fa", "cardano-node"]
+    m
 
 
 -- * Functions for extracting information out of nixops info command
 --
-newtype IP = IP { getIP :: Text }
-   deriving (Show, Generic, FromField)
-newtype NodeName = NodeName { fromNodeName :: Text }
-   deriving (Show, Generic, FromField)
-
 -- | Get all nodes in EC2 cluster
 getNodes :: Options -> NixopsConfig -> IO [DeploymentInfo]
 getNodes o c = do
@@ -584,7 +652,7 @@ info o c = do
     ExitSuccess -> return $ decodeWith nixopsDecodeOptions NoHeader (encodeUtf8 $ fromStrict nodes)
 
 toNodesInfo :: V.Vector DeploymentInfo -> [DeploymentInfo]
-toNodesInfo vector = 
+toNodesInfo vector =
   V.toList $ V.filter filterEC2 vector
     where
       filterEC2 di = T.take 4 (diType di) == "ec2 " && diStatus di /= Obsolete
@@ -597,6 +665,9 @@ getNodePublicIP name vector =
 -- * Utils
 showT :: Show a => a -> Text
 showT = T.pack . show
+
+lowerShowT :: Show a => a -> Text
+lowerShowT = T.toLower . T.pack . show
 
 errorT :: Text -> a
 errorT = error . T.unpack

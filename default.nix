@@ -11,7 +11,7 @@ with pkgs.lib;
 with pkgs.haskell.lib;
 
 let
-  prodMode = addConfigureFlags [ "-f-asserts" "-f-dev-mode" "--ghc-options=-DCONFIG=testnet_staging"];
+  prodMode = addConfigureFlags [ "-f-asserts" "-f-dev-mode" "--ghc-options=-DCONFIG=qanet_tns"];
   addConfigureFlags = flags: drv: overrideCabal drv (drv: {
     configureFlags = flags;
   });
@@ -19,9 +19,9 @@ let
   socket-io-src = pkgs.fetchgit (removeAttrs (importJSON ./pkgs/engine-io.json) ["date"]);
   iohkpkgs = ((import pkgs/default.nix { inherit pkgs compiler; }).override {
   overrides = self: super: {
-    mkDerivation = drv: super.mkDerivation (drv // {
-      dontStrip = true;
-    });
+    mkDerivation = if !localLib.debugBuild then super.mkDerivation
+                   else drv: super.mkDerivation (drv // { dontStrip = true; });
+
     cpphs = compiler.cpphs;
     cardano-sl-core = prodMode super.cardano-sl-core;
     cardano-sl = overrideCabal super.cardano-sl (drv: {
@@ -40,6 +40,8 @@ let
     });
     cardano-sl-static = justStaticExecutables self.cardano-sl;
     cardano-report-server-static = justStaticExecutables self.cardano-report-server;
+    cardano-sl-lwallet-static = justStaticExecutables self.cardano-sl-lwallet;
+    cardano-sl-tools-static = justStaticExecutables self.cardano-sl-tools;
 
     # TODO: https://github.com/input-output-hk/stack2nix/issues/7
     ether = addConfigureFlags ["-fdisable-tup-instances"] super.ether;
@@ -65,7 +67,7 @@ let
   };
 });
   iohk-ops-extra-runtime-deps = [
-    pkgs.git pkgs.nix-prefetch-scripts
+    pkgs.git pkgs.nix-prefetch-scripts compiler.yaml
   ];
   cabal2nixpkgs = rec {
     # extra packages to expose, that have no relation to pkgs/default.nix

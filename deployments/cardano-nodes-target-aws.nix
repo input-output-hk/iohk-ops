@@ -1,7 +1,8 @@
-{ accessKeyId, nodeLimit, ... }:
+{ accessKeyId, deployerIP, topologyYaml, ... }:
 
 with (import ./../lib.nix);
 let
-  nodeAWSConfig = (import ./../modules/cardano-node-aws.nix) { inherit accessKeyId; };
-  nodes = import ./cardano-nodes-config.nix { inherit nodeLimit; };
-in (mkNodes nodes nodeAWSConfig)
+  nodeInfo    = (import ./cardano-nodes-config.nix         { inherit accessKeyId deployerIP; });
+  nodeTgtConf = (import ./../modules/cardano-node-aws.nix) { inherit accessKeyId topologyYaml; inherit (nodeInfo) relays; };
+in
+  mkNodesUsing nodeTgtConf nodeInfo.nodeArgs
