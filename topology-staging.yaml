@@ -45,42 +45,49 @@ nodes:
   'r1':
     type: relay
     region: ap-southeast-1
-    static-routes: [["a1", "g1"], ["c1", "b1"]]
+    static-routes: [["a1", "g1"]]
     addr: r1.cardano
     port: 3000
+    kademlia: off
   'r2':
     type: relay
     region: eu-central-1
-    static-routes: [["b1", "a1"], ["d1", "c1"]]
+    static-routes: [["b1", "a1"]]
     addr: r2.cardano
     port: 3000
+    kademlia: off
   'r3':
     type: relay
     region: eu-central-1
-    static-routes: [["c1", "b1"], ["e1", "d1"]]
+    static-routes: [["c1", "b1"]]
     addr: r3.cardano
     port: 3000
+    kademlia: off
   'r4':
     type: relay
     region: ap-southeast-1
-    static-routes: [["d1", "c1"], ["f1", "e1"]]
+    static-routes: [["d1", "c1"]]
     addr: r4.cardano
     port: 3000
+    kademlia: off
   'r5':
     type: relay
     region: eu-central-1
-    static-routes: [["e1", "d1"], ["g1", "f1"]]
+    static-routes: [["e1", "d1"]]
     addr: r5.cardano
     port: 3000
+    kademlia: off
   'r6':
     type: relay
     region: eu-central-1
-    static-routes: [["f1", "e1"], ["a1", "g1"]]
+    static-routes: [["f1", "e1"]]
     addr: r6.cardano
     port: 3000
+    kademlia: off
   'r7':
     type: relay
     region: ap-southeast-1
-    static-routes: [["g1", "f1"], ["b1", "a1"]]
+    static-routes: [["g1", "f1"]]
     addr: r7.cardano
     port: 3000
+    kademlia: off
