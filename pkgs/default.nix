@@ -1128,8 +1128,8 @@ self: {
           version = "0.5.1";
           src = fetchgit {
             url = "https://github.com/input-output-hk/cardano-sl.git";
-            sha256 = "0yf31lyawr3s6j6gkajjygj2mszb0klkia0n9mbx12q0iqf0zyv0";
-            rev = "8f7ffed163f00da37b20fd43358dd9471472682f";
+            sha256 = "05f864ylf21q91nl7jkp56zms5l0rrms6f97c8vkg4px8rvvm9mg";
+            rev = "ccfebcf0624b6be10371e67297779edea32c1db2";
           };
           isLibrary = true;
           isExecutable = true;
