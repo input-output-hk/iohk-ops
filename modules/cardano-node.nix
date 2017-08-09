@@ -34,7 +34,7 @@ let
        else "--flat-distr \"${distributionParam}\""))
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
-    (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.nodeIndex + 1)}.sk")
+    (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString cfg.nodeIndex}.sk")
     (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
@@ -189,7 +189,7 @@ in {
       after         = [ "network.target" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       script = let
-        keyId = "key" + toString (cfg.nodeIndex + 1);
+        keyId = "key" + toString cfg.nodeIndex;
         key = keyId + ".sk";
       in ''
         [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}${key}

@@ -5,7 +5,6 @@ with (import ./../lib.nix);
 params:
   { config, resources, pkgs, nodes, options, ... }:
     let
-      indexPlus1 = params.i + 1; # used for keys
       cfg = config.services.cardano-node;
       cardanoNodeConfigs = filter (c: c.services.cardano-node.enable)
                (map (node: node.config) (attrValues nodes));
@@ -38,8 +37,8 @@ params:
       deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor accessKeyId params.region};
       deployment.ec2.securityGroups = mkForce sgs;
       deployment.keys = (optionalAttrs (cfg.productionMode && !cfg.hasExplorer) {
-        "key${toString indexPlus1}" = {
-          keyFile = ./. + "/../keys/key${toString indexPlus1}.sk";
+        "key${toString params.i}" = {
+          keyFile = ./. + "/../keys/key${toString params.i}.sk";
           user = "cardano-node";
         };
       }) // optionalAttrs (config.services.cardano-node.enable) {
