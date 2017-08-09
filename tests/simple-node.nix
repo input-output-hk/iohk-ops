@@ -3,6 +3,7 @@ import <nixpkgs/nixos/tests/make-test.nix> ({ pkgs, config, ... }: {
   nodes = {
     machine = { config, pkgs, ... }: {
       imports = [ (import ../modules/cardano-node-config.nix 0 "") ];
+      virtualisation.qemu.options = [ "-cpu Haswell" ];
       services.cardano-node = {
         autoStart = true;
         initialKademliaPeers = [];
