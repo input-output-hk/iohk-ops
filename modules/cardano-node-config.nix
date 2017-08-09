@@ -3,7 +3,7 @@
 with (import ./../lib.nix);
 
 params:
-  { pkgs, nodes, ...}:
+  { pkgs, nodes, config, ...}:
   let
     neighbourNames       = flatten params.static-routes;
     nodeNameToPublicIP   = name: cardanoAttr "publicIP" nodes.${name}.config.services.cardano-node;
@@ -20,13 +20,16 @@ params:
     services.dnsmasq.servers = [ "127.0.0.1" ];
 
     networking.extraHosts =
-    let hostList = neighbourPairs
+    let hostList = if config.services.cardano-node.enable == false then []
+                   else
+                   neighbourPairs
                    ++ (map (x:
                         { name = x.name;
                           ip   = nodeNameToPublicIP x.name; })
                         (filter (x: x.name != params.name) params.relays))
-                   ++ [ { name = params.name;
-                          ip   = nodeNameToPublicIP params.name; } ];
+                   ++ (if !(cardanoHasAttr "publicIP" config.services.cardano-node) then []
+                       else [ { name = params.name;
+                                ip   = nodeNameToPublicIP params.name; } ]);
     in
     ''
     ${concatStringsSep "\n" (map (host: "${host.ip} ${host.name}.cardano") hostList)}
