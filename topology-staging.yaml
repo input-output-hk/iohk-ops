@@ -3,7 +3,9 @@ nodes:
 # First the 7 cores, in 3 reigions
 # - Frankfurt      (eu-central-1)
 # - Tokyo          (ap-northeast-1)
-# - US, North Cal. (us-west-1)
+# - Singapore      (ap-southeast-1)
+
+# TODO: replace "ap-southeast-1" with US, North Cal. (us-west-1)
   
   'a-c-1':
     region: eu-central-1
@@ -36,13 +38,13 @@ nodes:
     static-routes: [['a-c-2', 'a-c-2'], ['b-c-1', 'b-r-1'], ['b-r-2', 'b-r-1']]
 
   'c-c-1':
-    region: us-west-1
+    region: ap-southeast-1
     type: core
     addr: c-c-1.cardano
     static-routes: [['a-c-1', 'a-c-2'], ['c-c-2', 'c-r-1'], ['c-r-1', 'c-r-2']]
 
   'c-c-2':
-    region: us-west-1
+    region: ap-southeast-1
     type: core
     addr: c-c-2.cardano
     static-routes: [['b-c-2', 'b-c-1'], ['c-c-1', 'c-r-1'], ['c-r-2', 'c-r-1']]
@@ -85,14 +87,14 @@ nodes:
     kademlia: false
 
   'c-r-1':
-    region: us-west-1
+    region: ap-southeast-1
     type: relay
     addr: c-r-1.cardano
     static-routes: [['c-c-1', 'c-c-2'], ['a-r-3', 'a-r-2'], ['c-r-2', 'a-r-2']]
     kademlia: false
 
   'c-r-2':
-    region: us-west-1
+    region: ap-southeast-1
     type: relay
     addr: c-r-2.cardano
     static-routes: [['c-c-2', 'c-c-1'], ['b-r-2', 'b-r-1'], ['c-r-1', 'a-r-2']]
