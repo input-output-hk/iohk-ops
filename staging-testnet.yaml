@@ -13,10 +13,6 @@ files:
 - deployments/cardano-nodes.nix
 - deployments/cardano-nodes-env-staging.nix
 - deployments/cardano-nodes-target-aws.nix
-- deployments/report-server.nix
-- deployments/report-server-env-staging.nix
-- deployments/report-server-target-aws.nix
 elements:
 - Nodes
-- ReportServer
 target: AWS
