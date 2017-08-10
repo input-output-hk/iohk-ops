@@ -73,7 +73,6 @@ in lib // (rec {
   keypairFor = accessKeyId: region: lib.head (lib.attrNames (lib.filterAttrs (n: v: v.region == region) (ec2KeyPairs accessKeyId)));
 
   ec2KeyPairs = accessKeyId: {
-    cardano-test-us-west-1 = { inherit accessKeyId; region = "us-west-1"; };
     cardano-test-eu-central = { inherit accessKeyId; region = "eu-central-1"; };
     cardano-test-eu-west-1 = { inherit accessKeyId; region = "eu-west-1"; };
     cardano-test-eu-west-2 = { inherit accessKeyId; region = "eu-west-2"; };
