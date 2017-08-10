@@ -8,6 +8,7 @@ params:
       cfg = config.services.cardano-node;
       cardanoNodeConfigs = filter (c: c.services.cardano-node.enable)
                (map (node: node.config) (attrValues nodes));
+      nodeNameToPublicIP   = name: cardanoAttr "publicIP" nodes.${name}.config.services.cardano-node;
 
       sgByName = x: resources.ec2SecurityGroups.${x};
       sgNames  = if   config.services.cardano-node.enable == false
@@ -57,12 +58,12 @@ params:
           ''
 identifier: '${config.services.cardano-node.dhtKey}'
 peers:
-${concatStringsSep "\n" (map (r: "  - host: '${r.value.name}.cardano'\n    port: ${toString config.services.cardano-node.port}") relays)}
+${concatStringsSep "\n" (map (r: "  - host: '${nodeNameToPublicIP r.value.name}'\n    port: ${toString config.services.cardano-node.port}") relays)}
 address:
   host: '0.0.0.0'
   port: ${toString config.services.cardano-node.port}
 externalAddress:
-  host: '${params.name}.cardano'
+  host: '${nodeNameToPublicIP params.name}'
   port: ${toString config.services.cardano-node.port}
           '';
         };
