@@ -453,8 +453,8 @@ modify o c@NixopsConfig{..} = do
   printf ("Syncing Nix->state for deployment "%s%"\n") cName
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
 
-deploy :: Options -> NixopsConfig -> Bool -> Bool -> IO ()
-deploy o c@NixopsConfig{..} evonly buonly = do
+deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> IO ()
+deploy o c@NixopsConfig{..} evonly buonly check = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
@@ -486,6 +486,7 @@ deploy o c@NixopsConfig{..} evonly buonly = do
     [ "--max-concurrent-copy", "50", "-j", "4" ]
     ++ [ "--evaluate-only" | evonly ]
     ++ [ "--build-only"    | buonly ]
+    ++ [ "--check"         | check ]
   echo "Done."
 
 destroy :: Options -> NixopsConfig -> IO ()
@@ -505,7 +506,7 @@ fromscratch o c = do
   destroy o c
   delete o c
   create o c
-  deploy o c False False
+  deploy o c False False False
 
 
 -- * Building
