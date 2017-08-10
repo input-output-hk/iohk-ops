@@ -7,95 +7,95 @@ nodes:
 
 # TODO: replace "ap-southeast-1" with US, North Cal. (us-west-1)
   
-  'a-c-1':
+  'c-a-1':
     region: eu-central-1
     type: core
-    addr: a-c-1.cardano
-    static-routes: [['a-c-2', 'a-c-3'], ['b-c-1', 'b-c-2'], ['a-r-1', 'a-r-2']]
+    addr: c-a-1.cardano
+    static-routes: [['c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['r-a-1', 'r-a-2']]
 
-  'a-c-2':
+  'c-a-2':
     region: eu-central-1
     type: core
-    addr: a-c-2.cardano
-    static-routes: [['a-c-3', 'a-c-1'], ['c-c-2', 'c-c-1'], ['a-r-2', 'a-r-3']]
+    addr: c-a-2.cardano
+    static-routes: [['c-a-3', 'c-a-1'], ['c-c-2', 'c-c-1'], ['r-a-2', 'r-a-3']]
 
-  'a-c-3':
+  'c-a-3':
     region: eu-central-1
     type: core
-    addr: a-c-3.cardano
-    static-routes: [['a-c-1', 'a-c-2'], ['a-r-3', 'a-r-1'], ['b-r-1', 'c-r-1']]
+    addr: c-a-3.cardano
+    static-routes: [['c-a-1', 'c-a-2'], ['r-a-3', 'r-a-1'], ['r-b-1', 'r-c-1']]
 
-  'b-c-1':
+  'c-b-1':
     region: ap-northeast-1
     type: core
-    addr: b-c-1.cardano
-    static-routes: [['b-c-2', 'b-r-2'], ['c-c-1', 'c-c-2'], ['b-r-1', 'b-r-2']]
+    addr: c-b-1.cardano
+    static-routes: [['c-b-2', 'r-b-2'], ['c-c-1', 'c-c-2'], ['r-b-1', 'r-b-2']]
 
-  'b-c-2':
+  'c-b-2':
     region: ap-northeast-1
     type: core
-    addr: b-c-2.cardano
-    static-routes: [['a-c-2', 'a-c-2'], ['b-c-1', 'b-r-1'], ['b-r-2', 'b-r-1']]
+    addr: c-b-2.cardano
+    static-routes: [['c-a-2', 'c-a-2'], ['c-b-1', 'r-b-1'], ['r-b-2', 'r-b-1']]
 
   'c-c-1':
     region: ap-southeast-1
     type: core
     addr: c-c-1.cardano
-    static-routes: [['a-c-1', 'a-c-2'], ['c-c-2', 'c-r-1'], ['c-r-1', 'c-r-2']]
+    static-routes: [['c-a-1', 'c-a-2'], ['c-c-2', 'r-c-1'], ['r-c-1', 'r-c-2']]
 
   'c-c-2':
     region: ap-southeast-1
     type: core
     addr: c-c-2.cardano
-    static-routes: [['b-c-2', 'b-c-1'], ['c-c-1', 'c-r-1'], ['c-r-2', 'c-r-1']]
+    static-routes: [['c-b-2', 'c-b-1'], ['c-c-1', 'r-c-1'], ['r-c-2', 'r-c-1']]
 
 # now the 7 relays, in the same 3 reigions
 
-  'a-r-1':
+  'r-a-1':
     region: eu-central-1
     type: relay
-    addr: a-r-1.cardano
-    static-routes: [['a-c-1', 'a-c-3'], ['a-c-2', 'a-c-3'], ['a-r-2', 'a-r-3'], ['b-r-1', 'b-r-2']]
+    addr: r-a-1.cardano
+    static-routes: [['c-a-1', 'c-a-3'], ['c-a-2', 'c-a-3'], ['r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2']]
     kademlia: false
 
-  'a-r-2':
+  'r-a-2':
     region: eu-central-1
     type: relay
-    addr: a-r-2.cardano
-    static-routes: [['a-c-1', 'a-c-2'], ['a-c-3', 'a-c-2'], ['a-r-3', 'a-r-1'], ['c-r-1', 'c-r-2']]
+    addr: r-a-2.cardano
+    static-routes: [['c-a-1', 'c-a-2'], ['c-a-3', 'c-a-2'], ['r-a-3', 'r-a-1'], ['r-c-1', 'r-c-2']]
     kademlia: false
 
-  'a-r-3':
+  'r-a-3':
     region: eu-central-1
     type: relay
-    addr: a-r-3.cardano
-    static-routes: [['a-c-2', 'a-c-1'], ['a-c-3', 'a-c-1'], ['a-r-1', 'a-r-2']]
+    addr: r-a-3.cardano
+    static-routes: [['c-a-2', 'c-a-1'], ['c-a-3', 'c-a-1'], ['r-a-1', 'r-a-2']]
     kademlia: false
 
-  'b-r-1':
+  'r-b-1':
     region: ap-northeast-1
     type: relay
-    addr: b-r-1.cardano
-    static-routes: [['b-c-1', 'b-c-2'], ['a-r-1', 'a-r-3'], ['b-r-2', 'a-r-2']]
+    addr: r-b-1.cardano
+    static-routes: [['c-b-1', 'c-b-2'], ['r-a-1', 'r-a-3'], ['r-b-2', 'r-a-2']]
     kademlia: false
 
-  'b-r-2':
+  'r-b-2':
     region: ap-northeast-1
     type: relay
-    addr: b-r-2.cardano
-    static-routes: [['b-c-2', 'b-c-1'], ['b-r-1', 'a-r-2'], ['c-r-2', 'c-r-1']]
+    addr: r-b-2.cardano
+    static-routes: [['c-b-2', 'c-b-1'], ['r-b-1', 'r-a-2'], ['r-c-2', 'r-c-1']]
     kademlia: false
 
-  'c-r-1':
+  'r-c-1':
     region: ap-southeast-1
     type: relay
-    addr: c-r-1.cardano
-    static-routes: [['c-c-1', 'c-c-2'], ['a-r-3', 'a-r-2'], ['c-r-2', 'a-r-2']]
+    addr: r-c-1.cardano
+    static-routes: [['c-c-1', 'c-c-2'], ['r-a-3', 'r-a-2'], ['r-c-2', 'r-a-2']]
     kademlia: false
 
-  'c-r-2':
+  'r-c-2':
     region: ap-southeast-1
     type: relay
-    addr: c-r-2.cardano
-    static-routes: [['c-c-2', 'c-c-1'], ['b-r-2', 'b-r-1'], ['c-r-1', 'a-r-2']]
+    addr: r-c-2.cardano
+    static-routes: [['c-c-2', 'c-c-1'], ['r-b-2', 'r-b-1'], ['r-c-1', 'r-a-2']]
     kademlia: false
