@@ -36,12 +36,14 @@ params:
       deployment.ec2.accessKeyId = accessKeyId;
       deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor accessKeyId params.region};
       deployment.ec2.securityGroups = mkForce sgs;
-      deployment.keys = (optionalAttrs (cfg.productionMode  && params.type == "core" && !cfg.hasExplorer) {
-        "key${toString params.i}" = {
-          keyFile = ./. + "/../keys/key${toString params.i}.sk";
-          user = "cardano-node";
-        };
-      }) // optionalAttrs (config.services.cardano-node.enable) {
+      deployment.keys = (optionalAttrs (cfg.productionMode  && params.type == "core" && !cfg.hasExplorer)
+      (let keyfile = "key${toString params.i}.sk";
+       in {
+         "key${toString params.i}" = builtins.trace (params.name + ": using " + keyfile) {
+           keyFile = ./. + "/../keys/${keyfile}";
+           user = "cardano-node";
+         };
+       })) // optionalAttrs (config.services.cardano-node.enable) {
         "topology.yaml" = {
           keyFile = topologyYaml;
           user = "cardano-node";
