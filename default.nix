@@ -11,7 +11,7 @@ with pkgs.lib;
 with pkgs.haskell.lib;
 
 let
-  prodMode = addConfigureFlags [ "-f-asserts" "-f-dev-mode" "--ghc-options=-DCONFIG=qanet_tns"];
+  prodMode = addConfigureFlags [ "-f-asserts" "-f-dev-mode" "--ghc-options=-DCONFIG=testnet_staging"];
   addConfigureFlags = flags: drv: overrideCabal drv (drv: {
     configureFlags = flags;
   });
@@ -36,6 +36,7 @@ let
         "-fwith-explorer"
         # https://github.com/NixOS/nixpkgs/pull/24692#issuecomment-306509337
         "--ghc-option=-optl-lm"
+        "--ghc-options=-DCONFIG=testnet_staging"
       ];
     });
     cardano-sl-static = justStaticExecutables self.cardano-sl;
