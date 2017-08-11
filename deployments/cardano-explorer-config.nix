@@ -4,7 +4,7 @@
              name = "sl-explorer"; # This is an important identity, let's not break it.
            region = "eu-central-1";
              type = "relay";
-    static-routes = [];
+            peers = [];
            relays = [];
          sg-names = ["allow-open-eu-central-1"];
   };

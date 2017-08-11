@@ -1,20 +1,21 @@
-{ accessKeyId, deployerIP, ... }:
+{ accessKeyId, deployerIP
+, topologyFile ? ./../topology.nix
+, ... }:
 
 with (import ./../lib.nix);
 
-let topologySpec  = (builtins.fromJSON (builtins.readFile ./../topology.nix)).nodes; # Strip the outer "nodes:" shell of topology.yaml
+let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile)).nodes; # Strip the outer "nodes:" shell of topology.yaml
     topologyList  = builtins.sort (l: r: l.name < r.name)
                                    (mapAttrsToList (k: v: { name = k; value = v; }) topologySpec);
     regionList    = unique (map (n: n.value.region) topologyList);
     indexed       = imap (n: x:
            let spec = x.value; in
            { name = x.name; value = rec {
-                            inherit relays;
                                 i = n - 1;
                              name = x.name; # This is an important identity, let's not break it.
                            region = spec.region;
                              type = spec.type;
-                    static-routes = if builtins.hasAttr "static-routes" spec then spec.static-routes else [];
+                            peers = (if builtins.hasAttr "static-routes" spec then (flatten  spec.static-routes) else []);
                          sg-names = if      spec.type == "other" then
                                       [ "allow-open-${region}" ]
                                     else if spec.type == "core"  then
@@ -90,7 +91,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile ./../topology.nix)).no
     coreSGNames = core:
         [ "allow-cardano-static-peers-${core.name}-${core.value.region}" ];
     coreSGs     = nodePort: ips: core:
-      let neighbourNames = flatten core.value.static-routes;
+      let neighbourNames = core.value.peers;
           neighbours = map byName neighbourNames;
           neigh'rule =
           neigh:
@@ -122,6 +123,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile ./../topology.nix)).no
 in
 {
   nodeArgs           = canonical;
+  cores              = cores;
   relays             = relays;
   securityGroupNames = securityGroupNames;
   securityGroups     = elasticIPsSecurityGroups;

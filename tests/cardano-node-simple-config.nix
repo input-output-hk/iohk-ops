@@ -4,7 +4,7 @@
              name = "machine"; # Must be the same ass the attribute set name
            region = "eu-central-1";
              type = "core";
-    static-routes = [];
+            peers = [];
            relays = [];
          sg-names = ["allow-open-eu-central-1"];
   };
