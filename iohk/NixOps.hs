@@ -12,36 +12,36 @@
 
 module NixOps where
 
-import Prelude hiding (FilePath)
-import           Control.Exception (throwIO)
+import           Control.Exception                (throwIO)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.=))
 import qualified Data.ByteString.Lazy          as BL
+import           Data.ByteString.Lazy.Char8       (ByteString, pack)
 import qualified Data.ByteString.UTF8          as BUTF8
-import Data.Char (ord)
-import qualified Data.Yaml                     as YAML
-import Data.Yaml (FromJSON(..), ToJSON(..))
+import           Data.Char                        (ord)
+import           Data.Csv                         (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
 import           Data.Either
+import           Data.List                        (sort)
 import           Data.Maybe
 import qualified Data.Map                      as Map
-import Data.Monoid ((<>))
+import           Data.Monoid                      ((<>))
 import           Data.Optional (Optional)
-import           Data.List                        (sort)
 import qualified Data.Set                      as Set
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import Data.Text.Lazy (fromStrict)
-import Data.Text.Lazy.Encoding (encodeUtf8)
-import Data.Csv (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
-import qualified Data.Vector as V
-import Data.ByteString.Lazy.Char8 (ByteString, pack)
+import qualified Data.Text                     as T
+import qualified Data.Text.IO                  as TIO
+import           Data.Text.Lazy                   (fromStrict)
+import           Data.Text.Lazy.Encoding          (encodeUtf8)
+import qualified Data.Vector                   as V
+import qualified Data.Yaml                     as YAML
+import           Data.Yaml                        (FromJSON(..), ToJSON(..))
 import qualified Filesystem.Path.CurrentOS     as Path
-import GHC.Generics
-import Safe (headMay)
+import           GHC.Generics
+import           Prelude                   hiding (FilePath)
+import           Safe                             (headMay)
 import qualified System.IO                     as Sys
 import           Text.Read                        (readMaybe)
-import Turtle hiding (procs, inproc)
-import qualified Turtle as Turtle
+import           Turtle                    hiding (procs, inproc)
+import qualified Turtle                        as Turtle
 
 
 -- * Constants
