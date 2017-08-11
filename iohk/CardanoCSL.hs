@@ -27,9 +27,11 @@ import Text.Printf
 import qualified Data.Map as M
 
 import           NixOps                           (Branch(..), Environment(..), Deployment(..), DeploymentInfo(..), Target(..)
-                                                  ,Options(..), NixopsConfig(..), NodeName(..), Region(..), URL(..)
-                                                  ,showT, cmd, cmd', parallelIO, ssh, ssh', sshForEach)
+                                                  ,Options(..), NixopsConfig(..), Region(..), URL(..)
+                                                  ,showT, cmd, cmd', parallelIO, ssh, ssh', sshForEach
+                                                  ,fromNodeName)
 import qualified NixOps                        as Ops
+import           Topology
 
 
 buildAMI :: Options -> NixopsConfig -> IO ()

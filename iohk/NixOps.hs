@@ -36,14 +36,17 @@ import qualified Data.Yaml                     as YAML
 import           Data.Yaml                        (FromJSON(..), ToJSON(..))
 import qualified Filesystem.Path.CurrentOS     as Path
 import           GHC.Generics
+import qualified Network.DNS                   as DNS
 import           Prelude                   hiding (FilePath)
 import           Safe                             (headMay)
 import qualified System.IO                     as Sys
 import           Text.Read                        (readMaybe)
-import           Turtle                    hiding (procs, inproc)
+import           Turtle                    hiding (fold, inproc, procs)
 import qualified Turtle                        as Turtle
 
 
+import           Topology
+
 -- * Constants
 --
 awsPublicIPURL :: URL
@@ -88,12 +91,14 @@ newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generi
 newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixParam  = NixParam  { fromNixParam :: Text } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
 newtype IP        = IP        { getIP       :: Text } deriving (Show, Generic, FromField)
-newtype NodeName  = NodeName  { fromNodeName :: Text } deriving (FromJSON, Generic, Show, FromField, IsString)
 newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+
+fromNodeName :: NodeName -> Text
+fromNodeName (NodeName x) = x
 
 
 -- * Some orphan instances..
@@ -307,7 +312,7 @@ data NixopsConfig = NixopsConfig
   { cName             :: Text
   , cNixops           :: Maybe FilePath
   , cNixpkgsCommit    :: Commit
-  , cTopology          :: FilePath
+  , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
   , cElements         :: [Deployment]
@@ -639,7 +644,7 @@ data DeploymentInfo = DeploymentInfo
     } deriving (Show, Generic)
 
 instance FromRecord DeploymentInfo
-
+deriving instance FromField NodeName
 
 nixopsDecodeOptions = defaultDecodeOptions {
     decDelimiter = fromIntegral (ord '\t')

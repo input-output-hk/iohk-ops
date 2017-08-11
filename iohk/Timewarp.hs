@@ -13,6 +13,7 @@ import qualified Data.Text.IO as TIO
 import Turtle
 
 import NixOps
+import Topology
 
 
 args = " -d time-warp" <> nixpath

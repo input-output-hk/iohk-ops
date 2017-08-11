@@ -13,12 +13,14 @@ import qualified Data.Text                     as T
 import qualified Filesystem.Path.CurrentOS     as Path
 import           Turtle                    hiding (procs, shells)
 
-import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..), NodeName(..)
+
+import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), Project(..), Region(..), URL(..)
-                                                  ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every)
+                                                  ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every, fromNodeName)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import qualified Timewarp                      as Timewarp
+import           Topology
 
 
 -- * Elementary parsers
@@ -146,7 +148,7 @@ centralCommandParser =
     , ("generate-ipdht",        "Generate IP/DHT mappings for wallet use",                          pure GenerateIPDHTMappings)
     , ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
     , ("ami",                   "Build ami",                                                        pure AMI) ]
-  
+
    -- * cluster lifecycle
 
    <|> subcommandGroup "Cluster lifecycle:"
@@ -189,7 +191,7 @@ centralCommandParser =
 
    <|> subcommandGroup "Other:"
     [ ])
-      
+
 
 main :: IO ()
 main = do
@@ -205,7 +207,7 @@ main = do
       let cf = flip fromMaybe oConfigFile $
                Ops.envConfigFilename Any
       c <- Ops.readConfig cf
-      
+
       when oVerbose $
         printf ("-- config '"%fp%"'\n"%w%"\n") cf c
 
