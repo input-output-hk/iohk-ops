@@ -13,6 +13,8 @@
 module NixOps where
 
 import           Control.Exception                (throwIO)
+import           Control.Lens                     ((<&>))
+import           Control.Monad                    (forM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.=))
 import qualified Data.ByteString.Lazy          as BL
@@ -97,6 +99,7 @@ newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generi
 newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 
+deriving instance Read NodeName
 fromNodeName :: NodeName -> Text
 fromNodeName (NodeName x) = x
 
@@ -163,13 +166,19 @@ data NixValue
 instance FromJSON NixValue
 instance ToJSON NixValue
 
+nixValueStr :: NixValue -> Text
+nixValueStr (NixBool bool) = T.toLower $ showT bool
+nixValueStr (NixInt  int)  = showT int
+nixValueStr (NixStr  str)  = str
+nixValueStr (NixFile f)    = let txt = format fp f
+                             in if T.isPrefixOf "/" txt
+                                then txt else ("./" <> txt)
+
 nixArgCmdline :: NixParam -> NixValue -> [Text]
-nixArgCmdline (NixParam name) (NixBool bool) = ["--arg",    name, T.toLower $ showT bool]
-nixArgCmdline (NixParam name) (NixInt  int)  = ["--arg",    name, showT int]
-nixArgCmdline (NixParam name) (NixStr  str)  = ["--argstr", name, str]
-nixArgCmdline (NixParam name) (NixFile f)    = ["--arg",    name, let txt = format fp f
-                                                                  in if T.isPrefixOf "/" txt
-                                                                     then txt else ("./" <> txt)]
+nixArgCmdline (NixParam name) x@(NixBool bool) = ["--arg",    name, nixValueStr x]
+nixArgCmdline (NixParam name) x@(NixInt  int)  = ["--arg",    name, nixValueStr x]
+nixArgCmdline (NixParam name) x@(NixStr  str)  = ["--argstr", name, nixValueStr x]
+nixArgCmdline (NixParam name) x@(NixFile f)    = ["--arg",    name, nixValueStr x]
 
 
 -- * Domain
@@ -227,7 +236,27 @@ selectDeploymentArgs o cTopology env delts = do
       <> [ ("deployerIP",   NixStr deployerIp) ]
 
 
--- * Deployment structure
+-- * Topology
+--
+dumpTopologyNix :: FilePath -> IO ()
+dumpTopologyNix topo = sh $ do
+  let nodeSpecExpr prefix =
+        format ("with (import <nixpkgs> {}); "%s%" (import deployments/cardano-nodes-config.nix { accessKeyId = \"\"; deployerIP = \"\"; topologyFile = "%fp%"; })") prefix topo
+      getNodeArgsAttr prefix attr = inproc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr prefix <> "." <> attr] empty
+      liftNixList = inproc "sed" ["s/\" \"/\", \"/g"]
+  (cores  :: [NodeName]) <- getNodeArgsAttr "map (x: x.name)" "cores"  & liftNixList <&> ((NodeName <$>) . readT . lineToText)
+  (relays :: [NodeName]) <- getNodeArgsAttr "map (x: x.name)" "relays" & liftNixList <&> ((NodeName <$>) . readT . lineToText)
+  printf "Cores:\n"
+  forM_ cores  $ \(NodeName x) -> do
+    printf ("  "%s%"\n    ") x
+    Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeArgs." <> x] empty
+  printf "Relays:\n"
+  forM_ relays $ \(NodeName x) -> do
+    printf ("  "%s%"\n    ") x
+    Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeArgs." <> x] empty
+
+
+-- * deployment structure
 --
 type FileSpec = (Environment, Target, Text)
 
@@ -454,9 +483,23 @@ create o c@NixopsConfig{..} = do
   nixops o c "create" $ deploymentFiles cEnvironment cTarget cElements
 
 modify :: Options -> NixopsConfig -> IO ()
-modify o c@NixopsConfig{..} = do
+modify o@Options{..} c@NixopsConfig{..} = do
   printf ("Syncing Nix->state for deployment "%s%"\n") cName
   nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
+
+  let deplArgs = Map.toList cDeplArgs
+                 <> [("topologyYaml", NixFile $ cTopology)] -- A special case, to avoid duplication.
+  printf ("Setting deployment arguments:\n")
+  forM_ deplArgs $ \(name, val)
+    -> printf ("  "%s%": "%s%"\n") (fromNixParam name) (nixValueStr val)
+  nixops o c "set-args" $ concat $ uncurry nixArgCmdline <$> deplArgs
+
+  printf ("Generating 'topology.nix' from '"%fp%"'..\n") cTopology
+  exists <- testpath cTopology
+  unless exists $
+    die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
+  inproc "yaml2json" [format fp cTopology] empty & output "topology.nix"
+  when oDebug $ dumpTopologyNix "./topology.nix"
 
 deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> IO ()
 deploy o c@NixopsConfig{..} evonly buonly check = do
@@ -464,12 +507,6 @@ deploy o c@NixopsConfig{..} evonly buonly check = do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
-
-  printf ("Generating 'topology.nix' from '"%fp%"'..\n") cTopology
-  exists <- testpath cTopology
-  unless exists $
-    die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
-  inproc "yaml2json" [format fp cTopology] empty & output "topology.nix"
 
   printf ("Deploying cluster "%s%"\n") cName
   export "NIX_PATH_LOCKED" "1"
@@ -481,11 +518,7 @@ deploy o c@NixopsConfig{..} evonly buonly check = do
     when (elem Explorer cElements) $ do
       cmd o "scripts/generate-explorer-frontend.sh" []
 
-  let deplArgs = Map.toList cDeplArgs
-                 <> [("topologyYaml", NixFile $ cTopology)] -- A special case, to avoid duplication.
-  nixops o c "set-args" $ concat $ uncurry nixArgCmdline <$> deplArgs
-
-  nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
+  modify o c
 
   nixops o c "deploy" $
     [ "--max-concurrent-copy", "50", "-j", "4" ]
@@ -671,6 +704,9 @@ getNodePublicIP name vector =
 -- * Utils
 showT :: Show a => a -> Text
 showT = T.pack . show
+
+readT :: Read a => Text -> a
+readT = read . T.unpack
 
 lowerShowT :: Show a => a -> Text
 lowerShowT = T.toLower . T.pack . show
