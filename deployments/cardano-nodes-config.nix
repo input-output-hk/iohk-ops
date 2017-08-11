@@ -4,18 +4,16 @@
 
 with (import ./../lib.nix);
 
-let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile)).nodes; # Strip the outer "nodes:" shell of topology.yaml
+let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
     topologyList  = builtins.sort (l: r: l.name < r.name)
                                    (mapAttrsToList (k: v: { name = k; value = v; }) topologySpec);
     regionList    = unique (map (n: n.value.region) topologyList);
     indexed       = imap (n: x:
            let spec = x.value; in
            { name = x.name; value = rec {
+                                        inherit (spec) region type kademlia peers;
                                 i = n - 1;
                              name = x.name; # This is an important identity, let's not break it.
-                           region = spec.region;
-                             type = spec.type;
-                            peers = (if builtins.hasAttr "static-routes" spec then (flatten  spec.static-routes) else []);
                          sg-names = if      spec.type == "other" then
                                       [ "allow-open-${region}" ]
                                     else if spec.type == "core"  then

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -17,10 +18,13 @@ import           Control.Lens                     ((<&>))
 import           Control.Monad                    (forM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.=))
+import qualified Data.Aeson.Types              as AE
+import           Data.Aeson.Encode.Pretty         (encodePretty)
 import qualified Data.ByteString.Lazy          as BL
 import           Data.ByteString.Lazy.Char8       (ByteString, pack)
-import qualified Data.ByteString.UTF8          as BUTF8
-import           Data.Char                        (ord)
+import qualified Data.ByteString.UTF8          as BU
+import qualified Data.ByteString.Lazy.UTF8     as LBU
+import           Data.Char                        (ord, toLower)
 import           Data.Csv                         (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
 import           Data.Either
 import           Data.List                        (sort)
@@ -49,6 +53,7 @@ import qualified Turtle                        as Turtle
 
 import           Topology
 
+
 -- * Constants
 --
 awsPublicIPURL :: URL
@@ -56,7 +61,8 @@ awsPublicIPURL = "http://169.254.169.254/latest/meta-data/public-ipv4"
 
 defaultEnvironment   = Development
 defaultTarget        = AWS
-defaultNode          = NodeName "node0"
+defaultNode          = NodeName "c-a-1"
+defaultNodePort      = PortNo 3000
 
 
 -- * Projects
@@ -92,14 +98,17 @@ projectSrcFile IOHK            = error "Feeling self-referential?"
 newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixParam  = NixParam  { fromNixParam :: Text } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
-newtype IP        = IP        { getIP       :: Text } deriving (Show, Generic, FromField)
 newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
 newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+newtype FQDN      = FQDN      { fromFQDN    :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+newtype IP        = IP        { getIP       :: Text } deriving (Show, Generic, FromField)
+newtype PortNo    = PortNo    { fromPortNo  :: Int  } deriving (FromJSON, Generic, Show, ToJSON)
 
 deriving instance Read NodeName
+deriving instance AE.ToJSONKey NodeName
 fromNodeName :: NodeName -> Text
 fromNodeName (NodeName x) = x
 
@@ -238,6 +247,58 @@ selectDeploymentArgs o cTopology env delts = do
 
 -- * Topology
 --
+readTopology :: FilePath -> IO Topology
+readTopology file = do
+  eTopo <- liftIO $ YAML.decodeFileEither $ Path.encodeString file
+  case eTopo of
+    Right (topology :: Topology) -> pure topology
+    Left err -> errorT $ format ("Failed to parse topology file: "%fp%": "%w) file err
+
+data SimpleTopo
+  =  SimpleTopo (Map.Map NodeName SimpleNode)
+  deriving (Generic, Show)
+instance ToJSON SimpleTopo
+data SimpleNode
+  =  SimpleNode
+     { snType     :: NodeType
+     , snRegion   :: NodeRegion
+     , snFQDN     :: FQDN
+     , snPort     :: PortNo
+     , snInPeers  :: [NodeName]                  -- ^ Incoming connection edges
+     , snKademlia :: RunKademlia
+     } deriving (Generic, Show)
+instance ToJSON SimpleNode where-- toJSON = jsonLowerStrip 2
+  toJSON SimpleNode{..} = AE.object
+   [ "type"        .= (lowerShowT snType & T.stripPrefix "node"
+                        & fromMaybe (error "A NodeType constructor gone mad: doesn't start with 'Node'."))
+   , "address"     .= fromFQDN snFQDN
+   , "port"        .= fromPortNo snPort
+   , "peers"       .= snInPeers
+   , "region"      .= snRegion
+   , "kademlia"    .= snKademlia ]
+instance ToJSON NodeRegion
+instance ToJSON NodeName
+deriving instance Generic NodeName
+deriving instance Generic NodeRegion
+deriving instance Generic NodeType
+instance ToJSON NodeType
+
+summariseTopology :: Topology -> SimpleTopo
+summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
+  SimpleTopo $ Map.mapWithKey simplifier nodeMap
+  where simplifier node (NodeMetadata snType snRegion (NodeRoutes outRoutes) nmAddr snKademlia) =
+          SimpleNode{..}
+          where (mPort,  fqdn)   = case nmAddr of
+                                     (NodeAddrExact fqdn  mPort) -> (mPort, fqdn) -- (Ok, bizarrely, this contains FQDNs, even if, well.. : -)
+                                     (NodeAddrDNS   mFqdn mPort) -> (mPort, flip fromMaybe mFqdn
+                                                                      $ error "Cannot deploy a topology with nodes lacking a FQDN address.")
+                (snPort, snFQDN) = (,) (fromMaybe defaultNodePort $ PortNo . fromIntegral <$> mPort)
+                                   $ (FQDN . T.pack . BU.toString) $ fqdn
+                snInPeers = [ other
+                            | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _)) <- Map.toList nodeMap
+                            , elem node (concat routes) ]
+                            <> concat outRoutes
+
 dumpTopologyNix :: FilePath -> IO ()
 dumpTopologyNix topo = sh $ do
   let nodeSpecExpr prefix =
@@ -393,7 +454,7 @@ mkConfig o (Branch cName) cNixops mTopology cNixpkgsCommit cEnvironment cTarget 
 writeConfig :: MonadIO m => Maybe FilePath -> NixopsConfig -> m FilePath
 writeConfig mFp c@NixopsConfig{..} = do
   let configFilename = flip fromMaybe mFp $ envConfigFilename cEnvironment
-  liftIO $ writeTextFile configFilename $ T.pack $ BUTF8.toString $ YAML.encode c
+  liftIO $ writeTextFile configFilename $ T.pack $ BU.toString $ YAML.encode c
   pure configFilename
 
 -- | Read back config, doing validation
@@ -498,7 +559,8 @@ modify o@Options{..} c@NixopsConfig{..} = do
   exists <- testpath cTopology
   unless exists $
     die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
-  inproc "yaml2json" [format fp cTopology] empty & output "topology.nix"
+  simpleTopo <- summariseTopology <$> readTopology cTopology
+  liftIO . writeTextFile "topology.nix" . T.pack . LBU.toString $ encodePretty simpleTopo
   when oDebug $ dumpTopologyNix "./topology.nix"
 
 deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> IO ()
@@ -713,3 +775,6 @@ lowerShowT = T.toLower . T.pack . show
 
 errorT :: Text -> a
 errorT = error . T.unpack
+
+jsonLowerStrip :: (Generic a, AE.GToJSON AE.Zero (Rep a)) => Int -> a -> AE.Value
+jsonLowerStrip n = AE.genericToJSON $ AE.defaultOptions { AE.fieldLabelModifier = map toLower . drop n }
