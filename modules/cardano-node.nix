@@ -72,7 +72,7 @@ in {
       executable = mkOption {
         type = types.str;
         description = "Executable to run as the daemon.";
-        default = "${cardano}/bin/cardano-node";
+        default = "${cardano}/bin/cardano-node-simple";
       };
       autoStart = mkOption { type = types.bool; default = true; };
       initialKademliaPeers = mkOption {
