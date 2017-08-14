@@ -23,8 +23,8 @@ params:
                    else
                    neighbourPairs
                    ++ (map (x:
-                        { name = x.name;
-                          ip   = nodeNameToPublicIP x.name; })
+                        { name = x;
+                          ip   = nodeNameToPublicIP x; })
                         params.peers)
                    ++ (if !(cardanoHasAttr "publicIP" config.services.cardano-node) then []
                        else [ { name = params.name;
