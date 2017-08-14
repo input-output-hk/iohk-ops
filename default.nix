@@ -58,8 +58,10 @@ let
     socket-io = self.callPackage ./pkgs/socket-io.nix {};
     engine-io = self.callPackage ./pkgs/engine-io.nix {};
     engine-io-wai = self.callPackage ./pkgs/engine-io-wai.nix {};
+    engine-io-snap = compiler.engine-io-snap;
+    snap-cors = compiler.snap-cors;
 
-    cardano-sl-explorer = prodMode (super.callPackage ./pkgs/cardano-sl-explorer.nix { });
+    cardano-sl-explorer = prodMode super.cardano-sl-explorer;
     cardano-sl-explorer-static = justStaticExecutables self.cardano-sl-explorer;
 
     #mkDerivation = args: super.mkDerivation (args // {
