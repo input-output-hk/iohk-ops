@@ -89,7 +89,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
     coreSGNames = core:
         [ "allow-cardano-static-peers-${core.name}-${core.value.region}" ];
     coreSGs     = nodePort: ips: core:
-      let neighbourNames = core.value.peers;
+      let neighbourNames = traceSF (p: "${core.name} peers: " + concatStringsSep ", " core.value.peers) core.value.peers;
           neighbours = map byName neighbourNames;
           neigh'rule =
           neigh:
@@ -98,7 +98,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           in {
               fromPort = nodePort;
               toPort   = nodePort;
-              sourceIp = ip;
+              sourceIp = traceSF (x: "${core.name} allowing peer ${x.address}") ip;
             };
       in {
         "allow-cardano-static-peers-${core.name}-${core.value.region}" = {
