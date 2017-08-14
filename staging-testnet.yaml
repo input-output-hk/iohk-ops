@@ -15,11 +15,7 @@ files:
 - deployments/cardano-nodes.nix
 - deployments/cardano-nodes-env-staging.nix
 - deployments/cardano-nodes-target-aws.nix
-- deployments/report-server.nix
-- deployments/report-server-env-staging.nix
-- deployments/report-server-target-aws.nix
 elements:
 - Nodes
-- ReportServer
 nixops: /nix/store/02wks5g6q1syblz98b3z7d0442gj73iq-nixops-1.6pre0_abcdef/bin/nixops
 target: AWS

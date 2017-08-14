@@ -40,7 +40,7 @@ let
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
-    (optionalString (cfg.type == "relay") "--kademlia /run/keys/kademlia.yaml")
+    # (optionalString (cfg.type == "relay") "--kademlia /run/keys/kademlia.yaml")
     "--topology /run/keys/topology.yaml"
     "--node-id ${cfg.nodeName}"
   ];

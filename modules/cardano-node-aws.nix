@@ -50,22 +50,26 @@ params:
           user = "cardano-node";
           permissions = "0400";
         };
-      } // optionalAttrs (config.services.cardano-node.enable && params.type == "relay") {
-        "kademlia.yaml" = {
-          user = "cardano-node";
-          permissions = "0400";
-          text =
-          ''
-identifier: '${config.services.cardano-node.dhtKey}'
-peers:
-${concatStringsSep "\n" (map (r: "  - host: '${nodeNameToPublicIP r.value.name}'\n    port: ${toString config.services.cardano-node.port}") relays)}
-address:
-  host: '0.0.0.0'
-  port: ${toString config.services.cardano-node.port}
-externalAddress:
-  host: '${nodeNameToPublicIP params.name}'
-  port: ${toString config.services.cardano-node.port}
-          '';
-        };
-      };
+      }
+#         // optionalAttrs (builtins.trace
+#                           ("Considering whether to generate 'kademlia.yaml' for ${config.services.cardano-node.nodeName}")
+#                           (config.services.cardano-node.enable && params.type == "relay")) {
+#         "kademlia.yaml" = {
+#           user = "cardano-node";
+#           permissions = "0400";
+#           text =
+#           ''
+# identifier: '${config.services.cardano-node.dhtKey}'
+# peers:
+# ${concatStringsSep "\n" (map (r: "  - host: '${nodeNameToPublicIP r.name}'\n    port: ${toString config.services.cardano-node.port}") relays)}
+# address:
+#   host: '0.0.0.0'
+#   port: ${toString config.services.cardano-node.port}
+# externalAddress:
+#   host: '${nodeNameToPublicIP params.name}'
+#   port: ${toString config.services.cardano-node.port}
+#           '';
+#         };
+#       }
+      ;
     }
