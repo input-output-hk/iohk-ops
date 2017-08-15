@@ -223,10 +223,9 @@ main = do
       doCommand o c topcmd
     where
         doCommand :: Options -> Ops.NixopsConfig -> Command -> IO ()
-        doCommand o c cmd = do
-          let isNode (T.unpack . Ops.fromNodeName -> ('n':'o':'d':'e':_)) = True
-              isNode _ = False
-              getNodeNames' = filter isNode <$> Ops.getNodeNames o c
+        doCommand o c@Ops.NixopsConfig{..} cmd = do
+          Ops.SimpleTopo cmap <- Ops.summariseTopology <$> Ops.readTopology cTopology
+          let nodenames = Map.keys cmap
           case cmd of
             -- * setup
             FakeKeys                 -> runFakeKeys
@@ -249,26 +248,26 @@ main = do
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployed'commit           o c m
             CheckStatus              -> Ops.checkstatus               o c
-            Start                    -> getNodeNames'
+            Start                    -> pure nodenames
                                         >>= Cardano.startNodes        o c
-            Stop                     -> getNodeNames'
+            Stop                     -> pure nodenames
                                         >>= Cardano.stopNodes         o c
             FirewallBlock{..}        -> Cardano.firewallBlock         o c from to
             FirewallClear            -> Cardano.firewallClear         o c
-            RunExperiment Nodes      -> getNodeNames'
+            RunExperiment Nodes      -> pure nodenames
                                         >>= Cardano.runexperiment     o c
             RunExperiment Timewarp   -> Timewarp.runexperiment        o c
             RunExperiment x          -> die $ "RunExperiment undefined for deployment " <> showT x
             PostExperiment           -> Cardano.postexperiment        o c
             DumpLogs{..}
-              | Nodes        <- depl -> getNodeNames'
+              | Nodes        <- depl -> pure nodenames
                                         >>= void . Cardano.dumpLogs  o c withProf
-              | Timewarp     <- depl -> getNodeNames'
+              | Timewarp     <- depl -> pure nodenames
                                         >>= void . Timewarp.dumpLogs o c withProf
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
             ClearJournals            -> Ops.clearJournals            o c
             GetJournals              -> Ops.getJournals              o c
-            PrintDate                -> getNodeNames'
+            PrintDate                -> pure nodenames
                                         >>= Cardano.printDate        o c
             Template{..}             -> error "impossible"
             SetRev   _ _             -> error "impossible"
