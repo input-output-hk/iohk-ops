@@ -122,6 +122,7 @@ data Command where
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
   ClearJournals         :: Command
   GetJournals           :: Command
+  ClearNodeDBs          :: Command
   PrintDate             :: Command
 deriving instance Show Command
 
@@ -195,6 +196,7 @@ centralCommandParser =
                                 <*> switch "prof"         'p' "Dump profiling data as well (requires service stop)")
    , ("clear-journals",         "Wipe *all* journald logs on cluster",                              pure ClearJournals)
    , ("get-journals",           "Obtain cardano-node journald logs from cluster",                   pure GetJournals)
+   , ("clear-node-dbs",         "Wipe *all* node databases on cluster",                             pure ClearNodeDBs)
    , ("date",                   "Print date/time",                                                  pure PrintDate)]
 
    <|> subcommandGroup "Other:"
@@ -270,6 +272,7 @@ main = do
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
             ClearJournals            -> Ops.clearJournals            o c
             GetJournals              -> Ops.getJournals              o c
+            ClearNodeDBs             -> Ops.clearNodeDBs             o c
             PrintDate                -> pure nodenames
                                         >>= Cardano.printDate        o c
             Template{..}             -> error "impossible"

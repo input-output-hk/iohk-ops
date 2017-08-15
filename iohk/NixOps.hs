@@ -717,28 +717,44 @@ deployed'commit o c m = do
 
 clearJournals :: Options -> NixopsConfig -> IO ()
 clearJournals o c@NixopsConfig{..} = do
-  (SimpleTopo cmap) <- summariseTopology <$> readTopology cTopology
-  printf "Clearing journals on cluster..\n"
+  SimpleTopo cmap <- summariseTopology <$> readTopology cTopology
+  echo "Clearing journals on cluster.."
   parallelIO o $ flip fmap (Map.keys cmap) $
     ssh' o c (const $ pure ()) ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
-  printf "Done.\n"
+  echo "Done."
 
 getJournals :: Options -> NixopsConfig -> IO ()
 getJournals o c@NixopsConfig{..} = do
-  (SimpleTopo cmap) <- summariseTopology <$> readTopology cTopology
+  SimpleTopo cmap <- summariseTopology <$> readTopology cTopology
   let nodes = Map.keys cmap
-  printf "Dumping journald logs on cluster..\n"
+  echo "Dumping journald logs on cluster.."
   parallelIO o $ flip fmap nodes $
     ssh o c ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
-  printf "Obtaining dumped journals..\n"
+  echo "Obtaining dumped journals.."
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
   parallelIO o $ flip fmap (zip nodes outfiles) $
     \(node, outfile) -> scpFromNode o c node "log" outfile
-  (Elapsed unixTime) <- timeCurrent
-  printf "Packing journals..\n"
+  Elapsed unixTime <- timeCurrent
+  echo "Packing journals.."
   cmd o "tar" (["czf", format ("dump-cardano-node-"%d%".tgz") unixTime] <> outfiles)
   cmd o "rm" $ "-f" : outfiles
-  printf "Done.\n"
+  echo "Done."
+
+confirmOrTerminate :: Text -> IO ()
+confirmOrTerminate question = do
+  echo $ unsafeTextToLine question <> "  Enter 'yes' to proceed:"
+  reply <- readline
+  unless (reply == Just "yes") $ do
+    echo "User declined to proceed, exiting."
+    exit $ ExitFailure 1
+
+clearNodeDBs :: Options -> NixopsConfig -> IO ()
+clearNodeDBs o c@NixopsConfig{..} = do
+  confirmOrTerminate "Clear node DBs on the entire cluster?"
+  SimpleTopo cmap <- summariseTopology <$> readTopology cTopology
+  parallelIO o $ flip fmap (Map.keys cmap) $
+    ssh' o c (const $ pure ()) ["rm", "-rf", "/var/lib/cardano-node"]
+  echo "Done."
 
 
 -- * Functions for extracting information out of nixops info command
