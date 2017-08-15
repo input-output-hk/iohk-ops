@@ -17,5 +17,5 @@ files:
 - deployments/cardano-nodes-target-aws.nix
 elements:
 - Nodes
-nixops: /nix/store/02wks5g6q1syblz98b3z7d0442gj73iq-nixops-1.6pre0_abcdef/bin/nixops
+nixops: /nix/store/g7jz0gl7zgqldbahkqz91gm9d1b65xyi-nixops-1.6pre0_abcdef/bin/nixops
 target: AWS
