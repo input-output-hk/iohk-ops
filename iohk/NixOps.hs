@@ -593,7 +593,7 @@ deploy o c@NixopsConfig{..} evonly buonly check bumpSystemStart hold = do
     (Elapsed now) <- timeCurrent
     let start :: Seconds = now + hold - hardcodedHold
     printf ("Bumping system-start to "%d%" ("%d%" minutes into future).  Don't forget to commit!\n") start (div hold 60)
-    writeTextFile "config-system-start.nix" $ T.pack $ show start
+    writeTextFile "config-system-start.nix" $ T.pack $ show (fromIntegral start :: Int)
 
   nixops o c "deploy" $
     [ "--max-concurrent-copy", "50", "-j", "4" ]
