@@ -66,6 +66,10 @@ defaultTarget        = AWS
 defaultNode          = NodeName "c-a-1"
 defaultNodePort      = PortNo 3000
 
+hardcodedHold, defaultHold :: Seconds
+hardcodedHold        = 3600 -- The hold-off fime hard-coded in cardano-sl, in seconds
+defaultHold          = 3600
+
 
 -- * Projects
 --
@@ -566,8 +570,8 @@ modify o@Options{..} c@NixopsConfig{..} = do
   liftIO . writeTextFile "topology.nix" . T.pack . LBU.toString $ encodePretty simpleTopo
   when oDebug $ dumpTopologyNix "./topology.nix"
 
-deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> Bool -> IO ()
-deploy o c@NixopsConfig{..} evonly buonly check bumpSystemStart = do
+deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> Bool -> Seconds -> IO ()
+deploy o c@NixopsConfig{..} evonly buonly check bumpSystemStart hold = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
@@ -586,9 +590,10 @@ deploy o c@NixopsConfig{..} evonly buonly check bumpSystemStart = do
   modify o c
 
   when bumpSystemStart $ do
-    (Elapsed unixTime) <- timeCurrent
-    printf ("Bumping system-start to "%d%".  Don't forget to commit!\n") unixTime
-    writeTextFile "config-system-start.nix" $ T.pack $ show unixTime
+    (Elapsed now) <- timeCurrent
+    let start :: Seconds = now + hold - hardcodedHold
+    printf ("Bumping system-start to "%d%" ("%d%" minutes into future).  Don't forget to commit!\n") start (div hold 60)
+    writeTextFile "config-system-start.nix" $ T.pack $ show start
 
   nixops o c "deploy" $
     [ "--max-concurrent-copy", "50", "-j", "4" ]
@@ -614,7 +619,7 @@ fromscratch o c = do
   destroy o c
   delete o c
   create o c
-  deploy o c False False False True
+  deploy o c False False False True defaultHold
 
 
 -- * Building

@@ -12,6 +12,7 @@ import           Data.Optional (Optional)
 import qualified Data.Text                     as T
 import qualified Filesystem.Path.CurrentOS     as Path
 import           Turtle                    hiding (procs, shells)
+import           Time.Types
 
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
@@ -103,7 +104,7 @@ data Command where
   Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
-  Deploy                :: Bool -> Bool -> Bool -> Bool -> Command
+  Deploy                :: Bool -> Bool -> Bool -> Bool -> Seconds -> Command
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
@@ -166,7 +167,9 @@ centralCommandParser =
                                 <$> switch "evaluate-only"     'e' "Pass --evaluate-only to 'nixops build'"
                                 <*> switch "build-only"        'b' "Pass --build-only to 'nixops build'"
                                 <*> switch "check"             'c' "Pass --check to 'nixops build'"
-                                <*> switch "bump-system-start" 'c' "Bump cluster --system-start time")
+                                <*> switch "bump-system-start" 's' "Bump cluster --system-start time"
+                                <*> (fromMaybe Ops.defaultHold . (Seconds . (* 60) . fromIntegral <$>)
+                                     <$> optional (optInteger "delay" 'd' "When bumping system start time, override the default start delay from 120 minutes to this")))
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
@@ -240,7 +243,7 @@ main = do
             Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy evo buo chk start -> Ops.deploy                    o c evo buo chk start
+            Deploy ev bu ch st de    -> Ops.deploy                    o c ev bu ch st de
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
