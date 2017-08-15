@@ -49,7 +49,7 @@ import qualified System.IO                     as Sys
 import           Text.Read                        (readMaybe)
 import           Time.System
 import           Time.Types
-import           Turtle                    hiding (fold, inproc, procs)
+import           Turtle                    hiding (fold, inproc, procs, o)
 import qualified Turtle                        as Turtle
 
 
@@ -709,6 +709,28 @@ deployed'commit o c m = do
                  _    -> errorT $ "Unexpected output from 'pgrep -fa cardano-node': '" <> r <> "' / " <> showT (cut space r))
     ["pgrep", "-fa", "cardano-node"]
     m
+
+clearJournals :: Options -> NixopsConfig -> IO ()
+clearJournals o c = do
+  printf "Clearing logs on cluster..\n"
+  sshForEach o c ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald'"]
+  printf "Done.\n"
+
+getJournals :: Options -> NixopsConfig -> IO ()
+getJournals o c@NixopsConfig{..} = do
+  printf "Dumping journald logs on cluster..\n"
+  sshForEach o c ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
+  printf "Obtaining dumped journals..\n"
+  (SimpleTopo cmap) <- summariseTopology <$> readTopology cTopology
+  let nodenames = Map.keys cmap
+      outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodenames
+  forM_ (zip nodenames outfiles) $ do
+    \(node, outfile) -> scpFromNode o c node "log" outfile
+  (Elapsed unixTime) <- timeCurrent
+  printf "Packing journals..\n"
+  cmd o "tar" (["czf", format ("dump-cardano-node-"%d%".tgz") unixTime] <> outfiles)
+  cmd o "rm" $ "-f" : outfiles
+  printf "Done.\n"
 
 
 -- * Functions for extracting information out of nixops info command

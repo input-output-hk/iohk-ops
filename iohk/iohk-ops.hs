@@ -119,6 +119,8 @@ data Command where
   RunExperiment         :: Deployment -> Command
   PostExperiment        :: Command
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
+  ClearJournals         :: Command
+  GetJournals           :: Command
   PrintDate             :: Command
 deriving instance Show Command
 
@@ -188,6 +190,8 @@ centralCommandParser =
                                 DumpLogs
                                 <$> parserDeployment
                                 <*> switch "prof"         'p' "Dump profiling data as well (requires service stop)")
+   , ("clear-journals",         "Wipe *all* journald logs on cluster",                              pure ClearJournals)
+   , ("get-journals",           "Obtain cardano-node journald logs from cluster",                   pure GetJournals)
    , ("date",                   "Print date/time",                                                  pure PrintDate)]
 
    <|> subcommandGroup "Other:"
@@ -262,6 +266,8 @@ main = do
               | Timewarp     <- depl -> getNodeNames'
                                         >>= void . Timewarp.dumpLogs o c withProf
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
+            ClearJournals            -> Ops.clearJournals            o c
+            GetJournals              -> Ops.getJournals              o c
             PrintDate                -> getNodeNames'
                                         >>= Cardano.printDate        o c
             Template{..}             -> error "impossible"
