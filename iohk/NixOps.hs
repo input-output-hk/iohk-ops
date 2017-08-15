@@ -27,6 +27,7 @@ import qualified Data.ByteString.Lazy.UTF8     as LBU
 import           Data.Char                        (ord, toLower)
 import           Data.Csv                         (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
 import           Data.Either
+import           Data.Hourglass                   (timePrint, ISO8601_DateAndTime(..))
 import           Data.List                        (sort)
 import           Data.Maybe
 import qualified Data.Map                      as Map
@@ -737,9 +738,10 @@ getJournals o c@NixopsConfig{..} = do
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
   parallelIO o $ flip fmap (zip nodes outfiles) $
     \(node, outfile) -> scpFromNode o c node "log" outfile
-  Elapsed unixTime <- timeCurrent
-  echo "Packing journals.."
-  cmd o "tar" (["czf", format ("dump-cardano-node-"%d%".tgz") unixTime] <> outfiles)
+  timeStr <- T.pack . timePrint ISO8601_DateAndTime <$> dateCurrent
+  let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) cName timeStr
+  printf ("Packing journals into "%s%"\n") archive
+  cmd o "tar" (["czf", archive, "--force-local"] <> outfiles)
   cmd o "rm" $ "-f" : outfiles
   echo "Done."
 
