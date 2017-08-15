@@ -49,11 +49,11 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           inherit region accessKeyId;
           description = "Everything goes";
           rules = [{
-            protocol = "6"; # TCP
+            protocol = "tcp"; # TCP
             sourceIp = "0.0.0.0/0";
             fromPort = 1; toPort = 65534;
           } {
-            protocol = "17"; # UDP
+            protocol = "udp"; # UDP
             sourceIp = "0.0.0.0/0";
             fromPort = 1; toPort = 65534;
           }];
@@ -62,7 +62,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           inherit region accessKeyId;
           description = "SSH";
           rules = [{
-            protocol = "6"; # TCP
+            protocol = "tcp"; # TCP
             fromPort = 22; toPort = 22;
             sourceIp = deployerIP + "/32";
           }];
@@ -71,7 +71,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           inherit region accessKeyId;
           description = "Kademlia UDP public";
           rules = [{
-            protocol = "17"; # UDP
+            protocol = "udp"; # UDP
             sourceIp = "0.0.0.0/0";
             fromPort = 1024; toPort = 65535;
           }];
@@ -80,7 +80,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           inherit region accessKeyId;
           description = "Cardano TCP public";
           rules = [{
-            protocol = "6"; # TCP
+            protocol = "tcp"; # TCP
             fromPort = nodePort; toPort = nodePort;
             sourceIp = "0.0.0.0/0";
           }];
