@@ -718,13 +718,14 @@ clearJournals o c = do
 
 getJournals :: Options -> NixopsConfig -> IO ()
 getJournals o c@NixopsConfig{..} = do
-  printf "Dumping journald logs on cluster..\n"
-  sshForEach o c ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
-  printf "Obtaining dumped journals..\n"
   (SimpleTopo cmap) <- summariseTopology <$> readTopology cTopology
-  let nodenames = Map.keys cmap
-      outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodenames
-  forM_ (zip nodenames outfiles) $ do
+  let nodes = Map.keys cmap
+  printf "Dumping journald logs on cluster..\n"
+  parallelIO o $ flip fmap nodes $
+    ssh o c ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
+  printf "Obtaining dumped journals..\n"
+  let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
+  forM_ (zip nodes outfiles) $ do
     \(node, outfile) -> scpFromNode o c node "log" outfile
   (Elapsed unixTime) <- timeCurrent
   printf "Packing journals..\n"
