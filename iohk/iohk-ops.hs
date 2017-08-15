@@ -121,9 +121,9 @@ data Command where
   RunExperiment         :: Deployment -> Command
   PostExperiment        :: Command
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
-  ClearJournals         :: Command
+  WipeJournals          :: Command
   GetJournals           :: Command
-  ClearNodeDBs          :: Command
+  WipeNodeDBs           :: Command
   PrintDate             :: Command
 deriving instance Show Command
 
@@ -197,9 +197,9 @@ centralCommandParser =
                                 DumpLogs
                                 <$> parserDeployment
                                 <*> switch "prof"         'p' "Dump profiling data as well (requires service stop)")
-   , ("clear-journals",         "Wipe *all* journald logs on cluster",                              pure ClearJournals)
+   , ("wipe-journals",          "Wipe *all* journald logs on cluster",                              pure WipeJournals)
    , ("get-journals",           "Obtain cardano-node journald logs from cluster",                   pure GetJournals)
-   , ("clear-node-dbs",         "Wipe *all* node databases on cluster",                             pure ClearNodeDBs)
+   , ("wipe-node-dbs",          "Wipe *all* node databases on cluster",                             pure WipeNodeDBs)
    , ("date",                   "Print date/time",                                                  pure PrintDate)]
 
    <|> subcommandGroup "Other:"
@@ -270,15 +270,15 @@ main = do
             PostExperiment           -> Cardano.postexperiment        o c
             DumpLogs{..}
               | Nodes        <- depl -> pure nodenames
-                                        >>= void . Cardano.dumpLogs  o c withProf
+                                        >>= void . Cardano.dumpLogs   o c withProf
               | Timewarp     <- depl -> pure nodenames
-                                        >>= void . Timewarp.dumpLogs o c withProf
+                                        >>= void . Timewarp.dumpLogs  o c withProf
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
-            ClearJournals            -> Ops.clearJournals            o c
-            GetJournals              -> Ops.getJournals              o c
-            ClearNodeDBs             -> Ops.clearNodeDBs             o c
+            WipeJournals             -> Ops.wipeJournals              o c
+            GetJournals              -> Ops.getJournals               o c
+            WipeNodeDBs              -> Ops.wipeNodeDBs               o c
             PrintDate                -> pure nodenames
-                                        >>= Cardano.printDate        o c
+                                        >>= Cardano.printDate         o c
             Template{..}             -> error "impossible"
             SetRev   _ _             -> error "impossible"
 

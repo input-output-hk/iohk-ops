@@ -718,10 +718,10 @@ deployed'commit o c m = do
     ["pgrep", "-fa", "cardano-node"]
     m
 
-clearJournals :: Options -> NixopsConfig -> IO ()
-clearJournals o c@NixopsConfig{..} = do
+wipeJournals :: Options -> NixopsConfig -> IO ()
+wipeJournals o c@NixopsConfig{..} = do
   SimpleTopo cmap <- summariseTopology <$> readTopology cTopology
-  echo "Clearing journals on cluster.."
+  echo "Wiping journals on cluster.."
   parallelIO o $ flip fmap (Map.keys cmap) $
     ssh' o c (const $ pure ()) ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
   echo "Done."
@@ -751,9 +751,9 @@ confirmOrTerminate question = do
     echo "User declined to proceed, exiting."
     exit $ ExitFailure 1
 
-clearNodeDBs :: Options -> NixopsConfig -> IO ()
-clearNodeDBs o c@NixopsConfig{..} = do
-  confirmOrTerminate "Clear node DBs on the entire cluster?"
+wipeNodeDBs :: Options -> NixopsConfig -> IO ()
+wipeNodeDBs o c@NixopsConfig{..} = do
+  confirmOrTerminate "Wipe node DBs on the entire cluster?"
   SimpleTopo cmap <- summariseTopology <$> readTopology cTopology
   parallelIO o $ flip fmap (Map.keys cmap) $
     ssh' o c (const $ pure ()) ["rm", "-rf", "/var/lib/cardano-node"]
