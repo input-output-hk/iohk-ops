@@ -10,5 +10,6 @@ with (import ./../lib.nix);
     ];
 
     deployment.ec2.accessKeyId = accessKeyId;
+    deployment.ec2.securityGroups = ["allow-open-${config.deployment.ec2.region}"];
   };
 }
