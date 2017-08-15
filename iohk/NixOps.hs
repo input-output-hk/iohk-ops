@@ -79,6 +79,7 @@ data Project
   | IOHK
   | Nixpkgs
   | Stack2nix
+  | Nixops
   deriving (Bounded, Enum, Eq, Read, Show)
 
 every :: (Bounded a, Enum a) => [a]
@@ -90,6 +91,7 @@ projectURL     CardanoExplorer = "https://github.com/input-output-hk/cardano-sl-
 projectURL     IOHK            = "https://github.com/input-output-hk/iohk-nixops.git"
 projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
 projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
+projectURL     Nixops          = "https://github.com/input-output-hk/nixops.git"
 
 projectSrcFile :: Project -> FilePath
 projectSrcFile CardanoSL       = "cardano-sl-src.json"
@@ -97,6 +99,7 @@ projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
 projectSrcFile Nixpkgs         = "nixpkgs-src.json"
 projectSrcFile Stack2nix       = "stack2nix-src.json"
 projectSrcFile IOHK            = error "Feeling self-referential?"
+projectSrcFile Nixops          = error "No corresponding -src.json spec for 'nixops' yet."
 
 
 -- * Primitive types
@@ -314,11 +317,11 @@ dumpTopologyNix topo = sh $ do
       liftNixList = inproc "sed" ["s/\" \"/\", \"/g"]
   (cores  :: [NodeName]) <- getNodeArgsAttr "map (x: x.name)" "cores"  & liftNixList <&> ((NodeName <$>) . readT . lineToText)
   (relays :: [NodeName]) <- getNodeArgsAttr "map (x: x.name)" "relays" & liftNixList <&> ((NodeName <$>) . readT . lineToText)
-  printf "Cores:\n"
+  echo "Cores:"
   forM_ cores  $ \(NodeName x) -> do
     printf ("  "%s%"\n    ") x
     Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeArgs." <> x] empty
-  printf "Relays:\n"
+  echo "Relays:"
   forM_ relays $ \(NodeName x) -> do
     printf ("  "%s%"\n    ") x
     Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeArgs." <> x] empty
@@ -700,16 +703,16 @@ deployed'commit o c m = do
                case cut space r of
                  (_:path:_) -> do
                    drv <- incmd o "nix-store" ["--query", "--deriver", T.strip path]
-                   exists <- testpath $ fromText $ T.strip drv
-                   unless exists $
+                   pathExists <- testpath $ fromText $ T.strip drv
+                   unless pathExists $
                      errorT $ "The derivation used to build the package is not present on the system: " <> T.strip drv
                    sh $ do
-                     x <- inproc "nix-store" ["--query", "--references", T.strip drv] empty &
-                          inproc "egrep"       ["/nix/store/[a-z0-9]*-cardano-sl-[0-9a-f]{7}\\.drv"] &
-                          inproc "sed" ["-E", "s|/nix/store/[a-z0-9]*-cardano-sl-([0-9a-f]{7})\\.drv|\\1|"]
-                     when (x == "") $
+                     str <- inproc "nix-store" ["--query", "--references", T.strip drv] empty &
+                            inproc "egrep"       ["/nix/store/[a-z0-9]*-cardano-sl-[0-9a-f]{7}\\.drv"] &
+                            inproc "sed" ["-E", "s|/nix/store/[a-z0-9]*-cardano-sl-([0-9a-f]{7})\\.drv|\\1|"]
+                     when (str == "") $
                        errorT $ "Cannot determine commit id for derivation: " <> T.strip drv
-                     echo $ "The 'cardano-sl' process running on '" <> unsafeTextToLine (fromNodeName m) <> "' has commit id " <> x
+                     echo $ "The 'cardano-sl' process running on '" <> unsafeTextToLine (fromNodeName m) <> "' has commit id " <> str
                  [""] -> errorT $ "Looks like 'cardano-node' is down on node '" <> fromNodeName m <> "'"
                  _    -> errorT $ "Unexpected output from 'pgrep -fa cardano-node': '" <> r <> "' / " <> showT (cut space r))
     ["pgrep", "-fa", "cardano-node"]
@@ -756,6 +759,27 @@ clearNodeDBs o c@NixopsConfig{..} = do
     ssh' o c (const $ pure ()) ["rm", "-rf", "/var/lib/cardano-node"]
   echo "Done."
 
+updateNixops :: Options -> NixopsConfig -> IO ()
+updateNixops o@Options{..} c@NixopsConfig{..} = do
+  let (,) nixopsDir outLink = (,) "nixops" ("nixops-link" :: FilePath)
+      configFile = flip fromMaybe oConfigFile $
+        error "The 'update-nixops' subcommand requires the -c/--config option to 'iohk-ops'."
+  preExists <- testpath nixopsDir
+  unless preExists $ do
+    errorT $ format ("The 'update-nixops' subcommand requires a '"%fp%"' subdirectory as input.") nixopsDir
+  cd nixopsDir
+  cmd o "nix-build" ["-A", "build.x86_64-linux", "--out-link", "../" <> format fp outLink, "release.nix"]
+  sh $ do
+    gitHeadRev <- inproc "git" ["rev-parse", "HEAD"] empty
+    cd ".."
+    nixopsStorePath <- inproc "readlink" [format fp outLink] empty
+    liftIO $ printf ("Built nixops commit '"%s%"' is at '"%s%"', updating config '"%fp%"'\n")
+      (lineToText gitHeadRev) (lineToText nixopsStorePath) configFile
+    writeConfig (Just configFile) $ c { cNixops = Just $ Path.fromText $ lineToText nixopsStorePath <> "/bin/nixops" }
+    -- Unfortunately, Turtle doesn't seem to provide anything of the form Shell a -> IO a,
+    -- that would allow us to smuggle non-Text values out of a Shell monad.
+  echo "Done."
+
 
 -- * Functions for extracting information out of nixops info command
 --
@@ -764,8 +788,8 @@ getNodes :: Options -> NixopsConfig -> IO [DeploymentInfo]
 getNodes o c = do
   result <- (fmap . fmap) toNodesInfo $ info o c
   case result of
-    Left s -> do
-        TIO.putStrLn $ T.pack s
+    Left str -> do
+        TIO.putStrLn $ T.pack str
         return []
     Right vector -> return vector
 

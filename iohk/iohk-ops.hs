@@ -92,6 +92,7 @@ data Command where
                            } -> Command
   SetRev                :: Project -> Commit -> Command
   FakeKeys              :: Command
+  UpdateNixops          :: Command
 
   -- * building
   Genesis               :: Command
@@ -100,7 +101,7 @@ data Command where
   AMI                   :: Command
 
   -- * cluster lifecycle
-  Nixops                :: NixopsCmd -> [Text] -> Command
+  Nixops'               :: NixopsCmd -> [Text] -> Command
   Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
@@ -145,6 +146,8 @@ centralCommandParser =
                                 <$> parserProject
                                 <*> parserCommit "Commit to set PROJECT's version to")
     , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
+    , ("update-nixops",         "Rebuild and bump 'nixops' to the version checked out in the 'nixops' subdirectory.  WARNING: non-chainable, since it updates the config file.",
+                                pure UpdateNixops)
     , ("do",                    "Chain commands",                                                   Do <$> parserDo) ]
 
    <|> subcommandGroup "Build-related:"
@@ -241,7 +244,8 @@ main = do
             Build depl               -> Ops.build                     o c depl
             AMI                      -> Cardano.buildAMI              o c
             -- * deployment lifecycle
-            Nixops cmd args          -> Ops.nixops                    o c cmd args
+            Nixops' cmd args         -> Ops.nixops                    o c cmd args
+            UpdateNixops             -> Ops.updateNixops              o c
             Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
