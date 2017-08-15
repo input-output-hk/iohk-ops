@@ -713,7 +713,7 @@ deployed'commit o c m = do
 clearJournals :: Options -> NixopsConfig -> IO ()
 clearJournals o c = do
   printf "Clearing logs on cluster..\n"
-  sshForEach o c ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald'"]
+  sshForEach o c ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
   printf "Done.\n"
 
 getJournals :: Options -> NixopsConfig -> IO ()
