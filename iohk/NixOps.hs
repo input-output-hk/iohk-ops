@@ -294,7 +294,8 @@ summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
                                                                       $ error "Cannot deploy a topology with nodes lacking a FQDN address.")
                 (snPort, snFQDN) = (,) (fromMaybe defaultNodePort $ PortNo . fromIntegral <$> mPort)
                                    $ (FQDN . T.pack . BU.toString) $ fqdn
-                snInPeers = [ other
+                snInPeers = Set.toList . Set.fromList
+                            $ [ other
                             | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _)) <- Map.toList nodeMap
                             , elem node (concat routes) ]
                             <> concat outRoutes
