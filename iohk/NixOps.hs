@@ -716,9 +716,11 @@ deployed'commit o c m = do
     m
 
 clearJournals :: Options -> NixopsConfig -> IO ()
-clearJournals o c = do
-  printf "Clearing logs on cluster..\n"
-  sshForEach o c ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
+clearJournals o c@NixopsConfig{..} = do
+  (SimpleTopo cmap) <- summariseTopology <$> readTopology cTopology
+  printf "Clearing journals on cluster..\n"
+  parallelIO o $ flip fmap (Map.keys cmap) $
+    ssh' o c (const $ pure ()) ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
   printf "Done.\n"
 
 getJournals :: Options -> NixopsConfig -> IO ()
