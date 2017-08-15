@@ -103,7 +103,7 @@ data Command where
   Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
-  Deploy                :: Bool -> Bool -> Bool -> Command
+  Deploy                :: Bool -> Bool -> Bool -> Bool -> Command
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
@@ -161,9 +161,10 @@ centralCommandParser =
    , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> switch "evaluate-only" 'e' "Pass --evaluate-only to 'nixops build'."
-                                <*> switch "build-only"    'b' "Pass --build-only to 'nixops build''."
-                                <*> switch "check"         'c' "Pass --check to 'nixops build''.")
+                                <$> switch "evaluate-only"     'e' "Pass --evaluate-only to 'nixops build'"
+                                <*> switch "build-only"        'b' "Pass --build-only to 'nixops build'"
+                                <*> switch "check"             'c' "Pass --check to 'nixops build'"
+                                <*> switch "bump-system-start" 'c' "Bump cluster --system-start time")
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
@@ -236,7 +237,7 @@ main = do
             Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy evo buo chk       -> Ops.deploy                    o c evo buo chk
+            Deploy evo buo chk start -> Ops.deploy                    o c evo buo chk start
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c

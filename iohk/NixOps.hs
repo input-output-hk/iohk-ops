@@ -47,6 +47,8 @@ import           Prelude                   hiding (FilePath)
 import           Safe                             (headMay)
 import qualified System.IO                     as Sys
 import           Text.Read                        (readMaybe)
+import           Time.System
+import           Time.Types
 import           Turtle                    hiding (fold, inproc, procs)
 import qualified Turtle                        as Turtle
 
@@ -564,8 +566,8 @@ modify o@Options{..} c@NixopsConfig{..} = do
   liftIO . writeTextFile "topology.nix" . T.pack . LBU.toString $ encodePretty simpleTopo
   when oDebug $ dumpTopologyNix "./topology.nix"
 
-deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> IO ()
-deploy o c@NixopsConfig{..} evonly buonly check = do
+deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> Bool -> IO ()
+deploy o c@NixopsConfig{..} evonly buonly check bumpSystemStart = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
@@ -582,6 +584,11 @@ deploy o c@NixopsConfig{..} evonly buonly check = do
       cmd o "scripts/generate-explorer-frontend.sh" []
 
   modify o c
+
+  when bumpSystemStart $ do
+    (Elapsed unixTime) <- timeCurrent
+    printf ("Bumping system-start to "%d%".  Don't forget to commit!\n") unixTime
+    writeTextFile "config-system-start.nix" $ T.pack $ show unixTime
 
   nixops o c "deploy" $
     [ "--max-concurrent-copy", "50", "-j", "4" ]
@@ -607,7 +614,7 @@ fromscratch o c = do
   destroy o c
   delete o c
   create o c
-  deploy o c False False False
+  deploy o c False False False True
 
 
 -- * Building

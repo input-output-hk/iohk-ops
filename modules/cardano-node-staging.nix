@@ -19,7 +19,7 @@ with (import ./../lib.nix);
   deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
   deployment.route53.hostName = "cardano-node-${toString config.services.cardano-node.nodeIndex}.aws.iohkdev.io";
 
-  services.cardano-node.systemStart = mkForce 1502718000;
+  services.cardano-node.systemStart = mkForce (import ../config-system-start.nix);
 
   services.dd-agent.tags = ["env:staging"];
   services.dd-agent.processConfig = ''
