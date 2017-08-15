@@ -51,8 +51,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           rules = [{
             protocol = "-1"; # All traffic
             sourceIp = "0.0.0.0/0";
-            fromPort = 0;
-            toPort   = 65535;
+            fromPort = 0; toPort = 65535;
           }];
         };
         "allow-deployer-ssh-${region}" = {
@@ -60,8 +59,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           description = "SSH";
           rules = [{
             protocol = "6"; # TCP
-            fromPort = 22;
-            toPort   = 22;
+            fromPort = 22; toPort = 22;
             sourceIp = deployerIP + "/32";
           }];
         };
@@ -71,8 +69,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           rules = [{
             protocol = "17"; # UDP
             sourceIp = "0.0.0.0/0";
-            fromPort = 1024;
-            toPort   = 65535;
+            fromPort = 1024; toPort = 65535;
           }];
         };
         "allow-cardano-public-tcp-${region}" = {
@@ -80,8 +77,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           description = "Cardano TCP public";
           rules = [{
             protocol = "6"; # TCP
-            fromPort = nodePort;
-            toPort   = nodePort;
+            fromPort = nodePort; toPort = nodePort;
             sourceIp = "0.0.0.0/0";
           }];
         };
@@ -96,8 +92,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           let
             ip = ips."${toString neigh.value.name}-ip";
           in {
-              fromPort = nodePort;
-              toPort   = nodePort;
+              fromPort = nodePort; toPort = nodePort;
               sourceIp = traceSF (x: "${core.name} allowing peer ${x.address}") ip;
             };
       in {
