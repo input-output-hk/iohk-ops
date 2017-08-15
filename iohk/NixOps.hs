@@ -732,7 +732,7 @@ getJournals o c@NixopsConfig{..} = do
     ssh o c ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
   printf "Obtaining dumped journals..\n"
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
-  forM_ (zip nodes outfiles) $ do
+  parallelIO o $ flip fmap (zip nodes outfiles) $
     \(node, outfile) -> scpFromNode o c node "log" outfile
   (Elapsed unixTime) <- timeCurrent
   printf "Packing journals..\n"
