@@ -49,9 +49,13 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           inherit region accessKeyId;
           description = "Everything goes";
           rules = [{
-            protocol = "-1"; # All traffic
+            protocol = "6"; # TCP
             sourceIp = "0.0.0.0/0";
-            fromPort = 0; toPort = 65535;
+            fromPort = 1; toPort = 65534;
+          } {
+            protocol = "17"; # UDP
+            sourceIp = "0.0.0.0/0";
+            fromPort = 1; toPort = 65534;
           }];
         };
         "allow-deployer-ssh-${region}" = {
