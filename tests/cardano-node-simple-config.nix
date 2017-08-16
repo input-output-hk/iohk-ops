@@ -6,6 +6,6 @@
              type = "core";
             peers = [];
            relays = [];
-         sg-names = ["allow-open-eu-central-1"];
+         sg-names = [];
   };
 }
