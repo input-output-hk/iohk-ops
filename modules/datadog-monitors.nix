@@ -88,7 +88,7 @@ rec {
   cardano_node_process_monitor = {
     name = "cardano-node process is down";
     type = "service check";
-    query = config: "\"process.up\".over(\"env:${config.deployment.name}\",\"process:cardano-node\").by(\"host\",\"process\").last(5).count_by_status()";
+    query = config: "\"process.up\".over(\"env:${config.deployment.name}\",\"process:cardano-node-simple\").by(\"host\",\"process\").last(5).count_by_status()";
     monitorOptions.thresholds = {
       warning = 2;
       critical = 4;
