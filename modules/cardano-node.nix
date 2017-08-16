@@ -51,7 +51,7 @@ in {
       port = mkOption { type = types.int; default = 3000; };
       systemStart = mkOption { type = types.int; default = 0; };
 
-      type      = mkOption { type = types.enum [ "core" "relay" "other" ]; default = null; };
+      type      = mkOption { type = types.enum [ "core" "relay" "explorer" "report-server" ]; default = null; };
 
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };

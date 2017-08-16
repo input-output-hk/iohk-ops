@@ -11,10 +11,7 @@ params:
       nodeNameToPublicIP   = name: cardanoAttr "publicIP" nodes.${name}.config.services.cardano-node;
 
       sgByName = x: resources.ec2SecurityGroups.${x};
-      sgNames  = if   config.services.cardano-node.enable == false
-                 then [ "allow-open-${params.region}" ]
-                 else params.sg-names;
-      sgs      = map sgByName sgNames;
+      sgs      = map sgByName params.sg-names;
     in  {
       imports = [
         ./amazon-base.nix

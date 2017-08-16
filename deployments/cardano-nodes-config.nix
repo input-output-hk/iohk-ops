@@ -14,16 +14,15 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
                                         inherit (spec) region type kademlia peers;
                                 i = n - 1;
                              name = x.name; # This is an important identity, let's not break it.
-                         sg-names = if      spec.type == "other" then
-                                      [ "allow-open-${region}" ]
-                                    else if spec.type == "core"  then
+                                    ## For the SG definitions look below in this file:
+                         sg-names = if      spec.type == "core"  then
                                       [ "allow-deployer-ssh-${region}"
                                         "allow-cardano-static-peers-${name}-${region}" ]
                                     else if spec.type == "relay" then
                                       [ "allow-deployer-ssh-${region}"
                                         "allow-kademlia-public-udp-${region}"
                                         "allow-cardano-public-tcp-${region}" ]
-                                    else throw "While computing EC2 SGs: unhandled cardano-node type: '${type}'";
+                                    else throw "While computing EC2 SGs: unhandled cardano-node type: '${type}', must be either 'core' or 'relay'.";
                              }; } ) topologyList;
     byName        = name: let xs = filter (n: n.name == name) indexed;
                           in if xs != [] then builtins.elemAt xs 0
@@ -39,25 +38,11 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
     ##
     ##
     regionSGNames = region:
-        [ "allow-open-${region}"
-          "allow-deployer-ssh-${region}"
+        [ "allow-deployer-ssh-${region}"
           "allow-kademlia-public-udp-${region}"
           "allow-cardano-public-tcp-${region}"
         ];
     regionSGs      = nodePort: region: {
-        "allow-open-${region}" = {
-          inherit region accessKeyId;
-          description = "Everything goes";
-          rules = [{
-            protocol = "tcp"; # TCP
-            sourceIp = "0.0.0.0/0";
-            fromPort = 1; toPort = 65534;
-          } {
-            protocol = "udp"; # UDP
-            sourceIp = "0.0.0.0/0";
-            fromPort = 1; toPort = 65534;
-          }];
-        };
         "allow-deployer-ssh-${region}" = {
           inherit region accessKeyId;
           description = "SSH";
@@ -105,6 +90,31 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
           region = core.value.region;
           description = "Cardano TCP static peers of ${core.name}";
           rules = map neigh'rule neighbours;
+        };
+      };
+    globalSGNames = centralRegion:
+        [ "allow-to-explorer-${centralRegion}"
+          "allow-to-report-server-${centralRegion}" ]
+    globalSGs = centralRegion:
+      let region = centralRegion;
+      in {
+        "allow-to-explorer-${region}" = {
+          inherit region accessKeyId;
+          description = "Access Cardano Explorer";
+          rules = [{
+            protocol = "tcp";
+            fromPort = 80; toPort = 80;
+            sourceIp = "0.0.0.0/0";
+          }];
+        };
+        "allow-to-report-server-${region}" = {
+          inherit region accessKeyId;
+          description = "Access Cardano report server";
+          rules = [{
+            protocol = "tcp";
+            fromPort = 8080; toPort = 8080;
+            sourceIp = "0.0.0.0/0";
+          }];
         };
       };
     securityGroupNames =
