@@ -743,26 +743,36 @@ deployed'commit o c m = do
     ["pgrep", "-fa", "cardano-node"]
     m
 
+exec :: Options -> NixopsConfig -> [Text] -> IO ()
+exec o c@NixopsConfig{..} command = do
+  topo <- summariseTopology <$> readTopology cTopology
+  exec' o c topo command
+
+exec' :: Options -> NixopsConfig -> SimpleTopo -> [Text] -> IO ()
+exec' o c@NixopsConfig{..} (SimpleTopo cmap) command = do
+  parallelIO o $ flip fmap (Map.keys cmap) $
+    ssh' o c (const $ pure ()) command
+
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
-  SimpleTopo cmap <- summariseTopology <$> readTopology cTopology
   echo "Wiping journals on cluster.."
-  parallelIO o $ flip fmap (Map.keys cmap) $
-    ssh' o c (const $ pure ()) ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
+  exec o c ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
   echo "Done."
 
 getJournals :: Options -> NixopsConfig -> IO ()
 getJournals o c@NixopsConfig{..} = do
-  SimpleTopo cmap <- summariseTopology <$> readTopology cTopology
+  topo@(SimpleTopo cmap) <- summariseTopology <$> readTopology cTopology
   let nodes = Map.keys cmap
+
   echo "Dumping journald logs on cluster.."
-  parallelIO o $ flip fmap nodes $
-    ssh o c ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
+  exec' o c topo ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
+
   echo "Obtaining dumped journals.."
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
   parallelIO o $ flip fmap (zip nodes outfiles) $
     \(node, outfile) -> scpFromNode o c node "log" outfile
   timeStr <- T.pack . timePrint ISO8601_DateAndTime <$> dateCurrent
+
   let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) cName timeStr
   printf ("Packing journals into "%s%"\n") archive
   cmd o "tar" (["czf", archive, "--force-local"] <> outfiles)
@@ -780,9 +790,7 @@ confirmOrTerminate question = do
 wipeNodeDBs :: Options -> NixopsConfig -> IO ()
 wipeNodeDBs o c@NixopsConfig{..} = do
   confirmOrTerminate "Wipe node DBs on the entire cluster?"
-  SimpleTopo cmap <- summariseTopology <$> readTopology cTopology
-  parallelIO o $ flip fmap (Map.keys cmap) $
-    ssh' o c (const $ pure ()) ["rm", "-rf", "/var/lib/cardano-node"]
+  exec o c ["rm", "-rf", "/var/lib/cardano-node"]
   echo "Done."
 
 updateNixops :: Options -> NixopsConfig -> IO ()
