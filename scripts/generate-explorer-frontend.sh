@@ -5,14 +5,15 @@ set -euo pipefail
 
 source scripts/set_nixpath.sh
 
-if [ ! -d "cardano-sl-explorer" ]; then
-  git clone https://github.com/input-output-hk/cardano-sl-explorer.git
+cardano_rev="$(nix-instantiate --eval default.nix -A cardano-sl-static.src.rev|tr -d '"')"
+explorer_path="$(nix-build -A cardano-sl-explorer-static default.nix)"
+
+if [ ! -d "cardano-sl" ]; then
+  git clone https://github.com/input-output-hk/cardano-sl.git
 fi
 
-pushd cardano-sl-explorer
+pushd cardano-sl
   git fetch
-  git checkout "$(nix-instantiate --eval ../default.nix -A cardano-sl-explorer-static.src.rev|tr -d '"')"
-  pushd frontend
-    EXPLORER_NIX_FILE=../default.nix ./scripts/build.sh
-  popd
+  git checkout "${cardano_rev}"
+  EXPLORER_EXECUTABLE="${explorer_path}"/bin/cardano-explorer-hs2purs ./explorer/frontend/scripts/build.sh
 popd

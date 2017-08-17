@@ -1,8 +1,8 @@
-{ accessKeyId, ... }:
+{ accessKeyId, topologyYaml, ... }:
 
 with (import ./../lib.nix);
 let
-  nodeAWSConfig = (import ./../modules/cardano-node-aws.nix) { inherit accessKeyId; relays = []; };
+  nodeAWSConfig = (import ./../modules/cardano-node-aws.nix) { inherit accessKeyId topologyYaml; };
   explorer      = import ./cardano-explorer-config.nix;
 in
   mkNodesUsing nodeAWSConfig explorer
