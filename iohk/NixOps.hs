@@ -18,7 +18,7 @@ import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
 import           Control.Monad                    (forM_)
 import qualified Data.Aeson                    as AE
-import           Data.Aeson                       ((.:), (.=))
+import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
 import qualified Data.Aeson.Types              as AE
 import           Data.Aeson.Encode.Pretty         (encodePretty)
 import qualified Data.ByteString.Lazy          as BL
@@ -64,6 +64,7 @@ defaultEnvironment   = Development
 defaultTarget        = AWS
 defaultNode          = NodeName "c-a-1"
 defaultNodePort      = PortNo 3000
+defaultNixpkgs       = Commit "9b948ea439ddbaa26740ce35543e7e35d2aa6d18"
 
 defaultHold          = 1200 :: Seconds -- 20 minutes
 
@@ -302,7 +303,8 @@ summariseTopology x = errorT $ format ("Unsupported topology type: "%w) x
 dumpTopologyNix :: FilePath -> IO ()
 dumpTopologyNix topo = sh $ do
   let nodeSpecExpr prefix =
-        format ("with (import <nixpkgs> {}); "%s%" (import deployments/cardano-nodes-config.nix { accessKeyId = \"\"; deployerIP = \"\"; topologyFile = "%fp%"; })") prefix topo
+        format ("with (import <nixpkgs> {}); "%s%" (import deployments/cardano-nodes-config.nix { accessKeyId = \"\"; deployerIP = \"\"; topologyFile = "%fp%"; systemStart = 0; })")
+               prefix topo
       getNodeArgsAttr prefix attr = inproc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr prefix <> "." <> attr] empty
       liftNixList = inproc "sed" ["s/\" \"/\", \"/g"]
   (cores  :: [NodeName]) <- getNodeArgsAttr "map (x: x.name)" "cores"  & liftNixList <&> ((NodeName <$>) . readT . lineToText)
@@ -417,10 +419,10 @@ data NixopsConfig = NixopsConfig
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
-        <*> v .: "gen-cmdline"
-        <*> v .: "nixops"
-        <*> v .: "nixpkgs"
-        <*> v .: "topology"
+        <*> v .:? "gen-cmdline" .!= "--unknown--"
+        <*> v .:? "nixops"      .!= Just "nixops"
+        <*> v .:? "nixpkgs"     .!= defaultNixpkgs
+        <*> v .:? "topology"    .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "elements"
