@@ -8,7 +8,11 @@ let
     sshKey = "/etc/nix/id_buildfarm";
     sshUser = "root";
     system = "x86_64-linux";
-    supportedFeatures = [ "kvm" "nixos-test" ];
+    supportedFeatures = [ "nixos-test" ];
+  };
+  mkLinux = hostName: commonBuildMachineOpt // {
+    inherit hostName;
+    maxJobs = 4;
   };
   mkMac = hostName: commonBuildMachineOpt // {
     inherit hostName;
@@ -31,8 +35,10 @@ in {
     buildMachines = [
       (commonBuildMachineOpt // {
         hostName = "localhost";
-        maxJobs = 4;
+        maxJobs = 2;
       })
+      (mkLinux "hydra-build-slave-1.aws.iohkdev.io")
+      (mkLinux "hydra-build-slave-2.aws.iohkdev.io")
       (mkMac "de302.macincloud.com")
       (mkMac "du516.macincloud.com")
     ];

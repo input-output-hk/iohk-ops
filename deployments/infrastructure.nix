@@ -1,9 +1,16 @@
 { ... }:
 
 with (import ./../lib.nix);
-{
+
+let
+  mkHydraBuildSlave = { config, pkgs, ... }: {
+    imports = [
+      ./../modules/hydra-slave.nix
+      ./../modules/common.nix
+    ];
+  };
+in {
   hydra = { config, pkgs, ... }: {
-    # TODO: Slack integration
     # On first setup:
 
     # Locally: $ ssh-keygen -C "hydra@hydra.example.org" -N "" -f static/id_buildfarm
@@ -15,6 +22,9 @@ with (import ./../lib.nix);
       ./../modules/common.nix
     ];
   };
+
+  hydra-build-slave-1 = mkHydraBuildSlave;
+  hydra-build-slave-2 = mkHydraBuildSlave;
 
   cardano-deployer = { config, pkgs, ... }: {
     imports = [
