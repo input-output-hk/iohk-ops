@@ -1,6 +1,9 @@
 { ... }:
 
 with (import ./../lib.nix);
+let
+  iohk-pkgs = import ../default.nix {};
+in
 {
   hydra = { config, pkgs, ... }: {
     # TODO: Slack integration
@@ -20,6 +23,8 @@ with (import ./../lib.nix);
     imports = [
       ./../modules/common.nix
     ];
+
+    environment.systemPackages = [ iohk-pkgs.iohk-ops ];
 
     users = {
       users.staging = {
