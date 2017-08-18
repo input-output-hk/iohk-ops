@@ -12,13 +12,13 @@ import           Data.Optional (Optional)
 import qualified Data.Text                     as T
 import qualified Filesystem.Path.CurrentOS     as Path
 import qualified System.Environment            as Sys
-import           Turtle                    hiding (procs, shells)
+import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, shells, e, f, o, x)
 import           Time.Types
 import           Time.System
 
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
-                                                  ,Options(..), NixopsCmd(..), Project(..), URL(..)
+                                                  ,Options(..), NixopsCmd(..), Project(..), URL(..), Exec(..), Arg(..)
                                                   ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every, fromNodeName)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
@@ -228,7 +228,6 @@ main = do
     where
         doCommand :: Options -> Ops.NixopsConfig -> Command -> IO ()
         doCommand o c@Ops.NixopsConfig{..} cmd = do
-          let nodenames = Ops.nodeNames o c
           case cmd of
             -- * setup
             FakeKeys                 -> runFakeKeys
@@ -255,16 +254,13 @@ main = do
             ForegroundStart node     -> Ops.foregroundStart           o c node
             Start                    -> Ops.start                     o c
             Stop                     -> Ops.stop                      o c
-            RunExperiment Nodes      -> pure nodenames
-                                        >>= Cardano.runexperiment     o c
+            RunExperiment Nodes      -> Cardano.runexperiment     o c
             RunExperiment Timewarp   -> Timewarp.runexperiment        o c
             RunExperiment x          -> die $ "RunExperiment undefined for deployment " <> showT x
             PostExperiment           -> Cardano.postexperiment        o c
             DumpLogs{..}
-              | Nodes        <- depl -> pure nodenames
-                                        >>= void . Cardano.dumpLogs   o c withProf
-              | Timewarp     <- depl -> pure nodenames
-                                        >>= void . Timewarp.dumpLogs  o c withProf
+              | Nodes        <- depl -> Cardano.dumpLogs              o c withProf >> pure ()
+              | Timewarp     <- depl -> Timewarp.dumpLogs             o c withProf >> pure ()
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
             WipeJournals             -> Ops.wipeJournals              o c
             GetJournals              -> Ops.getJournals               o c

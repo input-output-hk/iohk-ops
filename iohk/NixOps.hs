@@ -796,6 +796,8 @@ foregroundStart o c node =
 stop :: Options -> NixopsConfig -> IO ()
 stop o c = echo "Stopping nodes..."
   >> exec o c ["systemctl", "stop", "cardano-node"]
+
+defLogs, profLogs :: [(Text, Text -> Text)]
 defLogs =
     [ ("/var/lib/cardano-node/node.log", (<> ".log"))
     , ("/var/lib/cardano-node/jsonLog.json", (<> ".json"))

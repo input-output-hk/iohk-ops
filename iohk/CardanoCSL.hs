@@ -7,47 +7,44 @@
 module CardanoCSL where
 
 import Control.Monad.Except (ExceptT (..), runExceptT)
-import Turtle hiding (printf)
 import Prelude hiding (FilePath)
-import Control.Monad (forM_, void, when)
+import Control.Monad (forM_, when)
 import Control.Monad.Trans(lift)
 import Control.Lens
-import Filesystem.Path.CurrentOS (encodeString)
 import Data.Aeson
 import Data.Aeson.Lens
 import Data.Maybe (catMaybes, fromJust)
 import Data.Monoid ((<>))
-import Data.Yaml (decodeFile)
 import Data.Text.Lazy (fromStrict)
 import Data.Text.IO as TIO
 import Data.Text.Lazy.Encoding (encodeUtf8)
 import qualified Data.Text as T
 import GHC.Generics
 import Text.Printf
+import           Turtle                    hiding (dirname, env, err, fold, inproc, prefix, printf, procs, e, f, o, x)
 import qualified Data.Map as M
 
-import           NixOps                           (Branch(..), Environment(..), Deployment(..), DeploymentInfo(..), Target(..)
-                                                  ,Options(..), NixopsConfig(..), Region(..), URL(..)
-                                                  ,showT, cmd, cmd', parallelIO, ssh, ssh', sshForEach
+import           NixOps                           (DeploymentInfo(..)
+                                                  ,Options(..), NixopsConfig(..), URL(..)
+                                                  ,cmd, cmd', parallelIO
                                                   ,fromNodeName)
 import qualified NixOps                        as Ops
-import           Topology
 
 
 buildAMI :: Options -> NixopsConfig -> IO ()
-buildAMI o c = do
+buildAMI o _ = do
   cmd o "nix-build" ["jobsets/cardano.nix", "-A", "cardano-node-image", "-o", "image"]
   cmd o "./scripts/create-amis.sh" []
 
-runexperiment :: Options -> NixopsConfig -> [NodeName] -> IO ()
-runexperiment o c nodes = do
+runexperiment :: Options -> NixopsConfig -> IO ()
+runexperiment o c = do
   -- build
   echo "Checking nodes' status, rebooting failed"
   Ops.checkstatus o c
   --deploy
   Ops.stop o c
   echo "Starting nodes..."
-  startNodes o c
+  Ops.start o c
   echo "Delaying... (40s)"
   sleep 40
   config <- either error id <$> getConfig
@@ -68,11 +65,10 @@ runexperiment o c nodes = do
 
 postexperiment :: Options -> NixopsConfig -> IO ()
 postexperiment o c = do
-  let nodes = Ops.nodeNames o c
   echo "Checking nodes' status, rebooting failed"
   Ops.checkstatus o c
   echo "Retreive logs..."
-  dt <- dumpLogs o c True nodes
+  dt <- dumpLogs o c True
   cliCmd <- getSmartGenCmd o c
   let dirname = "./experiments/" <> dt
   shells ("echo \"" <> cliCmd <> "\" > " <> dirname <> "/txCommandLine") empty
@@ -85,8 +81,8 @@ postexperiment o c = do
   --shells (foldl (\s n -> s <> " --file " <> n <> ".json") ("sh -c 'cd " <> workDir <> "; ./result/bin/cardano-analyzer --tx-file timestampsTxSender.json") nodes <> "'") empty
   shells ("tar -czf experiments/" <> dt <> ".tgz experiments/" <> dt) empty
 
-dumpLogs :: Options -> NixopsConfig -> Bool -> [NodeName] -> IO Text
-dumpLogs o c withProf nodes = do
+dumpLogs :: Options -> NixopsConfig -> Bool -> IO Text
+dumpLogs o c withProf = do
     TIO.putStrLn $ "WithProf: " <> T.pack (show withProf)
     when withProf $ do
         Ops.stop o c
@@ -104,15 +100,15 @@ dumpLogs o c withProf nodes = do
           Ops.scpFromNode o c node rpath (workDir <> "/" <> fname (fromNodeName node))
     logs = mconcat
              [ if withProf
-                  then profLogs
+                  then Ops.profLogs
                   else []
-             , defLogs
+             , Ops.defLogs
              ]
 
 generateIPDHTMappings :: Options -> NixopsConfig -> IO Text
 generateIPDHTMappings o c = runError $ do
   nodes <- ExceptT $ getNodesMap o c
-  config@CardanoConfig{..} <- ExceptT $ getConfig
+  CardanoConfig{..} <- ExceptT $ getConfig
   let peers = genPeers nodePort (M.toList nodes)
   lift $ TIO.putStrLn $ T.unlines peers
   return $ T.unlines peers
@@ -123,7 +119,7 @@ getNodesMap :: Options -> NixopsConfig -> IO (Either String (M.Map Int Deploymen
 getNodesMap o c = fmap (toMap . Ops.toNodesInfo) <$> Ops.info o c
   where
     toMap :: [DeploymentInfo] -> M.Map Int DeploymentInfo
-    toMap = M.fromList . catMaybes . map (\d -> (,d) <$> extractName (T.unpack . fromNodeName $ diName d))
+    toMap = M.fromList . catMaybes . map (\di -> (,di) <$> extractName (T.unpack . fromNodeName $ diName di))
     extractName ('n':'o':'d':'e':rest) = Just $ read rest
     extractName _ = Nothing
 
@@ -141,7 +137,7 @@ getSmartGenCmd o c = runError $ do
   dhtfile <- lift $ Prelude.readFile "static/dht.json"
   peers <- ExceptT $ return $ getPeers c config dhtfile nodes
   (_, sgIp) <- fmap T.strip <$> shellStrict ("curl " <> fromURL Ops.awsPublicIPURL) empty
-  let sgDhtKey = fromJust $ dhtfile ^? key "node100" . _String
+  -- let sgDhtKey = fromJust $ dhtfile ^? key "node100" . _String
 
   let bot = if bitcoinOverFlat then "bitcoin" else "flat"
       recipShare = "0.5"
@@ -175,7 +171,7 @@ genPeers port = map impl
     impl (i, Ops.getIP . diPublicIP -> ip) = ip <> ":" <> show' port
 
 getPeers :: NixopsConfig -> CardanoConfig -> String -> M.Map Int DeploymentInfo -> Either String Text
-getPeers c config dhtfile nodes = do
+getPeers _ config _dhtfile nodes = do
   case M.lookup 0 nodes of
     Nothing -> Left "Node0 retrieval failed"
     Just node0 -> let port = nodePort config
@@ -234,5 +230,5 @@ instance FromJSON CardanoConfig
 
 getConfig :: IO (Either String CardanoConfig)
 getConfig = do
-  (_exitcode, output) <- shellStrict "nix-instantiate --eval --strict --json config.nix" empty
-  return $ eitherDecode (encodeUtf8 $ fromStrict output)
+  (_exitcode, output') <- shellStrict "nix-instantiate --eval --strict --json config.nix" empty
+  return $ eitherDecode (encodeUtf8 $ fromStrict output')

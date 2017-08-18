@@ -1,19 +1,18 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, ScopedTypeVariables #-}
 
 module Timewarp where
 
 import Control.Monad (forM_)
 import Data.Monoid ((<>))
-import Data.Yaml (decodeFile)
-import Filesystem.Path.CurrentOS (encodeString)
 import GHC.Conc (threadDelay)
 import Prelude hiding (FilePath)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Turtle
+import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x)
 
-import NixOps
-import Topology
+import NixOps                                     (Options(..), NixopsConfig(..)
+                                                  ,fromNodeName, nodeNames, parallelIO, scpFromNode, ssh, ssh', sshForEach)
 
 
 args = " -d time-warp" <> nixpath
@@ -29,12 +28,12 @@ runexperiment o c = do
   sshForEach o c ["rm", "-f", "/home/timewarp/node.log"]
   sshForEach o c ["systemctl", "start", "timewarp"]
   threadDelay (150*1000000)
-  dt <- dumpLogs o c False $ nodeNames o c
+  dt <- dumpLogs o c False
   TIO.putStrLn $ "Log dir: tw_experiments/" <> dt
 
 
-dumpLogs :: Options -> NixopsConfig -> Bool ->  [NodeName] -> IO Text
-dumpLogs o c withProf nodes = do
+dumpLogs :: Options -> NixopsConfig -> Bool -> IO Text
+dumpLogs o c withProf = do
     TIO.putStrLn $ "WithProf: " <> T.pack (show withProf)
     when withProf $ do
         echo "Stopping nodes..."
@@ -42,13 +41,13 @@ dumpLogs o c withProf nodes = do
         sleep 2
         echo "Dumping logs..."
     (_, dt) <- fmap T.strip <$> shellStrict "date +%F_%H%M%S" empty
-    let workDir = "tw_experiments/" <> dt
+    let workDir :: Text = "tw_experiments/" <> dt
     TIO.putStrLn workDir
-    shell ("mkdir -p " <> workDir) empty
+    void $ shell ("mkdir -p " <> workDir) empty
     parallelIO o c $ dump workDir
     return dt
   where
-    dump workDir node = do
+    dump (workDir :: Text) node = do
         forM_ logs $ \(rpath, fname) -> do
           scpFromNode o c node rpath (workDir <> "/" <> fname (fromNodeName node))
     logs = mconcat
