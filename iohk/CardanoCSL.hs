@@ -45,10 +45,9 @@ runexperiment o c nodes = do
   echo "Checking nodes' status, rebooting failed"
   Ops.checkstatus o c
   --deploy
-  echo "Stopping nodes..."
-  stopNodes o c nodes
+  Ops.stop o c
   echo "Starting nodes..."
-  startNodes o c nodes
+  startNodes o c
   echo "Delaying... (40s)"
   sleep 40
   config <- either error id <$> getConfig
@@ -69,7 +68,7 @@ runexperiment o c nodes = do
 
 postexperiment :: Options -> NixopsConfig -> IO ()
 postexperiment o c = do
-  nodes <- Ops.getNodeNames o c
+  let nodes = Ops.nodeNames o c
   echo "Checking nodes' status, rebooting failed"
   Ops.checkstatus o c
   echo "Retreive logs..."
@@ -90,15 +89,14 @@ dumpLogs :: Options -> NixopsConfig -> Bool -> [NodeName] -> IO Text
 dumpLogs o c withProf nodes = do
     TIO.putStrLn $ "WithProf: " <> T.pack (show withProf)
     when withProf $ do
-        echo "Stopping nodes..."
-        stopNodes o c nodes
+        Ops.stop o c
         sleep 2
         echo "Dumping logs..."
     (_, dt) <- fmap T.strip <$> cmd' o "date" ["+%F_%H%M%S"]
     let workDir = "experiments/" <> dt
     TIO.putStrLn workDir
     cmd o "mkdir" ["-p", workDir]
-    parallelIO o $ fmap (dump workDir) nodes
+    parallelIO o c $ dump workDir
     return dt
   where
     dump workDir node =
@@ -174,7 +172,7 @@ genDhtKey i = "MHdrsP-oPf7UWl" <> (T.pack $ printf "%.3d" i) <> "7QuXnLK5RD="
 genPeers :: Int -> [(Int, DeploymentInfo)] -> [Text]
 genPeers port = map impl
   where
-    impl (i, Ops.getIP . diPublicIP -> ip) = ip <> ":" <> show' port 
+    impl (i, Ops.getIP . diPublicIP -> ip) = ip <> ":" <> show' port
 
 getPeers :: NixopsConfig -> CardanoConfig -> String -> M.Map Int DeploymentInfo -> Either String Text
 getPeers c config dhtfile nodes = do
@@ -209,39 +207,6 @@ getWalletDelegationCmd o c = runError $ do
 
   return cliCmd
 
-defLogs =
-    [ ("/var/lib/cardano-node/node.log", (<> ".log"))
-    , ("/var/lib/cardano-node/jsonLog.json", (<> ".json"))
-    , ("/var/lib/cardano-node/time-slave.log", (<> "-ts.log"))
-    , ("/var/log/saALL", (<> ".sar"))
-    ]
-profLogs =
-    [ ("/var/lib/cardano-node/cardano-node.prof", (<> ".prof"))
-    , ("/var/lib/cardano-node/cardano-node.hp", (<> ".hp"))
-    -- in fact, if there's a heap profile then there's no eventlog and vice versa
-    -- but scp will just say "not found" and it's all good
-    , ("/var/lib/cardano-node/cardano-node.eventlog", (<> ".eventlog"))
-    ]
-
-printDate :: Options -> NixopsConfig -> [NodeName] -> IO ()
-printDate o c nodes = parallelIO o $ fmap f nodes
-  where
-    f n = ssh' o c (\s -> TIO.putStrLn $ "Date on " <> fromNodeName n <> ": " <> s) ["date"] n
-
-stopNodes :: Options -> NixopsConfig -> [NodeName] -> IO ()
-stopNodes o c nodes =
-  parallelIO o $ flip fmap nodes $
-  ssh o c ["systemctl", "stop", "cardano-node"]
-
-startNodes :: Options -> NixopsConfig -> [NodeName] -> IO ()
-startNodes o c nodes =
-  parallelIO o $ flip fmap nodes $
-  ssh o c ["bash", "-c", "'" <> rmCmd <> "; " <> startCmd <> "'"]
-  where
-    rmCmd = foldl (\s (f, _) -> s <> " " <> f) "rm -f" logs
-    startCmd = "systemctl start cardano-node"
-    logs = mconcat [ defLogs, profLogs ]
-
 
 -- * Cardano Config
 --
@@ -269,5 +234,5 @@ instance FromJSON CardanoConfig
 
 getConfig :: IO (Either String CardanoConfig)
 getConfig = do
-  (exitcode, output) <- shellStrict "nix-instantiate --eval --strict --json config.nix" empty
+  (_exitcode, output) <- shellStrict "nix-instantiate --eval --strict --json config.nix" empty
   return $ eitherDecode (encodeUtf8 $ fromStrict output)

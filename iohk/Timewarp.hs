@@ -27,10 +27,9 @@ runexperiment o c = do
   --deploy
   sshForEach o c ["systemctl", "stop", "timewarp"]
   sshForEach o c ["rm", "-f", "/home/timewarp/node.log"]
-  nodes <- getNodeNames o c
   sshForEach o c ["systemctl", "start", "timewarp"]
   threadDelay (150*1000000)
-  dt <- dumpLogs o c False nodes
+  dt <- dumpLogs o c False $ nodeNames o c
   TIO.putStrLn $ "Log dir: tw_experiments/" <> dt
 
 
@@ -46,7 +45,7 @@ dumpLogs o c withProf nodes = do
     let workDir = "tw_experiments/" <> dt
     TIO.putStrLn workDir
     shell ("mkdir -p " <> workDir) empty
-    parallelIO o $ fmap (dump workDir) nodes 
+    parallelIO o c $ dump workDir
     return dt
   where
     dump workDir node = do
@@ -63,7 +62,7 @@ defLogs =
     , ("/var/log/saALL", (<> ".sar"))
     ]
 profLogs =
-    [ 
+    [
     --  ("/var/lib/cardano-node/cardano-node.prof", (<> ".prof"))
     --, ("/var/lib/cardano-node/cardano-node.hp", (<> ".hp"))
     ---- in fact, if there's a heap profile then there's no eventlog and vice versa

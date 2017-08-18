@@ -529,11 +529,15 @@ readConfig cf = do
   pure c { topology = topo }
 
 
-parallelIO :: Options -> [IO a] -> IO ()
-parallelIO Options{..} =
-  if oSerial
-  then sequence_
-  else sh . parallel
+parallelIO' :: Options -> NixopsConfig -> ([NodeName] -> [a]) -> (a -> IO ()) -> IO ()
+parallelIO' o@Options{..} c@NixopsConfig{..} xform action =
+  (if oSerial
+   then sequence_
+   else sh . parallel) $
+  action <$> (xform $ nodeNames o c)
+
+parallelIO :: Options -> NixopsConfig -> (NodeName -> IO ()) -> IO ()
+parallelIO o c = parallelIO' o c id
 
 logCmd  bin args = do
   printf ("-- "%s%"\n") $ T.intercalate " " $ bin:args
@@ -568,12 +572,15 @@ incmd Options{..} bin args = do
 
 -- * Invoking nixops
 --
+nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO b
+nixops'' executor o c@NixopsConfig{..} com args =
+  executor o (format fp cNixops)
+  (fromCmd com : nixopsCmdOptions o c <> args)
 
-nixops  :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO ()
 nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO (ExitCode, Text)
-
-nixops  o c (NixopsCmd com) args = cmd  o (format fp $ nixopsPath c) (com : nixopsCmdOptions o c <> args)
-nixops' o c (NixopsCmd com) args = cmd' o (format fp $ nixopsPath c) (com : nixopsCmdOptions o c <> args)
+nixops  :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO ()
+nixops' = nixops'' cmd'
+nixops  = nixops'' cmd
 
 nixopsMaybeLimitNodes :: Options -> [Arg]
 nixopsMaybeLimitNodes (oOnlyOn -> maybeNode) = ((("--include":) . (:[]) . Arg . fromNodeName) <$> maybeNode & fromMaybe [])
@@ -716,8 +723,7 @@ build o _c depl = do
 -- Check if nodes are online and reboots them if they timeout
 checkstatus :: Options -> NixopsConfig -> IO ()
 checkstatus o c = do
-  nodes <- getNodeNames o c
-  parallelIO o $ fmap (rebootIfDown o c) nodes
+  parallelIO o c $ rebootIfDown o c
 
 rebootIfDown :: Options -> NixopsConfig -> NodeName -> IO ()
 rebootIfDown o c (fromNodeName -> node) = do
@@ -772,15 +778,41 @@ deployed'commit o c m = do
     ["pgrep", "-fa", "cardano-node"]
     m
 
+
 exec :: Options -> NixopsConfig -> [Text] -> IO ()
 exec o c@NixopsConfig{..} command = do
-  topo <- summariseTopology <$> readTopology cTopology
-  exec' o c topo command
-
-exec' :: Options -> NixopsConfig -> SimpleTopo -> [Text] -> IO ()
-exec' o c@NixopsConfig{..} (SimpleTopo cmap) command = do
-  parallelIO o $ flip fmap (Map.keys cmap) $
+  parallelIO o c $
     ssh' o c (const $ pure ()) command
+
+stop :: Options -> NixopsConfig -> IO ()
+stop o c = echo "Stopping nodes..."
+  >> exec o c ["systemctl", "stop", "cardano-node"]
+defLogs =
+    [ ("/var/lib/cardano-node/node.log", (<> ".log"))
+    , ("/var/lib/cardano-node/jsonLog.json", (<> ".json"))
+    , ("/var/lib/cardano-node/time-slave.log", (<> "-ts.log"))
+    , ("/var/log/saALL", (<> ".sar"))
+    ]
+profLogs =
+    [ ("/var/lib/cardano-node/cardano-node.prof", (<> ".prof"))
+    , ("/var/lib/cardano-node/cardano-node.hp", (<> ".hp"))
+    -- in fact, if there's a heap profile then there's no eventlog and vice versa
+    -- but scp will just say "not found" and it's all good
+    , ("/var/lib/cardano-node/cardano-node.eventlog", (<> ".eventlog"))
+    ]
+
+start :: Options -> NixopsConfig -> IO ()
+start o c =
+  parallelIO o c $
+  ssh o c ["bash", "-c", "'" <> rmCmd <> "; " <> startCmd <> "'"]
+  where
+    rmCmd = foldl (\str (f, _) -> str <> " " <> f) "rm -f" logs
+    startCmd = "systemctl start cardano-node"
+    logs = mconcat [ defLogs, profLogs ]
+
+date :: Options -> NixopsConfig -> IO ()
+date o c = parallelIO o c $
+  \n -> ssh' o c (\str -> TIO.putStrLn $ fromNodeName n <> ": " <> str) ["date"] n
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
@@ -793,11 +825,11 @@ getJournals o c@NixopsConfig{..} = do
   let nodes = nodeNames o c
 
   echo "Dumping journald logs on cluster.."
-  exec' o c topo ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
+  exec o c ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
 
   echo "Obtaining dumped journals.."
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
-  parallelIO o $ flip fmap (zip nodes outfiles) $
+  parallelIO' o c (flip zip outfiles) $
     \(node, outfile) -> scpFromNode o c node "log" outfile
   timeStr <- T.pack . timePrint ISO8601_DateAndTime <$> dateCurrent
 
@@ -846,20 +878,6 @@ updateNixops o@Options{..} c@NixopsConfig{..} = do
 -- * Functions for extracting information out of nixops info command
 --
 -- | Get all nodes in EC2 cluster
-getNodes :: Options -> NixopsConfig -> IO [DeploymentInfo]
-getNodes o c = do
-  result <- (fmap . fmap) toNodesInfo $ info o c
-  case result of
-    Left str -> do
-        TIO.putStrLn $ T.pack str
-        return []
-    Right vector -> return vector
-
-getNodeNames :: Options -> NixopsConfig -> IO [NodeName]
-getNodeNames o c = do
-  nodes <- getNodes o c
-  return $ fmap diName nodes
-
 data DeploymentStatus = UpToDate | Obsolete | Outdated
   deriving (Show, Eq)
 

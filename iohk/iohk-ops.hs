@@ -18,7 +18,7 @@ import           Time.System
 
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
-                                                  ,Options(..), NixopsCmd(..), Project(..), Region(..), URL(..)
+                                                  ,Options(..), NixopsCmd(..), Project(..), URL(..)
                                                   ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every, fromNodeName)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
@@ -248,10 +248,8 @@ main = do
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployed'commit           o c m
             CheckStatus              -> Ops.checkstatus               o c
-            Start                    -> pure nodenames
-                                        >>= Cardano.startNodes        o c
-            Stop                     -> pure nodenames
-                                        >>= Cardano.stopNodes         o c
+            Start                    -> Ops.start                     o c
+            Stop                     -> Ops.stop                      o c
             RunExperiment Nodes      -> pure nodenames
                                         >>= Cardano.runexperiment     o c
             RunExperiment Timewarp   -> Timewarp.runexperiment        o c
@@ -266,8 +264,7 @@ main = do
             WipeJournals             -> Ops.wipeJournals              o c
             GetJournals              -> Ops.getJournals               o c
             WipeNodeDBs              -> Ops.wipeNodeDBs               o c
-            PrintDate                -> pure nodenames
-                                        >>= Cardano.printDate         o c
+            PrintDate                -> Ops.date                      o c
             Template{..}             -> error "impossible"
             SetRev   _ _             -> error "impossible"
 
