@@ -784,6 +784,15 @@ exec o c@NixopsConfig{..} command = do
   parallelIO o c $
     ssh' o c (const $ pure ()) command
 
+foregroundStart :: Options -> NixopsConfig -> NodeName -> IO ()
+foregroundStart o c node =
+  (flip $ flip (ssh' o c)
+    [ "bash", "-c"
+    , "'systemctl show cardano-node --property=ExecStart | sed -e \"s/.*path=\\([^ ]*\\) .*/\\1/\" | xargs grep \"^exec \" | cut -d\" \" -f2-'"])
+  node $ \unitStartCmd ->
+    printf ("Starting Cardano in foreground;  Command line:\n  "%s%"\n") unitStartCmd >>
+    flip (ssh o c) node ["bash", "-c", "'" <> unitStartCmd <> "'"]
+
 stop :: Options -> NixopsConfig -> IO ()
 stop o c = echo "Stopping nodes..."
   >> exec o c ["systemctl", "stop", "cardano-node"]

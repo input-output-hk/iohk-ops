@@ -117,6 +117,7 @@ data Command where
   DeployedCommit        :: NodeName -> Command
   CheckStatus           :: Command
   Start                 :: Command
+  ForegroundStart       :: NodeName -> Command
   Stop                  :: Command
   RunExperiment         :: Deployment -> Command
   PostExperiment        :: Command
@@ -184,6 +185,9 @@ centralCommandParser =
                                 DeployedCommit
                                 <$> parserNodeName Ops.defaultNode)
    , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
+   , ("foreground-start",       "Start cardano (or explorer) on the specified node, in foreground",
+                                ForegroundStart
+                                <$> parserNodeName Ops.defaultNode)
    , ("start",                  "Start cardano-node service",                                       pure Start)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
    , ("runexperiment",          "Deploy cluster and perform measurements",                          RunExperiment <$> parserDeployment)
@@ -248,6 +252,7 @@ main = do
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployed'commit           o c m
             CheckStatus              -> Ops.checkstatus               o c
+            ForegroundStart node     -> Ops.foregroundStart           o c node
             Start                    -> Ops.start                     o c
             Stop                     -> Ops.stop                      o c
             RunExperiment Nodes      -> pure nodenames
