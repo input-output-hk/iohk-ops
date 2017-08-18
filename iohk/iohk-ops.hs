@@ -107,7 +107,7 @@ data Command where
   Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
-  Deploy                :: Bool -> Bool -> Bool -> Maybe Seconds -> Command
+  Deploy                :: Bool -> Bool -> Bool -> Bool -> Maybe Seconds -> Command
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
@@ -170,9 +170,10 @@ centralCommandParser =
    , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> switch "evaluate-only"     'e' "Pass --evaluate-only to 'nixops build'"
-                                <*> switch "build-only"        'b' "Pass --build-only to 'nixops build'"
-                                <*> switch "check"             'c' "Pass --check to 'nixops build'"
+                                <$> switch "evaluate-only"       'e' "Pass --evaluate-only to 'nixops build'"
+                                <*> switch "build-only"          'b' "Pass --build-only to 'nixops build'"
+                                <*> switch "check"               'c' "Pass --check to 'nixops build'"
+                                <*> switch "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
                                 <*> ((Seconds . (* 60) . fromIntegral <$>)
                                       <$> optional (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay")))
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
@@ -251,7 +252,7 @@ main = do
             Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy ev bu ch buhold   -> Ops.deploy                    o c ev bu ch buhold
+            Deploy ev bu ch ner buh  -> Ops.deploy                    o c ev bu ch (not ner) buh
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c

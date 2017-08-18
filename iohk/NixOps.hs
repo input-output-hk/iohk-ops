@@ -590,8 +590,8 @@ modify o@Options{..} c@NixopsConfig{..} = do
   liftIO . writeTextFile "topology.nix" . T.pack . LBU.toString $ encodePretty simpleTopo
   when oDebug $ dumpTopologyNix "./topology.nix"
 
-deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> Maybe Seconds -> IO ()
-deploy o@Options{..} c@NixopsConfig{..} evonly buonly check bumpSystemStartHeldBy = do
+deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> Bool -> Maybe Seconds -> IO ()
+deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFrontend bumpSystemStartHeldBy = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
@@ -603,7 +603,7 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check bumpSystemStartHeldB
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
     export "SMART_GEN_IP"     =<< getIP <$> deployerIP o
-    when (elem Explorer cElements) $ do
+    when (elem Explorer cElements && rebuildExplorerFrontend) $ do
       cmd o "scripts/generate-explorer-frontend.sh" []
 
   now <- timeCurrent
@@ -647,7 +647,7 @@ fromscratch o c = do
   destroy o c
   delete o c
   create o c
-  deploy o c False False False (Just defaultHold)
+  deploy o c False False False True (Just defaultHold)
 
 
 -- * Building
