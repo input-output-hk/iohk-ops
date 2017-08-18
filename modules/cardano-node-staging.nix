@@ -25,7 +25,7 @@ with (import ./../lib.nix);
 
     instances:
     - name: cardano-node
-      search_string: ['cardano-node']
+      search_string: ['cardano-node-simple']
       exact_match: True
       thresholds:
         critical: [1, 1]
