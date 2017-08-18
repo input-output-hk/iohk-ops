@@ -35,6 +35,7 @@ in {
       })
       (mkMac "de302.macincloud.com")
       (mkMac "du516.macincloud.com")
+      (mkMac "de528.macincloud.com")
     ];
     extraOptions = "auto-optimise-store = true";
   };
