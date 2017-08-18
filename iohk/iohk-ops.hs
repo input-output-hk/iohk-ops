@@ -118,8 +118,6 @@ data Command where
   CheckStatus           :: Command
   Start                 :: Command
   Stop                  :: Command
-  FirewallBlock         :: { from :: Region, to :: Region } -> Command
-  FirewallClear         :: Command
   RunExperiment         :: Deployment -> Command
   PostExperiment        :: Command
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
@@ -188,11 +186,6 @@ centralCommandParser =
    , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
    , ("start",                  "Start cardano-node service",                                       pure Start)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
-   , ("firewall-block-region",  "Block whole region in firewall",
-                                FirewallBlock
-                                <$> (Region <$> optText "from-region" 'f' "AWS Region that won't reach --to")
-                                <*> (Region <$> optText "to-region"   't' "AWS Region that all nodes will be blocked"))
-   , ("firewall-clear",         "Clear firewall",                                                   pure FirewallClear)
    , ("runexperiment",          "Deploy cluster and perform measurements",                          RunExperiment <$> parserDeployment)
    , ("postexperiment",         "Post-experiments logs dumping (if failed)",                        pure PostExperiment)
    , ("dumplogs",               "Dump logs",
@@ -227,9 +220,6 @@ main = do
       when oVerbose $
         printf ("-- config '"%fp%"'\n"%w%"\n") cf c
 
-      -- * CardanoCSL
-      -- dat <- getSmartGenCmd c
-      -- TIO.putStrLn $ T.pack $ show dat
 
       doCommand o c topcmd
     where
@@ -264,8 +254,6 @@ main = do
                                         >>= Cardano.startNodes        o c
             Stop                     -> pure nodenames
                                         >>= Cardano.stopNodes         o c
-            FirewallBlock{..}        -> Cardano.firewallBlock         o c from to
-            FirewallClear            -> Cardano.firewallClear         o c
             RunExperiment Nodes      -> pure nodenames
                                         >>= Cardano.runexperiment     o c
             RunExperiment Timewarp   -> Timewarp.runexperiment        o c
