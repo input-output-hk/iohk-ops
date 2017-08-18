@@ -75,11 +75,6 @@ in {
         default = "${cardano}/bin/cardano-node-simple";
       };
       autoStart = mkOption { type = types.bool; default = true; };
-      initialKademliaPeers = mkOption {
-        type = types.nullOr (types.listOf types.str);
-        description = "A file with peer/dht mappings";
-        default = null;
-      };
 
       genesisN = mkOption { type = types.int; };
       slotDuration = mkOption { type = types.int; };
@@ -140,8 +135,6 @@ in {
 
   config = mkIf cfg.enable {
     assertions = [
-    { assertion = cfg.initialKademliaPeers != null;
-      message = "services.cardano-node.initialKademliaPeers must be set, even if to an empty list (nodeIndex: ${toString cfg.nodeIndex})"; }
     { assertion = cfg.type != null;
       message = "services.cardano-node.type must be set to one of: core relay other"; }
     ];

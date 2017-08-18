@@ -8,7 +8,6 @@ import <nixpkgs/nixos/tests/make-test.nix> ({ pkgs, ... }: {
       imports = [ (import ../modules/cardano-node-config.nix (nodeArgs.machine)) <nixops/nix/options.nix> <nixops/nix/resource.nix> ];
       services.cardano-node = {
         autoStart = true;
-        initialKademliaPeers = [];
         neighbours = [];
       };
     };

@@ -18,11 +18,6 @@ params:
       ];
 
       services.cardano-node = {
-        initialKademliaPeers = genPeersFromConfig (
-          if (cfg.enableP2P && !cfg.productionMode)
-          then [(head cardanoNodeConfigs)]
-          else cardanoNodeConfigs
-        );
         publicIP = if options.networking.publicIPv4.isDefined then config.networking.publicIPv4 else null;
         privateIP = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
         statsdServer = "127.0.0.1:8125";

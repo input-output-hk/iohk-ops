@@ -9,7 +9,6 @@ import <nixpkgs/nixos/tests/make-test.nix> ({ pkgs, ... }: {
       virtualisation.qemu.options = [ "-cpu Haswell" ];
       services.cardano-node = {
         autoStart = true;
-        initialKademliaPeers = [];
         neighbours = [];
       };
     };
