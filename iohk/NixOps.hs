@@ -282,6 +282,9 @@ deriving instance Generic NodeRegion
 deriving instance Generic NodeType
 instance ToJSON NodeType
 
+topoNodes :: SimpleTopo -> [NodeName]
+topoNodes (SimpleTopo cmap) = Map.keys cmap
+
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
   SimpleTopo $ Map.mapWithKey simplifier nodeMap
@@ -317,6 +320,15 @@ dumpTopologyNix topo = sh $ do
   forM_ relays $ \(NodeName x) -> do
     printf ("  "%s%"\n    ") x
     Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeArgs." <> x] empty
+
+nodeNames :: Options -> NixopsConfig -> [NodeName]
+nodeNames (oOnlyOn -> Nothing)    NixopsConfig{..} = topoNodes topology
+nodeNames (oOnlyOn -> nodeLimit)  NixopsConfig{..}
+  | Nothing   <- nodeLimit = topoNodes topology
+  | Just node <- nodeLimit
+  , SimpleTopo nodeMap <- topology
+  = if Map.member node nodeMap then [node]
+    else errorT $ format ("Node '"%s%"' doesn't exist in cluster '"%fp%"'.") (showT $ fromNodeName node) cTopology
 
 
 -- * deployment structure
@@ -373,19 +385,25 @@ elementDeploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNe
 
 data Options = Options
   { oConfigFile       :: Maybe FilePath
+  , oOnlyOn           :: Maybe NodeName
   , oConfirm          :: Bool
   , oDebug            :: Bool
   , oSerial           :: Bool
   , oVerbose          :: Bool
   } deriving Show
 
+parserNodeLimit :: Parser (Maybe NodeName)
+parserNodeLimit = optional $ NodeName <$> (optText "just-node" 'n' "Limit operation to the specified node")
+
 parserOptions :: Parser Options
 parserOptions = Options
-                <$> optional (optPath "config"  'c' "Configuration file")
-                <*> switch  "confirm" 'y' "Pass --confirm to nixops"
-                <*> switch  "debug"   'd' "Pass --debug to nixops"
-                <*> switch  "serial"  's' "Disable parallelisation"
-                <*> switch  "verbose" 'v' "Print all commands that are being run"
+                <$> optional (optPath "config"    'c' "Configuration file")
+                <*> (optional $ NodeName
+                     <$>     (optText "only-on"   'n' "Limit operation to the specified node"))
+                <*>           switch  "confirm"   'y' "Pass --confirm to nixops"
+                <*>           switch  "debug"     'd' "Pass --debug to nixops"
+                <*>           switch  "serial"    's' "Disable parallelisation"
+                <*>           switch  "verbose"   'v' "Print all commands that are being run"
 
 nixpkgsCommitPath :: Commit -> Text
 nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
@@ -407,7 +425,7 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
 data NixopsConfig = NixopsConfig
   { cName             :: Text
   , cGenCmdline       :: Text
-  , cNixops           :: Maybe FilePath
+  , cNixops           :: FilePath
   , cNixpkgsCommit    :: Commit
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
@@ -415,12 +433,14 @@ data NixopsConfig = NixopsConfig
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
   , cDeplArgs         :: DeplArgs
+  -- this isn't stored in the config file, but is, instead filled in during initialisation
+  , topology          :: SimpleTopo
   } deriving (Generic, Show)
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
         <*> v .:? "gen-cmdline" .!= "--unknown--"
-        <*> v .:? "nixops"      .!= Just "nixops"
+        <*> v .:? "nixops"      .!= "nixops"
         <*> v .:? "nixpkgs"     .!= defaultNixpkgs
         <*> v .:? "topology"    .!= "topology-development.yaml"
         <*> v .: "environment"
@@ -428,6 +448,7 @@ instance FromJSON NixopsConfig where
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
+        <*> pure undefined -- this is filled in in readConfig
 instance ToJSON Environment
 instance ToJSON Target
 instance ToJSON Deployment
@@ -471,11 +492,13 @@ setDeplArg c@NixopsConfig{..} k v = c { cDeplArgs = Map.insert k v cDeplArgs }
 
 -- | Interpret inputs into a NixopsConfig
 mkConfig :: Options -> Text -> Branch -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> Elapsed -> IO NixopsConfig
-mkConfig o cGenCmdline (Branch cName) cNixops mTopology cNixpkgsCommit cEnvironment cTarget cElements systemStart = do
-  let cFiles    = deploymentFiles                          cEnvironment cTarget cElements
+mkConfig o cGenCmdline (Branch cName) mNixops mTopology cNixpkgsCommit cEnvironment cTarget cElements systemStart = do
+  let cNixops   = fromMaybe "nixops" mNixops
+      cFiles    = deploymentFiles                          cEnvironment cTarget cElements
       cTopology = flip fromMaybe mTopology $
                   selectTopologyConfig                     cEnvironment         cElements
   cDeplArgs    <- selectDeploymentArgs o cTopology         cEnvironment         cElements systemStart
+  topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
 -- | Write the config file
@@ -501,7 +524,9 @@ readConfig cf = do
   unless (storedFileSet == deducedFileSet) $
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
-  pure c
+  -- Can't read topology file without knowing its name, hence this phasing.
+  topo <- liftIO $ summariseTopology <$> readTopology cTopology
+  pure c { topology = topo }
 
 
 parallelIO :: Options -> [IO a] -> IO ()
@@ -543,14 +568,15 @@ incmd Options{..} bin args = do
 
 -- * Invoking nixops
 --
-nixopsPath :: NixopsConfig -> FilePath
-nixopsPath = fromMaybe "nixops" . cNixops
 
 nixops  :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO ()
 nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO (ExitCode, Text)
 
 nixops  o c (NixopsCmd com) args = cmd  o (format fp $ nixopsPath c) (com : nixopsCmdOptions o c <> args)
 nixops' o c (NixopsCmd com) args = cmd' o (format fp $ nixopsPath c) (com : nixopsCmdOptions o c <> args)
+
+nixopsMaybeLimitNodes :: Options -> [Arg]
+nixopsMaybeLimitNodes (oOnlyOn -> maybeNode) = ((("--include":) . (:[]) . Arg . fromNodeName) <$> maybeNode & fromMaybe [])
 
 
 -- * Deployment lifecycle
@@ -628,18 +654,21 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
     ++ [ "--evaluate-only" | evonly ]
     ++ [ "--build-only"    | buonly ]
     ++ [ "--check"         | check  ]
+    ++ nixopsMaybeLimitNodes o
   echo "Done."
 
 destroy :: Options -> NixopsConfig -> IO ()
 destroy o c@NixopsConfig{..} = do
   printf ("Destroying cluster "%s%"\n") cName
-  nixops (o { oConfirm = True }) c "destroy" []
+  nixops (o { oConfirm = True }) c "destroy"
+    $ nixopsMaybeLimitNodes o
   echo "Done."
 
 delete :: Options -> NixopsConfig -> IO ()
 delete o c@NixopsConfig{..} = do
   printf ("Un-defining cluster "%s%"\n") cName
-  nixops (o { oConfirm = True }) c "delete" []
+  nixops (o { oConfirm = True }) c "delete"
+    $ nixopsMaybeLimitNodes o
   echo "Done."
 
 fromscratch :: Options -> NixopsConfig -> IO ()
@@ -761,8 +790,7 @@ wipeJournals o c@NixopsConfig{..} = do
 
 getJournals :: Options -> NixopsConfig -> IO ()
 getJournals o c@NixopsConfig{..} = do
-  topo@(SimpleTopo cmap) <- summariseTopology <$> readTopology cTopology
-  let nodes = Map.keys cmap
+  let nodes = nodeNames o c
 
   echo "Dumping journald logs on cluster.."
   exec' o c topo ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
@@ -809,7 +837,7 @@ updateNixops o@Options{..} c@NixopsConfig{..} = do
     nixopsStorePath <- inproc "readlink" [format fp outLink] empty
     liftIO $ printf ("Built nixops commit '"%s%"' is at '"%s%"', updating config '"%fp%"'\n")
       (lineToText gitHeadRev) (lineToText nixopsStorePath) configFile
-    writeConfig (Just configFile) $ c { cNixops = Just $ Path.fromText $ lineToText nixopsStorePath <> "/bin/nixops" }
+    writeConfig (Just configFile) $ c { cNixops = Path.fromText $ lineToText nixopsStorePath <> "/bin/nixops" }
     -- Unfortunately, Turtle doesn't seem to provide anything of the form Shell a -> IO a,
     -- that would allow us to smuggle non-Text values out of a Shell monad.
   echo "Done."

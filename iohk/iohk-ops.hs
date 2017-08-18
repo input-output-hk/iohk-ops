@@ -220,13 +220,11 @@ main = do
       when oVerbose $
         printf ("-- config '"%fp%"'\n"%w%"\n") cf c
 
-
       doCommand o c topcmd
     where
         doCommand :: Options -> Ops.NixopsConfig -> Command -> IO ()
         doCommand o c@Ops.NixopsConfig{..} cmd = do
-          Ops.SimpleTopo cmap <- Ops.summariseTopology <$> Ops.readTopology cTopology
-          let nodenames = Map.keys cmap
+          let nodenames = Ops.nodeNames o c
           case cmd of
             -- * setup
             FakeKeys                 -> runFakeKeys
