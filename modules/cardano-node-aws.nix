@@ -9,9 +9,7 @@ params:
       cardanoNodeConfigs = filter (c: c.services.cardano-node.enable)
                (map (node: node.config) (attrValues nodes));
       nodeNameToPublicIP   = name: cardanoAttr "publicIP" nodes.${name}.config.services.cardano-node;
-
       sgByName = x: resources.ec2SecurityGroups.${x};
-      sgs      = map sgByName params.sgNames;
     in  {
       imports = [
         ./amazon-base.nix
@@ -28,7 +26,7 @@ params:
       deployment.ec2.region = mkForce params.region;
       deployment.ec2.accessKeyId = accessKeyId;
       deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor accessKeyId params.region};
-      deployment.ec2.securityGroups = mkForce sgs;
+      deployment.ec2.securityGroups = mkForce (map sgByName params.sgNames);
       deployment.keys = (optionalAttrs (cfg.productionMode  && params.type == "core" && !cfg.hasExplorer)
       (let keyfile = "key${toString params.i}.sk";
        in {

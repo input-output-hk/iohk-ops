@@ -6,7 +6,7 @@ nodes:
 # - Singapore      (ap-southeast-1)
 
 # TODO: replace "ap-southeast-1" with US, North Cal. (us-west-1)
-  
+
   'c-a-1':
     region: eu-central-1
     type: core
@@ -55,47 +55,54 @@ nodes:
     region: eu-central-1
     type: relay
     addr: r-a-1.cardano
-    static-routes: [['c-a-1', 'c-a-3'], ['c-a-2', 'c-a-3'], ['r-a-2', 'r-a-3', 'r-a-1'], ['r-b-1', 'r-b-2']]
+    static-routes: [['c-a-1', 'c-a-3'], ['c-a-2', 'c-a-3'], ['r-a-2', 'r-a-3', 'r-a-1'], ['r-b-1', 'r-b-2', 'explorer']]
     kademlia: false
 
   'r-a-2':
     region: eu-central-1
     type: relay
     addr: r-a-2.cardano
-    static-routes: [['c-a-1', 'c-a-2'], ['c-a-3', 'c-a-2'], ['r-a-3', 'r-a-1', 'r-a-2'], ['r-c-1', 'r-c-2'], ['r-b-1', 'r-b-2']]
+    static-routes: [['c-a-1', 'c-a-2'], ['c-a-3', 'c-a-2'], ['r-a-3', 'r-a-1', 'r-a-2'], ['r-c-1', 'r-c-2'], ['r-b-1', 'r-b-2', 'explorer']]
     kademlia: false
 
   'r-a-3':
     region: eu-central-1
     type: relay
     addr: r-a-3.cardano
-    static-routes: [['c-a-2', 'c-a-1'], ['c-a-3', 'c-a-1'], ['r-a-1', 'r-a-2'], ['r-a-3', 'r-b-1'], ['r-c-1']]
+    static-routes: [['c-a-2', 'c-a-1'], ['c-a-3', 'c-a-1'], ['r-a-1', 'r-a-2'], ['r-a-3', 'r-b-1'], ['r-c-1', 'explorer']]
     kademlia: false
 
   'r-b-1':
     region: ap-northeast-1
     type: relay
     addr: r-b-1.cardano
-    static-routes: [['c-b-1', 'c-b-2'], ['r-a-1', 'r-a-3'], ['r-b-2', 'r-a-2'], ['c-a-3', 'r-c-2']]
+    static-routes: [['c-b-1', 'c-b-2'], ['r-a-1', 'r-a-3'], ['r-b-2', 'r-a-2'], ['c-a-3', 'r-c-2', 'explorer']]
     kademlia: false
 
   'r-b-2':
     region: ap-northeast-1
     type: relay
     addr: r-b-2.cardano
-    static-routes: [['c-b-2', 'c-b-1'], ['r-b-1', 'r-a-2', 'r-a-1'], ['r-c-2', 'r-c-1']]
+    static-routes: [['c-b-2', 'c-b-1'], ['r-b-1', 'r-a-2', 'r-a-1'], ['r-c-2', 'r-c-1', 'explorer']]
     kademlia: false
 
   'r-c-1':
     region: ap-southeast-1
     type: relay
     addr: r-c-1.cardano
-    static-routes: [['c-c-1', 'c-c-2', 'c-a-3'], ['r-a-3', 'r-a-2'], ['r-c-2', 'r-b-2']]
+    static-routes: [['c-c-1', 'c-c-2', 'c-a-3'], ['r-a-3', 'r-a-2'], ['r-c-2', 'r-b-2', 'explorer']]
     kademlia: false
 
   'r-c-2':
     region: ap-southeast-1
     type: relay
     addr: r-c-2.cardano
-    static-routes: [['c-c-2', 'c-c-1'], ['r-b-2', 'r-b-1'], ['r-c-1', 'r-a-2']]
+    static-routes: [['c-c-2', 'c-c-1'], ['r-b-2', 'r-b-1'], ['r-c-1', 'r-a-2', 'explorer']]
+    kademlia: false
+
+  'explorer':
+    region: eu-central-1
+    type: relay
+    addr: explorer.cardano
+    static-routes: [['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     kademlia: false

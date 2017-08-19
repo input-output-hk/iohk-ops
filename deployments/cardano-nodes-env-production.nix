@@ -3,6 +3,7 @@
 with (import ./../lib.nix);
 let
   nodeArgs    = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart; }).nodeArgs;
+  explorer    = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart; }).explorer;
   nodeEnvConf = import ./../modules/cardano-node-prod.nix;
 in
 {

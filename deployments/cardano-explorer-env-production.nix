@@ -3,7 +3,7 @@
 with (import ./../lib.nix);
 
 {
-  sl-explorer = { config, ... }: {
+  explorer = { config, ... }: {
     imports = [ ./../modules/cardano-node-prod.nix ];
 
     deployment.route53 = {
@@ -13,7 +13,7 @@ with (import ./../lib.nix);
 
   resources = {
     elasticIPs = {
-      sl-explorer-ip = { inherit region accessKeyId; };
+      explorer-ip = { inherit region accessKeyId; };
     };
   };
 }

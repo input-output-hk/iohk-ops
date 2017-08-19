@@ -17,14 +17,17 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
                                 i = n - 1;
                              name = x.name; # This is an important identity, let's not break it.
                                     ## For the SG definitions look below in this file:
-                          sgNames = if      spec.type == "core"  then
+                          sgNames = if      name == "explorer" then
+                                      [ "allow-deployer-ssh-${region}"
+                                        "allow-to-explorer-${region}" ]
+                                    else if spec.type == "core"  then
                                       [ "allow-deployer-ssh-${region}"
                                         "allow-cardano-static-peers-${name}-${region}" ]
                                     else if spec.type == "relay" then
                                       [ "allow-deployer-ssh-${region}"
                                         "allow-kademlia-public-udp-${region}"
                                         "allow-cardano-public-tcp-${region}" ]
-                                    else throw "While computing EC2 SGs: unhandled cardano-node type: '${type}', must be either 'core' or 'relay'.";
+                                    else throw "While computing EC2 SGs: unhandled cardano-node type: '${type}', must be either 'core' or 'relay'.  Or must be of an explorer kind : -)";
                              }; } ) topologyList;
     byName        = name: let xs = filter (n: n.name == name) indexed;
                           in if xs != [] then builtins.elemAt xs 0
@@ -34,9 +37,12 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
     #   region        :: String
     #   type          :: String               -- one of: 'core', 'relay'
     #   static-routes :: [['nodeId, 'nodeId]] -- here we go, TupleList..
-    canonical       = builtins.listToAttrs indexed;
-    cores           = filter (x: x.value.type == "core")  indexed;
-    relays          = filter (x: x.value.type == "relay") indexed;
+    cores           = filter (x: x.value.type == "core"  && x.name != "explorer") indexed;
+    relays          = filter (x: x.value.type == "relay" && x.name != "explorer") indexed;
+    explorer        = let explorers = filter (x:            x.name == "explorer") indexed;
+                      in if explorers != [] then (head explorers).value
+                         else throw "Explorer evaluation requested, yet no node named 'explorer' in topology file.";
+    canonical       = builtins.listToAttrs (cores ++ relays);
     ##
     ##
     regionSGNames = region:
@@ -137,6 +143,7 @@ in
   nodeArgs           = canonical;
   cores              = cores;
   relays             = relays;
+  explorer           = explorer;
   securityGroupNames = securityGroupNames;
   securityGroups     = elasticIPsSecurityGroups;
 }

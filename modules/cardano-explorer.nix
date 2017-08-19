@@ -29,7 +29,7 @@ with (import ./../lib.nix);
     services.nginx = {
       enable = true;
       virtualHosts = {
-        "explorer.iohkdev.io" = {
+        "cardano-explorer.aws.iohkdev.io" = {
           # TLS provided by cloudfront
           locations = {
             "/" = {
