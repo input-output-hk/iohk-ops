@@ -113,8 +113,8 @@ newtype URL          = URL          { fromURL          :: Text   } deriving (Fro
 newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
 newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
-newtype Exec         = Exec         { fromExec         :: Text   } deriving (Show)
-newtype Arg          = Arg          { fromArg          :: Text   } deriving (Show)
+newtype Exec         = Exec         { fromExec         :: Text   } deriving (IsString, Show)
+newtype Arg          = Arg          { fromArg          :: Text   } deriving (IsString, Show)
 
 deriving instance Read NodeName
 deriving instance AE.ToJSONKey NodeName
@@ -574,13 +574,13 @@ incmd Options{..} bin args = do
 
 -- * Invoking nixops
 --
-nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO b
+nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO b
 nixops'' executor o c@NixopsConfig{..} com args =
   executor o (format fp cNixops)
-  (fromCmd com : nixopsCmdOptions o c <> args)
+  (fromCmd com : nixopsCmdOptions o c <> fmap fromArg args)
 
-nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO (ExitCode, Text)
-nixops  :: Options -> NixopsConfig -> NixopsCmd -> [Text] -> IO ()
+nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO (ExitCode, Text)
+nixops  :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO ()
 nixops' = nixops'' cmd'
 nixops  = nixops'' cmd
 
@@ -603,19 +603,19 @@ create o c@NixopsConfig{..} = do
   printf ("Creating deployment "%s%"\n") cName
   export "NIX_PATH_LOCKED" "1"
   export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
-  nixops o c "create" $ deploymentFiles cEnvironment cTarget cElements
+  nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
 
 modify :: Options -> NixopsConfig -> IO ()
 modify o@Options{..} c@NixopsConfig{..} = do
   printf ("Syncing Nix->state for deployment "%s%"\n") cName
-  nixops o c "modify" $ deploymentFiles cEnvironment cTarget cElements
+  nixops o c "modify" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
 
   let deplArgs = Map.toList cDeplArgs
                  <> [("topologyYaml", NixFile $ cTopology)] -- A special case, to avoid duplication.
   printf ("Setting deployment arguments:\n")
   forM_ deplArgs $ \(name, val)
     -> printf ("  "%s%": "%s%"\n") (fromNixParam name) (nixValueStr val)
-  nixops o c "set-args" $ concat $ uncurry nixArgCmdline <$> deplArgs
+  nixops o c "set-args" $ Arg <$> (concat $ uncurry nixArgCmdline <$> deplArgs)
 
   printf ("Generating 'topology.nix' from '"%fp%"'..\n") cTopology
   preExisting <- testpath cTopology
@@ -658,8 +658,8 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
   modify o c'
 
   printf ("Deploying cluster "%s%"\n") cName
-  nixops o c' "deploy"
-    $  [ "--max-concurrent-copy", "50", "-j", "4" ]
+  nixops o c' "deploy" $ Arg <$>
+       [ "--max-concurrent-copy", "50", "-j", "4" ]
     ++ [ "--evaluate-only" | evonly ]
     ++ [ "--build-only"    | buonly ]
     ++ [ "--check"         | check  ]
@@ -728,76 +728,73 @@ checkstatus o c = do
   parallelIO o c $ rebootIfDown o c
 
 rebootIfDown :: Options -> NixopsConfig -> NodeName -> IO ()
-rebootIfDown o c (fromNodeName -> node) = do
-  (x, _) <- nixops' o c "ssh" (node : ["-o", "ConnectTimeout=5", "echo", "-n"])
+rebootIfDown o c (Arg . fromNodeName -> node) = do
+  (x, _) <- nixops' o c "ssh" $ (node : ["-o", "ConnectTimeout=5", "echo", "-n"])
   case x of
     ExitSuccess -> return ()
     ExitFailure _ -> do
-      TIO.putStrLn $ "Rebooting " <> node
+      TIO.putStrLn $ "Rebooting " <> fromArg node
       nixops o c "reboot" ["--include", node]
 
-ssh  :: Options -> NixopsConfig -> [Text] -> NodeName -> IO ()
-ssh o c = ssh' o c $ const $ return ()
+ssh  :: Options -> NixopsConfig -> Exec -> [Arg] -> NodeName -> IO ()
+ssh o c e a n = ssh' o c e a n (TIO.putStr . ((fromNodeName n <> "> ") <>))
 
-ssh' :: Options -> NixopsConfig -> (Text -> IO ()) -> [Text] -> NodeName -> IO ()
-ssh' o c f bin (fromNodeName -> node) = do
-  let bin' = node: "--": bin
-  (exitcode, out) <- nixops' o c "ssh" bin'
-  f out
+ssh' :: Options -> NixopsConfig -> Exec -> [Arg] -> NodeName -> (Text -> IO ()) -> IO ()
+ssh' o c exec args (fromNodeName -> node) postFn = do
+  let cmdline = Arg node: "--": Arg (fromExec exec): args
+  (exitcode, out) <- nixops' o c "ssh" cmdline
+  postFn out
   case exitcode of
     ExitSuccess -> return ()
-    ExitFailure code -> TIO.putStrLn $ "ssh cmd '" <> (T.intercalate " " bin') <> "' to '" <> node <> "' failed with " <> showT code
+    ExitFailure code -> TIO.putStrLn $ "ssh cmd '" <> (T.intercalate " " $ fromArg <$> cmdline) <> "' to '" <> node <> "' failed with " <> showT code
+
+parallelSSH :: Options -> NixopsConfig -> Exec -> [Arg] -> IO ()
+parallelSSH o c@NixopsConfig{..} ex as = do
+  parallelIO o c $
+    ssh o c ex as
 
 scpFromNode :: Options -> NixopsConfig -> NodeName -> Text -> Text -> IO ()
 scpFromNode o c (fromNodeName -> node) from to = do
-  (exitcode, _) <- nixops' o c "scp" ["--from", node, from, to]
+  (exitcode, _) <- nixops' o c "scp" $ Arg <$> ["--from", node, from, to]
   case exitcode of
     ExitSuccess -> return ()
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
 
 sshForEach :: Options -> NixopsConfig -> [Text] -> IO ()
 sshForEach o c command =
-  nixops o c "ssh-for-each" ("--": command)
+  nixops o c "ssh-for-each" $ Arg <$> "--": command
 
 deployed'commit :: Options -> NixopsConfig -> NodeName -> IO ()
 deployed'commit o c m = do
-  ssh' o c (\r-> do
-               case cut space r of
-                 (_:path:_) -> do
-                   drv <- incmd o "nix-store" ["--query", "--deriver", T.strip path]
-                   pathExists <- testpath $ fromText $ T.strip drv
-                   unless pathExists $
-                     errorT $ "The derivation used to build the package is not present on the system: " <> T.strip drv
-                   sh $ do
-                     str <- inproc "nix-store" ["--query", "--references", T.strip drv] empty &
-                            inproc "egrep"       ["/nix/store/[a-z0-9]*-cardano-sl-[0-9a-f]{7}\\.drv"] &
-                            inproc "sed" ["-E", "s|/nix/store/[a-z0-9]*-cardano-sl-([0-9a-f]{7})\\.drv|\\1|"]
-                     when (str == "") $
-                       errorT $ "Cannot determine commit id for derivation: " <> T.strip drv
-                     echo $ "The 'cardano-sl' process running on '" <> unsafeTextToLine (fromNodeName m) <> "' has commit id " <> str
-                 [""] -> errorT $ "Looks like 'cardano-node' is down on node '" <> fromNodeName m <> "'"
-                 _    -> errorT $ "Unexpected output from 'pgrep -fa cardano-node': '" <> r <> "' / " <> showT (cut space r))
-    ["pgrep", "-fa", "cardano-node"]
-    m
+  ssh' o c "pgrep" ["-fa", "cardano-node"] m $
+    \r-> do
+      case cut space r of
+        (_:path:_) -> do
+          drv <- incmd o "nix-store" ["--query", "--deriver", T.strip path]
+          pathExists <- testpath $ fromText $ T.strip drv
+          unless pathExists $
+            errorT $ "The derivation used to build the package is not present on the system: " <> T.strip drv
+          sh $ do
+            str <- inproc "nix-store" ["--query", "--references", T.strip drv] empty &
+                   inproc "egrep"       ["/nix/store/[a-z0-9]*-cardano-sl-[0-9a-f]{7}\\.drv"] &
+                   inproc "sed" ["-E", "s|/nix/store/[a-z0-9]*-cardano-sl-([0-9a-f]{7})\\.drv|\\1|"]
+            when (str == "") $
+              errorT $ "Cannot determine commit id for derivation: " <> T.strip drv
+            echo $ "The 'cardano-sl' process running on '" <> unsafeTextToLine (fromNodeName m) <> "' has commit id " <> str
+        [""] -> errorT $ "Looks like 'cardano-node' is down on node '" <> fromNodeName m <> "'"
+        _    -> errorT $ "Unexpected output from 'pgrep -fa cardano-node': '" <> r <> "' / " <> showT (cut space r)
 
 
-exec :: Options -> NixopsConfig -> [Text] -> IO ()
-exec o c@NixopsConfig{..} command = do
-  parallelIO o c $
-    ssh' o c (const $ pure ()) command
-
 foregroundStart :: Options -> NixopsConfig -> NodeName -> IO ()
 foregroundStart o c node =
-  (flip $ flip (ssh' o c)
-    [ "bash", "-c"
-    , "'systemctl show cardano-node --property=ExecStart | sed -e \"s/.*path=\\([^ ]*\\) .*/\\1/\" | xargs grep \"^exec \" | cut -d\" \" -f2-'"])
+  ssh' o c "bash" [ "-c", "'systemctl show cardano-node --property=ExecStart | sed -e \"s/.*path=\\([^ ]*\\) .*/\\1/\" | xargs grep \"^exec \" | cut -d\" \" -f2-'"]
   node $ \unitStartCmd ->
     printf ("Starting Cardano in foreground;  Command line:\n  "%s%"\n") unitStartCmd >>
-    flip (ssh o c) node ["bash", "-c", "'" <> unitStartCmd <> "'"]
+    ssh o c "bash" ["-c", Arg $ "'" <> unitStartCmd <> "'"] node
 
 stop :: Options -> NixopsConfig -> IO ()
 stop o c = echo "Stopping nodes..."
-  >> exec o c ["systemctl", "stop", "cardano-node"]
+  >> parallelSSH o c "systemctl" ["stop", "cardano-node"]
 
 defLogs, profLogs :: [(Text, Text -> Text)]
 defLogs =
@@ -816,8 +813,7 @@ profLogs =
 
 start :: Options -> NixopsConfig -> IO ()
 start o c =
-  parallelIO o c $
-  ssh o c ["bash", "-c", "'" <> rmCmd <> "; " <> startCmd <> "'"]
+  parallelSSH o c "bash" ["-c", Arg $ "'" <> rmCmd <> "; " <> startCmd <> "'"]
   where
     rmCmd = foldl (\str (f, _) -> str <> " " <> f) "rm -f" logs
     startCmd = "systemctl start cardano-node"
@@ -825,12 +821,14 @@ start o c =
 
 date :: Options -> NixopsConfig -> IO ()
 date o c = parallelIO o c $
-  \n -> ssh' o c (\str -> TIO.putStrLn $ fromNodeName n <> ": " <> str) ["date"] n
+  \n -> ssh' o c "date" [] n
+  (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
   echo "Wiping journals on cluster.."
-  exec o c ["bash -c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
+  parallelSSH o c "bash"
+    ["-c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
   echo "Done."
 
 getJournals :: Options -> NixopsConfig -> IO ()
@@ -838,7 +836,8 @@ getJournals o c@NixopsConfig{..} = do
   let nodes = nodeNames o c
 
   echo "Dumping journald logs on cluster.."
-  exec o c ["bash -c", "'rm -f log && journalctl -u cardano-node > log'"]
+  parallelSSH o c "bash"
+    ["-c", "'rm -f log && journalctl -u cardano-node > log'"]
 
   echo "Obtaining dumped journals.."
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
@@ -863,7 +862,7 @@ confirmOrTerminate question = do
 wipeNodeDBs :: Options -> NixopsConfig -> IO ()
 wipeNodeDBs o c@NixopsConfig{..} = do
   confirmOrTerminate "Wipe node DBs on the entire cluster?"
-  exec o c ["rm", "-rf", "/var/lib/cardano-node"]
+  parallelSSH o c "rm" ["-rf", "/var/lib/cardano-node"]
   echo "Done."
 
 updateNixops :: Options -> NixopsConfig -> IO ()

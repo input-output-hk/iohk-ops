@@ -18,7 +18,7 @@ import           Time.System
 
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
-                                                  ,Options(..), NixopsCmd(..), Project(..), URL(..), Arg(..)
+                                                  ,Options(..), NixopsCmd(..), Project(..), URL(..), Exec(..), Arg(..)
                                                   ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every, fromNodeName)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
@@ -98,7 +98,7 @@ data Command where
   AMI                   :: Command
 
   -- * cluster lifecycle
-  Nixops'               :: NixopsCmd -> [Text] -> Command
+  Nixops'               :: NixopsCmd -> [Arg] -> Command
   Create                :: Command
   Modify                :: Command
   Deploy                :: Bool -> Bool -> Bool -> Bool -> Maybe Seconds -> Command
@@ -108,6 +108,7 @@ data Command where
   Info                  :: Command
 
   -- * live cluster ops
+  Ssh                   :: Exec -> [Arg] -> Command
   DeployedCommit        :: NodeName -> Command
   CheckStatus           :: Command
   Start                 :: Command
@@ -177,6 +178,8 @@ centralCommandParser =
    [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
                                 DeployedCommit
                                 <$> parserNodeName Ops.defaultNode)
+   , ("ssh",                    "Execute a command on cluster nodes.  Use --only-on to limit",
+                                Ssh <$> (Exec <$> (argText "CMD" "")) <*> many (Arg <$> (argText "ARG" "")))
    , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
    , ("foreground-start",       "Start cardano (or explorer) on the specified node, in foreground",
                                 ForegroundStart
@@ -247,6 +250,7 @@ runTop o@Options{..} args topcmd = do
             DeployedCommit m         -> Ops.deployed'commit           o c m
             CheckStatus              -> Ops.checkstatus               o c
             ForegroundStart node     -> Ops.foregroundStart           o c node
+            Ssh exec args            -> Ops.parallelSSH               o c exec args
             Start                    -> Ops.start                     o c
             Stop                     -> Ops.stop                      o c
             RunExperiment Nodes      -> Cardano.runexperiment     o c
