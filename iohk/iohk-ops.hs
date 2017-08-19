@@ -59,9 +59,9 @@ parserTarget      = fromMaybe Ops.defaultTarget      <$> optional (optReadLower 
 parserProject     :: Parser Project
 parserProject     = argReadLower "project" $ pure $ Turtle.HelpMessage ("Project to set version of: " <> T.intercalate ", " (lowerShowT <$> (every :: [Project])))
 
-parserNodeName    :: NodeName -> Parser NodeName
-parserNodeName def = (fromMaybe def . (NodeName <$>)) <$> optional (argText "NODE" $ pure $
-                                                                    Turtle.HelpMessage $ "Node to operate on. Defaults to '" <> (fromNodeName $ Ops.defaultNode) <> "'")
+parserNodeName    :: Parser NodeName
+parserNodeName    = NodeName <$> (argText "NODE" $ pure $
+                                   Turtle.HelpMessage $ "Node to operate on. Defaults to '" <> (fromNodeName $ Ops.defaultNode) <> "'")
 
 parserDeployment  :: Parser Deployment
 parserDeployment  = argReadLower "DEPL" (pure $
@@ -177,12 +177,12 @@ centralCommandParser =
    <|> subcommandGroup "Live cluster ops:"
    [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
                                 DeployedCommit
-                                <$> parserNodeName Ops.defaultNode)
+                                <$> parserNodeName)
    , ("ssh",                    "Execute a command on cluster nodes.  Use --only-on to limit",
                                 Ssh <$> (Exec <$> (argText "CMD" "")) <*> many (Arg <$> (argText "ARG" "")))
    , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
    , ("start",                  "Start cardano-node service",                                       pure Start)
-   , ("start-foreground",       "Start cardano (or explorer) on the specified node, in foreground", StartForeground <$> parserNodeName Ops.defaultNode)
+   , ("start-foreground",       "Start cardano (or explorer) on the specified node, in foreground", StartForeground <$> parserNodeName)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
    , ("runexperiment",          "Deploy cluster and perform measurements",                          RunExperiment <$> parserDeployment)
    , ("postexperiment",         "Post-experiments logs dumping (if failed)",                        pure PostExperiment)

@@ -790,7 +790,7 @@ startForeground o c node =
   ssh' o c "bash" [ "-c", "'systemctl show cardano-node --property=ExecStart | sed -e \"s/.*path=\\([^ ]*\\) .*/\\1/\" | xargs grep \"^exec \" | cut -d\" \" -f2-'"]
   node $ \unitStartCmd ->
     printf ("Starting Cardano in foreground;  Command line:\n  "%s%"\n") unitStartCmd >>
-    ssh o c "bash" ["-c", Arg $ "'" <> unitStartCmd <> "'"] node
+    ssh o c "bash" ["-c", Arg $ "'sudo -u cardano-node " <> unitStartCmd <> "'"] node
 
 stop :: Options -> NixopsConfig -> IO ()
 stop o c = echo "Stopping nodes..."
