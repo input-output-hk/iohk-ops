@@ -102,17 +102,19 @@ projectSrcFile Nixops          = error "No corresponding -src.json spec for 'nix
 
 -- * Primitive types
 --
-newtype Branch    = Branch    { fromBranch  :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype Commit    = Commit    { fromCommit  :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype NixParam  = NixParam  { fromNixParam :: Text } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
-newtype NixHash   = NixHash   { fromNixHash :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype NixAttr   = NixAttr   { fromAttr    :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype NixopsCmd = NixopsCmd { fromCmd     :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype Region    = Region    { fromRegion  :: Text } deriving (FromJSON, Generic, Show, IsString)
-newtype URL       = URL       { fromURL     :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype FQDN      = FQDN      { fromFQDN    :: Text } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype IP        = IP        { getIP       :: Text } deriving (Show, Generic, FromField)
-newtype PortNo    = PortNo    { fromPortNo  :: Int  } deriving (FromJSON, Generic, Show, ToJSON)
+newtype Branch       = Branch       { fromBranch       :: Text   } deriving (FromJSON, Generic, Show, IsString)
+newtype Commit       = Commit       { fromCommit       :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
+newtype NixHash      = NixHash      { fromNixHash      :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+newtype NixAttr      = NixAttr      { fromAttr         :: Text   } deriving (FromJSON, Generic, Show, IsString)
+newtype NixopsCmd    = NixopsCmd    { fromCmd          :: Text   } deriving (FromJSON, Generic, Show, IsString)
+newtype Region       = Region       { fromRegion       :: Text   } deriving (FromJSON, Generic, Show, IsString)
+newtype URL          = URL          { fromURL          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
+newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
+newtype Exec         = Exec         { fromExec         :: Text   } deriving (Show)
+newtype Arg          = Arg          { fromArg          :: Text   } deriving (Show)
 
 deriving instance Read NodeName
 deriving instance AE.ToJSONKey NodeName

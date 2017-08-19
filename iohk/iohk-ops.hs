@@ -18,7 +18,7 @@ import           Time.System
 
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
-                                                  ,Options(..), NixopsCmd(..), Project(..), URL(..), Exec(..), Arg(..)
+                                                  ,Options(..), NixopsCmd(..), Project(..), URL(..), Arg(..)
                                                   ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every, fromNodeName)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
@@ -72,11 +72,6 @@ parserDeployments = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
                     <$> ((,,,)
                          <$> (optional parserDeployment) <*> (optional parserDeployment) <*> (optional parserDeployment) <*> (optional parserDeployment))
 
-parserDo :: Parser [Command]
-parserDo = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
-           <$> ((,,,)
-                 <$> (optional centralCommandParser) <*> (optional centralCommandParser) <*> (optional centralCommandParser) <*> (optional centralCommandParser))
-
 
 -- * Central command
 --
@@ -104,7 +99,6 @@ data Command where
 
   -- * cluster lifecycle
   Nixops'               :: NixopsCmd -> [Text] -> Command
-  Do                    :: [Command] -> Command
   Create                :: Command
   Modify                :: Command
   Deploy                :: Bool -> Bool -> Bool -> Bool -> Maybe Seconds -> Command
@@ -148,8 +142,7 @@ centralCommandParser =
                                 <*> parserCommit "Commit to set PROJECT's version to")
     , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
     , ("update-nixops",         "Rebuild and bump 'nixops' to the version checked out in the 'nixops' subdirectory.  WARNING: non-chainable, since it updates the config file.",
-                                pure UpdateNixops)
-    , ("do",                    "Chain commands",                                                   Do <$> parserDo) ]
+                                pure UpdateNixops)]
 
    <|> subcommandGroup "Build-related:"
     [ ("genesis",               "initiate production of Genesis in cardano-sl/genesis subdir",      pure Genesis)
@@ -207,12 +200,15 @@ centralCommandParser =
 
 main :: IO ()
 main = do
-  cmdline <- T.concat . (T.pack <$>) . intersperse " " <$> Sys.getArgs
-  (o@Options{..}, topcmd) <- options "Helper CLI around IOHK NixOps. For example usage see:\n\n  https://github.com/input-output-hk/internal-documentation/wiki/iohk-ops-reference#example-deployment" $
-                             (,) <$> Ops.parserOptions <*> centralCommandParser
+  args <- (Arg . T.pack <$>) <$> Sys.getArgs
+  (opts@Options{..}, topcmds) <- options "Helper CLI around IOHK NixOps. For example usage see:\n\n  https://github.com/input-output-hk/internal-documentation/wiki/iohk-ops-reference#example-deployment" $
+                     (,) <$> Ops.parserOptions <*> many centralCommandParser
+  forM_ topcmds $ runTop opts args
 
+runTop :: Options -> [Arg] -> Command -> IO ()
+runTop o@Options{..} args topcmd = do
   case topcmd of
-    Template{..}                -> runTemplate        o topcmd cmdline
+    Template{..}                -> runTemplate        o topcmd  args
     SetRev       project commit -> runSetRev          o project commit
 
     _ -> do
@@ -222,7 +218,7 @@ main = do
       c <- Ops.readConfig cf
 
       when oVerbose $
-        printf ("-- config '"%fp%"'\n"%w%"\n") cf c
+        printf ("-- command "%s%"\n-- config '"%fp%"'\n") (showT topcmd) cf
 
       doCommand o c topcmd
     where
@@ -240,7 +236,6 @@ main = do
             -- * deployment lifecycle
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
             UpdateNixops             -> Ops.updateNixops              o c
-            Do cmds                  -> sequence_ $ doCommand o c <$> cmds
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
             Deploy ev bu ch ner buh  -> Ops.deploy                    o c ev bu ch (not ner) buh
@@ -270,8 +265,8 @@ main = do
             SetRev   _ _             -> error "impossible"
 
 
-runTemplate :: Options -> Command -> Text -> IO ()
-runTemplate o@Options{..} Template{..} cmdline = do
+runTemplate :: Options -> Command -> [Arg] -> IO ()
+runTemplate o@Options{..} Template{..} args = do
   when (elem (fromBranch tBranch) $ showT <$> (every :: [Deployment])) $
     die $ format ("the branch name "%w%" ambiguously refers to a deployment.  Cannot have that!") (fromBranch tBranch)
   homeDir <- home
@@ -290,6 +285,7 @@ runTemplate o@Options{..} Template{..} cmdline = do
   Ops.GithubSource{..} <- Ops.readSource Ops.githubSource Nixpkgs
 
   systemStart <- timeCurrent
+  let cmdline = T.concat $ intersperse " " $ fromArg <$> args
   config <- Ops.mkConfig o cmdline tBranch tNixops tTopology ghRev tEnvironment tTarget tDeployments systemStart
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
