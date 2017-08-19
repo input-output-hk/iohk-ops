@@ -785,8 +785,8 @@ deployed'commit o c m = do
         _    -> errorT $ "Unexpected output from 'pgrep -fa cardano-node': '" <> r <> "' / " <> showT (cut space r)
 
 
-foregroundStart :: Options -> NixopsConfig -> NodeName -> IO ()
-foregroundStart o c node =
+startForeground :: Options -> NixopsConfig -> NodeName -> IO ()
+startForeground o c node =
   ssh' o c "bash" [ "-c", "'systemctl show cardano-node --property=ExecStart | sed -e \"s/.*path=\\([^ ]*\\) .*/\\1/\" | xargs grep \"^exec \" | cut -d\" \" -f2-'"]
   node $ \unitStartCmd ->
     printf ("Starting Cardano in foreground;  Command line:\n  "%s%"\n") unitStartCmd >>

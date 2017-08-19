@@ -112,7 +112,7 @@ data Command where
   DeployedCommit        :: NodeName -> Command
   CheckStatus           :: Command
   Start                 :: Command
-  ForegroundStart       :: NodeName -> Command
+  StartForeground       :: NodeName -> Command
   Stop                  :: Command
   RunExperiment         :: Deployment -> Command
   PostExperiment        :: Command
@@ -181,10 +181,8 @@ centralCommandParser =
    , ("ssh",                    "Execute a command on cluster nodes.  Use --only-on to limit",
                                 Ssh <$> (Exec <$> (argText "CMD" "")) <*> many (Arg <$> (argText "ARG" "")))
    , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
-   , ("foreground-start",       "Start cardano (or explorer) on the specified node, in foreground",
-                                ForegroundStart
-                                <$> parserNodeName Ops.defaultNode)
    , ("start",                  "Start cardano-node service",                                       pure Start)
+   , ("start-foreground",       "Start cardano (or explorer) on the specified node, in foreground", StartForeground <$> parserNodeName Ops.defaultNode)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
    , ("runexperiment",          "Deploy cluster and perform measurements",                          RunExperiment <$> parserDeployment)
    , ("postexperiment",         "Post-experiments logs dumping (if failed)",                        pure PostExperiment)
@@ -249,7 +247,7 @@ runTop o@Options{..} args topcmd = do
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployed'commit           o c m
             CheckStatus              -> Ops.checkstatus               o c
-            ForegroundStart node     -> Ops.foregroundStart           o c node
+            StartForeground node     -> Ops.startForeground           o c node
             Ssh exec args            -> Ops.parallelSSH               o c exec args
             Start                    -> Ops.start                     o c
             Stop                     -> Ops.stop                      o c
