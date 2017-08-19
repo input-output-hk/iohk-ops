@@ -658,8 +658,8 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
   modify o c'
 
   printf ("Deploying cluster "%s%"\n") cName
-  nixops o c' "deploy" $ Arg <$>
-       [ "--max-concurrent-copy", "50", "-j", "4" ]
+  nixops o c' "deploy"
+    $  [ "--max-concurrent-copy", "50", "-j", "4" ]
     ++ [ "--evaluate-only" | evonly ]
     ++ [ "--build-only"    | buonly ]
     ++ [ "--check"         | check  ]
