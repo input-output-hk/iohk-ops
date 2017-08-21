@@ -4,7 +4,7 @@ args:
     contents: '35.156.156.28'
   systemStart:
     tag: NixInt
-    fromNixInt: 1503109125
+    fromNixInt: 1503321105
   accessKeyId:
     tag: NixStr
     contents: iohk
