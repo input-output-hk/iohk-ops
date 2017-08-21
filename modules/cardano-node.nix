@@ -34,7 +34,8 @@ let
        else "--flat-distr \"${distributionParam}\""))
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
-    (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString cfg.nodeIndex}.sk")
+    (optionalString (cfg.productionMode && cfg.nodeName != "explorer")
+      "--keyfile ${stateDir}key${toString cfg.nodeIndex}.sk")
     (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
