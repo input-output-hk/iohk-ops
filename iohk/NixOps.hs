@@ -694,6 +694,21 @@ fromscratch o c = do
 
 -- * Building
 --
+runSetRev :: Options -> Project -> Commit -> IO ()
+runSetRev o proj rev = do
+  printf ("Setting '"%s%"' commit to "%s%"\n") (lowerShowT proj) (fromCommit rev)
+  spec <- incmd o "nix-prefetch-git" ["--no-deepClone", fromURL $ projectURL proj, fromCommit rev]
+  writeFile (T.unpack $ format fp $ projectSrcFile proj) $ T.unpack spec
+
+runFakeKeys :: IO ()
+runFakeKeys = do
+  echo "Faking keys/key*.sk"
+  testdir "keys"
+    >>= flip unless (mkdir "keys")
+  forM_ ([1..41]) $
+    (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
+  echo "Minimum viable keyset complete."
+
 generateGenesis :: Options -> NixopsConfig -> IO ()
 generateGenesis o NixopsConfig{..} = do
   let cardanoSLDir     = "cardano-sl"
@@ -702,6 +717,8 @@ generateGenesis o NixopsConfig{..} = do
       genFiles         = [ "core/genesis-core-tns.bin"
                          , "genesis-info/tns.log"
                          , "godtossing/genesis-godtossing-tns.bin" ]
+      cardanoBumpFiles = [ "cardano-sl-src.json"
+                         , "pkgs/default.nix" ]
   GitSource{..} <- readSource gitSource CardanoSL
   printf ("Generating genesis using cardano-sl commit "%s%"\n  M:"%d%"\n  N:"%d%"\n")
     (fromCommit gRev) genM genN
@@ -718,7 +735,15 @@ generateGenesis o NixopsConfig{..} = do
     ["--build-mode", "nix", "--iohkops-dir", "..", "--install-as-suffix", genSuffix]
   cmd o "git" (["add"] <> genFiles)
   cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
-  echo "Genesis generated and committed"
+  echo "Genesis generated and committed, bumping 'iohk-op'"
+  cardanoGenesisCommit <- incmd o "git" ["log", "-n1", "--pretty=format:%H"]
+  cd ".."
+  printf ("Please, push commit '"%s%"' to the cardano-sl repository and press Enter.\n-> ") cardanoGenesisCommit
+  _ <- readline
+  runSetRev o CardanoSL $ Commit cardanoGenesisCommit
+  cmd o "pkgs/generate.sh" []
+  cmd o "git" (["add"] <> cardanoBumpFiles)
+  cmd o "git" ["commit", "-m", format ("Bump cardano: Regenerated genesis, M="%d%", N="%d) genM genN]
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"

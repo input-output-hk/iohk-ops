@@ -19,7 +19,7 @@ import           Time.System
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), Project(..), URL(..), Exec(..), Arg(..)
-                                                  ,showT, lowerShowT, errorT, cmd, incmd, projectURL, every, fromNodeName)
+                                                  ,showT, lowerShowT, errorT, cmd, projectURL, every, fromNodeName)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import qualified Timewarp                      as Timewarp
@@ -210,7 +210,7 @@ runTop :: Options -> [Arg] -> Command -> IO ()
 runTop o@Options{..} args topcmd = do
   case topcmd of
     Template{..}                -> runTemplate        o topcmd  args
-    SetRev       project commit -> runSetRev          o project commit
+    SetRev       project commit -> Ops.runSetRev      o project commit
 
     _ -> do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
@@ -227,7 +227,7 @@ runTop o@Options{..} args topcmd = do
         doCommand o c@Ops.NixopsConfig{..} cmd = do
           case cmd of
             -- * setup
-            FakeKeys                 -> runFakeKeys
+            FakeKeys                 -> Ops.runFakeKeys
             -- * building
             Genesis                  -> Ops.generateGenesis           o c
             GenerateIPDHTMappings    -> void $
@@ -295,18 +295,3 @@ runTemplate o@Options{..} Template{..} args = do
   echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
   cmd o "cat" [configFilename]
 runTemplate _ _ _ = error "impossible"
-
-runSetRev :: Options -> Project -> Commit -> IO ()
-runSetRev o proj rev = do
-  printf ("Setting '"%s%"' commit to "%s%"\n") (lowerShowT proj) (fromCommit rev)
-  spec <- incmd o "nix-prefetch-git" ["--no-deepClone", fromURL $ projectURL proj, fromCommit rev]
-  writeFile (T.unpack $ format fp $ Ops.projectSrcFile proj) $ T.unpack spec
-
-runFakeKeys :: IO ()
-runFakeKeys = do
-  echo "Faking keys/key*.sk"
-  testdir "keys"
-    >>= flip unless (mkdir "keys")
-  forM_ ([1..41]) $
-    (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
-  echo "Minimum viable keyset complete."
