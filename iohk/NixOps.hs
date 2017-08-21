@@ -180,7 +180,7 @@ nixpkgsNixosURL (Commit rev) = URL $
 -- | The set of first-class types present in Nix
 data NixValue
   = NixBool Bool
-  | NixInt  { fromNixInt :: Integer }
+  | NixInt  Integer
   | NixStr  Text
   | NixFile FilePath
   deriving (Generic, Show)
@@ -652,7 +652,7 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
       nowHeld                = now `timeAdd` mempty { durationSeconds = holdSecs }
       startE                 = case bumpSystemStartHeldBy of
         Just _  -> nowHeld
-        Nothing -> Elapsed $ fromIntegral $ fromNixInt $ deplArg c startParam (secNixVal nowHeld)
+        Nothing -> Elapsed $ fromIntegral $ (\(NixInt x)-> x) $ deplArg c startParam (secNixVal nowHeld)
       c' = setDeplArg c startParam $ secNixVal startE
   when (isJust bumpSystemStartHeldBy) $ do
     printf ("Setting --system-start to "%s%" ("%d%" minutes into future).  Don't forget to commit config YAML!\n")
