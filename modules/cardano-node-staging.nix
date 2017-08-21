@@ -24,7 +24,7 @@ with (import ./../lib.nix);
     init_config:
 
     instances:
-    - name: cardano-node
+    - name: cardano-node-simple
       search_string: ['cardano-node-simple']
       exact_match: True
       thresholds:
