@@ -116,6 +116,7 @@ newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (Fro
 newtype Exec         = Exec         { fromExec         :: Text   } deriving (IsString, Show)
 newtype Arg          = Arg          { fromArg          :: Text   } deriving (IsString, Show)
 
+deriving instance Eq NodeType
 deriving instance Read NodeName
 deriving instance AE.ToJSONKey NodeName
 fromNodeName :: NodeName -> Text
@@ -286,6 +287,9 @@ instance ToJSON NodeType
 
 topoNodes :: SimpleTopo -> [NodeName]
 topoNodes (SimpleTopo cmap) = Map.keys cmap
+
+topoNCores :: SimpleTopo -> Int
+topoNCores (SimpleTopo cmap) = Map.size $ flip Map.filter cmap ((== NodeCore) . snType)
 
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
@@ -691,24 +695,30 @@ fromscratch o c = do
 -- * Building
 --
 generateGenesis :: Options -> NixopsConfig -> IO ()
-generateGenesis o _c = do
-  let cardanoSLDir         = "cardano-sl"
+generateGenesis o NixopsConfig{..} = do
+  let cardanoSLDir     = "cardano-sl"
+      genSuffix        = "tns"
+      (,) genM genN    = (,) (topoNCores topology) 1200
+      genFiles         = [ "core/genesis-core-tns.bin"
+                         , "genesis-info/tns.log"
+                         , "godtossing/genesis-godtossing-tns.bin" ]
   GitSource{..} <- readSource gitSource CardanoSL
-  printf ("Generating genesis using cardano-sl commit "%s%"\n") $ fromCommit gRev
+  printf ("Generating genesis using cardano-sl commit "%s%"\n  M:"%d%"\n  N:"%d%"\n")
+    (fromCommit gRev) genM genN
   preExisting <- testpath cardanoSLDir
   unless preExisting $
     cmd o "git" ["clone", fromURL $ projectURL CardanoSL, "cardano-sl"]
-  cd "cardano-sl"
+  cd cardanoSLDir
   cmd o "git" ["fetch"]
+  cmd o "git" ["checkout", "master"]
   cmd o "git" ["reset", "--hard", fromCommit gRev]
-  cd ".."
-  export "M" "14"
-  cmd o "cardano-sl/scripts/generate/genesis.sh" ["genesis"]
--- M=14 NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/7648f528de9917933bc104359c9a507c6622925c.tar.gz ./util-scripts/generate-genesis.sh
--- cp genesis-qanet-2017-06-13/core/genesis-core.bin core/genesis-core.bin
--- cp genesis-qanet-2017-06-13/godtossing/genesis-godtossing.bin godtossing/genesis-godtossing.bin
--- cp genesis-qanet-2017-06-13/genesis.info .
--- scp genesis-qanet-2017-06-13/nodes/* staging@cardano:~/staging/keys/
+  export "M" (showT genM)
+  export "N" (showT genN)
+  cmd o "scripts/generate/genesis.sh"
+    ["--build-mode", "nix", "--iohkops-dir", "..", "--install-as-suffix", genSuffix]
+  cmd o "git" (["add"] <> genFiles)
+  cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
+  echo "Genesis generated and committed"
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"
