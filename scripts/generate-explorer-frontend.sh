@@ -8,6 +8,8 @@ source scripts/set_nixpath.sh
 cardano_rev="$(nix-instantiate --eval default.nix -A cardano-sl-static.src.rev|tr -d '"')"
 explorer_path="$(nix-build -A cardano-sl-explorer-static default.nix)"
 
+echo "Building explorer frontend from 'cardano-sl' repository revision:  ${cardano_rev}".
+
 if [ ! -d "cardano-sl" ]; then
   git clone https://github.com/input-output-hk/cardano-sl.git
 fi
@@ -17,3 +19,6 @@ pushd cardano-sl
   git checkout "${cardano_rev}"
   EXPLORER_EXECUTABLE="${explorer_path}"/bin/cardano-explorer-hs2purs ./explorer/frontend/scripts/build.sh
 popd
+
+echo "Built explorer frontend from 'cardano-sl' repository revision:  ${cardano_rev}".
+echo "The output store path is:  ${explorer_path}"
