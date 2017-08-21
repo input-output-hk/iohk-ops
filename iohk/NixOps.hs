@@ -73,7 +73,6 @@ defaultHold          = 1200 :: Seconds -- 20 minutes
 --
 data Project
   = CardanoSL
-  | CardanoExplorer
   | IOHK
   | Nixpkgs
   | Stack2nix
@@ -85,7 +84,6 @@ every = enumFromTo minBound maxBound
 
 projectURL     :: Project -> URL
 projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl.git"
-projectURL     CardanoExplorer = "https://github.com/input-output-hk/cardano-sl-explorer.git"
 projectURL     IOHK            = "https://github.com/input-output-hk/iohk-nixops.git"
 projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
 projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
@@ -93,7 +91,6 @@ projectURL     Nixops          = "https://github.com/input-output-hk/nixops.git"
 
 projectSrcFile :: Project -> FilePath
 projectSrcFile CardanoSL       = "cardano-sl-src.json"
-projectSrcFile CardanoExplorer = "cardano-sl-explorer-src.json"
 projectSrcFile Nixpkgs         = "nixpkgs-src.json"
 projectSrcFile Stack2nix       = "stack2nix-src.json"
 projectSrcFile IOHK            = error "Feeling self-referential?"
