@@ -4,6 +4,7 @@ with (import ./../lib.nix);
 
 let
   instancesPerNode = 10;
+  config = import ../config.nix;
   mkNode = index: {
     name = "instance${toString index}";
     value = {
@@ -14,6 +15,10 @@ let
         services.cardano-node = {
           #topologyFile = "todo";
           enable = true;
+          nodeIndex = 50;
+          inherit (config) genesisN enableP2P;
+          nodeName = "edgenode";
+          type = "relay"; # TODO, pick a better type
         };
       };
     };
