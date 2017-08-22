@@ -35,7 +35,7 @@ with (import ./../lib.nix);
             "/" = {
               # TODO: one day we'll build purescript with Nix!
               # but today, this is built by ./scripts/generate-explorer-frontend.sh
-              root = ./../cardano-sl-explorer/frontend/dist;
+              root = ./../cardano-sl/explorer/frontend/dist;
               # Serve static files or fallback to browser history api
               tryFiles = "$uri /index.html";
             };
