@@ -25,7 +25,7 @@ params:
                    ++ (map (x:
                         { name = x;
                           ip   = nodeNameToPublicIP x; })
-                        params.peers)
+                        params.allNames)
                    ++ (if !(cardanoHasAttr "publicIP" config.services.cardano-node) then []
                        else [ { name = params.name;
                                 ip   = nodeNameToPublicIP params.name; } ]);
