@@ -85,10 +85,21 @@ rec {
     };
   };
 
-  cardano_node_process_monitor = {
+  cardano_node_simple_process_monitor = {
     name = "cardano-node-simple process is down";
     type = "service check";
     query = config: "\"process.up\".over(\"env:${config.deployment.name}\",\"process:cardano-node-simple\").by(\"host\",\"process\").last(5).count_by_status()";
+    monitorOptions.thresholds = {
+      warning = 2;
+      critical = 4;
+      ok = 2;
+    };
+  };
+
+  cardano_explorer_process_monitor = {
+    name = "cardano-explorer process is down";
+    type = "service check";
+    query = config: "\"process.up\".over(\"env:${config.deployment.name}\",\"process:cardano-explorer\").by(\"host\",\"process\").last(5).count_by_status()";
     monitorOptions.thresholds = {
       warning = 2;
       critical = 4;
