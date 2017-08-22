@@ -13,7 +13,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
            let spec = x.value; in
            { name = x.name; value = rec {
                                         inherit (spec) region type kademlia peers;
-                                        inherit systemStart;
+                                        inherit systemStart allNames;
                                 i = n - 1;
                              name = x.name; # This is an important identity, let's not break it.
                                     ## For the SG definitions look below in this file:
@@ -37,6 +37,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
     #   region        :: String
     #   type          :: String               -- one of: 'core', 'relay'
     #   static-routes :: [['nodeId, 'nodeId]] -- here we go, TupleList..
+    allNames        = map (x: x.name) indexed;
     cores           = filter (x: x.value.type == "core"  && x.name != "explorer") indexed;
     relays          = filter (x: x.value.type == "relay" && x.name != "explorer") indexed;
     explorer        = let explorers = filter (x:            x.name == "explorer") indexed;
@@ -90,7 +91,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
             ip = ips."${toString neigh.value.name}-ip";
           in {
               fromPort = nodePort; toPort = nodePort;
-              sourceIp = traceSF (x: "${core.name} allowing peer ${x.address}") ip;
+              sourceIp = ip;
             };
       in {
         "allow-cardano-static-peers-${core.name}-${core.value.region}" = {
