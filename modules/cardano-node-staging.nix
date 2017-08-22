@@ -25,7 +25,7 @@ with (import ./../lib.nix);
 
     instances:
     '' +
-    (if config.services.nodeName = "explorer"
+    (if config.services.nodeName == "explorer"
     then ''
     - name: cardano-explorer
       search_string: ['cardano-explorer']
