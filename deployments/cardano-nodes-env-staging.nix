@@ -17,7 +17,15 @@ in {
         };
       });
 
-      cardano_node_process = mkMonitor (cardano_node_process_monitor // {
+      cardano_node_simple_process = mkMonitor (cardano_node_simple_process_monitor // {
+        message = pagerDutyPolicy.nonCritical;
+        monitorOptions.thresholds = {
+          warning = 3;
+          critical = 4;
+          ok = 1;
+        };
+      });
+      cardano_explorer_process = mkMonitor (cardano_explorer_process_monitor // {
         message = pagerDutyPolicy.nonCritical;
         monitorOptions.thresholds = {
           warning = 3;
