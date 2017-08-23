@@ -44,6 +44,8 @@ params:
 wallet:
   relays: [[${concatStringsSep ", " (map (relayIx: "{\"host\": \"cardano-node-${toString relayIx}.${(envSpecific environment).dnsSuffix}\", \"port\": 3000}")
               (range 0 (params.nRelays - 1)))}]]
+  valency: 3
+  fallbacks: 2
         '';});
         };
       }
