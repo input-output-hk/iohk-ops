@@ -5,7 +5,7 @@
 --  2. commented out some parts, mostly due to external dependencies
 --  3. imported some external definitions (see the 'XXX: added code' section)
 --
-{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings, RecordWildCards, TupleSections #-}
+{-# LANGUAGE DeriveGeneric, GeneralizedNewtypeDeriving, OverloadedStrings, RecordWildCards, TupleSections #-}
 
 -- | Infrastructure for parsing the .yaml network topology file
 module Topology where
@@ -17,6 +17,7 @@ import qualified Data.Aeson.Types       as A
 import qualified Data.ByteString.Char8  as BS.C8
 import qualified Data.HashMap.Lazy      as HM
 import qualified Data.Map.Strict        as M
+import qualified GHC.Generics           as G
 -- import           Network.Broadcast.OutboundQueue.Types
 import qualified Network.DNS            as DNS
 -- import           Pos.Util.Config
@@ -30,7 +31,6 @@ import qualified Network.DNS            as DNS
 import           Data.String
 import           Data.Text
 import           Data.Word
-import qualified Data.Yaml                     as YAML
 
 data NodeType = NodeCore | NodeRelay | NodeEdge
   deriving (Show)
@@ -68,6 +68,11 @@ newtype NodeRegion = NodeRegion Text
 newtype NodeRoutes = NodeRoutes [[NodeName]]
     deriving (Show)
 
+data NodeOrg = IOHK | CF | SGG
+    deriving (Bounded, Eq, Enum, G.Generic, Read, Show)
+instance FromJSON NodeOrg
+instance ToJSON NodeOrg
+
 data NodeMetadata = NodeMetadata
     { -- | Node type
       nmType    :: !NodeType
@@ -83,6 +88,9 @@ data NodeMetadata = NodeMetadata
 
       -- | Should the node register itself with the Kademlia network?
     , nmKademlia :: !RunKademlia
+
+      -- | Should the node register itself with the Kademlia network?
+    , nmOrg :: !(Maybe NodeOrg)
     }
     deriving (Show)
 
@@ -210,6 +218,7 @@ instance FromJSON NodeMetadata where
       nmRoutes   <- obj .: "static-routes"
       nmAddress  <- extractNodeAddr return obj
       nmKademlia <- obj .:? "kademlia" .!= defaultRunKademlia nmType
+      nmOrg      <- obj .:? "org"
       return NodeMetadata{..}
    where
      defaultRunKademlia :: NodeType -> RunKademlia

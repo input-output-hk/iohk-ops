@@ -41,6 +41,7 @@ import           Data.Text.Lazy.Encoding          (encodeUtf8)
 import qualified Data.Vector                   as V
 import qualified Data.Yaml                     as YAML
 import           Data.Yaml                        (FromJSON(..), ToJSON(..))
+import           Debug.Trace                      (trace)
 import qualified Filesystem.Path.CurrentOS     as Path
 import           GHC.Generics              hiding (from, to)
 import           Prelude                   hiding (FilePath)
@@ -70,6 +71,9 @@ defaultHold          = 1200 :: Seconds -- 20 minutes
 
 explorerNode         = NodeName "explorer"
 
+orgs :: [NodeOrg]
+orgs                 = enumFromTo minBound maxBound
+defaultOrg           = IOHK
 
 -- * Projects
 --
@@ -107,6 +111,7 @@ newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (Fro
 newtype NixHash      = NixHash      { fromNixHash      :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr      = NixAttr      { fromAttr         :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd    = NixopsCmd    { fromCmd          :: Text   } deriving (FromJSON, Generic, Show, IsString)
+newtype Org          = Org          { fromOrg          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype Region       = Region       { fromRegion       :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype URL          = URL          { fromURL          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
@@ -262,6 +267,7 @@ data SimpleNode
   =  SimpleNode
      { snType     :: NodeType
      , snRegion   :: NodeRegion
+     , snOrg      :: NodeOrg
      , snFQDN     :: FQDN
      , snPort     :: PortNo
      , snInPeers  :: [NodeName]                  -- ^ Incoming connection edges
@@ -271,10 +277,11 @@ instance ToJSON SimpleNode where-- toJSON = jsonLowerStrip 2
   toJSON SimpleNode{..} = AE.object
    [ "type"        .= (lowerShowT snType & T.stripPrefix "node"
                         & fromMaybe (error "A NodeType constructor gone mad: doesn't start with 'Node'."))
+   , "region"      .= snRegion
+   , "org"         .= snOrg
    , "address"     .= fromFQDN snFQDN
    , "port"        .= fromPortNo snPort
    , "peers"       .= snInPeers
-   , "region"      .= snRegion
    , "kademlia"    .= snKademlia ]
 instance ToJSON NodeRegion
 instance ToJSON NodeName
@@ -292,7 +299,7 @@ topoNCores (SimpleTopo cmap) = Map.size $ flip Map.filter cmap ((== NodeCore) . 
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
   SimpleTopo $ Map.mapWithKey simplifier nodeMap
-  where simplifier node (NodeMetadata snType snRegion (NodeRoutes outRoutes) nmAddr snKademlia) =
+  where simplifier node (NodeMetadata snType snRegion (NodeRoutes outRoutes) nmAddr snKademlia mbOrg) =
           SimpleNode{..}
           where (mPort,  fqdn)   = case nmAddr of
                                      (NodeAddrExact fqdn'  mPort') -> (mPort', fqdn') -- (Ok, bizarrely, this contains FQDNs, even if, well.. : -)
@@ -302,9 +309,13 @@ summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
                                    $ (FQDN . T.pack . BU.toString) $ fqdn
                 snInPeers = Set.toList . Set.fromList
                             $ [ other
-                            | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _)) <- Map.toList nodeMap
-                            , elem node (concat routes) ]
+                              | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _ _)) <- Map.toList nodeMap
+                              , elem node (concat routes) ]
                             <> concat outRoutes
+                snOrg = fromMaybe (trace (T.unpack $ format ("WARNING: node '"%w%"' has no 'org' field specified, defaulting to "%w%".")
+                                          node defaultOrg)
+                                   defaultOrg)
+                        mbOrg
 summariseTopology x = errorT $ format ("Unsupported topology type: "%w) x
 
 dumpTopologyNix :: FilePath -> IO ()
