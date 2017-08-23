@@ -484,7 +484,7 @@ selectDeploymentArgs o _ env delts (Elapsed systemStart) = do
     pure $ Map.fromList $
       staticArgs
       <> [ ("deployerIP",   NixStr deployerIp)
-         , ("systemStart",  NixInt $ fromIntegral systemStart) ]
+         , ("systemStart",  NixInt $ fromIntegral systemStart)]
 
 deplArg    :: NixopsConfig -> NixParam -> NixValue -> NixValue
 deplArg      NixopsConfig{..} k def = Map.lookup k cDeplArgs & fromMaybe def
@@ -612,7 +612,8 @@ modify o@Options{..} c@NixopsConfig{..} = do
   nixops o c "modify" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
 
   let deplArgs = Map.toList cDeplArgs
-                 <> [("topologyYaml", NixFile $ cTopology)] -- A special case, to avoid duplication.
+                 <> [("topologyYaml", NixFile $ cTopology)
+                    ,("environment",  NixStr  $ lowerShowT cEnvironment)]
   printf ("Setting deployment arguments:\n")
   forM_ deplArgs $ \(name, val)
     -> printf ("  "%s%": "%s%"\n") (fromNixParam name) (nixValueStr val)
