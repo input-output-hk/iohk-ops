@@ -42,7 +42,7 @@ params:
         else { text    =
         ''
 wallet:
-  relays: [[${concatStringsSep ", " (map (relayIx: "{\"addr\": \"cardano-node-${toString relayIx}.${(envSpecific environment).dnsSuffix}\", \"port\": 3000}")
+  relays: [[${concatStringsSep ", " (map (relayIx: "{\"host\": \"cardano-node-${toString relayIx}.${(envSpecific environment).dnsSuffix}\", \"port\": 3000}")
               (range 0 (params.nRelays - 1)))}]]
         '';});
         };
