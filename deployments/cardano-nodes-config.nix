@@ -1,6 +1,7 @@
 { accessKeyId, deployerIP
 , topologyFile ? ./../topology.nix
 , systemStart
+, environment
 , ... }:
 
 with (import ./../lib.nix);
@@ -12,26 +13,25 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
     topologyList  = builtins.sort (l: r: l.name < r.name)
                                    (mapAttrsToList (k: v: { name = k; value = v; }) topologySpec);
     regionList    = unique (map (n: n.value.region) topologyList);
+    globalArgs    = {
+      inherit allNames environment firstRelayIndex nRelays systemStart;
+    };
     indexed       = imap (n: x:
            let spec = x.value; in
-           { name = x.name; value = rec {
+           { name = x.name; value = globalArgs // rec {
                                         inherit (spec) region type kademlia peers;
-                                        inherit systemStart allNames;
                                 i = n - 1;
                        relayIndex = if type == "relay" then i - firstRelayIndex else null;
                              name = x.name; # This is an important identity, let's not break it.
                                     ## For the SG definitions look below in this file:
-                          sgNames = if      name == "explorer" then
-                                      [ "allow-deployer-ssh-${region}"
-                                        "allow-to-explorer-${region}" ]
-                                    else if spec.type == "core"  then
+                          sgNames = if      spec.type == "core"  then
                                       [ "allow-deployer-ssh-${region}"
                                         "allow-cardano-static-peers-${name}-${region}" ]
                                     else if spec.type == "relay" then
                                       [ "allow-deployer-ssh-${region}"
                                         "allow-kademlia-public-udp-${region}"
                                         "allow-cardano-public-tcp-${region}" ]
-                                    else throw "While computing EC2 SGs: unhandled cardano-node type: '${type}', must be either 'core' or 'relay'.  Or must be of an explorer kind : -)";
+                                    else throw "While computing EC2 SGs: unhandled cardano-node type: '${type}', must be either 'core' or 'relay'";
                              }; } ) topologyList;
     byName        = name: let xs = filter (n: n.name == name) indexed;
                           in if xs != [] then builtins.elemAt xs 0
@@ -44,13 +44,11 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
     #
     # WARNING: this depends on the sort order, as explained above.
     firstRelay      = findFirst (x: x.value.type == "relay") (throw "No relays in topology, it's sad we can't live..") indexed;
+    nRelays         = length relays;
     firstRelayIndex = firstRelay.value.i;
     allNames        = map (x: x.name) indexed;
     cores           = filter (x: x.value.type == "core")  indexed;
     relays          = filter (x: x.value.type == "relay") indexed;
-    explorer        = let explorers = filter (x: x.name == "explorer") indexed;
-                      in if explorers != [] then (head explorers).value
-                         else throw "Explorer evaluation requested, yet no node named 'explorer' in topology file.";
     canonical       = builtins.listToAttrs (cores ++ relays);
     ##
     ##
@@ -150,9 +148,9 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
 in
 {
   nodeArgs           = canonical;
+  globalArgs         = globalArgs;
   cores              = cores;
   relays             = relays;
-  explorer           = explorer;
   securityGroupNames = securityGroupNames;
   securityGroups     = elasticIPsSecurityGroups;
 }

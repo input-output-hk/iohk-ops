@@ -1,8 +1,8 @@
-{ accessKeyId, ... }:
+{ accessKeyId, environment, ... }:
 
 with (import ./../lib.nix);
 {
-  network.description = "IOHK infrastructure production";
+  network.description = "IOHK infrastructure ${environment}";
 
   hydra = { config, pkgs, resources, ... }: {
 
@@ -11,7 +11,7 @@ with (import ./../lib.nix);
       ./../modules/datadog.nix
     ];
 
-    services.dd-agent.tags = ["env:production"];
+    services.dd-agent.tags = ["env:${environment}"];
 
     deployment.ec2 = {
       elasticIPv4 = resources.elasticIPs.hydra-ip;
@@ -26,7 +26,7 @@ with (import ./../lib.nix);
       ./../modules/papertrail.nix
     ];
 
-    services.dd-agent.tags = ["env:production"];
+    services.dd-agent.tags = ["env:${environment}"];
 
     deployment.ec2 = {
       elasticIPv4 = resources.elasticIPs.cardanod-ip;

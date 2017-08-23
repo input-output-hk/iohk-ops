@@ -1,9 +1,9 @@
-{ accessKeyId, deployerIP, systemStart, ... }:
+{ accessKeyId, deployerIP, systemStart, environment, ... }:
 
 with (import ./../lib.nix);
 let
-  nodeArgs    = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart; }).nodeArgs;
-  nodeEnvConf = import ./../modules/cardano-node-staging.nix;
+  nodeArgs    = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart environment; }).nodeArgs;
+  nodeEnvConf = (import ./../modules/cardano-node-staging.nix { inherit environment; });
 in {
   resources = {
     elasticIPs = mkNodeIPs nodeArgs accessKeyId;

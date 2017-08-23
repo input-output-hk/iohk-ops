@@ -1,3 +1,5 @@
+{ environment, ... }:
+
 with (import ./../lib.nix);
 
 { config, pkgs, resources, ... }: {
@@ -18,9 +20,9 @@ with (import ./../lib.nix);
 
   deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
   deployment.route53.hostName = optionalString (config.services.cardano-node.type == "relay")
-                                "cardano-node-${toString config.services.cardano-node.relayIndex}.aws.iohkdev.io";
+                                "cardano-node-${toString config.services.cardano-node.relayIndex}.${(envSpecific environment).dnsSuffix}";
 
-  services.dd-agent.tags = ["env:staging"];
+  services.dd-agent.tags = ["env:${environment}"];
   services.dd-agent.processConfig = ''
     init_config:
 

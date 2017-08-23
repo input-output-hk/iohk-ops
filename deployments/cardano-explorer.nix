@@ -1,7 +1,7 @@
-{ accessKeyId, deployerIP, systemStart, ... }:
+{ accessKeyId, deployerIP, environment, systemStart, topologyYaml, ... }:
 
 let
-  explorer = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart; }).explorer;
+  explorer = import ./cardano-explorer-config.nix { inherit accessKeyId deployerIP environment systemStart; };
 in
 with (import ./../lib.nix);
 {
@@ -9,9 +9,8 @@ with (import ./../lib.nix);
 
   explorer = {
     imports = [
-      # A node with 1) index 40, 2) no region and 3) in outer tier:
       (import ./../modules/cardano-node-config.nix explorer)
-      ./../modules/cardano-explorer.nix
+      (import ./../modules/cardano-explorer.nix { inherit environment; })
     ];
   };
 }

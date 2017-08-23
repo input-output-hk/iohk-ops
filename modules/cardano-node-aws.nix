@@ -1,4 +1,4 @@
-{ accessKeyId, relays, topologyYaml }:
+{ accessKeyId, topologyYaml, environment }:
 
 with (import ./../lib.nix);
 
@@ -6,9 +6,6 @@ params:
   { config, resources, pkgs, nodes, options, ... }:
     let
       cfg = config.services.cardano-node;
-      cardanoNodeConfigs = filter (c: c.services.cardano-node.enable)
-               (map (node: node.config) (attrValues nodes));
-      nodeNameToPublicIP   = name: nodes.${name}.config.services.cardano-node.publicIP;
       sgByName = x: resources.ec2SecurityGroups.${x};
     in  {
       imports = [
@@ -35,10 +32,18 @@ params:
            user = "cardano-node";
          };
        })) // optionalAttrs (config.services.cardano-node.enable) {
-        "topology.yaml" = {
-          keyFile = topologyYaml;
+        "topology.yaml" =
+        {
           user = "cardano-node";
           permissions = "0400";
+        } //
+        (if config.services.cardano-node.nodeName != "explorer"
+        then { keyFile = topologyYaml; }
+        else { text    =
+        ''
+wallet:
+  relays: [[${concatStringsSep ", " (map (relayIx: "{\"addr\": \"cardano-node-${toString relayIx}.${(envSpecific environment).dnsSuffix}\", \"port\": 3000}")
+              (range 0 (params.nRelays - 1)))}]]
+        '';});
         };
-      };
-    }
+      }

@@ -1,7 +1,7 @@
+{ environment, ... }:
+
 let
-
   explorer = (import ./../default.nix {}).cardano-sl-explorer-static;
-
 in
 
 { config, pkgs, lib, ... }:
@@ -9,9 +9,6 @@ in
 with (import ./../lib.nix);
 
 {
-  options = {
-  };
-
   imports = [ ./common.nix ];
 
   config = {
@@ -29,7 +26,7 @@ with (import ./../lib.nix);
     services.nginx = {
       enable = true;
       virtualHosts = {
-        "cardano-explorer.aws.iohkdev.io" = {
+        "cardano-explorer.${(envSpecific environment).dnsSuffix}" = {
           # TLS provided by cloudfront
           locations = {
             "/" = {

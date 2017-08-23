@@ -1,4 +1,4 @@
-{ accessKeyId, ... }:
+{ accessKeyId, environment, ... }:
 
 with (import ./../lib.nix);
 
@@ -7,7 +7,7 @@ with (import ./../lib.nix);
     imports = [ ./../modules/cardano-node-prod.nix ];
 
     deployment.route53 = {
-      hostName = mkForce "cardano-explorer.aws.iohk.io";
+      hostName = mkForce "cardano-explorer.${(envSpecific environment).dnsSuffix}";
     };
   };
 

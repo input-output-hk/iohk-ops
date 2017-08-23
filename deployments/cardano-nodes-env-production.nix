@@ -1,14 +1,13 @@
-{ accessKeyId, deployerIP, systemStart, ... }:
+{ accessKeyId, deployerIP, systemStart, environment, ... }:
 
 with (import ./../lib.nix);
 let
-  nodeArgs    = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart; }).nodeArgs;
-  explorer    = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart; }).explorer;
+  nodeArgs    = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart environment; }).nodeArgs;
   nodeEnvConf = import ./../modules/cardano-node-prod.nix;
 in
 {
   resources = {
-    elasticIPs = mkNodeIPs nodeArgs accessKeyId;
+    elasticIPs = mkNodeIPs config.nodeArgs accessKeyId;
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       cpu = mkMonitor cpu_monitor;
       disk = mkMonitor disk_monitor;

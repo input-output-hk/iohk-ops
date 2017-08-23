@@ -68,6 +68,8 @@ defaultNixpkgs       = Commit "9b948ea439ddbaa26740ce35543e7e35d2aa6d18"
 
 defaultHold          = 1200 :: Seconds -- 20 minutes
 
+explorerNode         = NodeName "explorer"
+
 
 -- * Projects
 --
@@ -327,10 +329,10 @@ dumpTopologyNix topo = sh $ do
 nodeNames :: Options -> NixopsConfig -> [NodeName]
 nodeNames (oOnlyOn -> Nothing)    NixopsConfig{..} = topoNodes topology
 nodeNames (oOnlyOn -> nodeLimit)  NixopsConfig{..}
-  | Nothing   <- nodeLimit = topoNodes topology
+  | Nothing   <- nodeLimit = topoNodes topology <> [explorerNode]
   | Just node <- nodeLimit
   , SimpleTopo nodeMap <- topology
-  = if Map.member node nodeMap then [node]
+  = if Map.member node nodeMap || node == explorerNode then [node]
     else errorT $ format ("Node '"%s%"' doesn't exist in cluster '"%fp%"'.") (showT $ fromNodeName node) cTopology
 
 

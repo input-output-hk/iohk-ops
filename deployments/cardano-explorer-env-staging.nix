@@ -1,13 +1,13 @@
-{ accessKeyId, ... }:
+{ accessKeyId, environment, ... }:
 
 with (import ./../lib.nix);
 
 {
   explorer = { config, ... }: {
-    imports = [ ./../modules/cardano-node-staging.nix ];
+    imports = [ (import ./../modules/cardano-node-staging.nix { inherit environment; }) ];
 
     deployment.route53 = {
-      hostName = mkForce "cardano-explorer.aws.iohkdev.io";
+      hostName = mkForce "cardano-explorer.${(envSpecific environment).dnsSuffix}";
     };
   };
 

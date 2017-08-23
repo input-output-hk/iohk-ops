@@ -112,7 +112,7 @@ in {
       nodeIndex  = mkOption { type = types.int; };
       relayIndex = mkOption { type = types.int; };
       nodeName   = mkOption { type = types.str; };
-      type       = mkOption { type = types.enum [ "core" "relay" ]; default = null; };
+      type       = mkOption { type = types.enum [ "core" "relay" "other" ]; default = null; };
 
       publicIP = mkOption {
         type = types.nullOr types.str;

@@ -1,4 +1,4 @@
-{ accessKeyId, ... }:
+{ accessKeyId, environment, ... }:
 
 with (import ./../lib.nix);
 {
@@ -8,11 +8,11 @@ with (import ./../lib.nix);
       ./../modules/papertrail.nix
     ];
 
-    services.dd-agent.tags = ["env:production"];
+    services.dd-agent.tags = ["env:${environment}"];
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.report-server-ip;
     deployment.route53.accessKeyId = accessKeyId;
-    deployment.route53.hostName = "report-server.aws.iohk.io";
+    deployment.route53.hostName = "report-server.${(envSpecific environment).dnsSuffix}";
   };
   resources = {
     elasticIPs = {

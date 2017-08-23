@@ -14,20 +14,21 @@ in lib // (rec {
   # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
   mergeAttrs = nodes: lib.foldAttrs (a: b: a) [] nodes;
 
-  cardanoByName= x: nodes: let xs = builtins.filter (n: n.config.services.cardano-node.enable == true
-                                     && n.config.services.cardano-node.nodeName == x) nodes;
-                           in if xs != [] then (builtins.elemAt xs 0).config.services.cardano-node
-                              else throw "nodeById: no node with name '${toString x}'";
-  nodeCardano  = n: if !(builtins.hasAttr "cardano-node" n.config.services)
-                    then throw "nodeAttr: node has no 'cardano-node' service configured."
-                    else n.config.services.cardano-node;
-
   mkNodesUsing = constructor: nodes: lib.mapAttrs  (name: nodeParams: constructor nodeParams) nodes;
   mkNodeIPs = nodes: accessKeyId: lib.mapAttrs' (name: value:
       { name = "${toString value.name}-ip";
         value = { inherit (value) region; inherit accessKeyId;};
       }
     ) nodes;
+
+  envSpecific = environment:
+         if environment == "production"  then {
+    dnsSuffix = "aws.iohk.io";
+  } else if environment == "staging"     then {
+    dnsSuffix = "aws.iohkdev.io";
+  } else if environment == "development" then {
+    dnsSuffix = "--DNS-disabled--";
+  } else throw "Invalid environment arg: '${environment}";
 
   # fetch nixpkgs and give the expected hash
   fetchNixpkgsWithNixpkgs = nixpkgs: nixpkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));

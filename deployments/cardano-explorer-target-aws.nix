@@ -1,8 +1,10 @@
-{ accessKeyId, deployerIP, systemStart, topologyYaml, ... }:
+{ accessKeyId, deployerIP, systemStart, topologyYaml, environment, ... }:
 
 with (import ./../lib.nix);
 let
-  explorer    = (import ./cardano-nodes-config.nix         { inherit accessKeyId deployerIP systemStart; }).explorer;
-  nodeTgtConf = (import ./../modules/cardano-node-aws.nix) { inherit accessKeyId topologyYaml; relays = explorer.relays; };
+  nodeTgtConf = import ./../modules/cardano-node-aws.nix { inherit accessKeyId topologyYaml environment; };
+  explorer    = import ./cardano-explorer-config.nix { inherit accessKeyId environment deployerIP systemStart; };
 in
-  mkNodesUsing nodeTgtConf { explorer = explorer; }
+  mkNodesUsing nodeTgtConf { explorer = explorer; } //
+  {
+  }
