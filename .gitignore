@@ -2,6 +2,7 @@
 *#
 .#*
 .stack-work
+/cardano-sl/
 result
 logs/
 logs-analyze/
