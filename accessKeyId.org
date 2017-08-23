@@ -68,6 +68,3 @@
   - [ ] deployments/infrastructure-env-production.nix:38:      hydra-ip = { inherit region accessKeyId; };
   - [ ] deployments/infrastructure-env-production.nix:39:      cardanod-ip = { inherit region accessKeyId; };
   - [ ] modules/cardano-node-staging.nix:21:  deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
-* Stale?
-  - [ ] deployments/timewarp-target-aws.nix:1:{ accessKeyId, ... }:
-  - [ ] deployments/timewarp-target-aws.nix:6:    inherit accessKeyId;

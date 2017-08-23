@@ -26,7 +26,6 @@ script:
   - iohk-ops template --here --environment staging    --config 'csl-staging.yaml'          'csl-staging'          Nodes Explorer ReportServer
   - iohk-ops template --here                          --config 'csl.yaml'                  'csl'                  Nodes Explorer ReportServer
   - iohk-ops template --here --environment staging    --config 'csl-explorer-staging.yaml' 'csl-explorer-staging'       Explorer
-  - iohk-ops template --here                          --config 'tw.yaml'                   'tw'          Timewarp
   - iohk-ops template --here --environment production --config 'inf.yaml'                  'inf'         Infra
   - iohk-ops                                --verbose --config 'csl-production.yaml'       do create deploy --evaluate-only
   - iohk-ops                                --verbose --config 'csl-staging.yaml'          do create deploy --evaluate-only

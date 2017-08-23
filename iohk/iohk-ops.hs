@@ -22,7 +22,6 @@ import           NixOps                           (Branch(..), Commit(..), Envir
                                                   ,showT, lowerShowT, errorT, cmd, projectURL, every, fromNodeName)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
-import qualified Timewarp                      as Timewarp
 import           Topology
 
 
@@ -252,12 +251,10 @@ runTop o@Options{..} args topcmd = do
             Start                    -> Ops.start                     o c
             Stop                     -> Ops.stop                      o c
             RunExperiment Nodes      -> Cardano.runexperiment     o c
-            RunExperiment Timewarp   -> Timewarp.runexperiment        o c
             RunExperiment x          -> die $ "RunExperiment undefined for deployment " <> showT x
             PostExperiment           -> Cardano.postexperiment        o c
             DumpLogs{..}
               | Nodes        <- depl -> Cardano.dumpLogs              o c withProf >> pure ()
-              | Timewarp     <- depl -> Timewarp.dumpLogs             o c withProf >> pure ()
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
             WipeJournals             -> Ops.wipeJournals              o c
             GetJournals              -> Ops.getJournals               o c

@@ -208,7 +208,6 @@ data Deployment
   | Nodes
   | Infra
   | ReportServer
-  | Timewarp
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Deployment
 
@@ -363,9 +362,6 @@ deployments =
       , (Production,  All, "deployments/report-server-env-production.nix")
       , (Staging,     All, "deployments/report-server-env-staging.nix")
       , (Any,         AWS, "deployments/report-server-target-aws.nix") ])
-  , (Timewarp
-    , [ (Any,         All, "deployments/timewarp.nix")
-      , (Any,         AWS, "deployments/timewarp-target-aws.nix") ])
   ]
 
 deploymentSpecs :: Deployment -> [FileSpec]
