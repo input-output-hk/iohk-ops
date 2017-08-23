@@ -3,6 +3,9 @@
 .#*
 .stack-work
 /cardano-sl/
+/keys
+/nixops
+/topology.nix
 result
 logs/
 logs-analyze/
