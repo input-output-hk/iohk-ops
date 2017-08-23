@@ -18,8 +18,8 @@ import           Time.System
 
 
 import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
-                                                  ,Options(..), NixopsCmd(..), Project(..), URL(..), Exec(..), Arg(..)
-                                                  ,showT, lowerShowT, errorT, cmd, projectURL, every, fromNodeName)
+                                                  ,Options(..), NixopsCmd(..), NixopsDepl(..), Project(..), Exec(..), Arg(..)
+                                                  ,showT, lowerShowT, errorT, cmd, every, fromNodeName)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import           Topology
@@ -77,13 +77,13 @@ parserDeployments = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
 data Command where
 
   -- * setup
-  Template              :: { tHere        :: Bool
-                           , tFile        :: Maybe Turtle.FilePath
+  Clone                 :: { cBranch      :: Branch } -> Command
+  Template              :: { tFile        :: Maybe Turtle.FilePath
                            , tNixops      :: Maybe Turtle.FilePath
                            , tTopology    :: Maybe Turtle.FilePath
                            , tEnvironment :: Environment
                            , tTarget      :: Target
-                           , tBranch      :: Branch
+                           , tName        :: NixopsDepl
                            , tDeployments :: [Deployment]
                            } -> Command
   SetRev                :: Project -> Commit -> Bool -> Command
@@ -125,16 +125,17 @@ deriving instance Show Command
 centralCommandParser :: Parser Command
 centralCommandParser =
   (    subcommandGroup "General:"
-    [ ("template",              "Produce (or update) a checkout of BRANCH with a configuration YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
+    [ ("clone",                 "Clone an 'iohk-ops' repository branch",
+                                Clone
+                                <$> parserBranch "'iohk-ops' branch to checkout")
+    , ("template",              "Produce (or update) a checkout of BRANCH with a configuration YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
                                 Template
-                                <$> (fromMaybe False
-                                      <$> optional (switch "here" 'h' "Instead of cloning a subdir, operate on a config in the current directory"))
-                                <*> optional (optPath "config"    'c' "Override the default, environment-dependent config filename")
+                                <$> optional (optPath "config"    'c' "Override the default, environment-dependent config filename")
                                 <*> optional (optPath "nixops"    'n' "Use a specific Nixops binary for this cluster")
                                 <*> optional (optPath "topology"  't' "Cluster configuration.  Defaults to 'topology.yaml'")
                                 <*> parserEnvironment
                                 <*> parserTarget
-                                <*> parserBranch "iohk-nixops branch to check out"
+                                <*> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
                                 <*> parserDeployments)
     , ("set-rev",               "Set commit of PROJECT dependency to COMMIT, and commit the resulting changes",
                                 SetRev
@@ -211,6 +212,7 @@ main = do
 runTop :: Options -> [Arg] -> Command -> IO ()
 runTop o@Options{..} args topcmd = do
   case topcmd of
+    Clone{..}                   -> runClone           o cBranch
     Template{..}                -> runTemplate        o topcmd  args
     SetRev proj comId mCom      -> Ops.runSetRev      o proj comId $
                                    if not mCom then Nothing
@@ -266,32 +268,33 @@ runTop o@Options{..} args topcmd = do
             GetJournals              -> Ops.getJournals               o c
             WipeNodeDBs              -> Ops.wipeNodeDBs               o c
             PrintDate                -> Ops.date                      o c
+            Clone{..}                -> error "impossible"
             Template{..}             -> error "impossible"
             SetRev   _ _ _           -> error "impossible"
 
 
+runClone :: Options -> Branch -> IO ()
+runClone o@Options{..} branch = do
+  let bname     = fromBranch branch
+      branchDir = fromText bname
+  exists <- testpath branchDir
+  if exists
+  then  echo $ "Using existing git clone ..."
+  else cmd o "git" ["clone", Ops.fromURL $ Ops.projectURL IOHKOps, "-b", bname, bname]
+
+  cd branchDir
+  cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
+
 runTemplate :: Options -> Command -> [Arg] -> IO ()
 runTemplate o@Options{..} Template{..} args = do
-  when (elem (fromBranch tBranch) $ showT <$> (every :: [Deployment])) $
-    die $ format ("the branch name "%w%" ambiguously refers to a deployment.  Cannot have that!") (fromBranch tBranch)
-  homeDir <- home
-  let bname     = fromBranch tBranch
-      branchDir = homeDir <> (fromText bname)
-  exists <- testpath branchDir
-  case (exists, tHere) of
-    (_, True) -> pure ()
-    (True, _) -> echo $ "Using existing git clone ..."
-    _         -> cmd o "git" ["clone", fromURL $ projectURL IOHKOps, "-b", bname, bname]
-
-  unless tHere $ do
-    cd branchDir
-    cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
+  when (elem (fromNixopsDepl tName) $ showT <$> (every :: [Deployment])) $
+    die $ format ("the deployment name "%w%" ambiguously refers to a deployment _type_.  Cannot have that!") (fromNixopsDepl tName)
 
   Ops.GithubSource{..} <- Ops.readSource Ops.githubSource Nixpkgs
 
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
-  config <- Ops.mkConfig o cmdline tBranch tNixops tTopology ghRev tEnvironment tTarget tDeployments systemStart
+  config <- Ops.mkConfig o cmdline tName tNixops tTopology ghRev tEnvironment tTarget tDeployments systemStart
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

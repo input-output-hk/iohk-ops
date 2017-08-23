@@ -111,6 +111,7 @@ newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (Fro
 newtype NixHash      = NixHash      { fromNixHash      :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr      = NixAttr      { fromAttr         :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype NixopsCmd    = NixopsCmd    { fromCmd          :: Text   } deriving (FromJSON, Generic, Show, IsString)
+newtype NixopsDepl   = NixopsDepl   { fromNixopsDepl   :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype Org          = Org          { fromOrg          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype Region       = Region       { fromRegion       :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype URL          = URL          { fromURL          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
@@ -424,7 +425,7 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--debug"   | oDebug]   <>
   ["--confirm" | oConfirm] <>
   ["--show-trace"
-  ,"--deployment", cName
+  ,"--deployment", fromNixopsDepl cName
   ,"-I", nixpkgsCommitPath cNixpkgsCommit
   ]
 
@@ -434,7 +435,7 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
 --   If so, the way to do it is to add a deployment argument (see DeplArgs),
 --   which are smuggled across Nix border via --arg/--argstr.
 data NixopsConfig = NixopsConfig
-  { cName             :: Text
+  { cName             :: NixopsDepl
   , cGenCmdline       :: Text
   , cNixops           :: FilePath
   , cNixpkgsCommit    :: Commit
@@ -465,7 +466,7 @@ instance ToJSON Target
 instance ToJSON Deployment
 instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
-   [ "name"         .= cName
+   [ "name"         .= fromNixopsDepl cName
    , "gen-cmdline"  .= cGenCmdline
    , "nixops"       .= cNixops
    , "nixpkgs"      .= fromCommit cNixpkgsCommit
@@ -502,8 +503,8 @@ setDeplArg :: NixopsConfig -> NixParam -> NixValue -> NixopsConfig
 setDeplArg c@NixopsConfig{..} k v = c { cDeplArgs = Map.insert k v cDeplArgs }
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Options -> Text -> Branch -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> Elapsed -> IO NixopsConfig
-mkConfig o cGenCmdline (Branch cName) mNixops mTopology cNixpkgsCommit cEnvironment cTarget cElements systemStart = do
+mkConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> Elapsed -> IO NixopsConfig
+mkConfig o cGenCmdline cName mNixops mTopology cNixpkgsCommit cEnvironment cTarget cElements systemStart = do
   let cNixops   = fromMaybe "nixops" mNixops
       cFiles    = deploymentFiles                          cEnvironment cTarget cElements
       cTopology = flip fromMaybe mTopology $
@@ -611,15 +612,15 @@ create :: Options -> NixopsConfig -> IO ()
 create o c@NixopsConfig{..} = do
   deplExists <- exists o c
   when deplExists $
-    die $ format ("Deployment already exists?: '"%s%"'") cName
-  printf ("Creating deployment "%s%"\n") cName
+    die $ format ("Deployment already exists?: '"%s%"'") $ fromNixopsDepl cName
+  printf ("Creating deployment "%s%"\n") $ fromNixopsDepl cName
   export "NIX_PATH_LOCKED" "1"
   export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
 
 modify :: Options -> NixopsConfig -> IO ()
 modify o@Options{..} c@NixopsConfig{..} = do
-  printf ("Syncing Nix->state for deployment "%s%"\n") cName
+  printf ("Syncing Nix->state for deployment "%s%"\n") $ fromNixopsDepl cName
   nixops o c "modify" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
 
   let deplArgs = Map.toList cDeplArgs
@@ -673,7 +674,7 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
 
   modify o c'
 
-  printf ("Deploying cluster "%s%"\n") cName
+  printf ("Deploying cluster "%s%"\n") $ fromNixopsDepl cName
   nixops o c' "deploy"
     $  [ "--max-concurrent-copy", "50", "-j", "4" ]
     ++ [ "--evaluate-only" | evonly ]
@@ -684,14 +685,14 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
 
 destroy :: Options -> NixopsConfig -> IO ()
 destroy o c@NixopsConfig{..} = do
-  printf ("Destroying cluster "%s%"\n") cName
+  printf ("Destroying cluster "%s%"\n") $ fromNixopsDepl cName
   nixops (o { oConfirm = True }) c "destroy"
     $ nixopsMaybeLimitNodes o
   echo "Done."
 
 delete :: Options -> NixopsConfig -> IO ()
 delete o c@NixopsConfig{..} = do
-  printf ("Un-defining cluster "%s%"\n") cName
+  printf ("Un-defining cluster "%s%"\n") $ fromNixopsDepl cName
   nixops (o { oConfirm = True }) c "delete"
     $ nixopsMaybeLimitNodes o
   echo "Done."
@@ -894,7 +895,7 @@ getJournals o c@NixopsConfig{..} = do
     \(node, outfile) -> scpFromNode o c node "log" outfile
   timeStr <- T.pack . timePrint ISO8601_DateAndTime <$> dateCurrent
 
-  let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) cName timeStr
+  let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) (fromNixopsDepl cName) timeStr
   printf ("Packing journals into "%s%"\n") archive
   cmd o "tar" (["czf", archive, "--force-local"] <> outfiles)
   cmd o "rm" $ "-f" : outfiles
