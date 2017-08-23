@@ -21,11 +21,6 @@ in lib // (rec {
   nodeCardano  = n: if !(builtins.hasAttr "cardano-node" n.config.services)
                     then throw "nodeAttr: node has no 'cardano-node' service configured."
                     else n.config.services.cardano-node;
-  cardanoHasAttr = a: c: builtins.hasAttr a c && c."${a}" != null;
-  cardanoAttr  = a: c:
-                    if !cardanoHasAttr a c
-                    then throw "nodeAttr: cardano node has no attribute '${a}'."
-                    else c."${a}";
 
   mkNodesUsing = constructor: nodes: lib.mapAttrs  (name: nodeParams: constructor nodeParams) nodes;
   mkNodeIPs = nodes: accessKeyId: lib.mapAttrs' (name: value:

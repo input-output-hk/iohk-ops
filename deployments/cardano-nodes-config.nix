@@ -38,9 +38,9 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
     #   type          :: String               -- one of: 'core', 'relay'
     #   static-routes :: [['nodeId, 'nodeId]] -- here we go, TupleList..
     allNames        = map (x: x.name) indexed;
-    cores           = filter (x: x.value.type == "core"  && x.name != "explorer") indexed;
-    relays          = filter (x: x.value.type == "relay" && x.name != "explorer") indexed;
-    explorer        = let explorers = filter (x:            x.name == "explorer") indexed;
+    cores           = filter (x: x.value.type == "core")  indexed;
+    relays          = filter (x: x.value.type == "relay") indexed;
+    explorer        = let explorers = filter (x: x.name == "explorer") indexed;
                       in if explorers != [] then (head explorers).value
                          else throw "Explorer evaluation requested, yet no node named 'explorer' in topology file.";
     canonical       = builtins.listToAttrs (cores ++ relays);

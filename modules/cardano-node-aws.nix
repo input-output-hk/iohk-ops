@@ -8,7 +8,7 @@ params:
       cfg = config.services.cardano-node;
       cardanoNodeConfigs = filter (c: c.services.cardano-node.enable)
                (map (node: node.config) (attrValues nodes));
-      nodeNameToPublicIP   = name: cardanoAttr "publicIP" nodes.${name}.config.services.cardano-node;
+      nodeNameToPublicIP   = name: nodes.${name}.config.services.cardano-node.publicIP;
       sgByName = x: resources.ec2SecurityGroups.${x};
     in  {
       imports = [
@@ -40,26 +40,5 @@ params:
           user = "cardano-node";
           permissions = "0400";
         };
-      }
-#         // optionalAttrs (builtins.trace
-#                           ("Considering whether to generate 'kademlia.yaml' for ${config.services.cardano-node.nodeName}")
-#                           (config.services.cardano-node.enable && params.type == "relay")) {
-#         "kademlia.yaml" = {
-#           user = "cardano-node";
-#           permissions = "0400";
-#           text =
-#           ''
-# identifier: '${config.services.cardano-node.dhtKey}'
-# peers:
-# ${concatStringsSep "\n" (map (r: "  - host: '${nodeNameToPublicIP r.name}'\n    port: ${toString config.services.cardano-node.port}") relays)}
-# address:
-#   host: '0.0.0.0'
-#   port: ${toString config.services.cardano-node.port}
-# externalAddress:
-#   host: '${nodeNameToPublicIP params.name}'
-#   port: ${toString config.services.cardano-node.port}
-#           '';
-#         };
-#       }
-      ;
-    }
+      };
+    };

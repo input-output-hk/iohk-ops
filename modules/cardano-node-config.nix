@@ -5,7 +5,7 @@ with (import ./../lib.nix);
 params:
   { pkgs, nodes, config, ...}:
   let
-    nodeNameToPublicIP   = name: cardanoAttr "publicIP" nodes.${name}.config.services.cardano-node;
+    nodeNameToPublicIP   = name: nodes.${name}.config.services.cardano-node.publicIP;
     neighbourPairs       = map (n: { name = n; ip = nodeNameToPublicIP n; })
                                (builtins.trace "${params.name}: role '${params.type}'" params.peers);
     ppNeighbour          = n: "${n.name}: ${n.ip}";
@@ -26,7 +26,7 @@ params:
                         { name = x;
                           ip   = nodeNameToPublicIP x; })
                         params.allNames)
-                   ++ (if !(cardanoHasAttr "publicIP" config.services.cardano-node) then []
+                   ++ (if !(hasAttr "publicIP" config.services.cardano-node) then []
                        else [ { name = params.name;
                                 ip   = nodeNameToPublicIP params.name; } ]);
     in
