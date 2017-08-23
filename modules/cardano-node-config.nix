@@ -38,6 +38,7 @@ params:
       enable     = true;
       nodeName   = params.name;
       nodeIndex  = params.i;
+      relayIndex = params.relayIndex;
       port       = cconf.nodePort;
       inherit (params) systemStart type;
       inherit (cconf) enableP2P genesisN slotDuration networkDiameter mpcRelayInterval;

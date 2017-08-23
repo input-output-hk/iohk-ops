@@ -6,6 +6,9 @@
 with (import ./../lib.nix);
 
 let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
+    # WARNING: this sort order is key in a number of things:
+    #          - relay numbering
+    #          - DNS naming
     topologyList  = builtins.sort (l: r: l.name < r.name)
                                    (mapAttrsToList (k: v: { name = k; value = v; }) topologySpec);
     regionList    = unique (map (n: n.value.region) topologyList);
@@ -15,6 +18,7 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
                                         inherit (spec) region type kademlia peers;
                                         inherit systemStart allNames;
                                 i = n - 1;
+                       relayIndex = if type == "relay" then i - firstRelayIndex else null;
                              name = x.name; # This is an important identity, let's not break it.
                                     ## For the SG definitions look below in this file:
                           sgNames = if      name == "explorer" then
@@ -37,6 +41,10 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
     #   region        :: String
     #   type          :: String               -- one of: 'core', 'relay'
     #   static-routes :: [['nodeId, 'nodeId]] -- here we go, TupleList..
+    #
+    # WARNING: this depends on the sort order, as explained above.
+    firstRelay      = findFirst (x: x.value.type == "relay") (throw "No relays in topology, it's sad we can't live..") indexed;
+    firstRelayIndex = firstRelay.value.i;
     allNames        = map (x: x.name) indexed;
     cores           = filter (x: x.value.type == "core")  indexed;
     relays          = filter (x: x.value.type == "relay") indexed;

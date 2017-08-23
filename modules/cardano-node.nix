@@ -52,8 +52,6 @@ in {
       port = mkOption { type = types.int; default = 3000; };
       systemStart = mkOption { type = types.int; default = 0; };
 
-      type      = mkOption { type = types.enum [ "core" "relay" "explorer" "report-server" ]; default = null; };
-
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
       dhtKey = mkOption {
@@ -111,8 +109,10 @@ in {
         description = "Does the node has explorer running?";
       };
 
-      nodeIndex = mkOption { type = types.int; };
-      nodeName  = mkOption { type = types.str; };
+      nodeIndex  = mkOption { type = types.int; };
+      relayIndex = mkOption { type = types.int; };
+      nodeName   = mkOption { type = types.str; };
+      type       = mkOption { type = types.enum [ "core" "relay" ]; default = null; };
 
       publicIP = mkOption {
         type = types.nullOr types.str;

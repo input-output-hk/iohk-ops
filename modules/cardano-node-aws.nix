@@ -41,4 +41,4 @@ params:
           permissions = "0400";
         };
       };
-    };
+    }
