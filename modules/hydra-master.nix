@@ -37,8 +37,9 @@ in {
         hostName = "localhost";
         maxJobs = 2;
       })
-      (mkLinux "hydra-build-slave-1.aws.iohkdev.io")
-      (mkLinux "hydra-build-slave-2.aws.iohkdev.io")
+      # TODO: DEVOPS-166: reference linux slaves by DNS
+      (mkLinux "52.59.25.105")
+      (mkLinux "35.159.8.110")
       (mkMac "de302.macincloud.com")
       (mkMac "du516.macincloud.com")
       (mkMac "de528.macincloud.com")
