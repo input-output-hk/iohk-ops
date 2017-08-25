@@ -326,7 +326,6 @@ dumpTopologyNix topo = sh $ do
     Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeArgs." <> x] empty
 
 nodeNames :: Options -> NixopsConfig -> [NodeName]
-nodeNames (oOnlyOn -> Nothing)    NixopsConfig{..} = topoNodes topology
 nodeNames (oOnlyOn -> nodeLimit)  NixopsConfig{..}
   | Nothing   <- nodeLimit = topoNodes topology <> [explorerNode]
   | Just node <- nodeLimit
