@@ -8,7 +8,7 @@ let
     sshKey = "/etc/nix/id_buildfarm";
     sshUser = "root";
     system = "x86_64-linux";
-    supportedFeatures = [ "nixos-test" ];
+    supportedFeatures = [ "kvm" "nixos-test" ];
   };
   mkLinux = hostName: commonBuildMachineOpt // {
     inherit hostName;
