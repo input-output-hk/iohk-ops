@@ -501,10 +501,13 @@ mkConfig o cGenCmdline (Branch cName) mNixops mTopology cNixpkgsCommit cEnvironm
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
+normaliseConfigFilename :: Maybe FilePath -> NixopsConfig -> FilePath
+normaliseConfigFilename mFp NixopsConfig{..} = flip fromMaybe mFp $ envConfigFilename cEnvironment
+
 -- | Write the config file
 writeConfig :: MonadIO m => Maybe FilePath -> NixopsConfig -> m FilePath
 writeConfig mFp c@NixopsConfig{..} = do
-  let configFilename = flip fromMaybe mFp $ envConfigFilename cEnvironment
+  let configFilename = normaliseConfigFilename mFp c
   liftIO $ writeTextFile configFilename $ T.pack $ BU.toString $ YAML.encode c
   pure configFilename
 
@@ -650,9 +653,12 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
         Nothing -> Elapsed $ fromIntegral $ (\(NixInt x)-> x) $ deplArg c startParam (secNixVal nowHeld)
       c' = setDeplArg c startParam $ secNixVal startE
   when (isJust bumpSystemStartHeldBy) $ do
+    let timePretty = (T.pack $ timePrint ISO8601_DateAndTime (timeFromElapsed startE :: DateTime))
     printf ("Setting --system-start to "%s%" ("%d%" minutes into future).  Don't forget to commit config YAML!\n")
-           (T.pack $ timePrint ISO8601_DateAndTime (timeFromElapsed startE :: DateTime)) (div holdSecs 60)
-    void $ writeConfig oConfigFile c'
+           timePretty (div holdSecs 60)
+    cFp <- writeConfig oConfigFile c'
+    cmd o "git" (["add", format fp cFp])
+    cmd o "git" ["commit", "-m", format ("Bump systemStart to"%s) timePretty]
 
   modify o c'
 
