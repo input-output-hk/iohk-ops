@@ -4,7 +4,7 @@ args:
     contents: '35.156.156.28'
   systemStart:
     tag: NixInt
-    contents: 1503437905
+    contents: 1503618635
   accessKeyId:
     tag: NixStr
     contents: cardano-deployer
@@ -12,7 +12,7 @@ gen-cmdline: template --here -c edgenodes-testnet.yaml --environment development
   topology-staging.yaml edgenodes-scaling Nodes
 environment: Development
 nixpkgs: 9b948ea439ddbaa26740ce35543e7e35d2aa6d18
-topology: topology-staging.yaml
+topology: topology-edgenode.yaml
 name: edgenodes-scaling
 files:
 - deployments/firewalls.nix

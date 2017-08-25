@@ -14,7 +14,7 @@ let
   command = toString [
     cfg.executable
     (optionalString (cfg.publicIP != null) "--address ${cfg.publicIP}:${toString cfg.port}")
-    "--listen ${cfg.privateIP}:${toString cfg.port}"
+    (optionalString (cfg.type != "edge") "--listen ${cfg.privateIP}:${toString cfg.port}")
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
@@ -44,6 +44,8 @@ let
     # (optionalString (cfg.type == "relay") "--kademlia /run/keys/kademlia.yaml")
     (optionalString (cfg.topologyFile != null) "--topology ${cfg.topologyFile}")
     "--node-id ${cfg.nodeName}"
+    "--node-type ${cfg.type}"
+    cfg.extraArgs
   ];
 in {
   options = {
@@ -52,13 +54,17 @@ in {
       port = mkOption { type = types.int; default = 3000; };
       systemStart = mkOption { type = types.int; default = 0; };
 
-      type      = mkOption { type = types.enum [ "core" "relay" "explorer" "report-server" ]; default = null; };
+      type      = mkOption { type = types.enum [ "core" "relay" "explorer" "report-server" "edge" ]; default = null; };
 
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
       dhtKey = mkOption {
         type = types.str;
         description = "base64-url string describing dht key";
+      };
+      extraArgs = mkOption {
+        type = types.str;
+        default = "";
       };
       productionMode = mkOption {
         type = types.bool;
