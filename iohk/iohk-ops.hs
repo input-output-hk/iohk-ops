@@ -111,7 +111,7 @@ data Command where
   DeployedCommit        :: NodeName -> Command
   CheckStatus           :: Command
   Start                 :: Command
-  StartForeground       :: NodeName -> Command
+  StartForeground       :: Command
   Stop                  :: Command
   RunExperiment         :: Deployment -> Command
   PostExperiment        :: Command
@@ -181,7 +181,8 @@ centralCommandParser =
                                 Ssh <$> (Exec <$> (argText "CMD" "")) <*> many (Arg <$> (argText "ARG" "")))
    , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
    , ("start",                  "Start cardano-node service",                                       pure Start)
-   , ("start-foreground",       "Start cardano (or explorer) on the specified node, in foreground", StartForeground <$> parserNodeName)
+   , ("start-foreground",       "Start cardano (or explorer) on the specified node (--on), in foreground",
+                                 pure StartForeground)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
    , ("runexperiment",          "Deploy cluster and perform measurements",                          RunExperiment <$> parserDeployment)
    , ("postexperiment",         "Post-experiments logs dumping (if failed)",                        pure PostExperiment)
@@ -223,7 +224,7 @@ runTop o@Options{..} args topcmd = do
       doCommand o c topcmd
     where
         doCommand :: Options -> Ops.NixopsConfig -> Command -> IO ()
-        doCommand o c@Ops.NixopsConfig{..} cmd = do
+        doCommand o@Options{..} c@Ops.NixopsConfig{..} cmd = do
           case cmd of
             -- * setup
             FakeKeys                 -> Ops.runFakeKeys
@@ -246,7 +247,8 @@ runTop o@Options{..} args topcmd = do
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployed'commit           o c m
             CheckStatus              -> Ops.checkstatus               o c
-            StartForeground node     -> Ops.startForeground           o c node
+            StartForeground          -> Ops.startForeground           o c $
+                                        flip fromMaybe oOnlyOn $ error "'start-foreground' requires a global value for --on/-o"
             Ssh exec args            -> Ops.parallelSSH               o c exec args
             Start                    -> Ops.start                     o c
             Stop                     -> Ops.stop                      o c
