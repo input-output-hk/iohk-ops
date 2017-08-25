@@ -177,7 +177,7 @@ centralCommandParser =
    [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
                                 DeployedCommit
                                 <$> parserNodeName)
-   , ("ssh",                    "Execute a command on cluster nodes.  Use --only-on to limit",
+   , ("ssh",                    "Execute a command on cluster nodes.  Use --on to limit",
                                 Ssh <$> (Exec <$> (argText "CMD" "")) <*> many (Arg <$> (argText "ARG" "")))
    , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
    , ("start",                  "Start cardano-node service",                                       pure Start)

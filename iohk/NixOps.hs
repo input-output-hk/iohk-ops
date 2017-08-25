@@ -399,7 +399,7 @@ parserOptions :: Parser Options
 parserOptions = Options
                 <$> optional (optPath "config"    'c' "Configuration file")
                 <*> (optional $ NodeName
-                     <$>     (optText "only-on"   'n' "Limit operation to the specified node"))
+                     <$>     (optText "on"        'o' "Limit operation to the specified node"))
                 <*>           switch  "confirm"   'y' "Pass --confirm to nixops"
                 <*>           switch  "debug"     'd' "Pass --debug to nixops"
                 <*>           switch  "serial"    's' "Disable parallelisation"
