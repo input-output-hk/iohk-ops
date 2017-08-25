@@ -72,10 +72,14 @@ let topologySpec  = (builtins.fromJSON (builtins.readFile topologyFile));
         };
         "allow-cardano-public-tcp-${region}" = {
           inherit region accessKeyId;
-          description = "Cardano TCP public";
+          description = "Cardano TCP public (+WWW)";
           rules = [{
             protocol = "tcp"; # TCP
             fromPort = nodePort; toPort = nodePort;
+            sourceIp = "0.0.0.0/0";
+          }{
+            protocol = "tcp";
+            fromPort = 8080; toPort = 8080;
             sourceIp = "0.0.0.0/0";
           }];
         };

@@ -12,6 +12,7 @@ with (import ./../lib.nix);
 
   services.cardano-node = {
     saveCoreDumps = true;
+    serveEkg = true;
   };
 
   deployment.ec2.elasticIPv4 = resources.elasticIPs.${toString config.services.cardano-node.nodeName + "-ip"};

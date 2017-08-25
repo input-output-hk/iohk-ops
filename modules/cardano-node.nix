@@ -34,6 +34,7 @@ let
        else "--flat-distr \"${distributionParam}\""))
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
+    (optionalString (cfg.serveEkg)             "--ekg-server ${cfg.privateIP}:8080")
     (optionalString (cfg.productionMode && cfg.nodeName != "explorer")
       "--keyfile ${stateDir}key${toString cfg.nodeIndex}.sk")
     (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
@@ -97,6 +98,11 @@ in {
         type = types.nullOr types.str;
         description = "IP:Port of the EKG telemetry sink";
         default = null;
+      };
+      serveEkg = mkOption {
+        type = types.bool;
+        description = "Serve EKG raw on port 80";
+        default = false;
       };
 
       stats = mkOption { type = types.bool; default = false; };
@@ -169,7 +175,7 @@ in {
     services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.nodeIndex);
 
     networking.firewall = {
-      allowedTCPPorts = [ cfg.port ];
+      allowedTCPPorts = [ cfg.port 8080 ]; ## 8080 is EKG
 
       # TODO: securing this depends on CSLA-27
       # NOTE: this implicitly blocks DHCPCD, which uses port 68
