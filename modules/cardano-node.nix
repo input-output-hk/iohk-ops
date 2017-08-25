@@ -40,6 +40,7 @@ let
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
+    "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
     # (optionalString (cfg.type == "relay") "--kademlia /run/keys/kademlia.yaml")
     (optionalString (cfg.topologyFile != null) "--topology ${cfg.topologyFile}")
