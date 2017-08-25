@@ -1,0 +1,13 @@
+nodes:
+
+  'relay-1':
+    region: eu-central-1
+    type: relay
+    host: relay-1.cardano
+    static-routes: [ ]
+    kademlia: false
+  'edgenode':
+    region: eu-central-1
+    type: edge
+    host: edgenode.cardano
+    static-routes: [ ['relay-1'] ]
