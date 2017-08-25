@@ -275,7 +275,7 @@ runTemplate o@Options{..} Template{..} args = do
   case (exists, tHere) of
     (_, True) -> pure ()
     (True, _) -> echo $ "Using existing git clone ..."
-    _         -> cmd o "git" ["clone", fromURL $ projectURL IOHK, "-b", bname, bname]
+    _         -> cmd o "git" ["clone", fromURL $ projectURL IOHKOps, "-b", bname, bname]
 
   unless tHere $ do
     cd branchDir
