@@ -86,7 +86,7 @@ data Command where
                            , tBranch      :: Branch
                            , tDeployments :: [Deployment]
                            } -> Command
-  SetRev                :: Project -> Commit -> Command
+  SetRev                :: Project -> Commit -> Bool -> Command
   FakeKeys              :: Command
   UpdateNixops          :: Command
 
@@ -136,10 +136,12 @@ centralCommandParser =
                                 <*> parserTarget
                                 <*> parserBranch "iohk-nixops branch to check out"
                                 <*> parserDeployments)
-    , ("set-rev",               "Set commit of PROJECT dependency to COMMIT",
+    , ("set-rev",               "Set commit of PROJECT dependency to COMMIT, and commit the resulting changes",
                                 SetRev
                                 <$> parserProject
-                                <*> parserCommit "Commit to set PROJECT's version to")
+                                <*> parserCommit "Commit to set PROJECT's version to"
+                                <*> (fromMaybe True
+                                      <$> optional (switch "commit" 'n' "pkgs/generate.sh, then commit the *-src.json and pkgs/.")))
     , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
     , ("update-nixops",         "Rebuild and bump 'nixops' to the version checked out in the 'nixops' subdirectory.  WARNING: non-chainable, since it updates the config file.",
                                 pure UpdateNixops)]
@@ -210,7 +212,9 @@ runTop :: Options -> [Arg] -> Command -> IO ()
 runTop o@Options{..} args topcmd = do
   case topcmd of
     Template{..}                -> runTemplate        o topcmd  args
-    SetRev       project commit -> Ops.runSetRev      o project commit
+    SetRev proj comId mCom      -> Ops.runSetRev      o proj comId $
+                                   if not mCom then Nothing
+                                   else Just $ format ("Bump "%s%" revision to "%s%"; pkgs/generate.sh") (lowerShowT proj) (fromCommit comId)
 
     _ -> do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
@@ -263,7 +267,7 @@ runTop o@Options{..} args topcmd = do
             WipeNodeDBs              -> Ops.wipeNodeDBs               o c
             PrintDate                -> Ops.date                      o c
             Template{..}             -> error "impossible"
-            SetRev   _ _             -> error "impossible"
+            SetRev   _ _ _           -> error "impossible"
 
 
 runTemplate :: Options -> Command -> [Arg] -> IO ()

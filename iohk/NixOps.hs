@@ -695,11 +695,18 @@ fromscratch o c = do
 
 -- * Building
 --
-runSetRev :: Options -> Project -> Commit -> IO ()
-runSetRev o proj rev = do
+runSetRev :: Options -> Project -> Commit -> Maybe Text -> IO ()
+runSetRev o proj rev mCommitChanges = do
   printf ("Setting '"%s%"' commit to "%s%"\n") (lowerShowT proj) (fromCommit rev)
   spec <- incmd o "nix-prefetch-git" ["--no-deepClone", fromURL $ projectURL proj, fromCommit rev]
-  writeFile (T.unpack $ format fp $ projectSrcFile proj) $ T.unpack spec
+  let revspecFile = format fp $ projectSrcFile proj
+  writeFile (T.unpack $ revspecFile) $ T.unpack spec
+  case mCommitChanges of
+    Nothing  -> pure ()
+    Just msg -> do
+      cmd o "pkgs/generate.sh" []
+      cmd o "git" (["add", revspecFile, "pkgs/"])
+      cmd o "git" ["commit", "-m", msg]
 
 runFakeKeys :: IO ()
 runFakeKeys = do
@@ -718,8 +725,6 @@ generateGenesis o NixopsConfig{..} = do
       genFiles         = [ "core/genesis-core-tns.bin"
                          , "genesis-info/tns.log"
                          , "godtossing/genesis-godtossing-tns.bin" ]
-      cardanoBumpFiles = [ "cardano-sl-src.json"
-                         , "pkgs/default.nix" ]
   GitSource{..} <- readSource gitSource CardanoSL
   printf ("Generating genesis using cardano-sl commit "%s%"\n  M:"%d%"\n  N:"%d%"\n")
     (fromCommit gRev) genM genN
@@ -741,10 +746,7 @@ generateGenesis o NixopsConfig{..} = do
   cd ".."
   printf ("Please, push commit '"%s%"' to the cardano-sl repository and press Enter.\n-> ") cardanoGenesisCommit
   _ <- readline
-  runSetRev o CardanoSL $ Commit cardanoGenesisCommit
-  cmd o "pkgs/generate.sh" []
-  cmd o "git" (["add"] <> cardanoBumpFiles)
-  cmd o "git" ["commit", "-m", format ("Bump cardano: Regenerated genesis, M="%d%", N="%d) genM genN]
+  runSetRev o CardanoSL (Commit cardanoGenesisCommit) (Just $ format ("Bump cardano: Regenerated genesis, M="%d%", N="%d) genM genN)
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"
