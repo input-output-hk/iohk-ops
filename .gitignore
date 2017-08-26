@@ -6,6 +6,7 @@
 /keys
 /nixops
 /topology.nix
+/iohk/dist
 result
 logs/
 logs-analyze/
