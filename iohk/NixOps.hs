@@ -187,24 +187,28 @@ data NixValue
   = NixBool Bool
   | NixInt  Integer
   | NixStr  Text
+  | NixAttrSet (Map.Map Text NixValue)
+  | NixImport NixValue NixValue
   | NixFile FilePath
   deriving (Generic, Show)
 instance FromJSON NixValue
 instance ToJSON NixValue
 
 nixValueStr :: NixValue -> Text
-nixValueStr (NixBool bool) = T.toLower $ showT bool
-nixValueStr (NixInt  int)  = showT int
-nixValueStr (NixStr  str)  = str
-nixValueStr (NixFile f)    = let txt = format fp f
-                             in if T.isPrefixOf "/" txt
-                                then txt else ("./" <> txt)
+nixValueStr (NixBool bool)      = T.toLower $ showT bool
+nixValueStr (NixAttrSet attrs)  = ("{ " <>) . (<> " }") . T.concat
+                                  $ [ k <> " = " <> nixValueStr v <> "; "
+                                    | (k, v) <- Map.toList attrs ]
+nixValueStr (NixImport f as)    = "import " <> nixValueStr f <> " " <>  nixValueStr as
+nixValueStr (NixInt  int)       = showT int
+nixValueStr (NixStr  str)       = "\"" <> str <>"\""          -- XXX: this is naive, as it doesn't do escaping
+nixValueStr (NixFile f)         = let txt = format fp f
+                                  in if T.isPrefixOf "/" txt
+                                     then txt else ("./" <> txt)
 
 nixArgCmdline :: NixParam -> NixValue -> [Text]
-nixArgCmdline (NixParam name) x@(NixBool _) = ["--arg",    name, nixValueStr x]
-nixArgCmdline (NixParam name) x@(NixInt  _) = ["--arg",    name, nixValueStr x]
-nixArgCmdline (NixParam name) x@(NixStr  _) = ["--argstr", name, nixValueStr x]
-nixArgCmdline (NixParam name) x@(NixFile _) = ["--arg",    name, nixValueStr x]
+nixArgCmdline (NixParam name) x@(NixStr _) = ["--argstr", name, T.drop 1 $ nixValueStr x & T.dropEnd 1]
+nixArgCmdline (NixParam name) x            = ["--arg",    name, nixValueStr x]
 
 
 -- * Domain
