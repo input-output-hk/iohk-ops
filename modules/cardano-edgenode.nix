@@ -31,7 +31,7 @@ let
   };
 in { config, resources, pkgs, nodes, options, ... }:
 {
-  imports = [ ./amazon-base.nix ];
+  imports = [ ./amazon-base.nix ./cardano-node-scaling.nix ];
   deployment.ec2.region = mkForce region;
   deployment.ec2.accessKeyId = accessKeyId;
   deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor accessKeyId region};
