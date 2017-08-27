@@ -69,22 +69,22 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                                                                       "allow-cardano-public-tcp-${region}" ]
                                     ++ optionals typeIsRunsCardano  [ ];
                              }; } )
-                     (map (traceDSF id) topologySpecList);
-    # Canonical node parameter format is:
-    #   i             :: Int
-    #   region        :: String
-    #   type          :: String               -- one of: 'core', 'relay'
-    #   static-routes :: [['nodeId, 'nodeId]] -- here we go, TupleList..
-    #
+                     topologySpecList;
+    ## Summary:
+    ##
     cores           = filter     (x: x.value.typeIsCore)              indexed;
     relays          = filter     (x: x.value.typeIsRelay)             indexed;
-    explorer        = (findFirst (x: x.value.typeIsExplorer)     null indexed).value;
-    report-server   = (findFirst (x: x.value.typeIsReportServer) null indexed).value;
-    nodeMap         = builtins.listToAttrs (cores ++ relays);
+    nodeMap         = listToAttrs (cores ++ relays);
     # WARNING: this depends on the sort order, as explained above.
     firstRelay      = findFirst (x: x.value.typeIsRelay) (throw "No relays in topology, it's sad we can't live, but then.. who does?") indexed;
     firstRelayIndex = firstRelay.value.i;
     nRelays         = length relays;
+    ## Fuller map to include "other" nodes:
+    ##
+    explorerNV      = findFirst  (x: x.value.typeIsExplorer)     {}   indexed;
+    reportServerNV  = findFirst  (x: x.value.typeIsReportServer) {}   indexed;
+    fullMap         = nodeMap // listToAttrs (builtins.filter (x: x != {})
+                                              [ explorerNV reportServerNV ]);
 
     orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
 
@@ -105,7 +105,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
 in
 {
   inherit topologyYaml;
-  inherit cores relays nodeMap explorer report-server;
+  inherit cores relays nodeMap fullMap;
   inherit nRelays firstRelayIndex;
   inherit allRegions centralRegion;
   inherit allOrgs defaultOrg;

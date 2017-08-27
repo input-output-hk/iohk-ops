@@ -1,6 +1,6 @@
 { globals, ... }: with (import ./../lib.nix);
 
-let params = globals.report-server;
+let params = globals.fullMap.report-server;
 in
 {
   report-server = { resources, ...}: {
