@@ -1,5 +1,5 @@
 #!/usr/bin/env runhaskell
-{-# LANGUAGE DeriveGeneric, GADTs, OverloadedStrings, RecordWildCards, StandaloneDeriving, TupleSections, ViewPatterns #-}
+{-# LANGUAGE DeriveGeneric, GADTs, LambdaCase, OverloadedStrings, RecordWildCards, StandaloneDeriving, TupleSections, ViewPatterns #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 
 import           Control.Monad                    (forM_)
@@ -17,7 +17,7 @@ import           Time.Types
 import           Time.System
 
 
-import           NixOps                           (Branch(..), Commit(..), Environment(..), Deployment(..), Target(..)
+import           NixOps                           (Branch(..), Commit(..), Confirmation(..), Environment(..), Deployment(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), NixopsDepl(..), Project(..), Exec(..), Arg(..)
                                                   ,showT, lowerShowT, errorT, cmd, every, fromNodeName)
 import qualified NixOps                        as Ops
@@ -71,6 +71,12 @@ parserDeployments = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
                     <$> ((,,,)
                          <$> (optional parserDeployment) <*> (optional parserDeployment) <*> (optional parserDeployment) <*> (optional parserDeployment))
 
+parserConfirmation :: Text -> Parser Confirmation
+parserConfirmation question =
+  (\case False -> Ask question
+         True  -> Confirm)
+  <$> switch "confirm" 'y' "Confirm this particular action, don't ask questions."
+
 
 -- * Central command
 --
@@ -120,7 +126,7 @@ data Command where
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
   WipeJournals          :: Command
   GetJournals           :: Command
-  WipeNodeDBs           :: Command
+  WipeNodeDBs           :: Confirmation -> Command
   PrintDate             :: Command
 deriving instance Show Command
 
@@ -202,7 +208,9 @@ centralCommandParser =
                                 <*> switch "prof"         'p' "Dump profiling data as well (requires service stop)")
    , ("wipe-journals",          "Wipe *all* journald logs on cluster",                              pure WipeJournals)
    , ("get-journals",           "Obtain cardano-node journald logs from cluster",                   pure GetJournals)
-   , ("wipe-node-dbs",          "Wipe *all* node databases on cluster",                             pure WipeNodeDBs)
+   , ("wipe-node-dbs",          "Wipe *all* node databases on cluster (--on limits the scope, though)",
+                                WipeNodeDBs
+                                <$> parserConfirmation "Wipe node DBs on the entire cluster?")
    , ("date",                   "Print date/time",                                                  pure PrintDate)]
 
    <|> subcommandGroup "Other:"
@@ -273,7 +281,7 @@ runTop o@Options{..} args topcmd = do
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
             WipeJournals             -> Ops.wipeJournals              o c
             GetJournals              -> Ops.getJournals               o c
-            WipeNodeDBs              -> Ops.wipeNodeDBs               o c
+            WipeNodeDBs confirm      -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
             Clone{..}                -> error "impossible"
             Template{..}             -> error "impossible"

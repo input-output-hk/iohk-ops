@@ -132,8 +132,22 @@ newtype Arg          = Arg          { fromArg          :: Text   } deriving (IsS
 deriving instance Eq NodeType
 deriving instance Read NodeName
 deriving instance AE.ToJSONKey NodeName
+
 fromNodeName :: NodeName -> Text
 fromNodeName (NodeName x) = x
+
+-- | Sum to track assurance
+data Confirmation = Confirm | Ask Text
+  deriving (Eq, Read, Show)
+
+confirmOrTerminate :: Confirmation -> IO ()
+confirmOrTerminate  Confirm       = pure ()
+confirmOrTerminate (Ask question) = do
+  echo $ unsafeTextToLine question <> "  Enter 'yes' to proceed:"
+  reply <- readline
+  unless (reply == Just "yes") $ do
+    echo "User declined to proceed, exiting."
+    exit $ ExitFailure 1
 
 
 -- * Some orphan instances..
@@ -567,10 +581,11 @@ readConfig Options{..} cf = do
 
 parallelIO' :: Options -> NixopsConfig -> ([NodeName] -> [a]) -> (a -> IO ()) -> IO ()
 parallelIO' o@Options{..} c@NixopsConfig{..} xform action =
-  (if oSerial
-   then sequence_
-   else sh . parallel) $
-  action <$> (xform $ nodeNames o c)
+  ((if oSerial
+    then sequence_
+    else sh . parallel) $
+   action <$> (xform $ nodeNames o c))
+  >> echo ""
 
 parallelIO :: Options -> NixopsConfig -> (NodeName -> IO ()) -> IO ()
 parallelIO o c = parallelIO' o c id
@@ -974,17 +989,10 @@ getJournals o c@NixopsConfig{..} = do
   cmd o "rm" $ "-f" : outfiles
   echo "Done."
 
-confirmOrTerminate :: Text -> IO ()
-confirmOrTerminate question = do
-  echo $ unsafeTextToLine question <> "  Enter 'yes' to proceed:"
-  reply <- readline
-  unless (reply == Just "yes") $ do
-    echo "User declined to proceed, exiting."
-    exit $ ExitFailure 1
-
-wipeNodeDBs :: Options -> NixopsConfig -> IO ()
-wipeNodeDBs o c@NixopsConfig{..} = do
-  confirmOrTerminate "Wipe node DBs on the entire cluster?"
+wipeNodeDBs :: Options -> NixopsConfig -> Confirmation -> IO ()
+wipeNodeDBs o c@NixopsConfig{..} confirmation = do
+  confirmOrTerminate confirmation
+  echo "Wiping node databases.."
   parallelSSH o c "rm" ["-rf", "/var/lib/cardano-node"]
   echo "Done."
 
