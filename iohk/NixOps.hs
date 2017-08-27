@@ -225,6 +225,7 @@ data Environment
   = Any               -- ^ Wildcard or unspecified, depending on context.
   | Production
   | Staging
+  | Federated
   | Development
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Environment
@@ -239,16 +240,19 @@ envConfigFilename :: IsString s => Environment -> s
 envConfigFilename Any           = "config.yaml"
 envConfigFilename Development   = "config.yaml"
 envConfigFilename Staging       = "staging.yaml"
+envConfigFilename Federated     = "staging-federated.yaml"
 envConfigFilename Production    = "production.yaml"
 
 selectDeployer :: Environment -> [Deployment] -> NodeName
-selectDeployer Staging delts | elem Nodes delts = "iohk"
-                             | otherwise        = "cardano-deployer"
-selectDeployer _ _                              = "cardano-deployer"
+selectDeployer Federated _                        = "iohk"
+selectDeployer Staging   delts | elem Nodes delts = "iohk"
+                               | otherwise        = "cardano-deployer"
+selectDeployer _ _                                = "cardano-deployer"
 
 selectTopologyConfig :: Environment -> [Deployment] -> FilePath
 selectTopologyConfig Development _ = "topology-development.yaml"
 selectTopologyConfig Staging     _ = "topology-staging.yaml"
+selectTopologyConfig Federated   _ = "topology-federated.yaml"
 selectTopologyConfig _           _ = "topology.yaml"
 
 deployerIP :: Options -> IO IP
@@ -360,12 +364,14 @@ deployments =
     , [ (Any,         All, "deployments/cardano-explorer.nix")
       , (Development, All, "deployments/cardano-explorer-env-development.nix")
       , (Production,  All, "deployments/cardano-explorer-env-production.nix")
+      , (Federated,   All, "deployments/cardano-explorer-env-staging.nix")
       , (Staging,     All, "deployments/cardano-explorer-env-staging.nix")
       , (Any,         AWS, "deployments/cardano-explorer-target-aws.nix") ])
   , (Nodes
     , [ (Any,         All, "deployments/cardano-nodes.nix")
       , (Development, All, "deployments/cardano-nodes-env-development.nix")
       , (Production,  All, "deployments/cardano-nodes-env-production.nix")
+      , (Federated,   All, "deployments/cardano-nodes-env-staging.nix")
       , (Staging,     All, "deployments/cardano-nodes-env-staging.nix")
       , (Any,         AWS, "deployments/cardano-nodes-target-aws.nix") ])
   , (Infra
@@ -375,6 +381,7 @@ deployments =
   , (ReportServer
     , [ (Any,         All, "deployments/report-server.nix")
       , (Production,  All, "deployments/report-server-env-production.nix")
+      , (Federated,   All, "deployments/report-server-env-staging.nix")
       , (Staging,     All, "deployments/report-server-env-staging.nix")
       , (Any,         AWS, "deployments/report-server-target-aws.nix") ])
   ]
