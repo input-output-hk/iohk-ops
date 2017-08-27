@@ -222,7 +222,7 @@ runTop o@Options{..} args topcmd = do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
       let cf = flip fromMaybe oConfigFile $
                Ops.envConfigFilename Any
-      c <- Ops.readConfig cf
+      c <- Ops.readConfig o cf
 
       when oVerbose $
         printf ("-- command "%s%"\n-- config '"%fp%"'\n") (showT topcmd) cf

@@ -413,6 +413,7 @@ data Options = Options
   , oDebug            :: Bool
   , oSerial           :: Bool
   , oVerbose          :: Bool
+  , oNoComponentCheck :: Bool
   } deriving Show
 
 parserNodeLimit :: Parser (Maybe NodeName)
@@ -427,6 +428,7 @@ parserOptions = Options
                 <*>           switch  "debug"     'd' "Pass --debug to nixops"
                 <*>           switch  "serial"    's' "Disable parallelisation"
                 <*>           switch  "verbose"   'v' "Print all commands that are being run"
+                <*>           switch  "no-component-check" 'p' "Disable deployment/*.nix component check"
 
 nixpkgsCommitPath :: Commit -> Text
 nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
@@ -535,8 +537,8 @@ writeConfig mFp c@NixopsConfig{..} = do
   pure configFilename
 
 -- | Read back config, doing validation
-readConfig :: MonadIO m => FilePath -> m NixopsConfig
-readConfig cf = do
+readConfig :: MonadIO m => Options -> FilePath -> m NixopsConfig
+readConfig Options{..} cf = do
   cfParse <- liftIO $ YAML.decodeFileEither $ Path.encodeString $ cf
   let c@NixopsConfig{..}
         = case cfParse of
@@ -547,7 +549,7 @@ readConfig cf = do
       storedFileSet  = Set.fromList cFiles
       deducedFiles   = deploymentFiles cEnvironment cTarget cElements
       deducedFileSet = Set.fromList $ deducedFiles
-  unless (storedFileSet == deducedFileSet) $
+  unless (storedFileSet == deducedFileSet || oNoComponentCheck) $
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.
