@@ -83,8 +83,9 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     ##
     explorerNV      = findFirst  (x: x.value.typeIsExplorer)     {}   indexed;
     reportServerNV  = findFirst  (x: x.value.typeIsReportServer) {}   indexed;
-    fullMap         = nodeMap // listToAttrs (builtins.filter (x: x != {})
+    fullMap'        = nodeMap // listToAttrs (builtins.filter (x: x != {})
                                               [ explorerNV reportServerNV ]);
+    fullMap         = mapAttrs (k: v: traceDSF id v) fullMap';
 
     orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
 
