@@ -1,4 +1,4 @@
-{ accessKeyId, ... }:
+{ IOHKaccessKeyId, ... }:
 
 with (import ./../lib.nix);
 {
@@ -11,7 +11,7 @@ with (import ./../lib.nix);
     ];
 
     deployment.ec2 = {
-      inherit accessKeyId;
+      inherit IOHKaccessKeyId;
 
       instanceType = mkForce "r3.2xlarge";
       ebsInitialRootDiskSize = mkForce 200;
@@ -30,7 +30,7 @@ with (import ./../lib.nix);
     };
 
     deployment.ec2 = {
-      inherit accessKeyId;
+      inherit IOHKaccessKeyId;
 
       instanceType = mkForce "r3.2xlarge";
       ebsInitialRootDiskSize = mkForce 50;

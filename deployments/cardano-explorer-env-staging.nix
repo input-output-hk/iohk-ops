@@ -1,19 +1,21 @@
-{ accessKeyId, environment, ... }:
+{ globals, ... }: with (import ./../lib.nix);
 
-with (import ./../lib.nix);
+let nodeMap = { inherit (globals) explorer; }; in
 
+(flip mapAttrs nodeMap (name: import ./../modules/cardano-node-staging.nix globals))
+//
 {
-  explorer = { config, ... }: {
-    imports = [ (import ./../modules/cardano-node-staging.nix { inherit environment; }) ];
-
-    deployment.route53 = {
-      hostName = mkForce "cardano-explorer.${(envSpecific environment).dnsSuffix}";
-    };
-  };
-
   resources = {
-    elasticIPs = {
-      explorer-ip = { inherit region accessKeyId; };
-    };
+    elasticIPs = nodesElasticIPs nodeMap;
+    datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
+      cardano_explorer_process = mkMonitor (cardano_explorer_process_monitor // {
+        message = pagerDutyPolicy.nonCritical;
+        monitorOptions.thresholds = {
+          warning = 3;
+          critical = 4;
+          ok = 1;
+        };
+      });
+    });
   };
 }

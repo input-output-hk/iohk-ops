@@ -1,12 +1,12 @@
-{ accessKeyId, deployerIP, systemStart, environment, ... }:
+{ globals, ... }: with (import ./../lib.nix);
 
-with (import ./../lib.nix);
-let
-  nodeArgs    = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart environment; }).nodeArgs;
-  nodeEnvConf = (import ./../modules/cardano-node-staging.nix { inherit environment; });
-in {
+
+
+(flip mapAttrs globals.nodeMap (name: import ./../modules/cardano-node-staging.nix globals))
+//
+{
   resources = {
-    elasticIPs = mkNodeIPs nodeArgs accessKeyId;
+    elasticIPs = nodesElasticIPs globals.nodeMap;
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       cpu = mkMonitor (cpu_monitor // {
         message = pagerDutyPolicy.nonCritical;
@@ -25,14 +25,6 @@ in {
           ok = 1;
         };
       });
-      cardano_explorer_process = mkMonitor (cardano_explorer_process_monitor // {
-        message = pagerDutyPolicy.nonCritical;
-        monitorOptions.thresholds = {
-          warning = 3;
-          critical = 4;
-          ok = 1;
-        };
-      });
     });
   };
-} // (mkNodesUsing (params: nodeEnvConf) nodeArgs)
+}

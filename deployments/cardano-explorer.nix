@@ -1,16 +1,8 @@
-{ accessKeyId, deployerIP, environment, systemStart, topologyYaml, ... }:
+{ globals, ... }: with (import ./../lib.nix);
 
-let
-  explorer = import ./cardano-explorer-config.nix { inherit accessKeyId deployerIP environment systemStart; };
-in
-with (import ./../lib.nix);
-{
-  network.description = "Cardano Explorer";
+let nodeMap = { inherit (globals) explorer; }; in
 
-  explorer = {
-    imports = [
-      (import ./../modules/cardano-node-config.nix explorer)
-      (import ./../modules/cardano-explorer.nix { inherit environment; })
-    ];
-  };
-}
+flip mapAttrs nodeMap
+(name: import ./../modules/cardano-node-config.nix
+       globals
+       [./../modules/cardano-explorer.nix])

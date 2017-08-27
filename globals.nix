@@ -1,0 +1,116 @@
+{ IOHKaccessKeyId, CFaccessKeyId, SGGaccessKeyId
+, deployerIP
+, topologyYaml                  ## The original stuff we're passing on to the nodes.
+, topologyFile ? ./topology.nix ## The iohk-ops post-processed thing.
+, systemStart
+, environment
+, ... }:
+
+with (import ./lib.nix);
+
+let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
+    # WARNING: this sort order is key in a number of things:
+    #          - relay numbering
+    #          - DNS naming
+    topologySpecList = (builtins.sort (l: r: l.name < r.name)
+                                      (mapAttrsToList (k: v: { name = k; value = v;}) topologySpec))
+                       ++ [ explorerSpecElt reportServerSpecElt ];
+    # NOTE: the following definitions for explorerSpecElt and reportServerSpecElt
+    #       allow us to treat all cluster nodes in a uniform way.
+    #       It's as if they were defined in the topology yaml.
+    explorerSpecElt  = { name  = "explorer";
+                         value = { org      = defaultOrg;
+                                   region   = centralRegion;
+                                   type     = "other";
+                                   kademlia = false;
+                                   peers    = [];
+                                   address  = "explorer.cardano";
+                                   port     = 3000; }; };
+    reportServerSpecElt =
+                       { name  = "report-server";
+                         value = { org      = defaultOrg;
+                                   region   = centralRegion;
+                                   type     = "other";
+                                   kademlia = false;
+                                   peers    = [];
+                                   address  = "report-server.cardano";
+                                   port     = 8080; }; };
+
+    allRegions     = unique ([centralRegion] ++ map (n: n.value.region) topologySpecList);
+    centralRegion  = "eu-central-1";
+
+    allOrgs        = [ "IOHK" "CF" "SGG" ];
+    defaultOrg     =   "IOHK";
+    orgAccessKeys  = {  IOHK = IOHKaccessKeyId; CF = CFaccessKeyId; SGG = SGGaccessKeyId; };
+
+    indexed        = imap (n: x:
+            { name = x.name;
+             value = rec {
+                  inherit (x.value) org region kademlia peers address port;
+                                i = n - 1;
+                             name = x.name;       # This is an important identity, let's not break it.
+                         nodeType = x.value.type;
+                       typeIsCore = nodeType == "core";
+                      typeIsRelay = nodeType == "relay";
+                   typeIsExplorer = name == "explorer";
+                typeIsRunsCardano = typeIsCore || typeIsRelay || typeIsExplorer;
+               typeIsReportServer = name == "report-server";
+                      accessKeyId = if elem org allOrgs
+                                    then orgAccessKeys.${org}
+                                    else throw "Node '${name}' has invalid org '${org}' specified -- must be one of: ${toString allOrgs}.";
+                      keyPairName = orgRegionKeyPairName org region;
+                       relayIndex = if typeIsRelay then i - firstRelayIndex else null;
+                                    ## For the SG definitions look below in this file:
+                          sgNames = [ "allow-deployer-ssh-${region}" ]
+                                    ++ optionals typeIsExplorer     [ "allow-to-explorer-${region}" ]
+                                    ++ optionals typeIsReportServer [ "allow-to-report-server-${region}" ]
+                                    ++ optionals typeIsCore         [ "allow-cardano-static-peers-${name}-${region}" ]
+                                    ++ optionals typeIsRelay        [ "allow-kademlia-public-udp-${region}"
+                                                                      "allow-cardano-public-tcp-${region}" ]
+                                    ++ optionals typeIsRunsCardano  [ ];
+                             }; } )
+                     (map (traceDSF id) topologySpecList);
+    # Canonical node parameter format is:
+    #   i             :: Int
+    #   region        :: String
+    #   type          :: String               -- one of: 'core', 'relay'
+    #   static-routes :: [['nodeId, 'nodeId]] -- here we go, TupleList..
+    #
+    cores           = filter     (x: x.value.typeIsCore)              indexed;
+    relays          = filter     (x: x.value.typeIsRelay)             indexed;
+    explorer        = (findFirst (x: x.value.typeIsExplorer)     null indexed).value;
+    report-server   = (findFirst (x: x.value.typeIsReportServer) null indexed).value;
+    nodeMap         = builtins.listToAttrs (cores ++ relays);
+    # WARNING: this depends on the sort order, as explained above.
+    firstRelay      = findFirst (x: x.value.typeIsRelay) (throw "No relays in topology, it's sad we can't live, but then.. who does?") indexed;
+    firstRelayIndex = firstRelay.value.i;
+    nRelays         = length relays;
+
+    orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
+
+    ## orgRegionKeyPairs :: [Region] -> Org -> AccessKeyId -> Map Region (KeypairName, Keypair)
+    orgRegionKeyPairs = regions: { org, accessKeyId }: listToAttrs
+      ## TODO: avoid creating unused keypairs
+      (flip map regions
+        (region:
+          nameValuePair region (nameValuePair (orgRegionKeyPairName org region) { inherit accessKeyId region;})));
+
+    ## keyPairMap :: Map Org (Map Region (KeypairName, Keypair))
+    keyPairMap = flip mapAttrs orgAccessKeys
+      (org: accessKeyId: orgRegionKeyPairs allRegions { inherit org accessKeyId; } );
+
+    ## allNodeKeyPairs :: Map KeypairName Keypair
+    allKeyPairs        = listToAttrs (flatten (map builtins.attrValues (builtins.attrValues keyPairMap)));
+    defaultKeyPairName = orgRegionKeyPairName defaultOrg centralRegion;
+in
+{
+  inherit topologyYaml;
+  inherit cores relays nodeMap explorer report-server;
+  inherit nRelays firstRelayIndex;
+  inherit allRegions centralRegion;
+  inherit allOrgs defaultOrg;
+  inherit orgAccessKeys;
+  inherit keyPairMap allKeyPairs defaultKeyPairName;
+  ###
+  inherit deployerIP systemStart environment;
+}

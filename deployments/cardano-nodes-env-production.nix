@@ -1,13 +1,13 @@
-{ accessKeyId, deployerIP, systemStart, environment, ... }:
+{ ... }:
 
 with (import ./../lib.nix);
-let
-  nodeArgs    = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart environment; }).nodeArgs;
-  nodeEnvConf = import ./../modules/cardano-node-prod.nix;
-in
-{
+
+{ config, ... }:
+
+(mkNodesUsing (params: import ./../modules/cardano-node-prod.nix) config.system.build.iohk.nodeMap)
+// {
   resources = {
-    elasticIPs = mkNodeIPs config.nodeArgs accessKeyId;
+    elasticIPs = nodesElasticIPs config.system.build.iohk.nodeMap;
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       cpu = mkMonitor cpu_monitor;
       disk = mkMonitor disk_monitor;
@@ -17,4 +17,4 @@ in
       cardano_explorer_process = mkMonitor cardano_explorer_process_monitor;
     });
   };
-} // (mkNodesUsing (params: nodeEnvConf) nodeArgs)
+}
