@@ -10,10 +10,10 @@ args:
     contents: iohk
   CFaccessKeyId:
     tag: NixStr
-    contents: iohk
+    contents: third-party
   SGGaccessKeyId:
     tag: NixStr
-    contents: iohk
+    contents: third-party
 gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
   --here staging nodes reportserver explorer
 environment: Federated
