@@ -97,8 +97,9 @@ in lib // (rec {
   narylKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDnCVTNBCSXh9ZwufDT1j5qSD8ktA6JFAUe4sWHCtmrHrAhnUJWOalvWBnqk326k0VkiolntKRCmwUMtaBP4l8QLmthRvmV+ErD1so/xIEVF7ar5Xv/DH3T0uYrz6Im4Tbsd7506SyM+hSRwPuRb26f+LTa1c4KtuD9boNbYG1Vtu2qF1yFRjUpjXnacKkhYOlh1WA51TtTWQ++Z4a7I97kkeacmFyd4c1QLgME7DzfSyCId2IgsfgCIZtYkdK1wziJm/AWXkno+cibkvfPbnwzzK/TYtYk3xv6S/DmfN2rq5dF9rDYCOoXw7/020FGbRERVk4DvrkcIqN8JNxUJj3Z naryl@georgeee-laptop";
   pva701Key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8YZ0rSS3vRPM5ZevUld8HiVjLFFcncf8S0iwQv2vAnGVOVImugx4XbUHXj1wedvVw95/ChlYZhpc63UPA9L5i6sg00Pq+wMSpyZOTIxxKpy+HnIepjLGHQwliMcIqVKMm2rv3huCz7vwJPEjvzxoSUj0QDyTTQnmFNxpjndqYggFGHYM9Q/QtXjukJ+BJo92Tnn7o2e+XSkMZMB+6bMILr9dJC7puw63/bWu7vBwfxSw8n2WOrvVufYCn15RhRNof/j9dcIlARYgHvdtYLt14e78J3Flkb2pn8Hao4QT1gGbvZpn5wDQM7pDjrdv2N9FDbUTXaNYCXaYjjMyWeZE7 pva701@notebook";
   akegaljKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCn11qMrU3M+k/S5ScA8C37pPB7XNxzOmBnF89NkjJ16JhZxlX5tqEfq2Arja+nEG6UB8Js/5MsWTRkVYK6pB+ju0RAb5qyYomU/zZBhf9yOLlWuXTCV1ptdwRxLptjRdJ9a9YC0q715ZnNoIhfbVoR8o/CYLBFKFdFcV8O87R6mWPJ1I2CgTtfW3zjlFD8xRXtirio5EzNaq/Tq4ClQdpAOlfwHErxfk/TQMFY7vLiBdd26YEn+zD95xF4EX9cT7A2BHFD3U7OioTOTiyRwhaP3dFPcy+51fKGvxhBXtdb0fu+OanjQjsezmnBXwzSprKJUj6VjFoB4yt5qHqj0ntx akegalj@gmail.com";
+  alfredoKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFsD6QElYU5ubuUsgLmQh4/PI8ltKiBpmVCGSSV0dQ6h alfredo.dinapoli@iohk.io";
 
-  devKeys = [ volhovmKey georgeeeKey gromakKey gromak2Key flyingleafeKey flyingleafe2Key martoonKey domenKey alanKey jakeKey neongreenKey dshevchenkoKey larsKey philippKey shershKey fersel1Key fersel2Key niklasFPCKey kosergeKey ksaric sectore michaelKey narylKey pva701Key akegaljKey ];
+  devKeys = [ volhovmKey georgeeeKey gromakKey gromak2Key flyingleafeKey flyingleafe2Key martoonKey domenKey alanKey jakeKey neongreenKey dshevchenkoKey larsKey philippKey shershKey fersel1Key fersel2Key niklasFPCKey kosergeKey ksaric sectore michaelKey narylKey pva701Key akegaljKey alfredoKey];
 
   devOpsKeys = [ domenKey georgeeeKey jakeKey kosergeKey michaelKey ];
 })
