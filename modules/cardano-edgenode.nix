@@ -35,6 +35,7 @@ in { config, resources, pkgs, nodes, options, ... }:
   deployment.ec2.region = mkForce region;
   deployment.ec2.accessKeyId = accessKeyId;
   deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor accessKeyId region};
+  deployment.ec2.ebsInitialRootDiskSize = 100;
   containers = listToAttrs (map (mkNode config.networking.publicIPv4 nodes) (range 1 instancesPerNode));
   services.dnsmasq.enable = true;
   networking.extraHosts = ''

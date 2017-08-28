@@ -349,6 +349,7 @@ deployments =
   , (Nodes
     , [ (Any,         All, "deployments/cardano-nodes.nix")
       , (Any,         All, "deployments/edgenodes.nix")
+      , (Any,         All, "deployments/scaling.nix")
       , (Development, All, "deployments/cardano-nodes-env-development.nix")
       , (Production,  All, "deployments/cardano-nodes-env-production.nix")
       , (Staging,     All, "deployments/cardano-nodes-env-staging.nix")
