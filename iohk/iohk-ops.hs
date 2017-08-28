@@ -113,7 +113,6 @@ data Command where
   Ssh                   :: Exec -> [Arg] -> Command
   DeployedCommit        :: NodeName -> Command
   CheckStatus           :: Command
-  Start                 :: Command
   StartForeground       :: Command
   Stop                  :: Command
   RunExperiment         :: Deployment -> Command
@@ -192,7 +191,6 @@ centralCommandParser =
    , ("ssh",                    "Execute a command on cluster nodes.  Use --on to limit",
                                 Ssh <$> (Exec <$> (argText "CMD" "")) <*> many (Arg <$> (argText "ARG" "")))
    , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
-   , ("start",                  "Start cardano-node service",                                       pure Start)
    , ("start-foreground",       "Start cardano (or explorer) on the specified node (--on), in foreground",
                                  pure StartForeground)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
@@ -266,7 +264,6 @@ runTop o@Options{..} args topcmd = do
             StartForeground          -> Ops.startForeground           o c $
                                         flip fromMaybe oOnlyOn $ error "'start-foreground' requires a global value for --on/-o"
             Ssh exec args            -> Ops.parallelSSH               o c exec args
-            Start                    -> Ops.start                     o c
             Stop                     -> Ops.stop                      o c
             RunExperiment Nodes      -> Cardano.runexperiment     o c
             RunExperiment x          -> die $ "RunExperiment undefined for deployment " <> showT x
