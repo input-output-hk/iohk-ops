@@ -300,11 +300,9 @@ runTemplate o@Options{..} Template{..} args = do
   when (elem (fromNixopsDepl tName) $ showT <$> (every :: [Deployment])) $
     die $ format ("the deployment name "%w%" ambiguously refers to a deployment _type_.  Cannot have that!") (fromNixopsDepl tName)
 
-  Ops.GithubSource{..} <- Ops.readSource Ops.githubSource Nixpkgs
-
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
-  config <- Ops.mkConfig o cmdline tName tNixops tTopology ghRev tEnvironment tTarget tDeployments systemStart
+  config <- Ops.mkConfig o cmdline tName tNixops tTopology tEnvironment tTarget tDeployments systemStart
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

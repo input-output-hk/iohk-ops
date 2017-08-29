@@ -439,7 +439,6 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--confirm" | oConfirm] <>
   ["--show-trace"
   ,"--deployment", fromNixopsDepl cName
-  ,"-I", nixpkgsCommitPath cNixpkgsCommit
   ]
 
 
@@ -451,7 +450,6 @@ data NixopsConfig = NixopsConfig
   { cName             :: NixopsDepl
   , cGenCmdline       :: Text
   , cNixops           :: FilePath
-  , cNixpkgsCommit    :: Commit
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
@@ -466,7 +464,6 @@ instance FromJSON NixopsConfig where
         <$> v .: "name"
         <*> v .:? "gen-cmdline" .!= "--unknown--"
         <*> v .:? "nixops"      .!= "nixops"
-        <*> v .:? "nixpkgs"     .!= defaultNixpkgs
         <*> v .:? "topology"    .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
@@ -482,7 +479,6 @@ instance ToJSON NixopsConfig where
    [ "name"         .= fromNixopsDepl cName
    , "gen-cmdline"  .= cGenCmdline
    , "nixops"       .= cNixops
-   , "nixpkgs"      .= fromCommit cNixpkgsCommit
    , "topology"     .= cTopology
    , "environment"  .= showT cEnvironment
    , "target"       .= showT cTarget
@@ -516,8 +512,8 @@ setDeplArg :: NixopsConfig -> NixParam -> NixValue -> NixopsConfig
 setDeplArg c@NixopsConfig{..} k v = c { cDeplArgs = Map.insert k v cDeplArgs }
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Commit -> Environment -> Target -> [Deployment] -> Elapsed -> IO NixopsConfig
-mkConfig o cGenCmdline cName mNixops mTopology cNixpkgsCommit cEnvironment cTarget cElements systemStart = do
+mkConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> IO NixopsConfig
+mkConfig o cGenCmdline cName mNixops mTopology cEnvironment cTarget cElements systemStart = do
   let cNixops   = fromMaybe "nixops" mNixops
       cFiles    = deploymentFiles                          cEnvironment cTarget cElements
       cTopology = flip fromMaybe mTopology $
@@ -630,8 +626,6 @@ create o c@NixopsConfig{..} = do
   when deplExists $
     die $ format ("Deployment already exists?: '"%s%"'") $ fromNixopsDepl cName
   printf ("Creating deployment "%s%"\n") $ fromNixopsDepl cName
-  export "NIX_PATH_LOCKED" "1"
-  export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
 
 modify :: Options -> NixopsConfig -> IO ()
@@ -662,8 +656,6 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
-  export "NIX_PATH_LOCKED" "1"
-  export "NIX_PATH" (nixpkgsCommitPath cNixpkgsCommit)
   when (not evonly) $ do
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
