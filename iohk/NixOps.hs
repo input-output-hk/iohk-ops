@@ -89,11 +89,11 @@ every :: (Bounded a, Enum a) => [a]
 every = enumFromTo minBound maxBound
 
 projectURL     :: Project -> URL
-projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl.git"
-projectURL     IOHKOps         = "https://github.com/input-output-hk/iohk-nixops.git"
-projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs.git"
-projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix.git"
-projectURL     Nixops          = "https://github.com/input-output-hk/nixops.git"
+projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl"
+projectURL     IOHKOps         = "https://github.com/input-output-hk/iohk-nixops"
+projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs"
+projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix"
+projectURL     Nixops          = "https://github.com/input-output-hk/nixops"
 
 projectSrcFile :: Project -> FilePath
 projectSrcFile CardanoSL       = "cardano-sl-src.json"
@@ -155,6 +155,12 @@ data NixSource (a :: SourceKind) where
     , ghSha256          :: NixHash
     } -> NixSource Github
 deriving instance Show (NixSource a)
+instance ToJSON (NixSource Git) where
+  toJSON GitSource{..} = AE.object
+   [ "url"             .= fromURL gUrl
+   , "rev"             .= fromCommit gRev
+   , "sha256"          .= fromNixHash gSha256
+   , "fetchSubmodules" .= lowerShowT gFetchSubmodules ]
 instance FromJSON (NixSource Git) where
   parseJSON = AE.withObject "GitSource" $ \v -> GitSource
       <$> v .: "url"
@@ -718,9 +724,15 @@ fromscratch o c = do
 runSetRev :: Options -> Project -> Commit -> Maybe Text -> IO ()
 runSetRev o proj rev mCommitChanges = do
   printf ("Setting '"%s%"' commit to "%s%"\n") (lowerShowT proj) (fromCommit rev)
-  spec <- incmd o "nix-prefetch-git" ["--no-deepClone", fromURL $ projectURL proj, fromCommit rev]
+  let url = projectURL proj
+  hash <- incmd o "nix-prefetch-url" ["--unpack", (fromURL $ url) <> "/archive/" <> fromCommit rev <> ".tar.gz"]
+  printf ("Hash is"%s%"\n") hash
   let revspecFile = format fp $ projectSrcFile proj
-  writeFile (T.unpack $ revspecFile) $ T.unpack spec
+      revSpec = GitSource{ gRev             = rev
+                         , gUrl             = url
+                         , gSha256          = NixHash (T.strip hash)
+                         , gFetchSubmodules = True }
+  writeFile (T.unpack $ revspecFile) $ LBU.toString $ encodePretty revSpec
   case mCommitChanges of
     Nothing  -> pure ()
     Just msg -> do
