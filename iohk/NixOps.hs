@@ -724,8 +724,7 @@ runSetRev o proj rev mCommitChanges = do
   case mCommitChanges of
     Nothing  -> pure ()
     Just msg -> do
-      cmd o "pkgs/generate.sh" []
-      cmd o "git" (["add", revspecFile, "pkgs/"])
+      cmd o "git" (["add", revspecFile])
       cmd o "git" ["commit", "-m", msg]
 
 runFakeKeys :: IO ()
