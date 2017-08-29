@@ -3,8 +3,6 @@
 
 set -euo pipefail
 
-source scripts/set_nixpath.sh
-
 cardano_rev="$(jq -r .rev < cardano-sl-src.json)"
 explorer_path="$(nix-build -A cardano-sl-explorer-static default.nix)"
 
