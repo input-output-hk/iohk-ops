@@ -18,7 +18,7 @@ let
   cardano-sl-pkgs = import (pkgs.fetchgit (builtins.fromJSON (builtins.readFile ./cardano-sl-src.json))) {};
 in {
   iohk-ops = pkgs.haskell.lib.overrideCabal
-             (compiler.callPackage ./iohk/iohk-ops.nix {})
+             (compiler.callPackage ./iohk/default.nix {})
              (drv: {
                 executableToolDepends = [ pkgs.makeWrapper ];
                 postInstall = ''

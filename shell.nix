@@ -2,19 +2,17 @@ let
   localLib = import ./lib.nix;
   nixpkgs  = localLib.fetchNixPkgs;
   pkgs     = import nixpkgs {};
-  iohkpkgs = import ./default.nix {};
 in
 
 { ... }:
 let
-  drv     = iohkpkgs.callPackage ./pkgs/iohk-ops.nix {};
   drv'    = pkgs.haskell.lib.overrideCabal
-            drv
+            (import ./default.nix {}).iohk-ops
             (old: {
-              libraryHaskellDepends =
-                 [ pkgs.cabal-install pkgs.stack iohkpkgs.intero
+              libraryHaskellDepends = with pkgs;
+                 [ cabal-install stack haskellPackages.intero
                    # scripts/aws.hs dependencies:
-                   pkgs.wget pkgs.awscli
+                   wget awscli
                  ];
              });
   drv''   = pkgs.lib.overrideDerivation
