@@ -15,7 +15,6 @@ install:
 script:
   - git --version
   - ./scripts/find-all-revisions.sh
-  - nix-shell -p cabal2nix stack cabal-install ghc -Q -j 4 --run scripts/check-stack2nix.sh
   - nixops --version
   # check all scripts compile
   - iohk-ops --help

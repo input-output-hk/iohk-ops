@@ -6,7 +6,7 @@
 mkDerivation {
   pname = "iohk-ops";
   version = "0.1.0.0";
-  src = ../iohk;
+  src = ./.;
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
@@ -14,6 +14,5 @@ mkDerivation {
     lens lens-aeson mtl optional-args safe system-filepath text turtle
     unordered-containers utf8-string vector yaml
   ];
-  doCheck = false;
   license = stdenv.lib.licenses.bsd3;
 }
