@@ -106,7 +106,7 @@ projectSrcFile Nixops          = error "No corresponding -src.json spec for 'nix
 -- * Primitive types
 --
 newtype Branch       = Branch       { fromBranch       :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype Commit       = Commit       { fromCommit       :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+newtype Commit       = Commit       { fromCommit       :: Text   } deriving (Eq, FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
 newtype NixHash      = NixHash      { fromNixHash      :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr      = NixAttr      { fromAttr         :: Text   } deriving (FromJSON, Generic, Show, IsString)
@@ -597,6 +597,9 @@ incmd Options{..} bin args = do
   when oVerbose $ logCmd bin args
   inprocs bin args empty
 
+gitHEADCommit :: Options -> IO Commit
+gitHEADCommit o = Commit <$> incmd o "git" ["log", "-n1", "--pretty=format:%H"]
+
 
 -- * Invoking nixops
 --
@@ -679,11 +682,11 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
       c' = setDeplArg c startParam $ secNixVal startE
   when (isJust bumpSystemStartHeldBy) $ do
     let timePretty = (T.pack $ timePrint ISO8601_DateAndTime (timeFromElapsed startE :: DateTime))
-    printf ("Setting --system-start to "%s%" ("%d%" minutes into future).  Don't forget to commit config YAML!\n")
+    printf ("Setting --system-start to "%s%" ("%d%" minutes into future)\n")
            timePretty (div holdSecs 60)
     cFp <- writeConfig oConfigFile c'
     cmd o "git" (["add", format fp cFp])
-    cmd o "git" ["commit", "-m", format ("Bump systemStart to"%s) timePretty]
+    cmd o "git" ["commit", "-m", format ("Bump systemStart to "%s) timePretty]
 
   modify o c'
 
@@ -742,8 +745,16 @@ runFakeKeys = do
     (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
   echo "Minimum viable keyset complete."
 
-generateGenesis :: Options -> NixopsConfig -> IO ()
-generateGenesis o NixopsConfig{..} = do
+ensureCardanoCheckout :: Options -> Branch -> FilePath -> IO ()
+ensureCardanoCheckout o branch cardanoSLDir = do
+  preExisting <- testpath cardanoSLDir
+  unless preExisting $ do
+    echo "Cloning 'cardano-sl'"
+    cmd o "git" ["clone", "--branch", fromBranch branch, fromURL $ projectURL CardanoSL, "cardano-sl"]
+  
+-- | Generate genesis driving the tip of specified 'cardano-sl' branch.
+generateGenesis :: Options -> NixopsConfig -> Branch -> IO ()
+generateGenesis o NixopsConfig{..} cardanoBranch = do
   let cardanoSLDir     = "cardano-sl"
       genSuffix        = "tns"
       (,) genM genN    = (,) (topoNCores topology) 1200
@@ -753,25 +764,55 @@ generateGenesis o NixopsConfig{..} = do
   GitSource{..} <- readSource gitSource CardanoSL
   printf ("Generating genesis using cardano-sl commit "%s%"\n  M:"%d%"\n  N:"%d%"\n")
     (fromCommit gRev) genM genN
-  preExisting <- testpath cardanoSLDir
-  unless preExisting $
-    cmd o "git" ["clone", fromURL $ projectURL CardanoSL, "cardano-sl"]
+  ensureCardanoCheckout o cardanoBranch cardanoSLDir
   cd cardanoSLDir
-  cmd o "git" ["fetch"]
-  cmd o "git" ["checkout", "master"]
+  echo "WARNING: removing old genesis.."
+  cmd o "git" ["fetch", "origin"]
+  cmd o "git" ["checkout", fromBranch cardanoBranch]
   cmd o "git" ["reset", "--hard", fromCommit gRev]
   export "M" (showT genM)
   export "N" (showT genN)
+  cmd o "bash" ["-c", "rm -rf genesis*"]
   cmd o "scripts/generate/genesis.sh"
     ["--build-mode", "nix", "--iohkops-dir", "..", "--install-as-suffix", genSuffix]
   cmd o "git" (["add"] <> genFiles)
   cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
-  echo "Genesis generated and committed, bumping 'iohk-op'"
-  cardanoGenesisCommit <- incmd o "git" ["log", "-n1", "--pretty=format:%H"]
+  echo "Genesis generated and committed, bumping 'iohk-ops'"
+  cardanoGenesisCommit <- gitHEADCommit o
+  printf ("Committed new genesis as 'cardano-sl' commit "%s%"\n") (fromCommit cardanoGenesisCommit)
+  cmd o "git" ["push", "--force", "origin"]
   cd ".."
-  printf ("Please, push commit '"%s%"' to the cardano-sl repository and press Enter.\n-> ") cardanoGenesisCommit
-  _ <- readline
-  runSetRev o CardanoSL (Commit cardanoGenesisCommit) (Just $ format ("Bump cardano: Regenerated genesis, M="%d%", N="%d) genM genN)
+  runSetRev o CardanoSL cardanoGenesisCommit (Just $ format ("Bump cardano: Regenerated genesis, M="%d%", N="%d) genM genN)
+  cmd o "git" ["push", "--force", "origin"]
+  echo "Don't forget to archive and install the keys from our new genesis:"
+  cmd o "bash" ["-c", "ls -l genesis*"]
+
+-- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
+deployStagingPhase0 :: Options -> NixopsConfig -> Branch -> Bool -> IO ()
+deployStagingPhase0 o c cardanoBranch doGenesis = do
+  let cardanoSLDir     = "cardano-sl"
+  ensureCardanoCheckout o cardanoBranch cardanoSLDir
+  desiredHEAD <- do
+    cd cardanoSLDir
+    printf ("Updating local checkout of 'cardano-sl' to the tip of 'origin/"%s%"'..\n") (fromBranch cardanoBranch)
+    cmd o "git" ["fetch", "origin"]
+    cmd o "git" ["checkout", "-B", fromBranch cardanoBranch, "origin/" <> fromBranch cardanoBranch]
+    commit <- gitHEADCommit o
+    cd ".."
+    pure commit
+  GitSource{..} <- readSource gitSource CardanoSL
+  if (desiredHEAD == gRev)
+  then printf ("WARNING:  remote tip of branch '"%s%"' is '"%s%"', which matches our local spec for 'cardano-sl'.  Assuming that a pkgs/generate.sh is not needed.\n")
+         (fromBranch cardanoBranch) (fromCommit desiredHEAD)
+  else do
+    runSetRev o CardanoSL desiredHEAD (Just $ format ("Bump cardano-sl to:  "%s) (fromCommit desiredHEAD))
+  printf ("Pushing local 'iohk-ops' commit into 'origin'..\n")
+  cmd o "git" ["push", "--force", "origin"]
+  when doGenesis $ do
+    echo "Genesis regeneration requested.."
+    generateGenesis o c cardanoBranch
+  echo "The deed is done, CI now has the ball."
+  echo "Proceed to:  https://hydra.iohk.io/jobset/serokell/iohk-nixops-staging#tabs-evaluations"
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"

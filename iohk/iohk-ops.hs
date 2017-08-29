@@ -91,7 +91,7 @@ data Command where
   UpdateNixops          :: Command
 
   -- * building
-  Genesis               :: Command
+  Genesis               :: Branch -> Command
   GenerateIPDHTMappings :: Command
   Build                 :: Deployment -> Command
   AMI                   :: Command
@@ -105,6 +105,9 @@ data Command where
   Delete                :: Command
   FromScratch           :: Command
   Info                  :: Command
+
+  -- * Deployment
+  DeployStaging0        :: Branch -> Bool -> Command
 
   -- * live cluster ops
   Ssh                   :: Exec -> [Arg] -> Command
@@ -148,7 +151,9 @@ centralCommandParser =
                                 pure UpdateNixops)]
 
    <|> subcommandGroup "Build-related:"
-    [ ("genesis",               "initiate production of Genesis in cardano-sl/genesis subdir",      pure Genesis)
+    [ ("genesis",               "initiate production of Genesis in cardano-sl/genesis subdir",
+                                Genesis
+                                <$> parserBranch "'cardano-sl' branch to update with the new genesis")
     , ("generate-ipdht",        "Generate IP/DHT mappings for wallet use",                          pure GenerateIPDHTMappings)
     , ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
     , ("ami",                   "Build ami",                                                        pure AMI) ]
@@ -174,7 +179,11 @@ centralCommandParser =
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
-   , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
+   , ("info",                   "Invoke 'nixops info'",                                             pure Info)
+   , ("deploy-staging-phase0",  "Deploy 'staging', optionally with genesis regeneration",
+                                DeployStaging0
+                                <$> parserBranch "'cardano-sl' branch to update & deploy"
+                                <*> switch "with-genesis"        'g' "Regenerate genesis")]
 
    <|> subcommandGroup "Live cluster ops:"
    [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
@@ -235,7 +244,7 @@ runTop o@Options{..} args topcmd = do
             -- * setup
             FakeKeys                 -> Ops.runFakeKeys
             -- * building
-            Genesis                  -> Ops.generateGenesis           o c
+            Genesis branch           -> Ops.generateGenesis           o c branch
             GenerateIPDHTMappings    -> void $
                                         Cardano.generateIPDHTMappings o c
             Build depl               -> Ops.build                     o c depl
@@ -250,6 +259,7 @@ runTop o@Options{..} args topcmd = do
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
             Info                     -> Ops.nixops                    o c "info" []
+            DeployStaging0 br genp   -> Ops.deployStagingPhase0       o c br genp
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployed'commit           o c m
             CheckStatus              -> Ops.checkstatus               o c
