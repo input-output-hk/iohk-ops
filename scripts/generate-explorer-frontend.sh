@@ -5,7 +5,7 @@ set -euo pipefail
 
 source scripts/set_nixpath.sh
 
-cardano_rev="$(nix-instantiate --eval default.nix -A cardano-sl-static.src.rev|tr -d '"')"
+cardano_rev="$(jq -r .rev < cardano-sl-src.json)"
 explorer_path="$(nix-build -A cardano-sl-explorer-static default.nix)"
 
 echo "Building explorer frontend from 'cardano-sl' repository revision:  ${cardano_rev}".
