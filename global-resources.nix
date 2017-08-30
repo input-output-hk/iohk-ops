@@ -11,35 +11,27 @@ with import ./lib.nix;
                             (name: { name = name;
                                     value = { resources, ... }: (eIPsSecurityGroups resources.elasticIPs)."${name}"; });
         securityGroupNames =
-         (    concatMap  regionSGNames globals.allRegions
-          ++  concatMap  coreSGNames   globals.cores
-          ++            (globalSGNames globals.centralRegion)
+         (    concatMap  regionSGNames     globals.allRegions
+          ++  concatMap  orgXRegionSGNames globals.orgXRegions
+          ++  concatMap  coreSGNames       globals.cores
+          ++            (globalSGNames     globals.centralRegion)
          );
         eIPsSecurityGroups = eIPs:
           (fold (x: y: x // y) {}
-          (    map  (regionSGs  cconf.nodePort)       globals.allRegions
-           ++  map  (coreSGs    cconf.nodePort eIPs)  globals.cores
-           ++       (globalSGs  globals.centralRegion)
+          (    map  (regionSGs      cconf.nodePort)       globals.allRegions
+           ++  map  (orgXRegionSGs)                       globals.orgXRegions
+           ++  map  (coreSGs        cconf.nodePort eIPs)  globals.cores
+           ++       (globalSGs      globals.centralRegion)
           ));
         accessKeyId   = globals.orgAccessKeys.IOHK; # Design decision with regard to AWS SGs.
         ##
         ## SG names and definitions
         ##
         regionSGNames = region:
-            [ "allow-deployer-ssh-${region}"
-              "allow-kademlia-public-udp-${region}"
+            [ "allow-kademlia-public-udp-${region}"
               "allow-cardano-public-tcp-${region}"
             ];
         regionSGs      = nodePort: region: {
-            "allow-deployer-ssh-${region}" = {
-              inherit region accessKeyId;
-              description = "SSH";
-              rules = [{
-                protocol = "tcp"; # TCP
-                fromPort = 22; toPort = 22;
-                sourceIp = globals.deployerIP + "/32";
-              }];
-            };
             "allow-kademlia-public-udp-${region}" = {
               inherit region accessKeyId;
               description = "Kademlia UDP public";
@@ -59,8 +51,23 @@ with import ./lib.nix;
               }];
             };
           };
+        orgXRegionSGNames = { org, region }:
+            [ "allow-deployer-ssh-${region}-${org}"
+            ];
+        orgXRegionSGs     = { org, region}: {
+            "allow-deployer-ssh-${region}-${org}" = {
+              inherit region;
+              accessKeyId = globals.orgAccessKeys.${org};
+              description = "SSH";
+              rules = [{
+                protocol = "tcp"; # TCP
+                fromPort = 22; toPort = 22;
+                sourceIp = globals.deployerIP + "/32";
+              }];
+            };
+          };
         coreSGNames = core:
-            [ "allow-cardano-static-peers-${core.name}-${core.value.region}" ];
+            [ "allow-cardano-static-peers-${core.name}-${core.value.region}-${core.value.org}" ];
         coreSGs     = nodePort: ips: core:
           let neighbourNames = traceF (p: "${core.name} peers: " + concatStringsSep ", " core.value.peers) core.value.peers;
               neighbours = map (name: globals.nodeMap.${name}) neighbourNames;
@@ -72,9 +79,8 @@ with import ./lib.nix;
                   sourceIp = ip;
               };
           in {
-            "allow-cardano-static-peers-${core.name}-${core.value.region}" = {
-              inherit accessKeyId;
-              region = core.value.region;
+            "allow-cardano-static-peers-${core.name}-${core.value.region}-${core.value.org}" = {
+              inherit (core.value) accessKeyId region;
               description = "Cardano TCP static peers of ${core.name}";
               rules = map neighGrant neighbours;
             };

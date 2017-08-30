@@ -43,6 +43,10 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     defaultOrg     =   "IOHK";
     orgAccessKeys  = {  IOHK = IOHKaccessKeyId; CF = CFaccessKeyId; SGG = SGGaccessKeyId; };
 
+    ## All actual (Region * Org) pairs.
+    orgXRegions    = unique (flip map topologySpecList
+                     (x: { region = x.value.region; org = x.value.org; }));
+
     indexed        = imap (n: x:
             { name = x.name;
              value = rec {
@@ -61,10 +65,10 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                       keyPairName = orgRegionKeyPairName org region;
                        relayIndex = if typeIsRelay then i - firstRelayIndex else null;
                                     ## For the SG definitions look below in this file:
-                          sgNames = [ "allow-deployer-ssh-${region}" ]
+                          sgNames = [ "allow-deployer-ssh-${region}-${org}" ]
                                     ++ optionals typeIsExplorer     [ "allow-to-explorer-${region}" ]
                                     ++ optionals typeIsReportServer [ "allow-to-report-server-${region}" ]
-                                    ++ optionals typeIsCore         [ "allow-cardano-static-peers-${name}-${region}" ]
+                                    ++ optionals typeIsCore         [ "allow-cardano-static-peers-${name}-${region}-${org}" ]
                                     ++ optionals typeIsRelay        [ "allow-kademlia-public-udp-${region}"
                                                                       "allow-cardano-public-tcp-${region}" ]
                                     ++ optionals typeIsRunsCardano  [ ];
@@ -89,20 +93,11 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
 
     orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
 
-    ## orgRegionKeyPairs :: [Region] -> Org -> AccessKeyId -> Map Region (KeypairName, Keypair)
-    orgRegionKeyPairs = regions: { org, accessKeyId }: listToAttrs
-      ## TODO: avoid creating unused keypairs
-      (flip map regions
-        (region:
-          nameValuePair region (nameValuePair (orgRegionKeyPairName org region) { inherit accessKeyId region;})));
-
-    ## keyPairMap :: Map Org (Map Region (KeypairName, Keypair))
-    keyPairMap = flip mapAttrs orgAccessKeys
-      (org: accessKeyId: orgRegionKeyPairs allRegions { inherit org accessKeyId; } );
-
-    ## allNodeKeyPairs :: Map KeypairName Keypair
-    allKeyPairs        = listToAttrs (flatten (map builtins.attrValues (builtins.attrValues keyPairMap)));
-    defaultKeyPairName = orgRegionKeyPairName defaultOrg centralRegion;
+    ## allKeyPairs :: Map KeypairName Keypair
+    allKeyPairs     = listToAttrs (flip map orgXRegions
+                                   ({ org, region }:
+                                    nameValuePair (orgRegionKeyPairName org region)
+                                                  { inherit region; accessKeyId = orgAccessKeys.${org}; }));
 in
 {
   inherit topologyYaml;
@@ -110,8 +105,9 @@ in
   inherit nRelays firstRelayIndex;
   inherit allRegions centralRegion;
   inherit allOrgs defaultOrg;
+  inherit orgXRegions;
   inherit orgAccessKeys;
-  inherit keyPairMap allKeyPairs defaultKeyPairName;
+  inherit allKeyPairs;
   ###
   inherit deployerIP systemStart environment;
 }
