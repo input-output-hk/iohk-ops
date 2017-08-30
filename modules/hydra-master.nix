@@ -72,6 +72,11 @@ in {
         inputs = jobsets
         excludeBuildFromContext = 1
       </githubstatus>
+      <githubstatus>
+        jobs = serokell:cardano.*
+        inputs = cardano
+        excludeBuildFromContext = 1
+      </githubstatus>
     '';
     logo = (pkgs.fetchurl {
       url    = "https://iohk.io/images/iohk-share-logo.jpg";
