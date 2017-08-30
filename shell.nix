@@ -17,14 +17,5 @@ let
                    wget awscli
                  ];
              });
-  drv''   = pkgs.lib.overrideDerivation
-            drv'.env
-            (old: {
-              shellHook = ''
-                export NIX_PATH=nixpkgs=${nixpkgs}
-                export NIX_PATH_LOCKED=1
-                echo   NIX_PATH LOCKED and set to $NIX_PATH >&2
-              '';
-             });
 in
-  drv''
+  drv'
