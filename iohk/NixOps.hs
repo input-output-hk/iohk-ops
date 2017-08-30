@@ -870,8 +870,8 @@ sshForEach :: Options -> NixopsConfig -> [Text] -> IO ()
 sshForEach o c command =
   nixops o c "ssh-for-each" $ Arg <$> "--": command
 
-deployed'commit :: Options -> NixopsConfig -> NodeName -> IO ()
-deployed'commit o c m = do
+deployedCommit :: Options -> NixopsConfig -> NodeName -> IO ()
+deployedCommit o c m = do
   ssh' o c "pgrep" ["-fa", "cardano-node"] m $
     \r-> do
       case cut space r of

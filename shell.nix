@@ -3,11 +3,6 @@ let
   nixpkgs  = localLib.fetchNixPkgs;
   pkgs     = import nixpkgs {};
   hpkgs    = pkgs.haskell.packages.ghc802;
-  hpkgs'   =
-  hpkgs.override {
-    overrides = self: super: {
-    };
-  };
 in
 
 { ... }:

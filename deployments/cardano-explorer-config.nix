@@ -9,13 +9,12 @@ let
     kademlia = false;
     peers    = [];
   };
-in rec {
-        inherit (spec) region type kademlia peers;
+in spec // rec {
         inherit (config.globalArgs) allNames environment firstRelayIndex nRelays systemStart;
               i = length allNames; # assign last index
      relayIndex = null;
            name = "explorer";
-                  ## For the SG definitions look below in this file:
+                  ## For the SG definitions look in 'deployments/cardano-nodes-config.nix'
         sgNames = [ "allow-deployer-ssh-${region}"
                     "allow-to-explorer-${region}" ];
 }

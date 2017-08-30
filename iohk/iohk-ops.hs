@@ -259,7 +259,7 @@ runTop o@Options{..} args topcmd = do
             Info                     -> Ops.nixops                    o c "info" []
             DeployStaging0 br genp   -> Ops.deployStagingPhase0       o c br genp
             -- * live deployment ops
-            DeployedCommit m         -> Ops.deployed'commit           o c m
+            DeployedCommit m         -> Ops.deployedCommit           o c m
             CheckStatus              -> Ops.checkstatus               o c
             StartForeground          -> Ops.startForeground           o c $
                                         flip fromMaybe oOnlyOn $ error "'start-foreground' requires a global value for --on/-o"

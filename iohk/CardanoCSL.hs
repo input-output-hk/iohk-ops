@@ -137,7 +137,6 @@ getSmartGenCmd o c = runError $ do
   dhtfile <- lift $ Prelude.readFile "static/dht.json"
   peers <- ExceptT $ return $ getPeers c config dhtfile nodes
   (_, sgIp) <- fmap T.strip <$> shellStrict ("curl " <> fromURL Ops.awsPublicIPURL) empty
-  -- let sgDhtKey = fromJust $ dhtfile ^? key "node100" . _String
 
   let bot = if bitcoinOverFlat then "bitcoin" else "flat"
       recipShare = "0.5"

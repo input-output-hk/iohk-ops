@@ -88,7 +88,7 @@ in {
       };
       serveEkg = mkOption {
         type = types.bool;
-        description = "Serve EKG raw on port 80";
+        description = "Serve EKG web UI on port 8080";
         default = false;
       };
 

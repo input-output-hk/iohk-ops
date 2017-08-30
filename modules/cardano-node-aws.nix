@@ -24,7 +24,7 @@ params:
       deployment.ec2.accessKeyId = accessKeyId;
       deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor accessKeyId params.region};
       deployment.ec2.securityGroups = mkForce (map sgByName params.sgNames);
-      deployment.keys = (optionalAttrs (cfg.productionMode  && params.type == "core" && !cfg.hasExplorer)
+      deployment.keys = (optionalAttrs (cfg.productionMode  && params.type == "core")
       (let keyfile = "key${toString params.i}.sk";
        in {
          "key${toString params.i}" = builtins.trace (params.name + ": using " + keyfile) {

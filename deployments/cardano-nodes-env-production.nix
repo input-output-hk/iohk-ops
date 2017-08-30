@@ -7,7 +7,7 @@ let
 in
 {
   resources = {
-    elasticIPs = mkNodeIPs config.nodeArgs accessKeyId;
+    elasticIPs = mkNodeIPs nodeArgs accessKeyId;
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       cpu = mkMonitor cpu_monitor;
       disk = mkMonitor disk_monitor;
