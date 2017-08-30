@@ -368,7 +368,6 @@ deployments :: [(Deployment, [FileSpec])]
 deployments =
   [ (Explorer
     , [ (Any,         All, "deployments/cardano-explorer.nix")
-      , (Development, All, "deployments/cardano-explorer-env-development.nix")
       , (Production,  All, "deployments/cardano-explorer-env-production.nix")
       , (Federated,   All, "deployments/cardano-explorer-env-staging.nix")
       , (Staging,     All, "deployments/cardano-explorer-env-staging.nix")
