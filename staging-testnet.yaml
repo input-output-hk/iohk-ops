@@ -15,7 +15,7 @@ nixpkgs: 9b948ea439ddbaa26740ce35543e7e35d2aa6d18
 topology: topology-staging.yaml
 name: staging
 files:
-- deployments/firewalls.nix
+- deployments/security-groups.nix
 - deployments/keypairs.nix
 - deployments/cardano-nodes.nix
 - deployments/cardano-nodes-env-staging.nix

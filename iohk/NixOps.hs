@@ -494,7 +494,7 @@ instance ToJSON NixopsConfig where
 
 deploymentFiles :: Environment -> Target -> [Deployment] -> [Text]
 deploymentFiles cEnvironment cTarget cElements =
-  "deployments/firewalls.nix":
+  "deployments/security-groups.nix":
   "deployments/keypairs.nix":
   concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
