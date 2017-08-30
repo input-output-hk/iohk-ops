@@ -3,6 +3,7 @@ args:
     tag: NixStr
     contents: cardano-deployer
 environment: Production
+nixpkgs: 31a956f18c9251064997085fd7732562b1854726
 name: iohk-infra
 files:
 - deployments/keypairs.nix

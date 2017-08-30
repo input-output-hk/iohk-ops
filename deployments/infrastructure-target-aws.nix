@@ -1,10 +1,10 @@
 { accessKeyId, ... }:
 
 with (import ./../lib.nix);
-{
+rec {
   network.description = "IOHK infrastructure";
 
-  hydra = { config, pkgs, resources, ... }: {
+  hydra = { config, pkgs, resources, name, ... }: {
 
     imports = [
       ./../modules/amazon-base.nix
@@ -17,7 +17,12 @@ with (import ./../lib.nix);
       ebsInitialRootDiskSize = mkForce 200;
       associatePublicIpAddress = true;
     };
+    deployment.route53.accessKeyId = accessKeyId;
+    deployment.route53.hostName = "${name}.aws.iohkdev.io";
   };
+
+  hydra-build-slave-1 = hydra;
+  hydra-build-slave-2 = hydra;
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [

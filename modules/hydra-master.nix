@@ -11,6 +11,10 @@ let
     system = "x86_64-linux";
     supportedFeatures = [ "kvm" "nixos-test" ];
   };
+  mkLinux = hostName: commonBuildMachineOpt // {
+    inherit hostName;
+    maxJobs = 4;
+  };
   mkMac = hostName: commonBuildMachineOpt // {
     inherit hostName;
     maxJobs = 2;
@@ -34,10 +38,14 @@ in {
     buildMachines = [
       (commonBuildMachineOpt // {
         hostName = "localhost";
-        maxJobs = 4;
+        maxJobs = 2;
       })
+      # TODO: DEVOPS-166: reference linux slaves by DNS
+      (mkLinux "52.59.25.105")
+      (mkLinux "35.159.8.110")
       (mkMac "de302.macincloud.com")
       (mkMac "du516.macincloud.com")
+      (mkMac "de528.macincloud.com")
     ];
     extraOptions = "auto-optimise-store = true";
   };
@@ -65,6 +73,11 @@ in {
       <githubstatus>
         jobs = serokell:.*
         inputs = jobsets
+        excludeBuildFromContext = 1
+      </githubstatus>
+      <githubstatus>
+        jobs = serokell:cardano.*
+        inputs = cardano
         excludeBuildFromContext = 1
       </githubstatus>
     '';

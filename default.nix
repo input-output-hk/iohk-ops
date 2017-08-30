@@ -9,6 +9,7 @@ in
 
 with pkgs.lib;
 with pkgs.haskell.lib;
+# with (import <nixpkgs/pkgs/development/haskell-modules/lib.nix> { inherit pkgs; lib = pkgs.lib;});
 
 let
   iohk-ops-extra-runtime-deps = [
@@ -18,7 +19,7 @@ let
   cardano-sl-pkgs = import (pkgs.fetchgit (builtins.fromJSON (builtins.readFile ./cardano-sl-src.json))) {};
 in {
   iohk-ops = pkgs.haskell.lib.overrideCabal
-             (compiler.callPackage ./iohk/iohk-ops.nix {})
+             (compiler.callPackage ./iohk/default.nix {})
              (drv: {
                 executableToolDepends = [ pkgs.makeWrapper ];
                 postInstall = ''
@@ -26,6 +27,4 @@ in {
                   --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                 '';
              });
-} // cardano-sl-pkgs // {
-  cardano-report-server-static = justStaticExecutables cardano-sl-pkgs.cardano-report-server;
-}
+} // cardano-sl-pkgs

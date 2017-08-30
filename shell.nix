@@ -7,12 +7,15 @@ in
 
 { ... }:
 let
-  drv     = hpkgs.callPackage ./pkgs/iohk-ops.nix {};
+  drv     = hpkgs.callPackage ./iohk/default.nix {};
   drv'    = pkgs.haskell.lib.overrideCabal
-            drv
+            (import ./default.nix {}).iohk-ops
             (old: {
-              libraryHaskellDepends =
-                 [ pkgs.cabal-install pkgs.stack pkgs.haskell.packages.ghc802.intero ];
+              libraryHaskellDepends = with pkgs;
+                 [ cabal-install stack haskellPackages.intero
+                   # scripts/aws.hs dependencies:
+                   wget awscli
+                 ];
              });
   drv''   = pkgs.lib.overrideDerivation
             drv'.env

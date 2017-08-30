@@ -14,6 +14,7 @@ install:
 script:
   - git --version
   - ./scripts/find-all-revisions.sh
+  - nix-shell --run "./scripts/aws.hs --help"
   - nixops --version
   # check all scripts compile
   - iohk-ops --help
