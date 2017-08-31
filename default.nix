@@ -5,6 +5,7 @@ in
 , config ? {}
 , pkgs ? (import (localLib.fetchNixPkgs) { inherit system config; })
 , compiler ? pkgs.haskell.packages.ghc802
+, dconfig ? "testnet_staging"
 }:
 
 with pkgs.lib;
@@ -16,7 +17,9 @@ let
     pkgs.git pkgs.nix-prefetch-scripts compiler.yaml
   ];
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
-  cardano-sl-pkgs = import (pkgs.fetchgit (builtins.fromJSON (builtins.readFile ./cardano-sl-src.json))) {};
+  cardano-sl-pkgs = import (pkgs.fetchgit (builtins.fromJSON (builtins.readFile ./cardano-sl-src.json))) {
+                      inherit dconfig;
+                    };
 in {
   iohk-ops = pkgs.haskell.lib.overrideCabal
              (compiler.callPackage ./iohk/default.nix {})
