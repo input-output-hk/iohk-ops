@@ -1,8 +1,10 @@
-{ accessKeyId, deployerIP, systemStart, environment, ... }:
+{ globals, ... }: with (import ./../lib.nix);
 
-with (import ./../lib.nix);
-let
-  nodeArgs = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart  environment; }).nodeArgs;
-  nodeConf = import ./../modules/cardano-node-development.nix;
-in
-  mkNodesUsing (params: nodeConf) nodeArgs
+
+
+(flip mapAttrs globals.nodeMap (name: import ./../modules/cardano-node-development.nix globals))
+// {
+  resources = {
+    elasticIPs = nodesElasticIPs globals.nodeMap;
+  };
+}

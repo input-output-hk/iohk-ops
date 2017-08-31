@@ -2,22 +2,21 @@ args:
   deployerIP:
     tag: NixStr
     contents: '35.156.156.28'
+  SGGaccessKeyId:
+    tag: NixStr
+    contents: fifth-party
   systemStart:
     tag: NixInt
-    contents: 1503504180
-  IOHKaccessKeyId:
-    tag: NixStr
-    contents: iohk
+    contents: 1504112562
   CFaccessKeyId:
     tag: NixStr
-    contents: iohk
-  SGGaccessKeyId:
+    contents: third-party
+  IOHKaccessKeyId:
     tag: NixStr
     contents: iohk
 gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
   --here staging nodes reportserver explorer
 environment: Federated
-nixpkgs: 9b948ea439ddbaa26740ce35543e7e35d2aa6d18
 topology: topology-federated.yaml
 name: federation
 files:

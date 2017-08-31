@@ -14,6 +14,7 @@
 
 module NixOps where
 
+import           Control.Arrow                    ((***))
 import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
 import           Control.Monad                    (forM_)
@@ -74,6 +75,12 @@ explorerNode         = NodeName "explorer"
 orgs :: [NodeOrg]
 orgs                 = enumFromTo minBound maxBound
 defaultOrg           = IOHK
+accessKeyChain       = [ AccessKeyId $ showT org <> "accessKeyId"
+                       | org <- orgs ]
+
+simpleTopoFile       :: FilePath
+simpleTopoFile       = "topology.nix"
+
 
 -- * Projects
 --
@@ -105,6 +112,7 @@ projectSrcFile Nixops          = error "No corresponding -src.json spec for 'nix
 
 -- * Primitive types
 --
+newtype AccessKeyId  = AccessKeyId  { fromAccessKeyId  :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype Branch       = Branch       { fromBranch       :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype Commit       = Commit       { fromCommit       :: Text   } deriving (Eq, FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
@@ -342,17 +350,18 @@ summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
                               | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _ _)) <- Map.toList nodeMap
                               , elem node (concat routes) ]
                             <> concat outRoutes
-                snOrg = fromMaybe (trace (T.unpack $ format ("WARNING: node '"%w%"' has no 'org' field specified, defaulting to "%w%".")
-                                          node defaultOrg)
+                snOrg = fromMaybe (trace (T.unpack $ format ("WARNING: node '"%s%"' has no 'org' field specified, defaulting to "%w%".")
+                                          (fromNodeName node) defaultOrg)
                                    defaultOrg)
                         mbOrg
 summariseTopology x = errorT $ format ("Unsupported topology type: "%w) x
 
-dumpTopologyNix :: FilePath -> IO ()
-dumpTopologyNix topo = sh $ do
+-- | Dump intermediate core/relay info, as parametrised by the simplified topology file.
+dumpTopologyNix :: NixopsConfig -> IO ()
+dumpTopologyNix NixopsConfig{..} = sh $ do
   let nodeSpecExpr prefix =
-        format ("with (import <nixpkgs> {}); "%s%" (import deployments/cardano-nodes-config.nix { accessKeyId = \"\"; deployerIP = \"\"; topologyFile = "%fp%"; systemStart = 0; })")
-               prefix topo
+        format ("with (import <nixpkgs> {}); "%s%" (import ./globals.nix { deployerIP = \"\"; environment = \""%s%"\"; topologyYaml = ./"%fp%"; systemStart = 0; "%s%" = \"-stub-\"; })")
+               prefix (lowerShowT cEnvironment) cTopology (T.intercalate " = \"-stub-\"; " $ fromAccessKeyId <$> accessKeyChain)
       getNodeArgsAttr prefix attr = inproc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr prefix <> "." <> attr] empty
       liftNixList = inproc "sed" ["s/\" \"/\", \"/g"]
   (cores  :: [NodeName]) <- getNodeArgsAttr "map (x: x.name)" "cores"  & liftNixList <&> ((NodeName <$>) . readT . lineToText)
@@ -360,11 +369,11 @@ dumpTopologyNix topo = sh $ do
   echo "Cores:"
   forM_ cores  $ \(NodeName x) -> do
     printf ("  "%s%"\n    ") x
-    Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeArgs." <> x] empty
+    Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeMap." <> x] empty
   echo "Relays:"
   forM_ relays $ \(NodeName x) -> do
     printf ("  "%s%"\n    ") x
-    Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeArgs." <> x] empty
+    Turtle.proc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr "" <> ".nodeMap." <> x] empty
 
 nodeNames :: Options -> NixopsConfig -> [NodeName]
 nodeNames (oOnlyOn -> nodeLimit)  NixopsConfig{..}
@@ -385,15 +394,13 @@ deployments =
     , [ (Any,         All, "deployments/cardano-explorer.nix")
       , (Production,  All, "deployments/cardano-explorer-env-production.nix")
       , (Federated,   All, "deployments/cardano-explorer-env-staging.nix")
-      , (Staging,     All, "deployments/cardano-explorer-env-staging.nix")
-      , (Any,         AWS, "deployments/cardano-explorer-target-aws.nix") ])
+      , (Staging,     All, "deployments/cardano-explorer-env-staging.nix") ])
   , (Nodes
     , [ (Any,         All, "deployments/cardano-nodes.nix")
       , (Development, All, "deployments/cardano-nodes-env-development.nix")
       , (Production,  All, "deployments/cardano-nodes-env-production.nix")
       , (Federated,   All, "deployments/cardano-nodes-env-staging.nix")
-      , (Staging,     All, "deployments/cardano-nodes-env-staging.nix")
-      , (Any,         AWS, "deployments/cardano-nodes-target-aws.nix") ])
+      , (Staging,     All, "deployments/cardano-nodes-env-staging.nix") ])
   , (Infra
     , [ (Any,         All, "deployments/infrastructure.nix")
       , (Production,  All, "deployments/infrastructure-env-production.nix")
@@ -402,8 +409,7 @@ deployments =
     , [ (Any,         All, "deployments/report-server.nix")
       , (Production,  All, "deployments/report-server-env-production.nix")
       , (Federated,   All, "deployments/report-server-env-staging.nix")
-      , (Staging,     All, "deployments/report-server-env-staging.nix")
-      , (Any,         AWS, "deployments/report-server-target-aws.nix") ])
+      , (Staging,     All, "deployments/report-server-env-staging.nix") ])
   ]
 
 deploymentSpecs :: Deployment -> [FileSpec]
@@ -510,16 +516,16 @@ instance ToJSON NixopsConfig where
 
 deploymentFiles :: Environment -> Target -> [Deployment] -> [Text]
 deploymentFiles cEnvironment cTarget cElements =
-  "deployments/security-groups.nix":
-  "deployments/keypairs.nix":
+  "global-resources.nix":
   concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
 type DeplArgs = Map.Map NixParam NixValue
 
 selectDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> IO DeplArgs
 selectDeploymentArgs o _ env delts (Elapsed systemStart) = do
-    let staticArgs = [ ("accessKeyId"
-                       , NixStr . fromNodeName $ selectDeployer env delts) ]
+    let staticArgs = [ ( NixParam $ fromAccessKeyId akid
+                       , NixStr . fromNodeName $ selectDeployer env delts)
+                     | akid <- accessKeyChain ]
     (IP deployerIp) <- deployerIP o
     pure $ Map.fromList $
       staticArgs
@@ -658,26 +664,36 @@ create o c@NixopsConfig{..} = do
   printf ("Creating deployment "%s%"\n") $ fromNixopsDepl cName
   nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
 
+buildGlobalsImportNixExpr :: [(NixParam, NixValue)] -> NixValue
+buildGlobalsImportNixExpr deplArgs =
+  NixImport (NixFile "globals.nix")
+  $ NixAttrSet $ Map.fromList $ (fromNixParam *** id) <$> deplArgs
+
+computeFinalDeplArgs :: NixopsConfig -> [(NixParam, NixValue)]
+computeFinalDeplArgs NixopsConfig{..} =
+  let deplArgs = Map.toList cDeplArgs
+                 <> [("topologyYaml", NixFile cTopology)
+                    ,("environment",  NixStr  $ lowerShowT cEnvironment)]
+  in ("globals", buildGlobalsImportNixExpr deplArgs): deplArgs
+
 modify :: Options -> NixopsConfig -> IO ()
 modify o@Options{..} c@NixopsConfig{..} = do
   printf ("Syncing Nix->state for deployment "%s%"\n") $ fromNixopsDepl cName
-  nixops o c "modify" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
+  nixops o c "modify" $ Arg <$> cFiles
 
-  let deplArgs = Map.toList cDeplArgs
-                 <> [("topologyYaml", NixFile $ cTopology)
-                    ,("environment",  NixStr  $ lowerShowT cEnvironment)]
+  let deplArgs = computeFinalDeplArgs c
   printf ("Setting deployment arguments:\n")
   forM_ deplArgs $ \(name, val)
     -> printf ("  "%s%": "%s%"\n") (fromNixParam name) (nixValueStr val)
   nixops o c "set-args" $ Arg <$> (concat $ uncurry nixArgCmdline <$> deplArgs)
 
-  printf ("Generating 'topology.nix' from '"%fp%"'..\n") cTopology
+  printf ("Generating '"%fp%"' from '"%fp%"'..\n") simpleTopoFile cTopology
   preExisting <- testpath cTopology
   unless preExisting $
     die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
   simpleTopo <- summariseTopology <$> readTopology cTopology
-  liftIO . writeTextFile "topology.nix" . T.pack . LBU.toString $ encodePretty simpleTopo
-  when oDebug $ dumpTopologyNix "./topology.nix"
+  liftIO . writeTextFile simpleTopoFile . T.pack . LBU.toString $ encodePretty simpleTopo
+  when oDebug $ dumpTopologyNix c
 
 deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> Bool -> Maybe Seconds -> IO ()
 deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFrontend bumpSystemStartHeldBy = do

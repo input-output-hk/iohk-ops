@@ -1,4 +1,4 @@
-{ accessKeyId, ... }:
+{ IOHKaccessKeyId, ... }:
 
 with (import ./../lib.nix);
 {
@@ -9,7 +9,7 @@ with (import ./../lib.nix);
       ./../modules/amazon-base.nix
     ];
 
-    deployment.ec2.accessKeyId = accessKeyId;
+    deployment.ec2.accessKeyId = IOHKaccessKeyId;
     deployment.ec2.securityGroups = [
       resources.ec2SecurityGroups."allow-deployer-ssh-${config.deployment.ec2.region}"
       resources.ec2SecurityGroups."allow-to-report-server-${config.deployment.ec2.region}"

@@ -1,7 +1,7 @@
-{ config, pkgs, lib, options, ... }:
-
 with (import ./../lib.nix);
 
+globals: params:
+{ config, pkgs, lib, options, ... }:
 let
   cfg = config.services.cardano-node;
   name = "cardano-node";
@@ -35,17 +35,17 @@ let
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
     (optionalString (cfg.serveEkg)             "--ekg-server ${cfg.privateIP}:8080")
-    (optionalString (cfg.productionMode && cfg.nodeName != "explorer")
+    (optionalString (cfg.productionMode && params.name != "explorer")
       "--keyfile ${stateDir}key${toString cfg.nodeIndex}.sk")
-    (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
+    (optionalString (cfg.productionMode && globals.systemStart != 0) "--system-start ${toString globals.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
     "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
-    # (optionalString (cfg.type == "relay") "--kademlia /run/keys/kademlia.yaml")
+    # (optionalString params.typeIsRelay "--kademlia /run/keys/kademlia.yaml")
     "--topology /run/keys/topology.yaml"
-    "--node-id ${cfg.nodeName}"
+    "--node-id ${params.name}"
   ];
 in {
   options = {
@@ -110,16 +110,11 @@ in {
         default = false;
         description = "Enable rich-poor distr";
       };
-      hasExplorer = mkOption {
-        type = types.bool;
-        default = false;
-        description = "Does the node has explorer running?";
-      };
 
       nodeIndex  = mkOption { type = types.int; };
       relayIndex = mkOption { type = types.int; };
       nodeName   = mkOption { type = types.str; };
-      type       = mkOption { type = types.enum [ "core" "relay" "other" ]; default = null; };
+      nodeType   = mkOption { type = types.enum [ "core" "relay" "other" ]; default = null; };
 
       publicIP = mkOption {
         type = types.nullOr types.str;
@@ -143,7 +138,7 @@ in {
 
   config = mkIf cfg.enable {
     assertions = [
-    { assertion = cfg.type != null;
+    { assertion = cfg.nodeType != null;
       message = "services.cardano-node.type must be set to one of: core relay other"; }
     ];
 

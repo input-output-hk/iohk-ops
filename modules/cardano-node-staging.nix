@@ -1,12 +1,12 @@
-{ environment, ... }:
-
 with (import ./../lib.nix);
 
-{ config, pkgs, resources, ... }: {
+globals: params:
+{ config, pkgs, resources, ... }:
+
+{
   imports = [
     ./datadog.nix
     ./papertrail.nix
-    ./common.nix
   ];
 
   # DEVOPS-64: disable log bursting
@@ -17,19 +17,22 @@ with (import ./../lib.nix);
     serveEkg = true;
   };
 
-  deployment.ec2.elasticIPv4 = resources.elasticIPs.${toString config.services.cardano-node.nodeName + "-ip"};
+  deployment.ec2.elasticIPv4 = resources.elasticIPs.${params.name + "-ip"};
 
-  deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
-  deployment.route53.hostName = optionalString (config.services.cardano-node.type == "relay")
-                                "cardano-node-${toString config.services.cardano-node.relayIndex}.${(envSpecific environment).dnsSuffix}";
+  deployment.route53.accessKeyId = params.accessKeyId;
+  deployment.route53.hostName = if params.typeIsRelay
+                           then "cardano-node-${toString params.relayIndex}.${(envSpecific globals.environment).dnsSuffix}"
+                           else if params.typeIsExplorer
+                           then "cardano-explorer.${(envSpecific globals.environment).dnsSuffix}"
+                           else "";
 
-  services.dd-agent.tags = ["env:${environment}"];
+  services.dd-agent.tags = ["env:${globals.environment}"];
   services.dd-agent.processConfig = ''
     init_config:
 
     instances:
     '' +
-    (if config.services.cardano-node.nodeName == "explorer"
+    (if params.typeIsExplorer
     then ''
     - name: cardano-explorer
       search_string: ['cardano-explorer']

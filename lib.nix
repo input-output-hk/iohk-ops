@@ -14,18 +14,23 @@ in lib // (rec {
   # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
   mergeAttrs = nodes: lib.foldAttrs (a: b: a) [] nodes;
 
-  mkNodesUsing = constructor: nodes: lib.mapAttrs  (name: nodeParams: constructor nodeParams) nodes;
-  mkNodeIPs = nodes: accessKeyId: lib.mapAttrs' (name: value:
-      { name = "${toString value.name}-ip";
-        value = { inherit (value) region; inherit accessKeyId;};
-      }
-    ) nodes;
+  ## nodeElasticIP :: Node -> EIP
+  nodeElasticIP = node:
+    { name = "${node.name}-ip";
+      value = { inherit (node) region accessKeyId; };
+    };
 
+  ## nodesElasticIPs :: Map NodeName Node -> Map EIPName EIP
+  nodesElasticIPs = nodes: lib.flip lib.mapAttrs' nodes
+    (name: node: nodeElasticIP node);
+  
   envSpecific = environment:
          if environment == "production"  then {
     dnsSuffix = "aws.iohk.io";
   } else if environment == "staging"     then {
     dnsSuffix = "aws.iohkdev.io";
+  } else if environment == "federated"   then {
+    dnsSuffix = "awstest.iohkdev.io";
   } else if environment == "development" then {
     dnsSuffix = "--DNS-disabled--";
   } else throw "Invalid environment arg: '${environment}";
@@ -61,23 +66,6 @@ in lib // (rec {
 
   # Function to generate DHT key
   genDhtKey = i: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
-
-  region = "eu-central-1";
-
-  # Given a region, returns it's keypair
-  # TODO: meaningful error if keypair for region doesn't exist
-  keypairFor = accessKeyId: region: lib.head (lib.attrNames (lib.filterAttrs (n: v: v.region == region) (ec2KeyPairs accessKeyId)));
-
-  ec2KeyPairs = accessKeyId: {
-    cardano-test-eu-central = { inherit accessKeyId; region = "eu-central-1"; };
-    cardano-test-eu-west-1 = { inherit accessKeyId; region = "eu-west-1"; };
-    cardano-test-eu-west-2 = { inherit accessKeyId; region = "eu-west-2"; };
-    cardano-test-ap-southeast-1 = { inherit accessKeyId; region = "ap-southeast-1"; };
-    cardano-test-ap-southeast-2 = { inherit accessKeyId; region = "ap-southeast-2"; };
-    cardano-test-ap-northeast-1 = { inherit accessKeyId; region = "ap-northeast-1"; };
-    cardano-test-ap-northeast-2 = { inherit accessKeyId; region = "ap-northeast-2"; };
-    cardano-test-us-west-1 = { inherit accessKeyId; region = "us-west-1"; };
-  };
 
   volhovmKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRMQ16PB/UvIEF+UIHfy66FNaBUWgviE2xuD5qoq/nXURBsHogGzv1ssdj1uaLdh7pZxmo/cRC+Y5f6dallIHHwdiKKOdRq1R/IWToMxnL/TTre+px6rxq21al9r4lvibelIU9vDn0R6OFZo+pRWyXUm33bQ4DVhwWiSls3Hw+9xRq4Pf2aWy//ey5CUTW+QkVdDIOFQG97kHDO3OdoNuaOMdeS+HBgH25bzSlcMw044T/NV9Cyi3y1eEBCoyqA9ba28GIl3vNADBdoQb5YYhBViFLaFsadzgWv5XWTpXV4Kwnq8ekmTcBkDzoTng/QOrDLsFMLo1nEMvhbFZopAfZ volhovm.cs@gmail.com";
   georgeeeKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCymYrIVeNUd9TUPc3cTdHIAatTg3qPbuTENNNHCKQyM4PPvWE+DzmyVDki07NpBk9Ivge3whklcTpRVTMXs7AFX3YIdIxpvc+XVgKhweqd8H0QZkC4/gsJNVTBuY1ZQ2Ldw/rRmbiA9lx/z3vtoI5p4oLSumP2qd5l/KwjDvj66X8K4KOofkFFEiPqBztQwt+A2Hh6XH5qeakQQm/TFeNL6SU0X0zKRdhjyzYAEa2Nt/Te1KK+Jkof7vZ2YnJ3jQFUhC/yRej4o3MPde0HoEP7L86rm9ORcSyQe4jZJ/d6qXMNFAG/7LfU+3LVJ+T584kHXBm5Jl5rOyX2MngNxLxP georgeee@georgeee-laptop";

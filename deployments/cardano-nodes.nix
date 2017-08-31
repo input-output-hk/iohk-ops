@@ -1,9 +1,7 @@
-{ accessKeyId, deployerIP, systemStart, environment, ... }:
+{ # nixops, network, args,
+  globals, ... }: with (import ./../lib.nix);
 
-with (import ./../lib.nix);
-let
-  nodeArgs   = (import ./cardano-nodes-config.nix { inherit accessKeyId deployerIP systemStart environment; }).nodeArgs;
-  nodeConfig = import ./../modules/cardano-node-config.nix;
-in {
-  network.description = "Cardano SL";
-} // (mkNodesUsing nodeConfig nodeArgs)
+flip mapAttrs globals.nodeMap
+(name: import ./../modules/cardano-node-config.nix
+       globals
+       [])

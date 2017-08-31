@@ -1,41 +1,40 @@
-{ config, pkgs, lib, ... }:
-
 with (import ./../lib.nix);
 
-let
-  report-server = (import ./../default.nix {}).cardano-report-server-static;
-  cfg = config.services.report-server;
-in {
-  options = {
-    services.report-server = {
-      port = mkOption { type = types.int; default = 8080; };
-      logsdir = mkOption { type = types.path; default = "/var/lib/report-server"; };
-    };
-  };
+globals: params:
+{ config, pkgs, lib, ... }:
 
+let
+  report-server-drv = (import ./../default.nix {}).cardano-report-server-static;
+in {
   imports = [ ./common.nix ];
 
+  options.services.report-server = {
+      logsdir = mkOption { type = types.path; default = "/var/lib/report-server"; };
+  };
+
   config = {
+    networking.firewall.allowedTCPPorts = [
+      params.port
+    ];
+
     users = {
       users.report-server = {
         group = "report-server";
-        home = cfg.logsdir;
+        home = config.services.report-server.cfg.logsdir;
         createHome = true;
       };
       groups.report-server = {};
     };
 
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
-
     systemd.services.report-server = {
-      description   = "";
+      description   = "Cardano report server";
       after         = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
         User = "report-server";
         Group = "report-server";
         ExecStart = ''
-          ${report-server}/bin/cardano-report-server -p ${toString cfg.port} --logsdir ${cfg.logsdir}
+          ${report-server-drv}/bin/cardano-report-server -p ${toString params.port} --logsdir ${config.services.report-server.logsdir}
         '';
       };
     };

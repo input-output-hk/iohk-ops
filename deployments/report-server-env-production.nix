@@ -1,4 +1,4 @@
-{ accessKeyId, environment, ... }:
+{ IOHKaccessKeyId, environment, ... }:
 
 with (import ./../lib.nix);
 {
@@ -11,12 +11,12 @@ with (import ./../lib.nix);
     services.dd-agent.tags = ["env:${environment}"];
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.report-server-ip;
-    deployment.route53.accessKeyId = accessKeyId;
+    deployment.route53.accessKeyId = IOHKaccessKeyId;
     deployment.route53.hostName = "report-server.${(envSpecific environment).dnsSuffix}";
   };
   resources = {
     elasticIPs = {
-      report-server-ip = { inherit region accessKeyId; };
+      report-server-ip = { inherit region IOHKaccessKeyId; };
     };
   };
 }
