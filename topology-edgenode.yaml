@@ -1,35 +1,36 @@
 nodes:
 
-# First the 7 cores, in 3 reigions
-# - Frankfurt      (eu-central-1)
-# - Tokyo          (ap-northeast-1)
-# - Singapore      (ap-southeast-1)
-
-# TODO: replace "ap-southeast-1" with US, North Cal. (us-west-1)
+# First the 4 cores, in a single region
 
   'core-1':
     region: eu-central-1
     type: core
     host: core-1.cardano
-    static-routes: [ ['core-2'], ['core-3'], ['relay-1'] ]
+    static-routes: [ ['core-2'], ['core-3'], ['core-4'], ['relay-1'] ]
 
   'core-2':
     region: eu-central-1
     type: core
     host: core-2.cardano
-    static-routes: [ ['core-1'], ['core-3'], ['relay-1'] ]
+    static-routes: [ ['core-1'], ['core-3'], ['core-4'], ['relay-1'] ]
 
   'core-3':
     region: eu-central-1
     type: core
     host: core-3.cardano
-    static-routes: [ ['core-1'], ['core-2'], ['relay-1'] ]
+    static-routes: [ ['core-1'], ['core-2'], ['core-4'], ['relay-1'] ]
 
-# now the 7 relays, in the same 3 reigions
+  'core-4':
+    region: eu-central-1
+    type: core
+    host: core-4.cardano
+    static-routes: [ ['core-1'], ['core-2'], ['core-3'], ['relay-1'] ]
+
+# now the relay, in the same reigion
 
   'relay-1':
     region: eu-central-1
     type: relay
     host: relay-1.cardano
-    static-routes: [ ['core-1'], ['core-2'], ['core-3'], ['relay-1']]
+    static-routes: [ ['core-1'], ['core-2'], ['core-3'], ['core-4'] ]
     kademlia: false

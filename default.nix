@@ -11,7 +11,7 @@ with pkgs.lib;
 with pkgs.haskell.lib;
 
 let
-  prodMode = addConfigureFlags [ "-f-asserts" "-f-dev-mode" "--ghc-options=-DCONFIG=testnet_staging"];
+  prodMode = addConfigureFlags [ "-f-asserts" "-fdev-mode" "-fdev-custom-config" "--ghc-options=-DCONFIG=benchmark"];
   addConfigureFlags = flags: drv: overrideCabal drv (drv: {
     configureFlags = flags;
   });
@@ -32,11 +32,12 @@ let
       # production full nodes shouldn't use wallet as it means different constants
       configureFlags = [
         "-f-asserts"
-        "-f-dev-mode"
+        "-fdev-mode"
+	"-fdev-custom-config"
         "-fwith-explorer"
         # https://github.com/NixOS/nixpkgs/pull/24692#issuecomment-306509337
         "--ghc-option=-optl-lm"
-        "--ghc-options=-DCONFIG=testnet_staging"
+        "--ghc-options=-DCONFIG=benchmark"
       ];
     });
     cardano-sl-static = justStaticExecutables self.cardano-sl;

@@ -1,14 +1,14 @@
 rec {
   # Compile time settings
-  genesisN = 6;
+  genesisN = 4;
   slotDuration = 20;
   networkDiameter = 15;
   mpcRelayInterval = 45;
 
   # Run time settings
   bitcoinOverFlat = false;
-  totalMoneyAmount = 60000000;
-  richPoorDistr = false;
+  totalMoneyAmount = 6000000000;
+  richPoorDistr = true;
   nodePort = 3000;
   enableP2P = true;
 
