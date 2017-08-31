@@ -21,17 +21,17 @@ script:
   # check all packages build
   - nix-instantiate jobsets/cardano.nix --show-trace
   # check deploy evaluations
-  - iohk-ops template --here --environment production --config 'csl-production.yaml'       'csl-production'       Nodes Explorer ReportServer
-  - iohk-ops template --here --environment staging    --config 'csl-staging.yaml'          'csl-staging'          Nodes Explorer ReportServer
-  - iohk-ops template --here                          --config 'csl.yaml'                  'csl'                  Nodes Explorer ReportServer
-  - iohk-ops template --here --environment staging    --config 'csl-explorer-staging.yaml' 'csl-explorer-staging'       Explorer
-  - iohk-ops template --here --environment production --config 'inf.yaml'                  'inf'         Infra
-  - iohk-ops                                --verbose --config 'csl-production.yaml'       do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'csl-staging.yaml'          do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'csl.yaml'                  do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'csl-explorer-staging.yaml' do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'tw.yaml'                   do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'inf.yaml'                  do create deploy --evaluate-only
+  - iohk-ops template --environment production --config 'csl-production.yaml'       'csl-production'       Nodes Explorer ReportServer
+  - iohk-ops template --environment staging    --config 'csl-staging.yaml'          'csl-staging'          Nodes Explorer ReportServer
+  - iohk-ops template                          --config 'csl.yaml'                  'csl'                  Nodes Explorer ReportServer
+  - iohk-ops template --environment staging    --config 'csl-explorer-staging.yaml' 'csl-explorer-staging'       Explorer
+  - iohk-ops template --environment production --config 'inf.yaml'                  'inf'         Infra
+  - iohk-ops                         --verbose --config 'csl-production.yaml'       create deploy --evaluate-only
+  - iohk-ops                         --verbose --config 'csl-staging.yaml'          create deploy --evaluate-only
+  - iohk-ops                         --verbose --config 'csl.yaml'                  create deploy --evaluate-only
+  - iohk-ops                         --verbose --config 'csl-explorer-staging.yaml' create deploy --evaluate-only
+  - iohk-ops                         --verbose --config 'tw.yaml'                   create deploy --evaluate-only
+  - iohk-ops                         --verbose --config 'inf.yaml'                  create deploy --evaluate-only
 
 notifications:
   email: false
