@@ -262,7 +262,8 @@ selectTopologyConfig Federated   _ = "topology-federated.yaml"
 selectTopologyConfig _           _ = "topology.yaml"
 
 deployerIP :: Options -> IO IP
-deployerIP o = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+deployerIP o@Options{..} = IP <$> if oTesting then pure "0.0.0.0"
+                                  else incmd o "curl" ["--silent", fromURL awsPublicIPURL]
 
 
 -- * Topology
@@ -419,6 +420,7 @@ data Options = Options
   , oSerial           :: Bool
   , oVerbose          :: Bool
   , oNoComponentCheck :: Bool
+  , oTesting          :: Bool
   } deriving Show
 
 parserNodeLimit :: Parser (Maybe NodeName)
@@ -434,6 +436,7 @@ parserOptions = Options
                 <*>           switch  "serial"    's' "Disable parallelisation"
                 <*>           switch  "verbose"   'v' "Print all commands that are being run"
                 <*>           switch  "no-component-check" 'p' "Disable deployment/*.nix component check"
+                <*>           switch  "testing"   't' "Test scenario:  don't expect AWS or anything advanced"
 
 nixpkgsCommitPath :: Commit -> Text
 nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
@@ -577,12 +580,19 @@ inproc bin args inp = do
   liftIO $ logCmd bin args
   Turtle.inproc bin args inp
 
+minprocs :: MonadIO m => Text -> [Text] -> Shell Line -> m (Either ProcFailed Text)
+minprocs bin args inp = do
+  (exitCode, out) <- liftIO $ procStrict bin args inp
+  pure $ case exitCode of
+           ExitSuccess -> Right out
+           _           -> Left $ ProcFailed bin args exitCode
+
 inprocs :: MonadIO m => Text -> [Text] -> Shell Line -> m Text
 inprocs bin args inp = do
-  (exitCode, out) <- liftIO $ procStrict bin args inp
-  unless (exitCode == ExitSuccess) $
-    liftIO (throwIO (ProcFailed bin args exitCode))
-  pure out
+  ret <- minprocs bin args inp
+  case ret of
+    Right out -> pure out
+    Left  err -> liftIO $ throwIO err
 
 cmd   :: Options -> Text -> [Text] -> IO ()
 cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
