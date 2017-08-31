@@ -17,7 +17,7 @@ import           Time.Types
 import           Time.System
 
 
-import           NixOps                           (Branch(..), Commit(..), Confirmation(..), Environment(..), Deployment(..), Target(..)
+import           NixOps                           (Branch(..), Commit(..), Confirmation(..), Environment(..), Deployment(..), IP(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), NixopsDepl(..), Project(..), Exec(..), Arg(..)
                                                   ,showT, lowerShowT, errorT, cmd, every, fromNodeName)
 import qualified NixOps                        as Ops
@@ -91,6 +91,7 @@ data Command where
                            , tTarget      :: Target
                            , tName        :: NixopsDepl
                            , tDeployments :: [Deployment]
+                           , tDeployerIP  :: Maybe IP
                            } -> Command
   SetRev                :: Project -> Commit -> Bool -> Command
   FakeKeys              :: Command
@@ -144,7 +145,8 @@ centralCommandParser =
                                 <*> parserEnvironment
                                 <*> parserTarget
                                 <*> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
-                                <*> parserDeployments)
+                                <*> parserDeployments
+                                <*> optional (IP <$> optText "deployer-ip" 'd' "Deployer IP address.  Defaults to auto-detection (works on AWS only)"))
     , ("set-rev",               "Set commit of PROJECT dependency to COMMIT, and commit the resulting changes",
                                 SetRev
                                 <$> parserProject
@@ -307,7 +309,7 @@ runTemplate o@Options{..} Template{..} args = do
 
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
-  config <- Ops.mkConfig o cmdline tName tNixops tTopology tEnvironment tTarget tDeployments systemStart
+  config <- Ops.mkConfig o cmdline tName tNixops tTopology tEnvironment tTarget tDeployments systemStart tDeployerIP
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

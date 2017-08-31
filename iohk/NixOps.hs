@@ -283,9 +283,8 @@ selectTopologyConfig Staging     _ = "topology-staging.yaml"
 selectTopologyConfig Federated   _ = "topology-federated.yaml"
 selectTopologyConfig _           _ = "topology.yaml"
 
-deployerIP :: Options -> IO IP
-deployerIP o@Options{..} = IP <$> if oTesting then pure "0.0.0.0"
-                                  else incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+detectDeployerIP :: Options -> IO IP
+detectDeployerIP o = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
 
 
 -- * Topology
@@ -440,7 +439,6 @@ data Options = Options
   , oSerial           :: Bool
   , oVerbose          :: Bool
   , oNoComponentCheck :: Bool
-  , oTesting          :: Bool
   } deriving Show
 
 parserNodeLimit :: Parser (Maybe NodeName)
@@ -456,7 +454,6 @@ parserOptions = Options
                 <*>           switch  "serial"    's' "Disable parallelisation"
                 <*>           switch  "verbose"   'v' "Print all commands that are being run"
                 <*>           switch  "no-component-check" 'p' "Disable deployment/*.nix component check"
-                <*>           switch  "testing"   't' "Test scenario:  don't expect AWS or anything advanced"
 
 nixpkgsCommitPath :: Commit -> Text
 nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
@@ -521,12 +518,14 @@ deploymentFiles cEnvironment cTarget cElements =
 
 type DeplArgs = Map.Map NixParam NixValue
 
-selectDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> IO DeplArgs
-selectDeploymentArgs o _ env delts (Elapsed systemStart) = do
+selectDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe IP -> IO DeplArgs
+selectDeploymentArgs o _ env delts (Elapsed systemStart) mDeployerIP = do
     let staticArgs = [ ( NixParam $ fromAccessKeyId akid
                        , NixStr . fromNodeName $ selectDeployer env delts)
                      | akid <- accessKeyChain ]
-    (IP deployerIp) <- deployerIP o
+    IP deployerIp <- case mDeployerIP of
+                       Nothing -> detectDeployerIP o
+                       Just ip -> pure ip
     pure $ Map.fromList $
       staticArgs
       <> [ ("deployerIP",   NixStr deployerIp)
@@ -540,13 +539,13 @@ setDeplArg :: NixopsConfig -> NixParam -> NixValue -> NixopsConfig
 setDeplArg c@NixopsConfig{..} k v = c { cDeplArgs = Map.insert k v cDeplArgs }
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> IO NixopsConfig
-mkConfig o cGenCmdline cName mNixops mTopology cEnvironment cTarget cElements systemStart = do
+mkConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe IP -> IO NixopsConfig
+mkConfig o cGenCmdline cName mNixops mTopology cEnvironment cTarget cElements systemStart mDeployerIP = do
   let cNixops   = fromMaybe "nixops" mNixops
       cFiles    = deploymentFiles                          cEnvironment cTarget cElements
       cTopology = flip fromMaybe mTopology $
                   selectTopologyConfig                     cEnvironment         cElements
-  cDeplArgs    <- selectDeploymentArgs o cTopology         cEnvironment         cElements systemStart
+  cDeplArgs    <- selectDeploymentArgs o cTopology         cEnvironment         cElements systemStart mDeployerIP
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
@@ -702,12 +701,12 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
-  when (not evonly) $ do
+  when (not evonly && elem Explorer cElements && rebuildExplorerFrontend) $ do
+    cmd o "scripts/generate-explorer-frontend.sh" []
+  when (not (evonly || buonly)) $ do
+    export "SMART_GEN_IP" ((\(NixStr x)-> x) $ deplArg c "deployerIP" $ error "Asked to deploy a cluster config without 'deployerIP' set.")
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
-    export "SMART_GEN_IP"     =<< getIP <$> deployerIP o
-    when (elem Explorer cElements && rebuildExplorerFrontend) $ do
-      cmd o "scripts/generate-explorer-frontend.sh" []
 
   now <- timeCurrent
   let startParam             = NixParam "systemStart"
