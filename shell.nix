@@ -18,4 +18,4 @@ let
                  ];
              });
 in
-  drv'
+  drv'.env
