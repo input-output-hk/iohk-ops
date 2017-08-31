@@ -3,11 +3,11 @@ nodes:
     type: core
     region: eu-central-1
     static-routes: [["right"]]
-    host: left-ip
+    host: left.cardano
     port: 3000
   'right':
-    type: core
+    type: relay
     region: ap-southeast-1
     static-routes: [["left"]]
-    host: right-ip
+    host: right.cardano
     port: 3000
