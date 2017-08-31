@@ -368,7 +368,7 @@ dumpTopologyNix topo = sh $ do
 
 nodeNames :: Options -> NixopsConfig -> [NodeName]
 nodeNames (oOnlyOn -> nodeLimit)  NixopsConfig{..}
-  | Nothing   <- nodeLimit = topoNodes topology <> [explorerNode]
+  | Nothing   <- nodeLimit = topoNodes topology <> [explorerNode | elem Explorer cElements]
   | Just node <- nodeLimit
   , SimpleTopo nodeMap <- topology
   = if Map.member node nodeMap || node == explorerNode then [node]
