@@ -30,7 +30,7 @@ import           Data.Char                        (ord, toLower)
 import           Data.Csv                         (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
 import           Data.Either
 import           Data.Hourglass                   (timeAdd, timeFromElapsed, timePrint, Duration(..), ISO8601_DateAndTime(..))
-import           Data.List                        (sort)
+import           Data.List                        (nub, sort)
 import           Data.Maybe
 import qualified Data.Map.Strict               as Map
 import           Data.Monoid                      ((<>))
@@ -390,25 +390,28 @@ type FileSpec = (Environment, Target, Text)
 deployments :: [(Deployment, [FileSpec])]
 deployments =
   [ (Explorer
-    , [ (Any,         All, "deployments/cardano-explorer.nix")
+    , [ (Any,         All, "global-resources.nix")
+      , (Any,         All, "deployments/cardano-explorer.nix")
       , (Production,  All, "deployments/cardano-explorer-env-production.nix")
       , (Federated,   All, "deployments/cardano-explorer-env-staging.nix")
       , (Staging,     All, "deployments/cardano-explorer-env-staging.nix") ])
   , (Nodes
-    , [ (Any,         All, "deployments/cardano-nodes.nix")
+    , [ (Any,         All, "global-resources.nix")
+      , (Any,         All, "deployments/cardano-nodes.nix")
       , (Development, All, "deployments/cardano-nodes-env-development.nix")
       , (Production,  All, "deployments/cardano-nodes-env-production.nix")
       , (Federated,   All, "deployments/cardano-nodes-env-staging.nix")
       , (Staging,     All, "deployments/cardano-nodes-env-staging.nix") ])
+  , (ReportServer
+    , [ (Any,         All, "global-resources.nix")
+      , (Any,         All, "deployments/report-server.nix")
+      , (Production,  All, "deployments/report-server-env-production.nix")
+      , (Federated,   All, "deployments/report-server-env-staging.nix")
+      , (Staging,     All, "deployments/report-server-env-staging.nix") ])
   , (Infra
     , [ (Any,         All, "deployments/infrastructure.nix")
       , (Production,  All, "deployments/infrastructure-env-production.nix")
       , (Any,         AWS, "deployments/infrastructure-target-aws.nix") ])
-  , (ReportServer
-    , [ (Any,         All, "deployments/report-server.nix")
-      , (Production,  All, "deployments/report-server-env-production.nix")
-      , (Federated,   All, "deployments/report-server-env-staging.nix")
-      , (Staging,     All, "deployments/report-server-env-staging.nix") ])
   ]
 
 deploymentSpecs :: Deployment -> [FileSpec]
@@ -513,8 +516,7 @@ instance ToJSON NixopsConfig where
 
 deploymentFiles :: Environment -> Target -> [Deployment] -> [Text]
 deploymentFiles cEnvironment cTarget cElements =
-  "global-resources.nix":
-  concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
+  nub $ concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
 
 type DeplArgs = Map.Map NixParam NixValue
 
