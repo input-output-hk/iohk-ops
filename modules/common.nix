@@ -11,7 +11,7 @@ in {
       cabal2nix stack iptables graphviz ]
     ++ (if debugDeploy then [ tcpdump strace gdb binutils ] else []);
 
-  services.openssh.passwordAuthentication = true;
+  services.openssh.passwordAuthentication = false;
   services.openssh.enable = true;
 
   services.ntp.enable = true;
