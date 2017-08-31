@@ -31,7 +31,7 @@ params:
                                 ip   = nodeNameToPublicIP params.name; } ]);
     in
     ''
-    ${concatStringsSep "\n" (map (host: "${host.ip} ${host.name}.cardano") hostList)}
+    ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}.cardano") hostList)}
     '';
 
     services.cardano-node = {

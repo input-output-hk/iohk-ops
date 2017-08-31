@@ -7,5 +7,7 @@
             peers = [];
            relays = [];
           sgNames = [];
+      systemStart = 0;
+         allNames = [ "machine" ];
   };
 }
