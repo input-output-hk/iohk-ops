@@ -7,7 +7,7 @@ args:
     contents: fifth-party
   systemStart:
     tag: NixInt
-    contents: 1504112562
+    contents: 1504273902
   CFaccessKeyId:
     tag: NixStr
     contents: third-party
@@ -16,7 +16,6 @@ args:
     contents: iohk
 gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
   --here staging nodes reportserver explorer
-nixpkgs: 31a956f18c9251064997085fd7732562b1854726
 environment: Staging
 topology: topology-staging.yaml
 name: staging
