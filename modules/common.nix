@@ -21,7 +21,8 @@ in {
 
   environment.variables.TERM = "xterm-256color";
 
-  systemd.coredump.enable = config.services.cardano-node.saveCoreDumps;
+  systemd.coredump.enable = hasAttr "cardano-node" config.services &&
+                            config.services.cardano-node.saveCoreDumps;
 
   services.cron.enable = true;
   #services.cron.systemCronJobs = [
