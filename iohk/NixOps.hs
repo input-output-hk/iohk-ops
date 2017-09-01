@@ -814,11 +814,11 @@ ensureCardanoBranchCheckout o branch dir = do
   pure commit
   
 -- | Generate genesis driving the tip of specified 'cardano-sl' branch.
-generateGenesis :: Options -> NixopsConfig -> Branch -> IO FilePath
+generateGenesis :: Options -> NixopsConfig -> Branch -> IO Text
 generateGenesis o NixopsConfig{..} cardanoBranch = do
   let cardanoSLDir     = "cardano-sl"
-      genesisName      = "genesis"
-      genesisTarball   = genesisName <> ".tar.gz"
+      genesisName      = "genesis" :: Text
+      genesisTarball   = genesisName <> ".tgz"
       genSuffix        = "tn"
       (,) genM genN    = (,) (topoNCores topology) 1200
       genFiles         = [ "core/genesis-core-"%s%".bin"
@@ -829,13 +829,13 @@ generateGenesis o NixopsConfig{..} cardanoBranch = do
     (fromBranch cardanoBranch) (fromCommit cardanoCommit) genM genN
   cardanoGenesisCommit <- do
     cd cardanoSLDir
-    cmd o "rm" ["-rf", format fp genesisName]
+    cmd o "rm" ["-rf", genesisName, genesisTarball]
     cmd o "scripts/generate/genesis.sh"
       [ "--build-mode",        "nix"
-      , "--install-as-suffix", genSuffix
-      , "--rich-keys",         showT genM
-      , "--poor-keys",         showT genN
-      , "--output-dir",        format fp genesisName]
+      , "--install-as-suffix",  genSuffix
+      , "--rich-keys",          showT genM
+      , "--poor-keys",          showT genN
+      , "--output-dir",         genesisName]
     cmd o "git" (["add"] <> genFiles)
     cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
     echo "Genesis generated and committed, bumping 'iohk-ops'"
@@ -847,7 +847,7 @@ generateGenesis o NixopsConfig{..} cardanoBranch = do
   runSetRev o CardanoSL cardanoGenesisCommit (Just $ format ("Bump cardano: Regenerated genesis, M="%d%", N="%d%", cardano="%s) genM genN (fromCommit cardanoCommit))
   cmd o "git" ["push", "--force", "origin"]
   echo "Don't forget to archive and install the keys from our new genesis:"
-  cmd o "ls" ["-l", format fp $ cardanoSLDir <> "/" <> genesisTarball]
+  cmd o "ls" ["-l", format (fp%"/"%s) cardanoSLDir genesisTarball]
   pure genesisName
 
 -- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
@@ -856,7 +856,8 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
   let cardanoSLDir      = "cardano-sl"
       deployerUser      = "staging"
       deploymentAccount = deployerUser <> "@" <> (getIP $ configDeployerIP c)
-      deploymentSource  = format (s%":"%s%"/") deploymentAccount (fromNixopsDepl cName) <> "/"
+      deploymentDir     = fromNixopsDepl cName
+      deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
   -- 0. Validate
   unless skipValidation $ do
     echo "Validating 'iohk-ops' checkout.."
@@ -875,28 +876,32 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
   when doGenesis $ do
     echo "Genesis regeneration requested.."
     genesisName <- generateGenesis o c cardanoBranchToDrive
-    let genesisTarball = genesisName <> ".tar.gz"
+    let genesisTarball = genesisName <> ".tgz"
         richKeys       = topoNCores topology
     printf ("Updating deployer genesis: "%s%"\n") deploymentSource
     echo "  -- removing old genesis"
-    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'rm -rf ./"%fp%" ./"%fp%"'") genesisTarball genesisName]
+    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'rm -rf ./"%s%" ./"%s%"'") genesisTarball genesisName]
     echo "  -- uploading generated genesis archive"
-    cmd o "scp" [ format fp $ cardanoSLDir <> "/" <> genesisTarball, deploymentSource ]
+    cmd o "scp" [ format (fp%"/"%s) cardanoSLDir genesisTarball
+                , deploymentSource ]
     echo "  -- unpacking genesis archive"
-    cmd o "ssh" [ deploymentAccount, "tar", "xaf", format fp genesisTarball ]
+    cmd o "ssh" [ deploymentAccount, "tar", "xaf", deploymentDir <> "/" <> genesisTarball, "-C", deploymentDir ]
     echo "  -- removing old rich keys"
-    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'rm -rf ./keys/*'")]
+    cmd o "ssh" [ deploymentAccount, "bash", "-c"
+                , format ("'cd "%s%" && rm -rf ./keys/*'") deploymentDir]
     echo "  -- installing genesis rich keys"
-    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'for x in {1.."%d%"}; do cp "%fp%"/keys-testnet/rich/testnet$x.key keys/key$((x-1)).sk; done'") richKeys genesisName]
+    cmd o "ssh" [ deploymentAccount, "bash", "-c"
+                , format ("'cd "%s%" && for x in {1.."%d%"}; do cp "%s%"/keys-testnet/rich/testnet$x.key keys/key$((x-1)).sk; done'")
+                  deploymentDir richKeys genesisName]
   -- 4. Wait for CI (either after first or second bump)
   echo "CI status:  https://hydra.iohk.io/jobset/serokell/iohk-nixops-staging#tabs-evaluations"
   printf ("\nPress 'Enter' when CI has built the evaluation for 'iohk-ops' commit "%s%"\n") (fromCommit opsCommit)
   void readline
   -- 5. Deploy
   printf ("Updating deployment source: "%s%"\n") deploymentSource
-  cmd o "ssh"   [ deploymentAccount, "git", "fetch", "origin" ]
-  cmd o "ssh"   [ deploymentAccount, "git", "reset", "--hard", fromCommit opsCommit ]
-  cmd o "ssh" $ [ deploymentAccount, "io", "--config", format fp $ fromJust oConfigFile
+  cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "fetch", "origin" ]
+  cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "reset", "--hard", fromCommit opsCommit ]
+  cmd o "ssh" $ [ deploymentAccount, "io",  "-C", deploymentDir, "--config", format fp $ fromJust oConfigFile
                 , "deploy-staging-phase1" , "--bump-system-start-held-by", format d bumpHeldBy ]
                 ++ [ "--wipe-node-dbs" | doGenesis ]
 
