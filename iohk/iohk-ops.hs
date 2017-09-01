@@ -233,7 +233,11 @@ main = do
   args <- (Arg . T.pack <$>) <$> Sys.getArgs
   (opts@Options{..}, topcmds) <- options "Helper CLI around IOHK NixOps. For example usage see:\n\n  https://github.com/input-output-hk/internal-documentation/wiki/iohk-ops-reference#example-deployment" $
                      (,) <$> Ops.parserOptions <*> many centralCommandParser
-  forM_ topcmds $ runTop opts args
+  case oChdir of
+    Just path -> cd path
+    Nothing   -> pure ()
+
+  forM_ topcmds $ runTop (opts { oChdir = Nothing }) args
 
 runTop :: Options -> [Arg] -> Command -> IO ()
 runTop o@Options{..} args topcmd = do

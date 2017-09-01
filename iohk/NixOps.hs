@@ -437,7 +437,8 @@ elementDeploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNe
 
 
 data Options = Options
-  { oConfigFile       :: Maybe FilePath
+  { oChdir            :: Maybe FilePath
+  , oConfigFile       :: Maybe FilePath
   , oOnlyOn           :: Maybe NodeName
   , oConfirm          :: Bool
   , oDebug            :: Bool
@@ -451,7 +452,8 @@ parserNodeLimit = optional $ NodeName <$> (optText "just-node" 'n' "Limit operat
 
 parserOptions :: Parser Options
 parserOptions = Options
-                <$> optional (optPath "config"    'c' "Configuration file")
+                <$> optional (optPath "chdir"     'C' "Run as if 'iohk-ops' was started in <path> instead of the current working directory.")
+                <*> optional (optPath "config"    'c' "Configuration file")
                 <*> (optional $ NodeName
                      <$>     (optText "on"        'o' "Limit operation to the specified node"))
                 <*>           switch  "confirm"   'y' "Pass --confirm to nixops"
