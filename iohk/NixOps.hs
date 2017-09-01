@@ -871,7 +871,6 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
   -- 2. Record first bump and trigger CI
   printf ("Pushing local 'iohk-ops' commit into 'origin'..\n")
   cmd o "git" ["push", "--force", "origin"]
-  opsCommit <- gitHEADCommit o
   -- 3. Genesis
   when doGenesis $ do
     echo "Genesis regeneration requested.."
@@ -895,6 +894,7 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
                   deploymentDir richKeys genesisName]
   -- 4. Wait for CI (either after first or second bump)
   echo "CI status:  https://hydra.iohk.io/jobset/serokell/iohk-nixops-staging#tabs-evaluations"
+  opsCommit <- gitHEADCommit o
   printf ("\nPress 'Enter' when CI has built the evaluation for 'iohk-ops' commit "%s%"\n") (fromCommit opsCommit)
   void readline
   -- 5. Deploy
