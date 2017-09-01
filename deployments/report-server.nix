@@ -6,8 +6,3 @@ flip mapAttrs nodeMap
 (name: import ./../modules/report-server.nix
        globals
        [])
-// {
-  options.services.report-server = {
-    logsdir = mkOption { type = types.path; default = "/var/lib/report-server"; };
-  };
-}
