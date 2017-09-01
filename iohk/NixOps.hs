@@ -29,6 +29,7 @@ import qualified Data.ByteString.Lazy.UTF8     as LBU
 import           Data.Char                        (ord, toLower)
 import           Data.Csv                         (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
 import           Data.Either
+import           Data.Foldable                    (asum)
 import           Data.Hourglass                   (timeAdd, timeFromElapsed, timePrint, Duration(..), ISO8601_DateAndTime(..))
 import           Data.List                        (nub, sort)
 import           Data.Maybe
@@ -188,7 +189,8 @@ instance FromJSON (NixSource Git) where
       <$> v .: "url"
       <*> v .: "rev"
       <*> v .: "sha256"
-      <*> v .: "fetchSubmodules"
+      <*> asum [ (v .: "fetchSubmodules")
+               , readT . T.toTitle <$> (v .: "fetchSubmodules")]
 instance FromJSON (NixSource Github) where
   parseJSON = AE.withObject "GithubSource" $ \v -> GithubSource
       <$> v .: "owner"
