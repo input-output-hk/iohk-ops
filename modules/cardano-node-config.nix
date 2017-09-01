@@ -16,8 +16,8 @@ globals: imports: params:
 
     imports = [
       ./common.nix
+      ./amazon-base.nix
       (import ./cardano-node.nix globals params)
-      (import ./amazon-base.nix  globals params)
     ] ++ map (path: import path globals params) imports;
 
     services.dnsmasq.enable = true;

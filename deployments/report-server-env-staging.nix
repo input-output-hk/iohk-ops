@@ -8,7 +8,6 @@ in
       ./../modules/datadog.nix
       ./../modules/papertrail.nix
       ./../modules/common.nix
-      (import ./../modules/amazon-base.nix globals params)
     ];
 
     services.dd-agent.tags = ["env:${globals.environment}"];
