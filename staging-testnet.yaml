@@ -11,7 +11,6 @@ args:
 gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
   --here staging nodes reportserver explorer
 environment: Staging
-nixpkgs: 9b948ea439ddbaa26740ce35543e7e35d2aa6d18
 topology: topology-staging.yaml
 name: staging
 files:
