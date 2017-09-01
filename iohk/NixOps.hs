@@ -35,6 +35,7 @@ import           Data.List                        (nub, sort)
 import           Data.Maybe
 import qualified Data.Map.Strict               as Map
 import           Data.Monoid                      ((<>))
+import           Data.Optional                    (Optional)
 import qualified Data.Set                      as Set
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
@@ -445,7 +446,14 @@ data Options = Options
   , oSerial           :: Bool
   , oVerbose          :: Bool
   , oNoComponentCheck :: Bool
+  , oNixpkgs          :: Maybe FilePath
   } deriving Show
+
+parserBranch :: Optional HelpMessage -> Parser Branch
+parserBranch desc = Branch <$> argText "branch" desc
+
+parserCommit :: Optional HelpMessage -> Parser Commit
+parserCommit desc = Commit <$> argText "commit" desc
 
 parserNodeLimit :: Parser (Maybe NodeName)
 parserNodeLimit = optional $ NodeName <$> (optText "just-node" 'n' "Limit operation to the specified node")
@@ -461,6 +469,7 @@ parserOptions = Options
                 <*>           switch  "serial"    's' "Disable parallelisation"
                 <*>           switch  "verbose"   'v' "Print all commands that are being run"
                 <*>           switch  "no-component-check" 'p' "Disable deployment/*.nix component check"
+                <*> (optional $ optPath "nixpkgs" 'i' "Set 'nixpkgs' revision")
 
 nixpkgsCommitPath :: Commit -> Text
 nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
@@ -471,7 +480,7 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--confirm" | oConfirm] <>
   ["--show-trace"
   ,"--deployment", fromNixopsDepl cName
-  ]
+  ] <> fromMaybe [] ((["-I"] <>) . (:[]) . ("nixpkgs=" <>) . format fp <$> oNixpkgs)
 
 
 -- | Before adding a field here, consider, whether the value in question
@@ -481,6 +490,7 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
 data NixopsConfig = NixopsConfig
   { cName             :: NixopsDepl
   , cGenCmdline       :: Text
+  , cNixpkgs          :: Maybe Commit
   , cNixops           :: FilePath
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
@@ -495,6 +505,7 @@ instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
         <*> v .:? "gen-cmdline" .!= "--unknown--"
+        <*> v .:? "nixpkgs"
         <*> v .:? "nixops"      .!= "nixops"
         <*> v .:? "topology"    .!= "topology-development.yaml"
         <*> v .: "environment"
@@ -551,6 +562,7 @@ mkConfig o cGenCmdline cName mNixops mTopology cEnvironment cTarget cElements sy
       cFiles    = deploymentFiles                          cEnvironment cTarget cElements
       cTopology = flip fromMaybe mTopology $
                   selectTopologyConfig                     cEnvironment         cElements
+      cNixpkgs  = Nothing
   cDeplArgs    <- selectDeploymentArgs o cTopology         cEnvironment         cElements systemStart mDeployerIP
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
@@ -769,16 +781,23 @@ fromscratch o c = do
 
 -- * Building
 --
+prefetchURL :: Options -> Project -> Commit -> IO (NixHash, FilePath)
+prefetchURL o proj rev = do
+  let url = projectURL proj
+  hashPath <- incmd o "nix-prefetch-url" ["--unpack", "--print-path", (fromURL $ url) <> "/archive/" <> fromCommit rev <> ".tar.gz"]
+  let hashPath' = T.lines hashPath
+  pure (NixHash (hashPath' !! 0), Path.fromText $ hashPath' !! 1)
+
 runSetRev :: Options -> Project -> Commit -> Maybe Text -> IO ()
 runSetRev o proj rev mCommitChanges = do
   printf ("Setting '"%s%"' commit to "%s%"\n") (lowerShowT proj) (fromCommit rev)
   let url = projectURL proj
-  hash <- incmd o "nix-prefetch-url" ["--unpack", (fromURL $ url) <> "/archive/" <> fromCommit rev <> ".tar.gz"]
-  printf ("Hash is"%s%"\n") hash
+  (hash, _) <- prefetchURL o proj rev
+  printf ("Hash is"%s%"\n") (showT hash)
   let revspecFile = format fp $ projectSrcFile proj
       revSpec = GitSource{ gRev             = rev
                          , gUrl             = url
-                         , gSha256          = NixHash (T.strip hash)
+                         , gSha256          = hash
                          , gFetchSubmodules = True }
   writeFile (T.unpack $ revspecFile) $ LBU.toString $ encodePretty revSpec
   case mCommitChanges of
@@ -812,7 +831,7 @@ ensureCardanoBranchCheckout o branch dir = do
   commit <- gitHEADCommit o
   cd ".."
   pure commit
-  
+
 -- | Generate genesis driving the tip of specified 'cardano-sl' branch.
 generateGenesis :: Options -> NixopsConfig -> Branch -> IO Text
 generateGenesis o NixopsConfig{..} cardanoBranch = do
@@ -907,14 +926,25 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
 
 deployStagingPhase1 :: Options -> NixopsConfig -> Seconds -> Bool -> IO ()
 deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs = do
+  -- 0. If we have nixpkgs commit set in the config, propagate
+  nixpkgsPath <- case cNixpkgs of
+    Nothing -> pure Nothing
+    Just commit -> do
+      (_, storePath) <- prefetchURL o Nixpkgs commit
+      pure $ Just storePath
+  let options' = o { oNixpkgs = nixpkgsPath }
+
   -- 1. --build-only
-  deploy o c False True False True Nothing
-  -- 2. for real
+  deploy options' c False True False True Nothing
+
+  -- 2. cleanup
   stop o c
   wipeJournals o c
   when doWipeNodeDBs $
     wipeNodeDBs o c Confirm
-  deploy o c False False False False (Just bumpHeldBy)
+
+  -- 3. for real
+  deploy options' c False False False False (Just bumpHeldBy)
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"

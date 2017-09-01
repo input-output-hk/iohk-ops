@@ -8,7 +8,7 @@ import           Data.List
 import qualified Data.Map                      as Map
 import           Data.Maybe
 import           Data.Monoid                      ((<>))
-import           Data.Optional (Optional)
+import           Data.Optional                    (Optional)
 import qualified Data.Text                     as T
 import qualified Filesystem.Path.CurrentOS     as Path
 import qualified System.Environment            as Sys
@@ -19,7 +19,7 @@ import           Time.System
 
 import           NixOps                           (Branch(..), Commit(..), Confirmation(..), Environment(..), Deployment(..), IP(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), NixopsDepl(..), Project(..), Exec(..), Arg(..)
-                                                  ,showT, lowerShowT, errorT, cmd, every, fromNodeName)
+                                                  ,showT, lowerShowT, errorT, cmd, every, fromNodeName, parserBranch, parserCommit)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import           Topology
@@ -40,12 +40,6 @@ optReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> ShortName -> O
 optReadLower = opt (diagReadCaseInsensitive . T.unpack)
 argReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> Optional HelpMessage -> Parser a
 argReadLower = arg (diagReadCaseInsensitive . T.unpack)
-
-parserBranch :: Optional HelpMessage -> Parser Branch
-parserBranch desc = Branch <$> argText "branch" desc
-
-parserCommit :: Optional HelpMessage -> Parser Commit
-parserCommit desc = Commit <$> argText "commit" desc
 
 parserEnvironment :: Parser Environment
 parserEnvironment = fromMaybe Ops.defaultEnvironment <$> optional (optReadLower "environment" 'e' $ pure $
