@@ -677,6 +677,9 @@ computeFinalDeplArgs NixopsConfig{..} =
                     ,("environment",  NixStr  $ lowerShowT cEnvironment)]
   in ("globals", buildGlobalsImportNixExpr deplArgs): deplArgs
 
+configDeployerIP :: NixopsConfig -> IP
+configDeployerIP c = (\(NixStr x) -> IP x) <$> deplArg c "deployerIP" $ error "Asked to deploy a cluster config without 'deployerIP' set."
+
 modify :: Options -> NixopsConfig -> IO ()
 modify o@Options{..} c@NixopsConfig{..} = do
   printf ("Syncing Nix->state for deployment "%s%"\n") $ fromNixopsDepl cName
@@ -706,7 +709,7 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
   when (not evonly && elem Explorer cElements && rebuildExplorerFrontend) $ do
     cmd o "scripts/generate-explorer-frontend.sh" []
   when (not (evonly || buonly)) $ do
-    export "SMART_GEN_IP" ((\(NixStr x)-> x) $ deplArg c "deployerIP" $ error "Asked to deploy a cluster config without 'deployerIP' set.")
+    export "SMART_GEN_IP" $ getIP $ configDeployerIP c
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
 
@@ -789,74 +792,120 @@ runFakeKeys = do
     (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
   echo "Minimum viable keyset complete."
 
-ensureCardanoCheckout :: Options -> Branch -> FilePath -> IO ()
-ensureCardanoCheckout o branch cardanoSLDir = do
-  preExisting <- testpath cardanoSLDir
-  unless preExisting $ do
-    echo "Cloning 'cardano-sl'"
+ensureCardanoBranchCheckout :: Options -> Branch -> FilePath -> IO Commit
+ensureCardanoBranchCheckout o branch dir = do
+  preExisting <- testdir dir
+  if preExisting
+  then do
+    cd dir
+    printf ("Updating local checkout of 'cardano-sl' to the tip of 'origin/"%s%"'..\n") (fromBranch branch)
+    cmd o "git" ["fetch", "origin"]
+    cmd o "git" ["checkout", "-B", fromBranch branch, "origin/" <> fromBranch branch]
+  else do
+    printf ("Cloning 'cardano-sl' branch "%s%"\n") (fromBranch branch)
     cmd o "git" ["clone", "--branch", fromBranch branch, fromURL $ projectURL CardanoSL, "cardano-sl"]
+    cd dir
+  commit <- gitHEADCommit o
+  cd ".."
+  pure commit
   
 -- | Generate genesis driving the tip of specified 'cardano-sl' branch.
-generateGenesis :: Options -> NixopsConfig -> Branch -> IO ()
+generateGenesis :: Options -> NixopsConfig -> Branch -> IO FilePath
 generateGenesis o NixopsConfig{..} cardanoBranch = do
   let cardanoSLDir     = "cardano-sl"
-      genSuffix        = "tns"
+      genesisName      = "genesis"
+      genesisTarball   = genesisName <> ".tar.gz"
+      genSuffix        = "tn"
       (,) genM genN    = (,) (topoNCores topology) 1200
-      genFiles         = [ "core/genesis-core-tns.bin"
-                         , "genesis-info/tns.log"
-                         , "godtossing/genesis-godtossing-tns.bin" ]
-  GitSource{..} <- readSource gitSource CardanoSL
-  printf ("Generating genesis using cardano-sl commit "%s%"\n  M:"%d%"\n  N:"%d%"\n")
-    (fromCommit gRev) genM genN
-  ensureCardanoCheckout o cardanoBranch cardanoSLDir
-  cd cardanoSLDir
-  echo "WARNING: removing old genesis.."
-  cmd o "git" ["fetch", "origin"]
-  cmd o "git" ["checkout", fromBranch cardanoBranch]
-  cmd o "git" ["reset", "--hard", fromCommit gRev]
-  export "M" (showT genM)
-  export "N" (showT genN)
-  cmd o "bash" ["-c", "rm -rf genesis*"]
-  cmd o "scripts/generate/genesis.sh"
-    ["--build-mode", "nix", "--iohkops-dir", "..", "--install-as-suffix", genSuffix]
-  cmd o "git" (["add"] <> genFiles)
-  cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
-  echo "Genesis generated and committed, bumping 'iohk-ops'"
-  cardanoGenesisCommit <- gitHEADCommit o
-  printf ("Committed new genesis as 'cardano-sl' commit "%s%"\n") (fromCommit cardanoGenesisCommit)
-  cmd o "git" ["push", "--force", "origin"]
-  cd ".."
-  runSetRev o CardanoSL cardanoGenesisCommit (Just $ format ("Bump cardano: Regenerated genesis, M="%d%", N="%d) genM genN)
+      genFiles         = [ "core/genesis-core-"%s%".bin"
+                         , "genesis-info/"%s%".log"
+                         , "godtossing/genesis-godtossing-"%s%".bin" ] <&> flip format genSuffix
+  cardanoCommit <- ensureCardanoBranchCheckout o cardanoBranch cardanoSLDir
+  printf ("Generating genesis using cardano-sl branch '"%s%"' (commit "%s%")\n  M:"%d%"\n  N:"%d%"\n")
+    (fromBranch cardanoBranch) (fromCommit cardanoCommit) genM genN
+  cardanoGenesisCommit <- do
+    cd cardanoSLDir
+    cmd o "rm" ["-rf", format fp genesisName]
+    cmd o "scripts/generate/genesis.sh"
+      [ "--build-mode",        "nix"
+      , "--install-as-suffix", genSuffix
+      , "--rich-keys",         showT genM
+      , "--poor-keys",         showT genN
+      , "--output-dir",        format fp genesisName]
+    cmd o "git" (["add"] <> genFiles)
+    cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
+    echo "Genesis generated and committed, bumping 'iohk-ops'"
+    cardanoGenesisCommit <- gitHEADCommit o
+    printf ("Committed new genesis as 'cardano-sl' commit "%s%", pushing to 'origin'\n") (fromCommit cardanoGenesisCommit)
+    cmd o "git" ["push", "--force", "origin"]
+    cd ".."
+    pure cardanoGenesisCommit
+  runSetRev o CardanoSL cardanoGenesisCommit (Just $ format ("Bump cardano: Regenerated genesis, M="%d%", N="%d%", cardano="%s) genM genN (fromCommit cardanoCommit))
   cmd o "git" ["push", "--force", "origin"]
   echo "Don't forget to archive and install the keys from our new genesis:"
-  cmd o "bash" ["-c", "ls -l genesis*"]
+  cmd o "ls" ["-l", format fp $ cardanoSLDir <> "/" <> genesisTarball]
+  pure genesisName
 
 -- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
-deployStagingPhase0 :: Options -> NixopsConfig -> Branch -> Bool -> IO ()
-deployStagingPhase0 o c cardanoBranch doGenesis = do
-  let cardanoSLDir     = "cardano-sl"
-  ensureCardanoCheckout o cardanoBranch cardanoSLDir
-  desiredHEAD <- do
-    cd cardanoSLDir
-    printf ("Updating local checkout of 'cardano-sl' to the tip of 'origin/"%s%"'..\n") (fromBranch cardanoBranch)
-    cmd o "git" ["fetch", "origin"]
-    cmd o "git" ["checkout", "-B", fromBranch cardanoBranch, "origin/" <> fromBranch cardanoBranch]
-    commit <- gitHEADCommit o
-    cd ".."
-    pure commit
+deployStaging :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> IO ()
+deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis skipValidation = do
+  let cardanoSLDir      = "cardano-sl"
+      deployerUser      = "staging"
+      deploymentAccount = deployerUser <> "@" <> (getIP $ configDeployerIP c)
+      deploymentSource  = format (s%":"%s%"/") deploymentAccount (fromNixopsDepl cName) <> "/"
+  -- 0. Validate
+  unless skipValidation $ do
+    echo "Validating 'iohk-ops' checkout.."
+    cmd o "bash" ["scripts/travis.sh", "iohk-ops", format fp cNixops]
+    cmd o "nix-build" ["--keep-failed", "jobsets/cardano.nix", "-A", "tests.simpleNode.x86_64-linux", "--show-trace"]
+  -- 1. Bump Cardano
+  branchHEAD <- ensureCardanoBranchCheckout o cardanoBranchToDrive cardanoSLDir
   GitSource{..} <- readSource gitSource CardanoSL
-  if (desiredHEAD == gRev)
-  then printf ("WARNING:  remote tip of branch '"%s%"' is '"%s%"', which matches our local spec for 'cardano-sl'.  Assuming that a pkgs/generate.sh is not needed.\n")
-         (fromBranch cardanoBranch) (fromCommit desiredHEAD)
-  else do
-    runSetRev o CardanoSL desiredHEAD (Just $ format ("Bump cardano-sl to:  "%s) (fromCommit desiredHEAD))
+  unless (branchHEAD == gRev) $ do
+    runSetRev o CardanoSL branchHEAD (Just $ format ("Bump cardano-sl to:  "%s) (fromCommit branchHEAD))
+  -- 2. Record first bump and trigger CI
   printf ("Pushing local 'iohk-ops' commit into 'origin'..\n")
   cmd o "git" ["push", "--force", "origin"]
+  opsCommit <- gitHEADCommit o
+  -- 3. Genesis
   when doGenesis $ do
     echo "Genesis regeneration requested.."
-    generateGenesis o c cardanoBranch
-  echo "The deed is done, CI now has the ball."
-  echo "Proceed to:  https://hydra.iohk.io/jobset/serokell/iohk-nixops-staging#tabs-evaluations"
+    genesisName <- generateGenesis o c cardanoBranchToDrive
+    let genesisTarball = genesisName <> ".tar.gz"
+        richKeys       = topoNCores topology
+    printf ("Updating deployer genesis: "%s%"\n") deploymentSource
+    echo "  -- removing old genesis"
+    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'rm -rf ./"%fp%" ./"%fp%"'") genesisTarball genesisName]
+    echo "  -- uploading generated genesis archive"
+    cmd o "scp" [ format fp $ cardanoSLDir <> "/" <> genesisTarball, deploymentSource ]
+    echo "  -- unpacking genesis archive"
+    cmd o "ssh" [ deploymentAccount, "tar", "xaf", format fp genesisTarball ]
+    echo "  -- removing old rich keys"
+    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'rm -rf ./keys/*'")]
+    echo "  -- installing genesis rich keys"
+    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'for x in {1.."%d%"}; do cp "%fp%"/keys-testnet/rich/testnet$x.key keys/key$((x-1)).sk; done'") richKeys genesisName]
+  -- 4. Wait for CI (either after first or second bump)
+  echo "CI status:  https://hydra.iohk.io/jobset/serokell/iohk-nixops-staging#tabs-evaluations"
+  printf ("\nPress 'Enter' when CI has built the evaluation for 'iohk-ops' commit "%s%"\n") (fromCommit opsCommit)
+  void readline
+  -- 5. Deploy
+  printf ("Updating deployment source: "%s%"\n") deploymentSource
+  cmd o "ssh"   [ deploymentAccount, "git", "fetch", "origin" ]
+  cmd o "ssh"   [ deploymentAccount, "git", "reset", "--hard", fromCommit opsCommit ]
+  cmd o "ssh" $ [ deploymentAccount, "io", "--config", format fp $ fromJust oConfigFile
+                , "deploy-staging-phase1" , "--bump-system-start-held-by", format d bumpHeldBy ]
+                ++ [ "--wipe-node-dbs" | doGenesis ]
+
+deployStagingPhase1 :: Options -> NixopsConfig -> Seconds -> Bool -> IO ()
+deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs = do
+  -- 1. --build-only
+  deploy o c False True False True Nothing
+  -- 2. for real
+  stop o c
+  wipeJournals o c
+  when doWipeNodeDBs $
+    wipeNodeDBs o c Confirm
+  deploy o c False False False False (Just bumpHeldBy)
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"

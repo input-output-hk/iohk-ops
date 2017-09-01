@@ -114,7 +114,8 @@ data Command where
   Info                  :: Command
 
   -- * Deployment
-  DeployStaging0        :: Branch -> Bool -> Command
+  DeployStaging         :: Branch -> Seconds -> Bool -> Bool -> Command
+  DeployStaging1        :: Seconds -> Bool -> Command
 
   -- * live cluster ops
   Ssh                   :: Exec -> [Arg] -> Command
@@ -187,10 +188,18 @@ centralCommandParser =
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
    , ("info",                   "Invoke 'nixops info'",                                             pure Info)
-   , ("deploy-staging-phase0",  "Deploy 'staging', optionally with genesis regeneration",
-                                DeployStaging0
+   , ("deploy-staging",         "Deploy 'staging' from specified Cardano branch, optionally with genesis regeneration",
+                                DeployStaging
                                 <$> parserBranch "'cardano-sl' branch to update & deploy"
-                                <*> switch "with-genesis"        'g' "Regenerate genesis")]
+                                <*> (Seconds . (* 60) . fromIntegral
+                                      <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
+                                <*> switch "do-genesis"            'g' "Regenerate genesis"
+                                <*> switch "skip-local-validation" 's' "Skip local validation of the current iohk-ops checkout")
+   , ("deploy-staging-phase1",  "On-deployer phase of 'deploy-staging'",
+                                DeployStaging1
+                                <$> (Seconds . (* 60) . fromIntegral
+                                      <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
+                                <*> switch "wipe-node-dbs"       'w' "Wipe node databases")]
 
    <|> subcommandGroup "Live cluster ops:"
    [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
@@ -252,7 +261,8 @@ runTop o@Options{..} args topcmd = do
             -- * setup
             FakeKeys                 -> Ops.runFakeKeys
             -- * building
-            Genesis branch           -> Ops.generateGenesis           o c branch
+            Genesis branch           -> void $
+                                        Ops.generateGenesis           o c branch
             GenerateIPDHTMappings    -> void $
                                         Cardano.generateIPDHTMappings o c
             Build depl               -> Ops.build                     o c depl
@@ -267,9 +277,10 @@ runTop o@Options{..} args topcmd = do
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
             Info                     -> Ops.nixops                    o c "info" []
-            DeployStaging0 br genp   -> Ops.deployStagingPhase0       o c br genp
+            DeployStaging br st gn sv -> Ops.deployStaging            o c br st gn sv
+            DeployStaging1 st wipe   -> Ops.deployStagingPhase1       o c st wipe
             -- * live deployment ops
-            DeployedCommit m         -> Ops.deployedCommit           o c m
+            DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c
             StartForeground          -> Ops.startForeground           o c $
                                         flip fromMaybe oOnlyOn $ error "'start-foreground' requires a global value for --on/-o"
