@@ -446,6 +446,7 @@ data Options = Options
   , oSerial           :: Bool
   , oVerbose          :: Bool
   , oNoComponentCheck :: Bool
+  , oMosh             :: Bool
   , oNixpkgs          :: Maybe FilePath
   } deriving Show
 
@@ -469,6 +470,7 @@ parserOptions = Options
                 <*>           switch  "serial"    's' "Disable parallelisation"
                 <*>           switch  "verbose"   'v' "Print all commands that are being run"
                 <*>           switch  "no-component-check" 'p' "Disable deployment/*.nix component check"
+                <*>           switch  "mosh"      'm' "Use 'mosh' instead of 'ssh' for time-consuming operations"
                 <*> (optional $ optPath "nixpkgs" 'i' "Set 'nixpkgs' revision")
 
 nixpkgsCommitPath :: Commit -> Text
@@ -877,6 +879,7 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
       deploymentAccount = deployerUser <> "@" <> (getIP $ configDeployerIP c)
       deploymentDir     = fromNixopsDepl cName
       deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
+      rsh               = if oMosh then "mosh" else "ssh"
   -- 0. Validate
   unless skipValidation $ do
     echo "Validating 'iohk-ops' checkout.."
@@ -918,14 +921,14 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
   void readline
   -- 5. Deploy
   printf ("Updating deployment source: "%s%"\n") deploymentSource
-  cmd o "ssh"    [ deploymentAccount, "git", "-C", deploymentDir, "fetch", "origin" ]
-  cmd o "ssh"    [ deploymentAccount, "git", "-C", deploymentDir, "reset", "--hard", fromCommit opsCommit ]
-  cmd o "mosh" $ [ "--", deploymentAccount, "bash",  "-c",
-                   format ("'echo && cd "%s%" && pwd && $(nix-build -A iohk-ops default.nix)/bin/iohk-ops --config "%fp%" deploy-staging-phase1 --bump-system-start-held-by "%d%" "%s%"'")
-                   deploymentDir (fromJust oConfigFile) bumpHeldBy (if doGenesis then "--wipe-node-dbs" else "") ]
+  cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "fetch", "origin" ]
+  cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "reset", "--hard", fromCommit opsCommit ]
+  cmd o  rsh  $ [ "--", deploymentAccount, "bash",  "-c",
+                  format ("'echo && cd ~/"%s%" && pwd && $(nix-build -A iohk-ops default.nix)/bin/iohk-ops --config "%fp%" deploy-staging-phase1 --bump-system-start-held-by "%d%" "%s%"'")
+                  deploymentDir (fromJust oConfigFile) (bumpHeldBy `div` 60) (if doGenesis then "--wipe-node-dbs" else "") ]
 
 deployStagingPhase1 :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
-deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorer = do
+deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorerFrontend = do
   -- 0. If we have nixpkgs commit set in the config, propagate
   nixpkgsPath <- case cNixpkgs of
     Nothing -> pure Nothing
@@ -935,7 +938,7 @@ deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplore
   let options' = o { oNixpkgs = nixpkgsPath }
 
   -- 1. --build-only
-  deploy options' c False True False rebuildExplorer Nothing
+  deploy options' c False True False rebuildExplorerFrontend Nothing
 
   -- 2. cleanup
   stop o c
