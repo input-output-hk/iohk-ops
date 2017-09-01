@@ -2,8 +2,6 @@
 
 with (import ./../lib.nix);
 rec {
-  network.description = "IOHK infrastructure";
-
   hydra = { config, pkgs, resources, name, ... }: {
 
     imports = [
@@ -11,13 +9,13 @@ rec {
     ];
 
     deployment.ec2 = {
-      inherit IOHKaccessKeyId;
+      accessKeyId = IOHKaccessKeyId;
 
       instanceType = mkForce "r3.2xlarge";
       ebsInitialRootDiskSize = mkForce 200;
       associatePublicIpAddress = true;
     };
-    deployment.route53.accessKeyId = accessKeyId;
+    deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
     deployment.route53.hostName = "${name}.aws.iohkdev.io";
   };
 
@@ -35,7 +33,7 @@ rec {
     };
 
     deployment.ec2 = {
-      inherit IOHKaccessKeyId;
+      accessKeyId = IOHKaccessKeyId;
 
       instanceType = mkForce "r3.2xlarge";
       ebsInitialRootDiskSize = mkForce 50;

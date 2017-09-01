@@ -20,10 +20,14 @@ in lib // (rec {
       value = { inherit (node) region accessKeyId; };
     };
 
+  centralRegion = "eu-central-1";
+
   ## nodesElasticIPs :: Map NodeName Node -> Map EIPName EIP
   nodesElasticIPs = nodes: lib.flip lib.mapAttrs' nodes
     (name: node: nodeElasticIP node);
-  
+
+  orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
+
   envSpecific = environment:
          if environment == "production"  then {
     dnsSuffix = "aws.iohk.io";

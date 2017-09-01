@@ -1,7 +1,7 @@
 with (import ./../lib.nix);
 
 globals: params:
-{ config, pkgs, resources, ... }: {
+{ name, config, pkgs, resources, ... }: {
   imports = [
     ./datadog.nix
     ./papertrail.nix
@@ -13,7 +13,7 @@ globals: params:
   # Initial block is big enough to hold 3 months of transactions
   deployment.ec2.ebsInitialRootDiskSize = mkForce 700;
 
-  deployment.ec2.elasticIPv4 = resources.elasticIPs.${toString params.name + "-ip"};
+  deployment.ec2.elasticIPv4 = resources.elasticIPs.${name + "-ip"};
 
   deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
   deployment.route53.hostName = optionalString params.typeIsRelay

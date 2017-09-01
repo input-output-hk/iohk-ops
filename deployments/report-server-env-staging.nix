@@ -7,17 +7,17 @@ in
     imports = [
       ./../modules/datadog.nix
       ./../modules/papertrail.nix
-      ./../modules/common.nix
     ];
 
     services.dd-agent.tags = ["env:${globals.environment}"];
 
-    deployment.ec2.accessKeyId = params.accessKeyId;
-    deployment.ec2.securityGroups = map (sgName: resources.ec2SecurityGroups.${sgName}) params.sgNames;
-
-    deployment.ec2.elasticIPv4 = resources.elasticIPs.report-server-ip;
     deployment.route53.accessKeyId = params.accessKeyId;
     deployment.route53.hostName = "report-server.${(envSpecific globals.environment).dnsSuffix}";
+    deployment.ec2.securityGroups = mkForce (map (x: resources.ec2SecurityGroups.${x}) params.sgNames);
+    # deployment.ec2.elasticIPv4 = resources.elasticIPs.report-server-ip;
   };
-  resources.elasticIPs.report-server-ip = nodeElasticIP params;
+  # resources.elasticIPs.report-server-ip =
+  #   { config, ...}:
+  #   let region = config.deployment.ec2.region;
+  #   in { inherit region accessKeyId; };
 }

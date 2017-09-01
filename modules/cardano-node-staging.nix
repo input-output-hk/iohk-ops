@@ -1,9 +1,7 @@
 with (import ./../lib.nix);
 
 globals: params:
-{ config, pkgs, resources, ... }:
-
-{
+{ name, config, pkgs, resources, ... }: {
   imports = [
     ./datadog.nix
     ./papertrail.nix
@@ -17,9 +15,9 @@ globals: params:
     serveEkg = true;
   };
 
-  deployment.ec2.elasticIPv4 = resources.elasticIPs.${params.name + "-ip"};
+  deployment.ec2.elasticIPv4 = resources.elasticIPs.${name + "-ip"};
 
-  deployment.route53.accessKeyId = params.accessKeyId;
+  deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
   deployment.route53.hostName = if params.typeIsRelay
                            then "cardano-node-${toString params.relayIndex}.${(envSpecific globals.environment).dnsSuffix}"
                            else if params.typeIsExplorer

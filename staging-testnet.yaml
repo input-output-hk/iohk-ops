@@ -29,5 +29,5 @@ elements:
 - Nodes
 - ReportServer
 - Explorer
-nixops: /nix/store/lbwz2f08x9n3wlsqs4iglwwfbcwcb1b4-nixops-1.6pre0_abcdef/bin/nixops
+nixops: /nix/store/42a2qapbf843x1s9pssa1ihrwcfbwmvd-nixops-1.6pre0_abcdef/bin/nixops
 target: AWS

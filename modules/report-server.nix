@@ -1,18 +1,20 @@
 with (import ./../lib.nix);
 
-globals: params:
-{ config, pkgs, lib, ... }:
+globals: imports: params:
+  { pkgs, nodes, config, resources, options, ...}:
+  let
+    report-server-drv = (import ./../default.nix {}).cardano-report-server-static;
+  in {
 
-let
-  report-server-drv = (import ./../default.nix {}).cardano-report-server-static;
-in {
-  imports = [ ./common.nix ];
+    imports = [
+      ./common.nix
+      ./amazon-base.nix
+    ];
 
-  options.services.report-server = {
-      logsdir = mkOption { type = types.path; default = "/var/lib/report-server"; };
-  };
+    deployment.ec2.region         = mkForce params.region;
+    deployment.ec2.accessKeyId    = params.accessKeyId;
+    deployment.ec2.keyPair        = resources.ec2KeyPairs.${params.keyPairName};
 
-  config = {
     networking.firewall.allowedTCPPorts = [
       params.port
     ];
@@ -38,5 +40,4 @@ in {
         '';
       };
     };
-  };
-}
+  }

@@ -37,7 +37,6 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                                    port     = 8080; }; };
 
     allRegions     = unique ([centralRegion] ++ map (n: n.value.region) topologySpecList);
-    centralRegion  = "eu-central-1";
 
     allOrgs        = [ "IOHK" "CF" "SGG" ];
     defaultOrg     =   "IOHK";
@@ -89,8 +88,6 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     reportServerNV  = findFirst  (x: x.value.typeIsReportServer) {}   indexed;
     fullMap         = nodeMap // listToAttrs (builtins.filter (x: x != {})
                                               [ explorerNV reportServerNV ]);
-
-    orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
 
     ## allKeyPairs :: Map KeypairName Keypair
     allKeyPairs     = listToAttrs (flip map orgXRegions

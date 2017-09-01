@@ -2,6 +2,11 @@
 
 with import ./lib.nix;
 {
+  config = {
+    ## attribute ‘iohk’ missing, at /home/deepfire/iohk/modules/amazon-base.nix:8:37
+    iohk.globals = globals;
+  };
+
   network.description = "Cardano Federated";
 
   resources.ec2KeyPairs = globals.allKeyPairs;

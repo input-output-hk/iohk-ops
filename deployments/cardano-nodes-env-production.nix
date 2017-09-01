@@ -2,7 +2,7 @@
 
 
 
-(flip mapAttrs globals.nodeMap (name: import ./../modules/cardano-node-production.nix globals))
+(flip mapAttrs globals.nodeMap (name: import ./../modules/cardano-node-prod.nix globals))
 // {
   resources = {
     elasticIPs = nodesElasticIPs globals.nodeMap;
@@ -12,7 +12,6 @@
       ram = mkMonitor ram_monitor;
       ntp = mkMonitor ntp_monitor;
       cardano_node_simple_process = mkMonitor cardano_node_simple_process_monitor;
-      cardano_explorer_process = mkMonitor cardano_explorer_process_monitor;
     });
   };
 }

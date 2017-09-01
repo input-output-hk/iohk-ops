@@ -35,8 +35,8 @@ with (import ./../lib.nix);
 
   resources = {
     elasticIPs = {
-      hydra-ip = { inherit region IOHKaccessKeyId; };
-      cardanod-ip = { inherit region IOHKaccessKeyId; };
+      hydra-ip = { region = centralRegion; accessKeyId = IOHKaccessKeyId; };
+      cardanod-ip = { region = centralRegion; accessKeyId = IOHKaccessKeyId; };
     };
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       disk = mkMonitor disk_monitor;
