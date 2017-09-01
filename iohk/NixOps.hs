@@ -924,8 +924,8 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
                 , "deploy-staging-phase1" , "--bump-system-start-held-by", format d bumpHeldBy ]
                 ++ [ "--wipe-node-dbs" | doGenesis ]
 
-deployStagingPhase1 :: Options -> NixopsConfig -> Seconds -> Bool -> IO ()
-deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs = do
+deployStagingPhase1 :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
+deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorer = do
   -- 0. If we have nixpkgs commit set in the config, propagate
   nixpkgsPath <- case cNixpkgs of
     Nothing -> pure Nothing
@@ -935,7 +935,7 @@ deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs = do
   let options' = o { oNixpkgs = nixpkgsPath }
 
   -- 1. --build-only
-  deploy options' c False True False True Nothing
+  deploy options' c False True False rebuildExplorer Nothing
 
   -- 2. cleanup
   stop o c

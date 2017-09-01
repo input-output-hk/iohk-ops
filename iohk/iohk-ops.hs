@@ -109,7 +109,7 @@ data Command where
 
   -- * Deployment
   DeployStaging         :: Branch -> Seconds -> Bool -> Bool -> Command
-  DeployStaging1        :: Seconds -> Bool -> Command
+  DeployStaging1        :: Seconds -> Bool -> Bool -> Command
 
   -- * live cluster ops
   Ssh                   :: Exec -> [Arg] -> Command
@@ -193,6 +193,7 @@ centralCommandParser =
                                 DeployStaging1
                                 <$> (Seconds . (* 60) . fromIntegral
                                       <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
+                                <*> switch "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
                                 <*> switch "wipe-node-dbs"       'w' "Wipe node databases")]
 
    <|> subcommandGroup "Live cluster ops:"
@@ -276,7 +277,7 @@ runTop o@Options{..} args topcmd = do
             FromScratch              -> Ops.fromscratch               o c
             Info                     -> Ops.nixops                    o c "info" []
             DeployStaging br st gn sv -> Ops.deployStaging            o c br st gn sv
-            DeployStaging1 st wipe   -> Ops.deployStagingPhase1       o c st wipe
+            DeployStaging1 st wi ner -> Ops.deployStagingPhase1       o c st wi (not ner)
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c
