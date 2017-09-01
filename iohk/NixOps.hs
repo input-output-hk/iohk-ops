@@ -918,11 +918,11 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
   void readline
   -- 5. Deploy
   printf ("Updating deployment source: "%s%"\n") deploymentSource
-  cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "fetch", "origin" ]
-  cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "reset", "--hard", fromCommit opsCommit ]
-  cmd o "ssh" $ [ deploymentAccount, "io",  "-C", deploymentDir, "--config", format fp $ fromJust oConfigFile
-                , "deploy-staging-phase1" , "--bump-system-start-held-by", format d bumpHeldBy ]
-                ++ [ "--wipe-node-dbs" | doGenesis ]
+  cmd o "ssh"    [ deploymentAccount, "git", "-C", deploymentDir, "fetch", "origin" ]
+  cmd o "ssh"    [ deploymentAccount, "git", "-C", deploymentDir, "reset", "--hard", fromCommit opsCommit ]
+  cmd o "mosh" $ [ "--", deploymentAccount, "bash",  "-c",
+                   format ("'echo && cd "%s%" && pwd && $(nix-build -A iohk-ops default.nix)/bin/iohk-ops --config "%fp%" deploy-staging-phase1 --bump-system-start-held-by "%d%" "%s%"'")
+                   deploymentDir (fromJust oConfigFile) bumpHeldBy (if doGenesis then "--wipe-node-dbs" else "") ]
 
 deployStagingPhase1 :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
 deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorer = do
