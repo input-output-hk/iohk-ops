@@ -8,8 +8,4 @@ flip mapAttrs nodeMap
 //
 {
   resources.elasticIPs = nodesElasticIPs nodeMap;
-
-  deployment.ec2.securityGroups = map (resolveSGName resources) [
-    "allow-to-report-server-${config.deployment.ec2.region}"
-  ];
 }
