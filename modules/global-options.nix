@@ -23,6 +23,11 @@ with import ./../lib.nix;
             description = "Organisation hosting deployer, report-server and other global services.";
             default = "IOHK";
           };
+          organisation = mkOption {
+            type = enum [ "CF" "IOHK" "SGG" ];
+            description = "Organisation managing this machine.";
+            default = "IOHK";
+          };
           deployerIP = mkOption {
             type = str;
             description = "The IP address of the deployer.";

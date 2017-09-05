@@ -20,6 +20,8 @@ globals: imports: params:
       (import ./cardano-service.nix globals params)
     ] ++ map (path: import path globals params) imports;
 
+    global.organisation = params.org;
+
     services.dnsmasq.enable = true;
     services.dnsmasq.servers = [ "127.0.0.1" ];
 

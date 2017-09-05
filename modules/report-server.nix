@@ -11,6 +11,8 @@ in {
     ./amazon-base.nix
   ];
 
+  global.organisation = params.org;
+
   deployment.ec2.region         = mkForce params.region;
   deployment.ec2.accessKeyId    = params.accessKeyId;
   deployment.ec2.keyPair        = resources.ec2KeyPairs.${params.keyPairName};
