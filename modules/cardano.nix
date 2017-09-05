@@ -15,6 +15,7 @@ globals: imports: params:
   in {
     imports = [
       ./global-options.nix
+      ./global-config.nix
       ./common.nix
       ./amazon-base.nix
       (import ./cardano-service.nix globals params)

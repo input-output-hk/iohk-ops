@@ -6,7 +6,6 @@
              type = "core";
             peers = [];
            relays = [];
-          sgNames = [];
       systemStart = 0;
          allNames = [ "machine" ];
   };

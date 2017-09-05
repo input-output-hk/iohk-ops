@@ -1,5 +1,3 @@
-{ name, config, resources, ... }:
-
 with import ./../lib.nix;
 {
   options = {
@@ -64,21 +62,5 @@ with import ./../lib.nix;
 
     # To avoid creation of a new file just for a single option.
     services.report-server.logsdir = mkOption { type = types.path; default = "/var/lib/report-server"; };
-  };
-  config = {
-    deployment = {
-      ec2 = {
-        elasticIPv4 = if config.global.allocateElasticIP
-                      then resources.elasticIPs.${name + "-ip"} else "";
-        securityGroups = map (resolveSGName resources) [
-          "allow-deployer-ssh-${config.global.centralRegion}-${config.global.defaultOrg}"
-        ];
-      };
-
-      route53 = optionalAttrs (config.global.dnsHostname != null) {
-        accessKeyId = config.deployment.ec2.accessKeyId;
-        hostName    = config.global.dnsHostname +"."+ config.global.dnsDomainname;
-      };
-    };
   };
 }

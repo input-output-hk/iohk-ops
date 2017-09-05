@@ -7,6 +7,7 @@ let
 in {
   imports = [
     ./global-options.nix
+    ./global-config.nix
     ./common.nix
     ./amazon-base.nix
   ];
