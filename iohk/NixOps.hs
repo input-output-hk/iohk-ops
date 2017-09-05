@@ -757,7 +757,7 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
 deployValidate :: Options -> NixopsConfig -> Bool -> IO ()
 deployValidate o c rebuildExplorerFrontend = do
   deploy o c True  False False False                   Nothing
-  deploy o c False True  False rebuildExplorerFrontend Nothing
+  -- deploy o c False True  False rebuildExplorerFrontend Nothing
 
 destroy :: Options -> NixopsConfig -> IO ()
 destroy o c@NixopsConfig{..} = do
