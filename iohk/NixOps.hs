@@ -943,8 +943,8 @@ deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs _rebuildExplor
       pure $ Just storePath
   let options' = o { oNixpkgs = nixpkgsPath }
 
-  -- 1. --build-only
-  -- deploy options' c False True False rebuildExplorerFrontend Nothing
+  -- 1. --evaluate-only
+  deploy options' c True False False rebuildExplorerFrontend Nothing
 
   -- 2. cleanup
   stop o c
