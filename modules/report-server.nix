@@ -13,6 +13,7 @@ in {
   ];
 
   global.organisation = params.org;
+  global.dnsHostname = mkForce "report-server";
 
   deployment.ec2.region         = mkForce params.region;
   deployment.ec2.accessKeyId    = params.accessKeyId;
