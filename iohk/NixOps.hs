@@ -934,7 +934,7 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
                 ]
 
 deployStagingPhase1 :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
-deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs _rebuildExplorerFrontend = do
+deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorerFrontend = do
   -- 0. If we have nixpkgs commit set in the config, propagate
   nixpkgsPath <- case cNixpkgs of
     Nothing -> pure Nothing
