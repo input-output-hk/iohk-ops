@@ -671,10 +671,12 @@ exists o c@NixopsConfig{..} = do
 create :: Options -> NixopsConfig -> IO ()
 create o c@NixopsConfig{..} = do
   deplExists <- exists o c
-  when deplExists $
-    die $ format ("Deployment already exists?: '"%s%"'") $ fromNixopsDepl cName
-  printf ("Creating deployment "%s%"\n") $ fromNixopsDepl cName
-  nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
+  if deplExists
+  then do
+    printf ("Deployment already exists?: '"%s%"'") $ fromNixopsDepl cName
+  else do
+    printf ("Creating deployment "%s%"\n") $ fromNixopsDepl cName
+    nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
 
 buildGlobalsImportNixExpr :: [(NixParam, NixValue)] -> NixValue
 buildGlobalsImportNixExpr deplArgs =
@@ -751,6 +753,11 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
     ++ [ "--check"         | check  ]
     ++ nixopsMaybeLimitNodes o
   echo "Done."
+
+deployValidate :: Options -> NixopsConfig -> Bool -> IO ()
+deployValidate o c rebuildExplorerFrontend = do
+  deploy o c True  False False False                   Nothing
+  deploy o c False True  False rebuildExplorerFrontend Nothing
 
 destroy :: Options -> NixopsConfig -> IO ()
 destroy o c@NixopsConfig{..} = do
@@ -876,7 +883,10 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
   -- 0. Validate
   unless skipValidation $ do
     echo "Validating 'iohk-ops' checkout.."
-    cmd o "bash" ["scripts/travis.sh", "iohk-ops", format fp cNixops]
+    create o c
+    deployValidate o c False
+    -- XXX: re-enable this.. after figuring out how to use local 'iohk-ops'..
+    -- cmd o "bash" ["scripts/travis.sh", "iohk-ops", format fp cNixops]
     cmd o "nix-build" ["--keep-failed", "jobsets/cardano.nix", "-A", "tests.simpleNode.x86_64-linux", "--show-trace"]
   -- 1. Bump Cardano
   branchHEAD <- ensureCardanoBranchCheckout o cardanoBranchToDrive cardanoSLDir
