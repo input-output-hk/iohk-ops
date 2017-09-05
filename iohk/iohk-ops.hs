@@ -108,7 +108,7 @@ data Command where
   Info                  :: Command
 
   -- * Deployment
-  DeployStaging         :: Branch -> Seconds -> Bool -> Bool -> Command
+  DeployStaging         :: Branch -> Seconds -> Bool -> Bool -> Bool -> Command
   DeployStaging1        :: Seconds -> Bool -> Bool -> Command
 
   -- * live cluster ops
@@ -188,6 +188,7 @@ centralCommandParser =
                                 <*> (Seconds . (* 60) . fromIntegral
                                       <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
                                 <*> switch "do-genesis"            'g' "Regenerate genesis"
+                                <*> switch "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
                                 <*> switch "skip-local-validation" 's' "Skip local validation of the current iohk-ops checkout")
    , ("deploy-staging-phase1",  "On-deployer phase of 'deploy-staging'",
                                 DeployStaging1
@@ -276,8 +277,8 @@ runTop o@Options{..} args topcmd = do
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
             Info                     -> Ops.nixops                    o c "info" []
-            DeployStaging br st gn sv -> Ops.deployStaging            o c br st gn sv
-            DeployStaging1 st wi ner -> Ops.deployStagingPhase1       o c st wi (not ner)
+            DeployStaging br st gn ner sv -> Ops.deployStaging             o c br st gn (not ner) sv
+            DeployStaging1 st wi   ner    -> Ops.deployStagingPhase1       o c st wi    (not ner)
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c

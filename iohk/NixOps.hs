@@ -872,8 +872,8 @@ generateGenesis o NixopsConfig{..} cardanoBranch = do
   pure genesisName
 
 -- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
-deployStaging :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> IO ()
-deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis skipValidation = do
+deployStaging :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> Bool -> IO ()
+deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis rebuildExplorerFrontend skipValidation = do
   let cardanoSLDir      = "cardano-sl"
       deployerUser      = "staging"
       deploymentAccount = deployerUser <> "@" <> (getIP $ configDeployerIP c)
@@ -884,7 +884,7 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
   unless skipValidation $ do
     echo "Validating 'iohk-ops' checkout.."
     create o c
-    deployValidate o c False
+    deployValidate o c rebuildExplorerFrontend
     -- XXX: re-enable this.. after figuring out how to use local 'iohk-ops'..
     -- cmd o "bash" ["scripts/travis.sh", "iohk-ops", format fp cNixops]
     -- cmd o "nix-build" ["--keep-failed", "jobsets/cardano.nix", "-A", "tests.simpleNode.x86_64-linux", "--show-trace"]
@@ -927,8 +927,11 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
   cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "fetch", "origin" ]
   cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "reset", "--hard", fromCommit opsCommit ]
   cmd o  rsh  $ [ "--", deploymentAccount, "bash",  "-c",
-                  format ("'echo && cd ~/"%s%" && pwd && $(nix-build -A iohk-ops default.nix)/bin/iohk-ops --config "%fp%" deploy-staging-phase1 --bump-system-start-held-by "%d%" "%s%"'")
-                  deploymentDir (fromJust oConfigFile) (bumpHeldBy `div` 60) (if doGenesis then "--wipe-node-dbs" else "") ]
+                  format ("'echo && cd ~/"%s%" && pwd && $(nix-build -A iohk-ops default.nix)/bin/iohk-ops --config "%fp%" deploy-staging-phase1 --bump-system-start-held-by "%d%" "%s%" "%s%"'")
+                  deploymentDir (fromJust oConfigFile) (bumpHeldBy `div` 60)
+                  (if doGenesis               then "--wipe-node-dbs" else "")
+                  (if rebuildExplorerFrontend then "" else "--no-explorer-rebuild")
+                ]
 
 deployStagingPhase1 :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
 deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorerFrontend = do
