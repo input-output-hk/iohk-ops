@@ -7,6 +7,8 @@ let
   explorer-drv = (import ./../default.nix {}).cardano-sl-explorer-static;
 in
 {
+  global.dnsHostname = mkForce "cardano-explorer";
+
   services.cardano-node.executable = "${explorer-drv}/bin/cardano-explorer";
 
   networking.firewall.allowedTCPPorts = [
