@@ -34,11 +34,11 @@ globals: imports: params:
     deployment.ec2.securityGroups =
       with params;
       let sgNames =
-           optionals typeIsExplorer              [ "allow-to-explorer-${region}" ]
-        ++ optionals typeIsCore                  [ "allow-cardano-static-peers-${name}-${region}-${org}" ]
-        ++ optionals typeIsRelay                 [ "allow-kademlia-public-udp-${region}"
-                                                   "allow-cardano-public-tcp-${region}" ]
-        ++ optionals config.global.enableEkgWeb  [ "allow-ekg-public-tcp-${region}" ];
+           optionals typeIsExplorer              [ "allow-to-explorer-${params.region}" ]
+        ++ optionals typeIsCore                  [ "allow-cardano-static-peers-${params.name}-${params.region}-${params.org}" ]
+        ++ optionals typeIsRelay                 [ "allow-kademlia-public-udp-${params.region}"
+                                                   "allow-cardano-public-tcp-${params.region}" ]
+        ++ optionals config.global.enableEkgWeb  [ "allow-ekg-public-tcp-${params.region}-${params.org}" ];
       in map (resolveSGName resources) sgNames;
 
     networking.extraHosts =

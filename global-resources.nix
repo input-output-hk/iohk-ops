@@ -41,7 +41,6 @@ with import ./lib.nix;
         regionSGNames = region:
             [ "allow-kademlia-public-udp-${region}"
               "allow-cardano-public-tcp-${region}"
-              "allow-ekg-public-tcp-${region}"
             ];
         regionSGs      = { nodePort }: region: {
             "allow-kademlia-public-udp-${region}" = {
@@ -62,18 +61,10 @@ with import ./lib.nix;
                 sourceIp = "0.0.0.0/0";
               }];
             };
-            "allow-ekg-public-tcp-${region}" = {
-              inherit region accessKeyId;
-              description = "EKG 8080 public";
-              rules = [{
-                protocol = "tcp";
-                fromPort = 8080; toPort = 8080;
-                sourceIp = "0.0.0.0/0";
-              }];
-            };
           };
         orgXRegionSGNames = { org, region }:
             [ "allow-deployer-ssh-${region}-${org}"
+              "allow-ekg-public-tcp-${region}-${org}"
             ];
         orgXRegionSGs     = { org, region}: {
             "allow-deployer-ssh-${region}-${org}" = {
@@ -84,6 +75,16 @@ with import ./lib.nix;
                 protocol = "tcp"; # TCP
                 fromPort = 22; toPort = 22;
                 sourceIp = globals.deployerIP + "/32";
+              }];
+            };
+            "allow-ekg-public-tcp-${region}-${org}" = {
+              inherit region;
+              accessKeyId = globals.orgAccessKeys.${org};
+              description = "EKG 8080 public";
+              rules = [{
+                protocol = "tcp";
+                fromPort = 8080; toPort = 8080;
+                sourceIp = "0.0.0.0/0";
               }];
             };
           };

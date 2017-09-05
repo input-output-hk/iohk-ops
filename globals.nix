@@ -64,8 +64,6 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                       keyPairName = orgRegionKeyPairName org region;
                        relayIndex = if typeIsRelay then i - firstRelayIndex else null;
                                     ## For the SG definitions look below in this file:
-                          sgNames = [ "allow-deployer-ssh-${region}-${org}" ]
-                                    ++ optionals typeIsReportServer [ "allow-to-report-server-${region}" ];
                              }; } )
                      topologySpecList;
     ## Summary:
