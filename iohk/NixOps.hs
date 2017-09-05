@@ -887,7 +887,7 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
     deployValidate o c False
     -- XXX: re-enable this.. after figuring out how to use local 'iohk-ops'..
     -- cmd o "bash" ["scripts/travis.sh", "iohk-ops", format fp cNixops]
-    cmd o "nix-build" ["--keep-failed", "jobsets/cardano.nix", "-A", "tests.simpleNode.x86_64-linux", "--show-trace"]
+    -- cmd o "nix-build" ["--keep-failed", "jobsets/cardano.nix", "-A", "tests.simpleNode.x86_64-linux", "--show-trace"]
   -- 1. Bump Cardano
   branchHEAD <- ensureCardanoBranchCheckout o cardanoBranchToDrive cardanoSLDir
   GitSource{..} <- readSource gitSource CardanoSL
