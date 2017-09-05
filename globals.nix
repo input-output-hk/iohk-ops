@@ -65,12 +65,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                        relayIndex = if typeIsRelay then i - firstRelayIndex else null;
                                     ## For the SG definitions look below in this file:
                           sgNames = [ "allow-deployer-ssh-${region}-${org}" ]
-                                    ++ optionals typeIsExplorer     [ "allow-to-explorer-${region}" ]
-                                    ++ optionals typeIsReportServer [ "allow-to-report-server-${region}" ]
-                                    ++ optionals typeIsCore         [ "allow-cardano-static-peers-${name}-${region}-${org}" ]
-                                    ++ optionals typeIsRelay        [ "allow-kademlia-public-udp-${region}"
-                                                                      "allow-cardano-public-tcp-${region}" ]
-                                    ++ optionals typeIsRunsCardano  [ ];
+                                    ++ optionals typeIsReportServer [ "allow-to-report-server-${region}" ];
                              }; } )
                      topologySpecList;
     ## Summary:

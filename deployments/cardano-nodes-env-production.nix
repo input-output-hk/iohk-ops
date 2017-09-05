@@ -1,11 +1,11 @@
 { globals, ... }: with (import ./../lib.nix);
+let nodeMap = globals.nodeMap; in
 
 
-
-(flip mapAttrs globals.nodeMap (name: import ./../modules/cardano-node-prod.nix globals))
+(flip mapAttrs nodeMap (name: import ./../modules/cardano-production.nix))
 // {
   resources = {
-    elasticIPs = nodesElasticIPs globals.nodeMap;
+    elasticIPs = nodesElasticIPs nodeMap;
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       cpu = mkMonitor cpu_monitor;
       disk = mkMonitor disk_monitor;

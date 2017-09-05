@@ -1,7 +1,7 @@
-{ # nixops, network, args,
-  globals, ... }: with (import ./../lib.nix);
+{ globals, ... }: with (import ./../lib.nix);
+let nodeMap = globals.nodeMap; in
 
-flip mapAttrs globals.nodeMap
-(name: import ./../modules/cardano-node-config.nix
+flip mapAttrs nodeMap
+(name: import ./../modules/cardano.nix
        globals
        [])

@@ -3,21 +3,11 @@
 let params = globals.fullMap.report-server;
 in
 {
-  report-server = { resources, ...}: {
+  report-server = { config, resources, ...}: {
     imports = [
+      ./../modules/staging.nix
       ./../modules/datadog.nix
       ./../modules/papertrail.nix
     ];
-
-    services.dd-agent.tags = ["env:${globals.environment}"];
-
-    deployment.route53.accessKeyId = params.accessKeyId;
-    deployment.route53.hostName = "report-server.${(envSpecific globals.environment).dnsSuffix}";
-    deployment.ec2.securityGroups = mkForce (map (x: resources.ec2SecurityGroups.${x}) params.sgNames);
-    # deployment.ec2.elasticIPv4 = resources.elasticIPs.report-server-ip;
   };
-  # resources.elasticIPs.report-server-ip =
-  #   { config, ...}:
-  #   let region = config.deployment.ec2.region;
-  #   in { inherit region accessKeyId; };
 }

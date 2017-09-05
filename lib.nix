@@ -26,18 +26,9 @@ in lib // (rec {
   nodesElasticIPs = nodes: lib.flip lib.mapAttrs' nodes
     (name: node: nodeElasticIP node);
 
-  orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
+  resolveSGName = resources: name: resources.ec2SecurityGroups.${name};
 
-  envSpecific = environment:
-         if environment == "production"  then {
-    dnsSuffix = "aws.iohk.io";
-  } else if environment == "staging"     then {
-    dnsSuffix = "aws.iohkdev.io";
-  } else if environment == "federated"   then {
-    dnsSuffix = "awstest.iohkdev.io";
-  } else if environment == "development" then {
-    dnsSuffix = "--DNS-disabled--";
-  } else throw "Invalid environment arg: '${environment}";
+  orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
 
   # fetch nixpkgs and give the expected hash
   fetchNixpkgsWithNixpkgs = nixpkgs: nixpkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));

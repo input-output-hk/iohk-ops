@@ -56,17 +56,13 @@ in {
 
       enableP2P = mkOption { type = types.bool; default = false; };
       supporter = mkOption { type = types.bool; default = false; };
-      dhtKey = mkOption {
-        type = types.str;
-        description = "base64-url string describing dht key";
-      };
       productionMode = mkOption {
         type = types.bool;
         default = false;
       };
       saveCoreDumps = mkOption {
         type = types.bool;
-        default = false;
+        default = true;
         description = "automatically save coredumps when cardano-node segfaults";
       };
 
@@ -81,17 +77,6 @@ in {
       slotDuration = mkOption { type = types.int; };
       networkDiameter = mkOption { type = types.int; };
       mpcRelayInterval = mkOption { type = types.int; };
-      statsdServer = mkOption {
-        type = types.nullOr types.str;
-        description = "IP:Port of the EKG telemetry sink";
-        default = null;
-      };
-      serveEkg = mkOption {
-        type = types.bool;
-        description = "Serve EKG web UI on port 8080";
-        default = false;
-      };
-
       stats = mkOption { type = types.bool; default = false; };
       jsonLog = mkOption { type = types.bool; default = true; };
       totalMoneyAmount = mkOption { type = types.int; default = 100000; };
@@ -133,6 +118,18 @@ in {
         # type = types.list;
         description = ''List of name:ip pairs of neighbours.'';
       };
+
+      statsdServer = mkOption {
+        type = types.nullOr types.str;
+        description = "IP:Port of the EKG telemetry sink";
+        default = null;
+      };
+
+      serveEkg = mkOption {
+        type = types.bool;
+        description = "Serve EKG web UI on port 8080";
+        default = false;
+      };
     };
   };
 
@@ -155,8 +152,6 @@ in {
         gid = 123123;
       };
     };
-
-    services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.nodeIndex);
 
     networking.firewall = {
       allowedTCPPorts = [ cfg.port 8080 ]; ## 8080 is EKG

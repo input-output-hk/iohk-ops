@@ -6,6 +6,7 @@ let
   report-server-drv = (import ./../default.nix {}).cardano-report-server-static;
 in {
   imports = [
+    ./global-options.nix
     ./common.nix
     ./amazon-base.nix
   ];

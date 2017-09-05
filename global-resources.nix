@@ -4,24 +4,35 @@ with import ./lib.nix;
 {
   network.description = "Cardano Federated";
 
+  # XXX: Exhibit of a Broken Passthrough
+  config =  { config, ...}: {
+    global.topologyYaml = throw "foo";
+  };
+
   resources.ec2KeyPairs = globals.allKeyPairs;
 
   resources.ec2SecurityGroups =
     let sgs               = flip map securityGroupNames
                             (name: { name = name;
-                                    value = { resources, ... }: (eIPsSecurityGroups resources.elasticIPs)."${name}"; });
+                                    value = { config, resources, ... }: (eIPsSecurityGroups { inherit config resources; })."${name}"; });
         securityGroupNames =
-         (    concatMap  regionSGNames     globals.allRegions
-          ++  concatMap  orgXRegionSGNames globals.orgXRegions
-          ++  concatMap  coreSGNames       globals.cores
-          ++            (globalSGNames     globals.centralRegion)
+         (              (centralRegionSGNames  globals.centralRegion)
+          ++  concatMap  regionSGNames         globals.allRegions
+          ++  concatMap  orgXRegionSGNames     globals.orgXRegions
+          ++  concatMap  coreSGNames           globals.cores
          );
-        eIPsSecurityGroups = eIPs:
+        eIPsSecurityGroups = { config, resources }:
           (fold (x: y: x // y) {}
-          (    map  (regionSGs      cconf.nodePort)       globals.allRegions
-           ++  map  (orgXRegionSGs)                       globals.orgXRegions
-           ++  map  (coreSGs        cconf.nodePort eIPs)  globals.cores
-           ++       (globalSGs      globals.centralRegion)
+          (         (centralRegionSGs  globals.centralRegion)
+
+           ++  map  (regionSGs         { inherit (cconf) nodePort; }) ## 'config' is mostly empty here.
+                    globals.allRegions
+
+           ++  map  (orgXRegionSGs)
+                    globals.orgXRegions
+
+           ++  map  (coreSGs           cconf.nodePort resources.elasticIPs)
+                    globals.cores
           ));
         accessKeyId   = globals.orgAccessKeys.IOHK; # Design decision with regard to AWS SGs.
         ##
@@ -30,8 +41,9 @@ with import ./lib.nix;
         regionSGNames = region:
             [ "allow-kademlia-public-udp-${region}"
               "allow-cardano-public-tcp-${region}"
+              "allow-ekg-public-tcp-${region}"
             ];
-        regionSGs      = nodePort: region: {
+        regionSGs      = { nodePort }: region: {
             "allow-kademlia-public-udp-${region}" = {
               inherit region accessKeyId;
               description = "Kademlia UDP public";
@@ -47,6 +59,15 @@ with import ./lib.nix;
               rules = [{
                 protocol = "tcp"; # TCP
                 fromPort = nodePort; toPort = nodePort;
+                sourceIp = "0.0.0.0/0";
+              }];
+            };
+            "allow-ekg-public-tcp-${region}" = {
+              inherit region accessKeyId;
+              description = "EKG 8080 public";
+              rules = [{
+                protocol = "tcp";
+                fromPort = 8080; toPort = 8080;
                 sourceIp = "0.0.0.0/0";
               }];
             };
@@ -85,10 +106,10 @@ with import ./lib.nix;
               rules = map neighGrant neighbours;
             };
           };
-        globalSGNames = centralRegion:
+        centralRegionSGNames = centralRegion:
             [ "allow-to-explorer-${centralRegion}"
               "allow-to-report-server-${centralRegion}" ];
-        globalSGs = centralRegion:
+        centralRegionSGs = centralRegion:
           let region = centralRegion;
           in [{
             "allow-to-explorer-${region}" = {

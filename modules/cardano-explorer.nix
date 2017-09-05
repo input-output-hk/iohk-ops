@@ -16,7 +16,7 @@ in
   services.nginx = {
     enable = true;
     virtualHosts = {
-      "cardano-explorer.${(envSpecific globals.environment).dnsSuffix}" = {
+      "cardano-explorer.${config.global.dnsDomainname}" = {
         # TLS provided by cloudfront
         locations = {
           "/" = {

@@ -2,7 +2,7 @@
 
 
 
-(flip mapAttrs globals.nodeMap (name: import ./../modules/cardano-node-development.nix globals))
+(flip mapAttrs globals.nodeMap (name: import ./../modules/cardano-development.nix))
 // {
   resources.elasticIPs = nodesElasticIPs globals.nodeMap;
 }

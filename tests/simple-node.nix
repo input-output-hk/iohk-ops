@@ -5,7 +5,7 @@ import <nixpkgs/nixos/tests/make-test.nix> ({ pkgs, ... }: {
   name = "simple-node";
   nodes = {
     machine = { config, pkgs, ... }: {
-      imports = [ (import ../modules/cardano-node-config.nix (nodeMap.machine)) ];
+      imports = [ (import ../modules/cardano.nix (nodeMap.machine)) ];
       virtualisation.qemu.options = [ "-cpu Haswell" ];
       services.cardano-node = {
         autoStart = true;

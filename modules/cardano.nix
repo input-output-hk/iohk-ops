@@ -5,19 +5,19 @@ with (import ./../lib.nix);
 globals: imports: params:
   { pkgs, nodes, config, resources, options, ...}:
   let
-    nodeNameToPublicIP   = name: nodes.${name}.config.services.cardano-node.publicIP;
+    nodeNameToPublicIP   = name: let ip = nodes.${name}.config.services.cardano-node.publicIP;
+                                 in if ip == null then "" else ip;
     neighbourPairs       = map (n: { name = n; ip = nodeNameToPublicIP n; })
                                (builtins.trace "${params.name}: role '${params.nodeType}'" params.peers);
     ppNeighbour          = n: "${n.name}: ${n.ip}";
     sep                  = ", ";
     cfg                  = config.services.cardano-node;
   in {
-    # _module.args.globals = globals; ## Important:  pass through globals
-
     imports = [
+      ./global-options.nix
       ./common.nix
       ./amazon-base.nix
-      (import ./cardano-node.nix globals params)
+      (import ./cardano-service.nix globals params)
     ] ++ map (path: import path globals params) imports;
 
     services.dnsmasq.enable = true;
@@ -28,8 +28,16 @@ globals: imports: params:
     deployment.ec2.region         = mkForce params.region;
     deployment.ec2.accessKeyId    = params.accessKeyId;
     deployment.ec2.keyPair        = resources.ec2KeyPairs.${params.keyPairName};
-    deployment.ec2.securityGroups = mkForce (map (x: resources.ec2SecurityGroups.${x}) params.sgNames);
-    
+    deployment.ec2.securityGroups =
+      with params;
+      let sgNames =
+           optionals typeIsExplorer              [ "allow-to-explorer-${region}" ]
+        ++ optionals typeIsCore                  [ "allow-cardano-static-peers-${name}-${region}-${org}" ]
+        ++ optionals typeIsRelay                 [ "allow-kademlia-public-udp-${region}"
+                                                   "allow-cardano-public-tcp-${region}" ]
+        ++ optionals config.global.enableEkgWeb  [ "allow-ekg-public-tcp-${region}" ];
+      in map (resolveSGName resources) sgNames;
+
     networking.extraHosts =
     let hostList = if config.services.cardano-node.enable == false then []
                    else
@@ -77,13 +85,20 @@ globals: imports: params:
           permissions = "0400";
         }
         //
+        ## XXX: Exhibit one:  code locality.
         (if ! params.typeIsExplorer
          then { keyFile = globals.topologyYaml; }
          else { text    =
-         ''
+           let relayAddressSpecs =
+             if globals.environment == "development"
+             then map (name: { addrType = "addr"; addr = nodeNameToPublicIP name; })
+                      (map (x: x.name) globals.relays)
+             else map (idx:  { addrType = "host"; addr = "cardano-node-${toString idx}.${config.global.dnsDomainname}"; })
+                      (range 0 (globals.nRelays - 1));
+           in ''
 wallet:
-  relays: [[${concatStringsSep ", " (map (relayIx: "{\"host\": \"cardano-node-${toString relayIx}.${(envSpecific globals.environment).dnsSuffix}\", \"port\": ${toString params.port}}")
-              (range 0 (globals.nRelays - 1)))}]]
+  relays: [[${concatStringsSep ", " (map ({ addrType, addr }: "{\"${addrType}\": \"${addr}\", \"port\": ${toString params.port}}")
+                                         relayAddressSpecs)}]]
   valency: 3
   fallbacks: 2
         '';});
