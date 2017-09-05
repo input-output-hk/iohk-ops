@@ -755,7 +755,7 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
   echo "Done."
 
 deployValidate :: Options -> NixopsConfig -> Bool -> IO ()
-deployValidate o c rebuildExplorerFrontend = do
+deployValidate o c _rebuildExplorerFrontend = do
   deploy o c True  False False False                   Nothing
   -- deploy o c False True  False rebuildExplorerFrontend Nothing
 
