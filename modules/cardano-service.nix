@@ -134,6 +134,8 @@ in {
   };
 
   config = mkIf cfg.enable {
+    services.cardano-node.serveEkg = config.global.enableEkgWeb;
+
     assertions = [
     { assertion = cfg.nodeType != null;
       message = "services.cardano-node.type must be set to one of: core relay other"; }
