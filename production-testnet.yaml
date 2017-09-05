@@ -1,0 +1,35 @@
+args:
+  deployerIP:
+    tag: NixStr
+    contents: '35.156.156.28'
+  SGGaccessKeyId:
+    tag: NixStr
+    contents: fifth-party
+  systemStart:
+    tag: NixInt
+    contents: 1504649011
+  CFaccessKeyId:
+    tag: NixStr
+    contents: third-party
+  IOHKaccessKeyId:
+    tag: NixStr
+    contents: iohk
+gen-cmdline: template -c production-testnet.yaml --environment production --nixops /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
+  production nodes reportserver explorer
+environment: Production
+topology: topology-staging.yaml
+name: testnet06-production
+files:
+- global-resources.nix
+- deployments/cardano-nodes.nix
+- deployments/cardano-nodes-env-production.nix
+- deployments/cardano-explorer.nix
+- deployments/cardano-explorer-env-production.nix
+- deployments/report-server.nix
+- deployments/report-server-env-production.nix
+elements:
+- Nodes
+- Explorer
+- ReportServer
+nixops: /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
+target: AWS
