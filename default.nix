@@ -65,6 +65,8 @@ let
     cardano-sl-explorer = prodMode super.cardano-sl-explorer;
     cardano-sl-explorer-static = justStaticExecutables self.cardano-sl-explorer;
 
+    cardano-post-mortem-static = justStaticExecutables self.cardano-sl-tools;
+
     #mkDerivation = args: super.mkDerivation (args // {
     #enableLibraryProfiling = false;
     #});

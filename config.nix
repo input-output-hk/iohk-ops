@@ -26,5 +26,5 @@ rec {
   #enableDelegation = true;
   delegationNode = 0;
 
-  productionMode = true;
+  productionMode = false;
 }

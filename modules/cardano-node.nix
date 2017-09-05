@@ -37,7 +37,7 @@ let
     (optionalString (cfg.serveEkg)             "--ekg-server ${cfg.privateIP}:8080")
     (optionalString (cfg.productionMode && cfg.nodeName != "explorer")
       "--keyfile ${stateDir}key${toString cfg.nodeIndex}.sk")
-    (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
+    (optionalString (cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"

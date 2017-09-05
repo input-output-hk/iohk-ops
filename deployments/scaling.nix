@@ -8,5 +8,6 @@ in {
   core-1 = node;
   core-2 = node;
   core-3 = node;
+  core-4 = node;
   relay-1 = node;
 }
