@@ -1,24 +1,25 @@
 #!/bin/sh
 
-set -xe
+set -eu
 
-IOHK_OPS=${1:-iohk-ops}
-NIXOPS=${2:-nixops}
-WITH_CLEANUP=${3:-true}
-WITH_STAGING=${4:-true}
-WITH_PRODUCTION=${5:-true}
-WITH_DEVELOPMENT=${6:-true}
-WITH_EXPLORER=${7:-true}
-WITH_REPORT_SERVER=${8:-true}
-WITH_INFRA=${9:-true}
+set -x; IOHK_OPS=${1:-iohk-ops};         set +x; shift || true
+set -x; NIXOPS=${1:-nixops};             set +x; shift || true
+set -x; CLEANUP_DEPLOYS=${1:-true};      set +x; shift || true
+set -x; CLEANUP_CONFIGS=${1:-true};      set +x; shift || true
+set -x; WITH_STAGING=${1:-true};         set +x; shift || true
+set -x; WITH_PRODUCTION=${1:-true};      set +x; shift || true
+set -x; WITH_DEVELOPMENT=${1:-true};     set +x; shift || true
+set -x; WITH_EXPLORER=${1:-true};        set +x; shift || true
+set -x; WITH_REPORT_SERVER=${1:-true};   set +x; shift || true
+set -x; WITH_INFRA=${1:-true};           set +x; shift || true
 
 # 0. Check all scripts compile
-# nixops --version
-# nix-shell --run "./scripts/aws.hs --help"
-# ${IOHK_OPS} --help
+nixops --version
+nix-shell --run "./scripts/aws.hs --help"
+${IOHK_OPS} --help
 
-# # 1. check all packages build
-# nix-instantiate jobsets/cardano.nix --show-trace
+# 1. check all packages build
+nix-instantiate jobsets/cardano.nix --show-trace
 
 # 2. check all environments evaluate
 CLEANUP_DEPLS=""
@@ -26,13 +27,13 @@ cleanup() {
         set +xe
         for depl in ${CLEANUP_DEPLS}
         do
-                ${IOHK_OPS} --config ${depl}'.yaml' destroy delete >/dev/null 2>&1
-                rm -f                ${depl}'.yaml'
+                test -z "${CLEANUP_DEPLOYS}" ||
+                        ${IOHK_OPS} --config ${depl}'.yaml' destroy delete >/dev/null 2>&1
+                test -z "${CLEANUP_CONFIGS}" ||
+                        rm -f                ${depl}'.yaml'
         done
 }
-if test -n "${WITH_CLEANUP}"
-then trap cleanup EXIT
-fi
+trap cleanup EXIT
 
 banner() {
         echo -e "--\n--\n--  $*\n--\n--\n"
