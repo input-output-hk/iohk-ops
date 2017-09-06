@@ -1,0 +1,34 @@
+rotation:
+    logLimit: 104857600 # 100 MB
+    keepFiles: 20
+severity: Debug
+smart-wallet:
+    severity: Debug
+    handlers:
+      - file: smart-wallet-node_lightwallet.log
+node:
+    severity: Debug
+    handlers:
+      - file: node_lightwallet.log.pub
+        round: 5
+      - file: node_lightwallet.log
+    comm:
+        severity: Info
+        file: comm-node_lightwallet.log
+    dht:
+        severity: Info
+    server:
+        file: server-node_lightwallet.log
+        ssc:
+            file: server-ssc-node_lightwallet.log
+        tx:
+            file: server-tx-node_lightwallet.log
+        block:
+            file: server-block-node_lightwallet.log
+time-slave:
+    severity: Debug
+    file: time-slave-node_lightwallet.log
+smart-gen:
+    severity: Info
+dht:
+    severity: Info

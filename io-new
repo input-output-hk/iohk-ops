@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+export NIXOPS_DEPLOYMENT=edgenodes-scaling
+runhaskell -iiohk/ iohk/iohk-ops.hs -c edgenodes-testnet.yaml $@

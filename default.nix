@@ -19,10 +19,11 @@ let
   socket-io-src = pkgs.fetchgit (removeAttrs (importJSON ./pkgs/engine-io.json) ["date"]);
   iohkpkgs = ((import pkgs/default.nix { inherit pkgs compiler; }).override {
   overrides = self: super: {
-    mkDerivation = if !localLib.debugBuild then super.mkDerivation
-                   else drv: super.mkDerivation (drv // { dontStrip = true; });
+    mkDerivation = drv: super.mkDerivation (drv // {
+      dontStrip = true;
+      configureFlags = (drv.configureFlags or []) ++ ["--ghc-options=-g" "--disable-library-stripping" "--disable-executable-stripping"];
+    });
 
-    cpphs = compiler.cpphs;
     cardano-sl-core = prodMode super.cardano-sl-core;
     cardano-sl = overrideCabal super.cardano-sl (drv: {
       doHaddock = false;
@@ -33,7 +34,7 @@ let
       configureFlags = [
         "-f-asserts"
         "-fdev-mode"
-	"-fdev-custom-config"
+        "-fdev-custom-config"
         "-fwith-explorer"
         # https://github.com/NixOS/nixpkgs/pull/24692#issuecomment-306509337
         "--ghc-option=-optl-lm"

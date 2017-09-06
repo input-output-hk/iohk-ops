@@ -1,9 +1,9 @@
-{ accessKeyId, region }:
+{ accessKeyId, region, systemStart }:
 
 with (import ./../lib.nix);
 
 let
-  instancesPerNode = 10;
+  instancesPerNode = 1;
   config = import ../config.nix;
   mkNode = publicIP: nodes: index: {
     name = "instance${toString index}";
@@ -20,11 +20,13 @@ let
           topologyFile = "${../topology-edgenode-3.yaml}";
           enable = true;
           nodeIndex = 50;
-          inherit (config) genesisN enableP2P productionMode;
+          inherit (config) genesisN enableP2P productionMode; # systemStart distribution richPoorDistr;
           nodeName = "edgenode";
           type = "edge";
+          serveEkg = false;
           extraArgs = "--peer-relay ${nodes.relay-1.config.services.cardano-node.publicIP}:3000";
           #inherit publicIP;
+          inherit systemStart;
         };
       };
     };

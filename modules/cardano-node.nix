@@ -46,7 +46,8 @@ let
     # (optionalString (cfg.type == "relay") "--kademlia /run/keys/kademlia.yaml")
     (optionalString (cfg.topologyFile != null) "--topology ${cfg.topologyFile}")
     "--node-id ${cfg.nodeName}"
-    "--node-type ${cfg.type}"
+    "--policies ${../. + "/policy_${cfg.type}.yaml"}"
+    # "--node-type ${cfg.type}"
     cfg.extraArgs
   ];
 in {
@@ -74,7 +75,7 @@ in {
       };
       saveCoreDumps = mkOption {
         type = types.bool;
-        default = false;
+        default = true;
         description = "automatically save coredumps when cardano-node segfaults";
       };
 
@@ -102,7 +103,7 @@ in {
       serveEkg = mkOption {
         type = types.bool;
         description = "Serve EKG raw on port 80";
-        default = false;
+        default = true;
       };
 
       stats = mkOption { type = types.bool; default = false; };

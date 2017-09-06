@@ -3,9 +3,9 @@
 set -e
 CLUSTERNAME=edgenodes-scaling
 SENDMODE='send-random'
-TIME=60    # how many seconds should the generator send transactions
+TIME=600    # how many seconds should the generator send transactions
 CONC=1      # number of threads in the generator
-DELAY=2000  # number of ms each thread waits between transactions
+DELAY=10000  # number of ms each thread waits between transactions
 COOLDOWN=10 # number of slots for cooldown, i.e., not sending
 	    # transactions, and allowing the mempools to empty
 
@@ -13,8 +13,8 @@ export NIXOPS_DEPLOYMENT=${CLUSTERNAME}
 
 ## TODO: -DCONFIG=benchmark somewhere within the nix setup
 ./io-new stop
-./io-new deploy
-./io-new start
+./io-new deploy -t 5
+nixops reboot --include edgenode-1 edgenode-2 edgenode-3 edgenode-4 edgenode-5 edgenode-6 edgenode-7 edgenode-8 edgenode-9 edgenode-10
 nix-build --no-build-output --cores 0 -A cardano-sl-lwallet-static -o lwallet
 nix-build --no-build-output --cores 0 -A cardano-post-mortem-static -o post-mortem
 
@@ -26,6 +26,8 @@ echo "Starting benchmarks for cluster ${CLUSTERNAME} of size ${CLUSTERSIZE}"
 SYSTEMSTART=`grep -A 2 systemStart edgenodes-testnet.yaml | grep contents | awk '{print $2}'`
 TOPOLOGY=`grep topology: edgenodes-testnet.yaml | awk '{print $2}'`
 RELAY_IP=`nixops info | grep 'relay-1 ' | awk 'NF>=2 {print $(NF-1)}'`
+
+sleep 2m
 
 ./lwallet/bin/cardano-wallet \
     --db-path wdb \
