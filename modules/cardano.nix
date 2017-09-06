@@ -62,6 +62,23 @@ globals: imports: params:
       nodeIndex   = params.i;
       relayIndex  = params.relayIndex;
       port        = params.port;
+      topologyYaml =
+         if !params.typeIsExplorer
+         then globals.topologyYaml
+         else 
+           let relayAddressSpecs =
+             if globals.environment == "development"
+             then map (name: { addrType = "addr"; addr = nodeNameToPublicIP name; })
+                      (map (x: x.name) globals.relays)
+             else map (idx:  { addrType = "host"; addr = "cardano-node-${toString idx}.${config.global.dnsDomainname}"; })
+                      (range 0 (globals.nRelays - 1));
+           in pkgs.writeText "topology-explorer.yaml" ''
+wallet:
+  relays: [[${concatStringsSep ", " (map ({ addrType, addr }: "{\"${addrType}\": \"${addr}\", \"port\": ${toString params.port}}")
+                                         relayAddressSpecs)}]]
+  valency: 3
+  fallbacks: 2
+           '';
       systemStart = params.systemStart;
       nodeType    = params.nodeType;
       neighbours = builtins.trace "${params.name}: neighbours: ${concatStringsSep sep (map ppNeighbour neighbourPairs)}"
@@ -78,29 +95,5 @@ globals: imports: params:
            "key${toString params.i}" = builtins.trace (params.name + ": using " + keyfile) {
              keyFile = ./. + "/../keys/${keyfile}";
              user = "cardano-node";
-           };}))
-      // {
-        "topology.yaml" = {
-          user = "cardano-node";
-          permissions = "0400";
-        }
-        //
-        ## XXX: Exhibit one:  code locality.
-        (if ! params.typeIsExplorer
-         then { keyFile = globals.topologyYaml; }
-         else { text    =
-           let relayAddressSpecs =
-             if globals.environment == "development"
-             then map (name: { addrType = "addr"; addr = nodeNameToPublicIP name; })
-                      (map (x: x.name) globals.relays)
-             else map (idx:  { addrType = "host"; addr = "cardano-node-${toString idx}.${config.global.dnsDomainname}"; })
-                      (range 0 (globals.nRelays - 1));
-           in ''
-wallet:
-  relays: [[${concatStringsSep ", " (map ({ addrType, addr }: "{\"${addrType}\": \"${addr}\", \"port\": ${toString params.port}}")
-                                         relayAddressSpecs)}]]
-  valency: 3
-  fallbacks: 2
-        '';});
-      };
+           };}));
   }

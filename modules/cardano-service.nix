@@ -43,8 +43,7 @@ let
     "--logs-prefix /var/lib/cardano-node"
     "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
-    # (optionalString params.typeIsRelay "--kademlia /run/keys/kademlia.yaml")
-    "--topology /run/keys/topology.yaml"
+    "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
   ];
 in {
@@ -73,6 +72,7 @@ in {
       };
       autoStart = mkOption { type = types.bool; default = true; };
 
+      topologyYaml = mkOption { type = types.path; };
       
       genesisN = mkOption { type = types.int; default = 6; };
       slotDuration = mkOption { type = types.int; default = 20; };
