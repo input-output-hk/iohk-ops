@@ -4,7 +4,7 @@ update_NIX_PATH() {
     return
   fi
   local scriptDir=$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")
-  nix-build "${scriptDir}/../fetch-nixpkgs.nix" -o "${scriptDir}/iohk-nixpkgs"
+  nix-build "${scriptDir}/../lib.nix" -A fetchNixPkgs -o "${scriptDir}/iohk-nixpkgs"
   export NIX_PATH="nixpkgs=${scriptDir}/iohk-nixpkgs"
   export NIX_PATH_LOCKED=1
 }
