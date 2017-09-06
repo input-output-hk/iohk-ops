@@ -156,7 +156,7 @@ in {
     };
 
     networking.firewall = {
-      allowedTCPPorts = [ cfg.port 8080 ]; ## 8080 is EKG
+      allowedTCPPorts = [ cfg.port ] ++ optionals cfg.serveEkg 8080;
 
       # TODO: securing this depends on CSLA-27
       # NOTE: this implicitly blocks DHCPCD, which uses port 68
