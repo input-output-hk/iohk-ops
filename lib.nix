@@ -52,8 +52,6 @@ in lib // (rec {
   # mod 1 10 == 1
   mod = base: int: base - (int * (builtins.div base int));
 
-  cconf = import ./config.nix;
-
   # Function to generate DHT key
   genDhtKey = i: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
 

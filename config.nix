@@ -1,17 +1,8 @@
+# These constants are all used by runexperiment
+
+# The rest are now configured centrally in modules/cardano-service.nix
+
 rec {
-  # Compile time settings
-  genesisN = 6;
-  slotDuration = 20;
-  networkDiameter = 15;
-  mpcRelayInterval = 45;
-
-  # Run time settings
-  bitcoinOverFlat = false;
-  totalMoneyAmount = 60000000;
-  richPoorDistr = false;
-  nodePort = 3000;
-  enableP2P = true;
-
   txgenR = 1;
   txgenN = 3;
   txgenPause = 0;
@@ -21,10 +12,7 @@ rec {
   txgenAddresses = [ 0 ];
   #txgenMofN = [ 3 5 ];
 
-  # Delegation settings
+  # Delegation settings (used for runexperiment)
   enableDelegation = false;
-  #enableDelegation = true;
   delegationNode = 0;
-
-  productionMode = true;
 }

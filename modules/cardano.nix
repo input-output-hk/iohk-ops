@@ -1,4 +1,3 @@
-# TODO: get rid of this duplication between config.nix and modules/cardano-node.nix
 # XXX: rename this file:  cardano-node-config vs. cardano-nodes-config is CRUEL
 with (import ./../lib.nix);
 
@@ -65,8 +64,6 @@ globals: imports: params:
       port        = params.port;
       systemStart = params.systemStart;
       nodeType    = params.nodeType;
-      inherit (cconf) enableP2P genesisN slotDuration networkDiameter mpcRelayInterval;
-      inherit (cconf) totalMoneyAmount bitcoinOverFlat productionMode richPoorDistr;
       neighbours = builtins.trace "${params.name}: neighbours: ${concatStringsSep sep (map ppNeighbour neighbourPairs)}"
                                   neighbourPairs;
       publicIP = if options.networking.publicIPv4.isDefined then config.networking.publicIPv4 else null;

@@ -25,13 +25,13 @@ with import ./lib.nix;
           (fold (x: y: x // y) {}
           (         (centralRegionSGs  globals.centralRegion)
 
-           ++  map  (regionSGs         { inherit (cconf) nodePort; }) ## 'config' is mostly empty here.
+           ++  map  (regionSGs         { nodePort = 3000; }) # TODO: 'config' is mostly empty here.
                     globals.allRegions
 
            ++  map  (orgXRegionSGs)
                     globals.orgXRegions
 
-           ++  map  (coreSGs           cconf.nodePort resources.elasticIPs)
+           ++  map  (coreSGs           3000 resources.elasticIPs) # TODO: config for port
                     globals.cores
           ));
         accessKeyId   = globals.orgAccessKeys.IOHK; # Design decision with regard to AWS SGs.

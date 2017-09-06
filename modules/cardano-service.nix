@@ -54,7 +54,7 @@ in {
       port = mkOption { type = types.int; default = 3000; };
       systemStart = mkOption { type = types.int; default = 0; };
 
-      enableP2P = mkOption { type = types.bool; default = false; };
+      enableP2P = mkOption { type = types.bool; default = true; };
       supporter = mkOption { type = types.bool; default = false; };
       productionMode = mkOption {
         type = types.bool;
@@ -73,13 +73,14 @@ in {
       };
       autoStart = mkOption { type = types.bool; default = true; };
 
-      genesisN = mkOption { type = types.int; };
-      slotDuration = mkOption { type = types.int; };
-      networkDiameter = mkOption { type = types.int; };
-      mpcRelayInterval = mkOption { type = types.int; };
+      
+      genesisN = mkOption { type = types.int; default = 6; };
+      slotDuration = mkOption { type = types.int; default = 20; };
+      networkDiameter = mkOption { type = types.int; default = 15; };
+      mpcRelayInterval = mkOption { type = types.int; default = 45; };
       stats = mkOption { type = types.bool; default = false; };
       jsonLog = mkOption { type = types.bool; default = true; };
-      totalMoneyAmount = mkOption { type = types.int; default = 100000; };
+      totalMoneyAmount = mkOption { type = types.int; default = 60000000; };
       distribution = mkOption {
         type = types.bool;
         default = true;
