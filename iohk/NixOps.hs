@@ -879,9 +879,10 @@ generateGenesis o NixopsConfig{..} cardanoBranch = do
   cmd o "ls" ["-l", format (fp%"/"%s) cardanoSLDir genesisTarball]
   pure genesisName
 
--- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
-deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> Bool -> IO ()
-deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis rebuildExplorerFrontend skipValidation = do
+-- * Local phase of a full deployment
+deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> Bool -> Bool -> Bool -> IO ()
+deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGenesis rebuildExplorerFrontend skipValidation = do
+  -- XXX: duplicated below
   let EnvSettings{..}   = envSettings cEnvironment
       cardanoSLDir      = "cardano-sl"
       deploymentAccount = fromUsername envDeployerUser <> "@" <> (getIP $ configDeployerIP c)
@@ -925,11 +926,48 @@ deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGe
                 , format ("'cd "%s%" && for x in {1.."%d%"}; do cp "%s%"/keys-testnet/rich/testnet$x.key keys/key$((x-1)).sk; done'")
                   deploymentDir richKeys genesisName]
   -- 4. Wait for CI (either after first or second bump)
-  echo "CI status:  https://hydra.iohk.io/jobset/serokell/iohk-nixops-staging#tabs-evaluations"
   opsCommit <- gitHEADCommit o
+  echo ""
+  echo "CI status:  https://hydra.iohk.io/jobset/serokell/iohk-nixops-staging#tabs-evaluations"
   printf ("\nPress 'Enter' when CI has built the evaluation for 'iohk-ops' commit "%s%"\n") (fromCommit opsCommit)
   void readline
-  -- 5. Deploy
+
+deployFullDeployerPhase :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
+deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorerFrontend = do
+  -- 0. If we have nixpkgs commit set in the config, propagate
+  nixpkgsPath <- case cNixpkgs of
+    Nothing -> pure Nothing
+    Just commit -> do
+      (_, storePath) <- prefetchURL o Nixpkgs commit
+      pure $ Just storePath
+  let options' = o { oNixpkgs = nixpkgsPath }
+
+  -- 6. --evaluate-only
+  deploy options' c True False False rebuildExplorerFrontend Nothing
+
+  -- 7. cleanup
+  stop o c
+  wipeJournals o c
+  when doWipeNodeDBs $
+    wipeNodeDBs o c Confirm
+
+  -- 8. for real
+  deploy options' c False False False False (Just bumpHeldBy)
+
+-- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
+deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> Bool -> Bool -> IO ()
+deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis rebuildExplorerFrontend skipValidation resumeFailed = do
+  let EnvSettings{..}   = envSettings cEnvironment
+      deploymentAccount = fromUsername envDeployerUser <> "@" <> (getIP $ configDeployerIP c)
+      deploymentDir     = fromNixopsDepl cName
+      deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
+
+  unless resumeFailed $
+    deployFullLocalPhase o c cardanoBranchToDrive doGenesis rebuildExplorerFrontend skipValidation
+
+  -- 5. Remote, on-deployer phase
+  opsCommit <- gitHEADCommit o
+
   printf ("Updating deployment source: "%s%"\n") deploymentSource
   cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "fetch", "origin" ]
   cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "reset", "--hard", fromCommit opsCommit ]
@@ -945,28 +983,6 @@ deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGe
                   (if doGenesis               then "--wipe-node-dbs" else "")
                   (if rebuildExplorerFrontend then "" else "--no-explorer-rebuild")
                 ]
-
-deployFullDeployerPhase :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
-deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorerFrontend = do
-  -- 0. If we have nixpkgs commit set in the config, propagate
-  nixpkgsPath <- case cNixpkgs of
-    Nothing -> pure Nothing
-    Just commit -> do
-      (_, storePath) <- prefetchURL o Nixpkgs commit
-      pure $ Just storePath
-  let options' = o { oNixpkgs = nixpkgsPath }
-
-  -- 1. --evaluate-only
-  deploy options' c True False False rebuildExplorerFrontend Nothing
-
-  -- 2. cleanup
-  stop o c
-  wipeJournals o c
-  when doWipeNodeDBs $
-    wipeNodeDBs o c Confirm
-
-  -- 3. for real
-  deploy options' c False False False False (Just bumpHeldBy)
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"
