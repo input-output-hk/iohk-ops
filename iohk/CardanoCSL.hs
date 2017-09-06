@@ -134,8 +134,7 @@ getSmartGenCmd :: Options -> NixopsConfig -> IO Text
 getSmartGenCmd o c = runError $ do
   nodes <- ExceptT $ getNodesMap o c
   config@CardanoConfig{..} <- ExceptT $ getConfig
-  dhtfile <- lift $ Prelude.readFile "static/dht.json"
-  peers <- ExceptT $ return $ getPeers c config dhtfile nodes
+  peers <- ExceptT $ return $ getPeers c config nodes
   (_, sgIp) <- fmap T.strip <$> shellStrict ("curl " <> fromURL Ops.awsPublicIPURL) empty
 
   let bot = if bitcoinOverFlat then "bitcoin" else "flat"
@@ -166,8 +165,8 @@ genPeers port = map impl
   where
     impl (i, Ops.getIP . diPublicIP -> ip) = ip <> ":" <> show' port
 
-getPeers :: NixopsConfig -> CardanoConfig -> String -> M.Map Int DeploymentInfo -> Either String Text
-getPeers _ config _dhtfile nodes = do
+getPeers :: NixopsConfig -> CardanoConfig -> M.Map Int DeploymentInfo -> Either String Text
+getPeers _ config nodes = do
   case M.lookup 0 nodes of
     Nothing -> Left "Node0 retrieval failed"
     Just node0 -> let port = nodePort config
@@ -178,8 +177,7 @@ getWalletDelegationCmd :: Options -> NixopsConfig -> IO Text
 getWalletDelegationCmd o c = runError $ do
   nodes <- ExceptT $ getNodesMap o c
   config@CardanoConfig{..} <- ExceptT $ getConfig
-  dhtfile <- lift $ Prelude.readFile "static/dht.json"
-  peers <- ExceptT $ return $ getPeers c config dhtfile nodes
+  peers <- ExceptT $ return $ getPeers c config nodes
 
   let mkCmd i = "delegate-light " <> show' i <> " " <> show' delegationNode
       cmds = T.intercalate "," $ map mkCmd $ filter (/= delegationNode) $ M.keys nodes
