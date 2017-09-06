@@ -40,6 +40,7 @@ executable iohk-ops
                      , system-filepath >=0.4
                      , text >=1.2
                      , turtle >=1.3
+                     , unix
                      , unordered-containers
                      , utf8-string
                      , vector >=0.11

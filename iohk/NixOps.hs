@@ -51,6 +51,7 @@ import           GHC.Stack
 import           Prelude                   hiding (FilePath)
 import           Safe                             (headMay)
 import qualified System.IO                     as Sys
+import qualified System.Posix.User             as Sys
 import           Time.System
 import           Time.Types
 import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x)
@@ -843,45 +844,74 @@ ensureCardanoBranchCheckout o branch dir = do
   pure commit
 
 -- | Generate genesis driving the tip of specified 'cardano-sl' branch.
-generateGenesis :: Options -> NixopsConfig -> Branch -> IO Text
-generateGenesis o NixopsConfig{..} cardanoBranch = do
+generateOrInsertGenesis :: Options -> NixopsConfig -> Branch -> Maybe FilePath -> IO (Text, FilePath)
+generateOrInsertGenesis o NixopsConfig{..} cardanoBranch preGenesis = do
   let cardanoSLDir     = "cardano-sl"
-      genesisName      = "genesis" :: Text
-      genesisTarball   = genesisName <> ".tgz"
       genSuffix        = "tn"
+      genesisName'     = "genesis-" <> genSuffix :: Text
+      genesisTarball   = Path.fromText genesisName' <.> "tgz"
       (,) genM genN    = (,) (topoNCores topology) 1200
-      genFiles         = [ "core/genesis-core-"%s%".bin"
-                         , "genesis-info/"%s%".log"
-                         , "godtossing/genesis-godtossing-"%s%".bin" ] <&> flip format genSuffix
+      genFiles         = zip [ "genesis-core.bin"
+                             , "genesis-godtossing.bin"
+                             , "genesisCreation.log" ]
+                         $   [ "core/genesis-core-"%s%".bin"
+                             , "godtossing/genesis-godtossing-"%s%".bin"
+                             , "genesis-info/"%s%".log" ]
+                         <&> flip format genSuffix
   cardanoCommit <- ensureCardanoBranchCheckout o cardanoBranch cardanoSLDir
   printf ("Generating genesis using cardano-sl branch '"%s%"' (commit "%s%")\n  M:"%d%"\n  N:"%d%"\n")
     (fromBranch cardanoBranch) (fromCommit cardanoCommit) genM genN
-  cardanoGenesisCommit <- do
-    cd cardanoSLDir
-    cmd o "rm" ["-rf", genesisName, genesisTarball]
-    cmd o "scripts/generate/genesis.sh"
-      [ "--build-mode",        "nix"
-      , "--install-as-suffix",  genSuffix
-      , "--rich-keys",          showT genM
-      , "--poor-keys",          showT genN
-      , "--output-dir",         genesisName]
-    cmd o "git" (["add"] <> genFiles)
-    cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
-    echo "Genesis generated and committed, bumping 'iohk-ops'"
-    cardanoGenesisCommit <- gitHEADCommit o
-    printf ("Committed new genesis as 'cardano-sl' commit "%s%", pushing to 'origin'\n") (fromCommit cardanoGenesisCommit)
-    cmd o "git" ["push", "--force", "origin"]
-    cd ".."
-    pure cardanoGenesisCommit
-  runSetRev o CardanoSL cardanoGenesisCommit (Just $ format ("Bump cardano: Regenerated genesis, M="%d%", N="%d%", cardano="%s) genM genN (fromCommit cardanoCommit))
+  (genesisName,
+   genesisPath,
+   genesisCommitMsg) <- do
+    case preGenesis of
+      Nothing -> do
+        echo "NEW genesis deployment requested"
+        cd cardanoSLDir
+        cmd o "rm" ["-rf", genesisName', format fp genesisTarball]
+        cmd o "scripts/generate/genesis.sh"
+          [ "--build-mode",        "nix"
+          , "--install-as-suffix",  genSuffix
+          , "--rich-keys",          showT genM
+          , "--poor-keys",          showT genN
+          , "--output-dir",         genesisName']
+        pure (genesisName', genesisTarball,
+              format ("Bump cardano: Regenerated genesis, M="%d%", N="%d%", cardano=") genM genN)
+      Just genf -> do
+        printf ("PREMADE genesis deployment requested: "%fp%"\n") genf
+        existsp <- testfile genf
+        unless existsp $
+          errorT $ format ("PREMADE genesis file missing: "%fp%"\n") genf
+        let stdGenesisName = dropExtension $ last $ splitDirectories genf
+        echo "Installing genesis.."
+        cmd o "rm" ["-rf", format ("./"%fp%"/"%s) cardanoSLDir genesisName', format fp genesisTarball]
+        cmd o "tar" ["xaf", format fp genf, "-C", format fp cardanoSLDir]
+        cd cardanoSLDir
+        forM_ genFiles $
+          \(from, to)-> cmd o "cp" ["-f", format fp $ stdGenesisName </> from, to]
+        pure $ (format fp stdGenesisName, genf,
+                format ("Bump cardano: Implanted genesis "%fp%", cardano=") stdGenesisName)
+
+  printf ("Genesis NAME: "%s%"\n")  genesisName
+  printf ("Genesis FILE: "%fp%"\n") genesisPath
+
+  cmd o "git" (["add"] <> (snd <$> genFiles))
+  cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
+  echo "Genesis generated and committed, bumping 'iohk-ops'"
+  cardanoGenesisCommit <- gitHEADCommit o
+  printf ("Committed new genesis as 'cardano-sl' commit "%s%", pushing to 'origin'\n") (fromCommit cardanoGenesisCommit)
   cmd o "git" ["push", "--force", "origin"]
-  echo "Don't forget to archive and install the keys from our new genesis:"
-  cmd o "ls" ["-l", format (fp%"/"%s) cardanoSLDir genesisTarball]
-  pure genesisName
+  cd ".."
+
+  runSetRev o CardanoSL cardanoGenesisCommit (Just $ genesisCommitMsg <> (fromCommit cardanoCommit))
+  cmd o "git" ["push", "--force", "origin"]
+  echo "Don't forget to archive our new genesis:"
+  cmd o "ls" ["-l", format fp genesisPath]
+  pure (genesisName, genesisPath)
 
 -- * Local phase of a full deployment
-deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> Bool -> Bool -> Bool -> Bool -> IO ()
-deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doWipeNodeDBs doGenesis rebuildExplorerFrontend skipValidation = do
+deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> Bool -> Maybe FilePath -> Bool -> Bool -> IO ()
+deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGenesis preGenesis rebuildExplorerFrontend skipValidation = do
   -- XXX: duplicated below
   let EnvSettings{..}   = envSettings cEnvironment
       cardanoSLDir      = "cardano-sl"
@@ -905,22 +935,23 @@ deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doWip
   printf ("Pushing local 'iohk-ops' commit into 'origin'..\n")
   cmd o "git" ["push", "--force", "origin"]
   -- 3. Genesis
-  when (doGenesis || doWipeNodeDBs) $ do
-    echo "Genesis regeneration requested.."
-    genesisName <- generateGenesis o c cardanoBranchToDrive
-    let genesisTarball = genesisName <> ".tgz"
-        richKeys       = topoNCores topology
+  when (doGenesis || isJust preGenesis) $ do
+    case (doGenesis, preGenesis) of
+      (True, Just _) -> error "Asked to both regenerate and use supplied genesis: these options are exclusive."
+      _              -> pure ()
+    (genesisName,
+     genesisPath) <- generateOrInsertGenesis o c cardanoBranchToDrive preGenesis
+    let richKeys = topoNCores topology
     printf ("Updating deployer genesis: "%s%"\n") deploymentSource
     echo "  -- removing old genesis"
-    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'rm -rf ./"%s%" ./"%s%"'") genesisTarball genesisName]
+    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'rm -rf ./genesis-tn-*'")]
     echo "  -- uploading generated genesis archive"
-    cmd o "scp" [ format (fp%"/"%s) cardanoSLDir genesisTarball
-                , deploymentSource ]
+    cmd o "scp" [ format fp genesisPath, deploymentSource ]
     echo "  -- unpacking genesis archive"
-    cmd o "ssh" [ deploymentAccount, "tar", "xaf", deploymentDir <> "/" <> genesisTarball, "-C", deploymentDir ]
+    cmd o "ssh" [ deploymentAccount, "tar", "xaf", deploymentDir <> "/" <> genesisName <> ".tgz", "-C", deploymentDir ]
     echo "  -- removing old rich keys"
     cmd o "ssh" [ deploymentAccount, "bash", "-c"
-                , format ("'cd "%s%" && rm -rf ./keys/*'") deploymentDir]
+                , format ("'cd "%s%" && rm -f ./keys/*'") deploymentDir]
     echo "  -- installing genesis rich keys"
     cmd o "ssh" [ deploymentAccount, "bash", "-c"
                 , format ("'cd "%s%" && for x in {1.."%d%"}; do cp "%s%"/keys-testnet/rich/testnet$x.key keys/key$((x-1)).sk; done'")
@@ -954,16 +985,24 @@ deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExp
   -- 8. for real
   deploy options' c False False False False (Just bumpHeldBy)
 
+runningOnDeployer :: IO Bool
+runningOnDeployer = flip elem ["staging", "live-production"] <$> Sys.getLoginName
+
 -- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
-deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> Bool -> Bool -> Bool -> IO ()
-deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis doWipeNodeDBs rebuildExplorerFrontend skipValidation resumeFailed = do
+deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Maybe FilePath -> Bool -> Bool -> Bool -> Bool -> IO ()
+deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy newGenesis preGenesis wipeNodeDBs' rebuildExplorerFrontend skipValidation resumeFailed = do
   let EnvSettings{..}   = envSettings cEnvironment
       deploymentAccount = fromUsername envDeployerUser <> "@" <> (getIP $ configDeployerIP c)
       deploymentDir     = fromNixopsDepl cName
       deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
+      doGenesis         = newGenesis || isJust preGenesis
+      doWipeNodeDBs     = wipeNodeDBs' || doGenesis
+
+  onDeployer <- runningOnDeployer
+  when onDeployer $ error "The 'iohk-ops deploy' subcommand is designed to be run from a developer machine."
 
   unless resumeFailed $
-    deployFullLocalPhase o c cardanoBranchToDrive doGenesis doWipeNodeDBs rebuildExplorerFrontend skipValidation
+    deployFullLocalPhase o c cardanoBranchToDrive newGenesis preGenesis rebuildExplorerFrontend skipValidation
 
   -- 5. Remote, on-deployer phase
   opsCommit <- gitHEADCommit o
@@ -980,7 +1019,7 @@ deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGe
                              \ deploy-full-deployer-phase \
                              \ --bump-system-start-held-by "%d%" "%s%" "%s%"'")
                   deploymentDir (fromJust oConfigFile) (bumpHeldBy `div` 60)
-                  (if doGenesis               then "--wipe-node-dbs" else "")
+                  (if doWipeNodeDBs           then "--wipe-node-dbs" else "")
                   (if rebuildExplorerFrontend then "" else "--no-explorer-rebuild")
                 ]
 
