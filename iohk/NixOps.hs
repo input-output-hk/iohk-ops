@@ -47,6 +47,7 @@ import           Data.Yaml                        (FromJSON(..), ToJSON(..))
 import           Debug.Trace                      (trace)
 import qualified Filesystem.Path.CurrentOS     as Path
 import           GHC.Generics              hiding (from, to)
+import           GHC.Stack
 import           Prelude                   hiding (FilePath)
 import           Safe                             (headMay)
 import qualified System.IO                     as Sys
@@ -115,8 +116,10 @@ projectSrcFile Nixops          = error "No corresponding -src.json spec for 'nix
 -- * Primitive types
 --
 newtype AccessKeyId  = AccessKeyId  { fromAccessKeyId  :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+newtype Arg          = Arg          { fromArg          :: Text   } deriving (IsString, Show)
 newtype Branch       = Branch       { fromBranch       :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype Commit       = Commit       { fromCommit       :: Text   } deriving (Eq, FromJSON, Generic, Show, IsString, ToJSON)
+newtype Exec         = Exec         { fromExec         :: Text   } deriving (IsString, Show)
 newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
 newtype NixHash      = NixHash      { fromNixHash      :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr      = NixAttr      { fromAttr         :: Text   } deriving (FromJSON, Generic, Show, IsString)
@@ -128,8 +131,7 @@ newtype URL          = URL          { fromURL          :: Text   } deriving (Fro
 newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
 newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
-newtype Exec         = Exec         { fromExec         :: Text   } deriving (IsString, Show)
-newtype Arg          = Arg          { fromArg          :: Text   } deriving (IsString, Show)
+newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 
 deriving instance Eq NodeType
 deriving instance Read NodeName
@@ -245,9 +247,10 @@ nixArgCmdline (NixParam name) x            = ["--arg",    name, nixValueStr x]
 -- * Domain
 --
 data Deployment
-  = Explorer
-  | Nodes
+  = Every
+  | Explorer
   | Infra
+  | Nodes
   | ReportServer
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Deployment
@@ -266,24 +269,79 @@ data Target
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Target
 
-envConfigFilename :: IsString s => Environment -> s
-envConfigFilename Any           = "config.yaml"
-envConfigFilename Development   = "config.yaml"
-envConfigFilename Staging       = "staging.yaml"
-envConfigFilename Production    = "production.yaml"
+
+-- * Environment-specificity
+--
+data EnvSettings =
+  EnvSettings
+  { envDeployerUser      :: Username
+  , envDefaultConfig     :: FilePath
+  , envDefaultTopology   :: FilePath
+  , envDeploymentFiles   :: [FileSpec]
+  }
+
+type FileSpec = (Deployment, Target, Text)
+
+envSettings :: HasCallStack => Environment -> EnvSettings
+envSettings env =
+  let deplAgnosticFiles      = [ (Every,          All, "global-resources.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer.nix")
+                               , (ReportServer,   All, "deployments/report-server.nix")
+                               , (Nodes,          All, "deployments/cardano-nodes.nix")
+                               , (Infra,          All, "deployments/infrastructure.nix")
+                               , (Infra,          AWS, "deployments/infrastructure-target-aws.nix") ]
+  in case env of
+    Staging      -> EnvSettings
+      { envDeployerUser      = "staging"
+      , envDefaultConfig     = "staging-testnet.yaml"
+      , envDefaultTopology   = "topology-staging.yaml"
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer-env-staging.nix")
+                               , (ReportServer,   All, "deployments/report-server-env-staging.nix")
+                               ] <> deplAgnosticFiles}
+    Production  -> EnvSettings
+      { envDeployerUser      = "live-production"
+      , envDefaultConfig     = "production-testnet.yaml"
+      , envDefaultTopology   = "topology-production.yaml"
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-production.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer-env-production.nix")
+                               , (ReportServer,   All, "deployments/report-server-env-production.nix")
+                               , (Infra,          All, "deployments/infrastructure-env-production.nix")
+                               ] <> deplAgnosticFiles}
+    Development -> EnvSettings
+      { envDeployerUser      = "staging"
+      , envDefaultConfig     = "config.yaml"
+      , envDefaultTopology   = "topology.yaml"
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
+                               ] <> deplAgnosticFiles}
+    Any -> error "envSettings called with 'Any'"
 
 selectDeployer :: Environment -> [Deployment] -> NodeName
 selectDeployer Staging   delts | elem Nodes delts = "iohk"
                                | otherwise        = "cardano-deployer"
 selectDeployer _ _                                = "cardano-deployer"
 
-selectTopologyConfig :: Environment -> [Deployment] -> FilePath
-selectTopologyConfig Development _ = "topology-development.yaml"
-selectTopologyConfig Staging     _ = "topology-staging.yaml"
-selectTopologyConfig _           _ = "topology.yaml"
-
 detectDeployerIP :: Options -> IO IP
 detectDeployerIP o = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+
+
+-- * Deployment file set computation
+--
+filespecDeplSpecific :: Deployment -> FileSpec -> Bool
+filespecDeplSpecific x (x', _, _) = x == x'
+filespecTgtSpecific  :: Target     -> FileSpec -> Bool
+filespecTgtSpecific  x (_, x', _) = x == x'
+
+filespecNeededDepl   :: Deployment -> FileSpec -> Bool
+filespecNeededTgt    :: Target     -> FileSpec -> Bool
+filespecNeededDepl x fs = filespecDeplSpecific Every fs || filespecDeplSpecific x fs
+filespecNeededTgt  x fs = filespecTgtSpecific  All   fs || filespecTgtSpecific  x fs
+
+filespecFile :: FileSpec -> Text
+filespecFile (_, _, x) = x
+
+elementDeploymentFiles :: Environment -> Target -> Deployment -> [Text]
+elementDeploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNeededDepl depl x && filespecNeededTgt tgt x) $ envDeploymentFiles $ envSettings env)
 
 
 -- * Topology
@@ -380,54 +438,6 @@ nodeNames (oOnlyOn -> nodeLimit)  NixopsConfig{..}
   , SimpleTopo nodeMap <- topology
   = if Map.member node nodeMap || node == explorerNode then [node]
     else errorT $ format ("Node '"%s%"' doesn't exist in cluster '"%fp%"'.") (showT $ fromNodeName node) cTopology
-
-
--- * deployment structure
---
-type FileSpec = (Environment, Target, Text)
-
-deployments :: [(Deployment, [FileSpec])]
-deployments =
-  [ (Explorer
-    , [ (Any,         All, "global-resources.nix")
-      , (Any,         All, "deployments/cardano-explorer.nix")
-      , (Production,  All, "deployments/cardano-explorer-env-production.nix")
-      , (Staging,     All, "deployments/cardano-explorer-env-staging.nix") ])
-  , (Nodes
-    , [ (Any,         All, "global-resources.nix")
-      , (Any,         All, "deployments/cardano-nodes.nix")
-      , (Development, All, "deployments/cardano-nodes-env-development.nix")
-      , (Production,  All, "deployments/cardano-nodes-env-production.nix")
-      , (Staging,     All, "deployments/cardano-nodes-env-staging.nix") ])
-  , (ReportServer
-    , [ (Any,         All, "global-resources.nix")
-      , (Any,         All, "deployments/report-server.nix")
-      , (Production,  All, "deployments/report-server-env-production.nix")
-      , (Staging,     All, "deployments/report-server-env-staging.nix") ])
-  , (Infra
-    , [ (Any,         All, "deployments/infrastructure.nix")
-      , (Production,  All, "deployments/infrastructure-env-production.nix")
-      , (Any,         AWS, "deployments/infrastructure-target-aws.nix") ])
-  ]
-
-deploymentSpecs :: Deployment -> [FileSpec]
-deploymentSpecs = fromJust . flip lookup deployments
-
-filespecEnvSpecific :: Environment -> FileSpec -> Bool
-filespecEnvSpecific x (x', _, _) = x == x'
-filespecTgtSpecific :: Target      -> FileSpec -> Bool
-filespecTgtSpecific x (_, x', _) = x == x'
-
-filespecNeededEnv :: Environment -> FileSpec -> Bool
-filespecNeededTgt :: Target      -> FileSpec -> Bool
-filespecNeededEnv x fs = filespecEnvSpecific Any fs || filespecEnvSpecific x fs
-filespecNeededTgt x fs = filespecTgtSpecific All fs || filespecTgtSpecific x fs
-
-filespecFile :: FileSpec -> Text
-filespecFile (_, _, x) = x
-
-elementDeploymentFiles :: Environment -> Target -> Deployment -> [Text]
-elementDeploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNeededEnv env x && filespecNeededTgt tgt x) $ deploymentSpecs depl)
 
 
 data Options = Options
@@ -550,18 +560,18 @@ setDeplArg c@NixopsConfig{..} k v = c { cDeplArgs = Map.insert k v cDeplArgs }
 
 -- | Interpret inputs into a NixopsConfig
 mkConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe IP -> IO NixopsConfig
-mkConfig o cGenCmdline cName mNixops mTopology cEnvironment cTarget cElements systemStart mDeployerIP = do
-  let cNixops   = fromMaybe "nixops" mNixops
-      cFiles    = deploymentFiles                          cEnvironment cTarget cElements
-      cTopology = flip fromMaybe mTopology $
-                  selectTopologyConfig                     cEnvironment         cElements
-      cNixpkgs  = Nothing
-  cDeplArgs    <- selectDeploymentArgs o cTopology         cEnvironment         cElements systemStart mDeployerIP
+mkConfig o cGenCmdline cName mNixops   mTopology   cEnvironment cTarget cElements systemStart mDeployerIP = do
+  let EnvSettings{..} = envSettings                cEnvironment
+      cNixops         = fromMaybe "nixops" mNixops
+      cFiles          = deploymentFiles            cEnvironment cTarget cElements
+      cTopology       = flip fromMaybe mTopology envDefaultTopology
+      cNixpkgs        = Nothing
+  cDeplArgs    <- selectDeploymentArgs o cTopology cEnvironment         cElements systemStart mDeployerIP
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
 normaliseConfigFilename :: Maybe FilePath -> NixopsConfig -> FilePath
-normaliseConfigFilename mFp NixopsConfig{..} = flip fromMaybe mFp $ envConfigFilename cEnvironment
+normaliseConfigFilename mFp NixopsConfig{..} = flip fromMaybe mFp $ envDefaultConfig $ envSettings cEnvironment
 
 -- | Write the config file
 writeConfig :: MonadIO m => Maybe FilePath -> NixopsConfig -> m FilePath
@@ -872,9 +882,9 @@ generateGenesis o NixopsConfig{..} cardanoBranch = do
 -- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
 deployStaging :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> Bool -> IO ()
 deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis rebuildExplorerFrontend skipValidation = do
-  let cardanoSLDir      = "cardano-sl"
-      deployerUser      = "staging"
-      deploymentAccount = deployerUser <> "@" <> (getIP $ configDeployerIP c)
+  let EnvSettings{..}   = envSettings cEnvironment
+      cardanoSLDir      = "cardano-sl"
+      deploymentAccount = fromUsername envDeployerUser <> "@" <> (getIP $ configDeployerIP c)
       deploymentDir     = fromNixopsDepl cName
       deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
   -- 0. Validate
