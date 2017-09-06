@@ -5,11 +5,6 @@ let
   hostPkgs = import <nixpkgs> {};
   lib = hostPkgs.lib;
 in lib // (rec {
-  debugBuild  = let x = (builtins.getEnv "DEBUG_BUILD")  != "";
-                in if !x then x else builtins.trace "DEBUG_BUILD is set, switching on debug build flags" x;
-  debugDeploy = let x = (builtins.getEnv "DEBUG_DEPLOY") != "";
-                in if !x then x else builtins.trace "DEBUG_DEPLOY is set, enriching deployment with debugging tools" x;
-
   # TODO: sanity check there's no duplicate nodes for same index
   # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
   mergeAttrs = nodes: lib.foldAttrs (a: b: a) [] nodes;

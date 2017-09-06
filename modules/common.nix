@@ -8,8 +8,7 @@ in {
   environment.systemPackages = with pkgs;
     # nixopsUnstable: wait for 1.5.1 release
     [ git tmux vim sysstat nixopsUnstable lsof ncdu tree mosh tig
-      cabal2nix stack iptables graphviz ]
-    ++ (if debugDeploy then [ tcpdump strace gdb binutils ] else []);
+      cabal2nix stack iptables graphviz tcpdump strace gdb binutils nix-repl ];
 
   services.openssh.passwordAuthentication = false;
   services.openssh.enable = true;
