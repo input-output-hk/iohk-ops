@@ -20,7 +20,7 @@ let
           topologyFile = "${../topology-edgenode-3.yaml}";
           enable = true;
           nodeIndex = 50;
-          inherit (config) genesisN enableP2P productionMode; # systemStart distribution richPoorDistr;
+          inherit (config) genesisN enableP2P productionMode richPoorDistr totalMoneyAmount;
           nodeName = "edgenode";
           type = "edge";
           serveEkg = false;
