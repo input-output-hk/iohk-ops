@@ -161,9 +161,6 @@ getSmartGenCmd o c = runError $ do
   return cliCmd
 
 
-genDhtKey :: Int -> Text
-genDhtKey i = "MHdrsP-oPf7UWl" <> (T.pack $ printf "%.3d" i) <> "7QuXnLK5RD="
-
 genPeers :: Int -> [(Int, DeploymentInfo)] -> [Text]
 genPeers port = map impl
   where
