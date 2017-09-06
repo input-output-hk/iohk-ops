@@ -1,21 +1,14 @@
-let
-  localLib = import ./lib.nix;
-  nixpkgs  = localLib.fetchNixPkgs;
-  pkgs     = import nixpkgs {};
-  hpkgs    = pkgs.haskell.packages.ghc802;
-in
+{ localLib ? import ./lib.nix
+, pkgs ? import (localLib.fetchNixPkgs) {}
+}:
 
-{ ... }:
 let
-  drv     = hpkgs.callPackage ./iohk/default.nix {};
-  drv'    = pkgs.haskell.lib.overrideCabal
-            (import ./default.nix {}).iohk-ops
-            (old: {
-              libraryHaskellDepends = with pkgs;
-                 [ cabal-install stack haskellPackages.intero
-                   # scripts/aws.hs dependencies:
-                   wget awscli
-                 ];
-             });
-in
-  drv'.env
+  extraDeps = with pkgs;
+    [ cabal-install stack haskellPackages.intero
+      # scripts/aws.hs dependencies:
+      wget awscli
+    ];
+  drv = pkgs.haskell.lib.overrideCabal
+         (import ./default.nix {}).iohk-ops
+         (drv: { libraryHaskellDepends = extraDeps; });
+in drv.env
