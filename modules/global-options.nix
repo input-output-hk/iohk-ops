@@ -59,8 +59,5 @@ with import ./../lib.nix;
         };
       };
     };
-
-    # To avoid creation of a new file just for a single option.
-    services.report-server.logsdir = mkOption { type = types.path; default = "/var/lib/report-server"; };
   };
 }

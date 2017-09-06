@@ -34,7 +34,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                                    kademlia = false;
                                    peers    = [];
                                    address  = "report-server.cardano";
-                                   port     = 8080; }; };
+                                   port     = null; }; };
 
     allRegions     = unique ([centralRegion] ++ map (n: n.value.region) topologySpecList);
 
