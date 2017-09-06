@@ -880,8 +880,8 @@ generateGenesis o NixopsConfig{..} cardanoBranch = do
   pure genesisName
 
 -- * Local phase of a full deployment
-deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> Bool -> Bool -> Bool -> IO ()
-deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGenesis rebuildExplorerFrontend skipValidation = do
+deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> Bool -> Bool -> Bool -> Bool -> IO ()
+deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doWipeNodeDBs doGenesis rebuildExplorerFrontend skipValidation = do
   -- XXX: duplicated below
   let EnvSettings{..}   = envSettings cEnvironment
       cardanoSLDir      = "cardano-sl"
@@ -905,7 +905,7 @@ deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGen
   printf ("Pushing local 'iohk-ops' commit into 'origin'..\n")
   cmd o "git" ["push", "--force", "origin"]
   -- 3. Genesis
-  when doGenesis $ do
+  when (doGenesis || doWipeNodeDBs) $ do
     echo "Genesis regeneration requested.."
     genesisName <- generateGenesis o c cardanoBranchToDrive
     let genesisTarball = genesisName <> ".tgz"
@@ -955,15 +955,15 @@ deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExp
   deploy options' c False False False False (Just bumpHeldBy)
 
 -- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
-deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> Bool -> Bool -> IO ()
-deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis rebuildExplorerFrontend skipValidation resumeFailed = do
+deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> Bool -> Bool -> Bool -> IO ()
+deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis doWipeNodeDBs rebuildExplorerFrontend skipValidation resumeFailed = do
   let EnvSettings{..}   = envSettings cEnvironment
       deploymentAccount = fromUsername envDeployerUser <> "@" <> (getIP $ configDeployerIP c)
       deploymentDir     = fromNixopsDepl cName
       deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
 
   unless resumeFailed $
-    deployFullLocalPhase o c cardanoBranchToDrive doGenesis rebuildExplorerFrontend skipValidation
+    deployFullLocalPhase o c cardanoBranchToDrive doGenesis doWipeNodeDBs rebuildExplorerFrontend skipValidation
 
   -- 5. Remote, on-deployer phase
   opsCommit <- gitHEADCommit o

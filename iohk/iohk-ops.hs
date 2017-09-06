@@ -108,7 +108,7 @@ data Command where
   Info                  :: Command
 
   -- * Deployment
-  DeployFull            :: Branch -> Seconds -> Bool -> Bool -> Bool -> Bool -> Command
+  DeployFull            :: Branch -> Seconds -> Bool -> Bool -> Bool -> Bool -> Bool -> Command
   DeployFullDeployerPhase :: Seconds -> Bool -> Bool -> Command
 
   -- * live cluster ops
@@ -188,6 +188,7 @@ centralCommandParser =
                                 <*> (Seconds . (* 60) . fromIntegral
                                       <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
                                 <*> switch "do-genesis"            'g' "Regenerate genesis"
+                                <*> switch "wipe-node-dbs"         'w' "Wipe node databases"
                                 <*> switch "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
                                 <*> switch "skip-local-validation" 's' "Skip local validation of the current iohk-ops checkout"
                                 <*> switch "resume"                'r' "Resume a full remote deployment that failed during on-deployer evaluation.  Pass all the same flags")
@@ -195,8 +196,8 @@ centralCommandParser =
                                 DeployFullDeployerPhase
                                 <$> (Seconds . (* 60) . fromIntegral
                                       <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
-                                <*> switch "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
-                                <*> switch "wipe-node-dbs"         'w' "Wipe node databases")]
+                                <*> switch "wipe-node-dbs"         'w' "Wipe node databases"
+                                <*> switch "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!")]
 
    <|> subcommandGroup "Live cluster ops:"
    [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
@@ -277,8 +278,8 @@ runTop o@Options{..} args topcmd = do
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
             Info                     -> Ops.nixops                    o c "info" []
-            DeployFull br st gn ner sv resume -> Ops.deployFull              o c br st gn (not ner) sv resume
-            DeployFullDeployerPhase st wi ner -> Ops.deployFullDeployerPhase o c st wi    (not ner)
+            DeployFull              br st genes wipeDB noExRe skipV resume -> Ops.deployFull              o c br st genes wipeDB (not noExRe) skipV resume
+            DeployFullDeployerPhase    st       wipeDB noExRe              -> Ops.deployFullDeployerPhase o c    st       wipeDB (not noExRe)
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c
