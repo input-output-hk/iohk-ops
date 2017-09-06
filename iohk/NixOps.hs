@@ -880,8 +880,8 @@ generateGenesis o NixopsConfig{..} cardanoBranch = do
   pure genesisName
 
 -- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
-deployStaging :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> Bool -> IO ()
-deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis rebuildExplorerFrontend skipValidation = do
+deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Bool -> Bool -> IO ()
+deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy doGenesis rebuildExplorerFrontend skipValidation = do
   let EnvSettings{..}   = envSettings cEnvironment
       cardanoSLDir      = "cardano-sl"
       deploymentAccount = fromUsername envDeployerUser <> "@" <> (getIP $ configDeployerIP c)
@@ -934,14 +934,20 @@ deployStaging o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy d
   cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "fetch", "origin" ]
   cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "reset", "--hard", fromCommit opsCommit ]
   cmd o "ssh" $ [ "--", deploymentAccount, "bash",  "-c",
-                  format ("'echo && cd ~/"%s%" && pwd && $(nix-build -A iohk-ops default.nix)/bin/iohk-ops --config "%fp%" deploy-staging-phase1 --bump-system-start-held-by "%d%" "%s%" "%s%"'")
+                  format ("'echo && \
+                          \ cd ~/"%s%" && \
+                          \ pwd && \
+                          \ $(nix-build -A iohk-ops default.nix)/bin/iohk-ops \
+                             \ --config "%fp%" \
+                             \ deploy-full-deployer-phase \
+                             \ --bump-system-start-held-by "%d%" "%s%" "%s%"'")
                   deploymentDir (fromJust oConfigFile) (bumpHeldBy `div` 60)
                   (if doGenesis               then "--wipe-node-dbs" else "")
                   (if rebuildExplorerFrontend then "" else "--no-explorer-rebuild")
                 ]
 
-deployStagingPhase1 :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
-deployStagingPhase1 o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorerFrontend = do
+deployFullDeployerPhase :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
+deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorerFrontend = do
   -- 0. If we have nixpkgs commit set in the config, propagate
   nixpkgsPath <- case cNixpkgs of
     Nothing -> pure Nothing

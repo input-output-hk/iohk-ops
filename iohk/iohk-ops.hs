@@ -108,8 +108,8 @@ data Command where
   Info                  :: Command
 
   -- * Deployment
-  DeployStaging         :: Branch -> Seconds -> Bool -> Bool -> Bool -> Command
-  DeployStaging1        :: Seconds -> Bool -> Bool -> Command
+  DeployFull            :: Branch -> Seconds -> Bool -> Bool -> Bool -> Command
+  DeployFullDeployerPhase :: Seconds -> Bool -> Bool -> Command
 
   -- * live cluster ops
   Ssh                   :: Exec -> [Arg] -> Command
@@ -182,16 +182,16 @@ centralCommandParser =
    , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
    , ("info",                   "Invoke 'nixops info'",                                             pure Info)
-   , ("deploy-staging",         "Deploy 'staging' from specified Cardano branch, optionally with genesis regeneration",
-                                DeployStaging
+   , ("deploy-full",            "Perform a full remote deployment from the specified Cardano branch, optionally with genesis regeneration",
+                                DeployFull
                                 <$> parserBranch "'cardano-sl' branch to update & deploy"
                                 <*> (Seconds . (* 60) . fromIntegral
                                       <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
                                 <*> switch "do-genesis"            'g' "Regenerate genesis"
                                 <*> switch "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
                                 <*> switch "skip-local-validation" 's' "Skip local validation of the current iohk-ops checkout")
-   , ("deploy-staging-phase1",  "On-deployer phase of 'deploy-staging'",
-                                DeployStaging1
+   , ("deploy-full-deployer-phase", "On-deployer phase of 'deploy-full'",
+                                DeployFullDeployerPhase
                                 <$> (Seconds . (* 60) . fromIntegral
                                       <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
                                 <*> switch "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
@@ -246,8 +246,7 @@ runTop o@Options{..} args topcmd = do
 
     _ -> do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
-      let cf = flip fromMaybe oConfigFile $
-               Ops.envConfigFilename Any
+      let cf = flip fromMaybe oConfigFile $ Ops.envDefaultConfig $ Ops.envSettings Ops.defaultEnvironment
       c <- Ops.readConfig o cf
 
       when oVerbose $
@@ -277,8 +276,8 @@ runTop o@Options{..} args topcmd = do
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
             Info                     -> Ops.nixops                    o c "info" []
-            DeployStaging br st gn ner sv -> Ops.deployStaging             o c br st gn (not ner) sv
-            DeployStaging1 st wi   ner    -> Ops.deployStagingPhase1       o c st wi    (not ner)
+            DeployFull br st gn ner sv        -> Ops.deployFull              o c br st gn (not ner) sv
+            DeployFullDeployerPhase st wi ner -> Ops.deployFullDeployerPhase o c st wi    (not ner)
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c
