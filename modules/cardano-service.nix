@@ -57,7 +57,7 @@ in {
       supporter = mkOption { type = types.bool; default = false; };
       productionMode = mkOption {
         type = types.bool;
-        default = false;
+        default = true;
       };
       saveCoreDumps = mkOption {
         type = types.bool;
