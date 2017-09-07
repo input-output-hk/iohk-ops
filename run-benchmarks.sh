@@ -3,9 +3,9 @@
 set -e
 CLUSTERNAME=edgenodes-scaling
 SENDMODE='send-random'
-TIME=600    # how many seconds should the generator send transactions
+TIME=6000    # how many seconds should the generator send transactions
 CONC=1      # number of threads in the generator
-DELAY=10000  # number of ms each thread waits between transactions
+DELAY=500  # number of ms each thread waits between transactions
 COOLDOWN=10 # number of slots for cooldown, i.e., not sending
 	    # transactions, and allowing the mempools to empty
 

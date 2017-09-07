@@ -3,7 +3,7 @@
 with (import ./../lib.nix);
 
 let
-  instancesPerNode = 1;
+  instancesPerNode = 8;
   config = import ../config.nix;
   mkNode = publicIP: nodes: index: {
     name = "instance${toString index}";

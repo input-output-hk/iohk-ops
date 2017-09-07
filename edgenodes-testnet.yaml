@@ -4,7 +4,7 @@ args:
     contents: '35.156.156.28'
   systemStart:
     tag: NixInt
-    contents: 1504696513
+    contents: 1504770770
   accessKeyId:
     tag: NixStr
     contents: cardano-deployer
