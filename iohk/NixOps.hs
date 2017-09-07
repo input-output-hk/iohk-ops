@@ -900,11 +900,11 @@ generateOrInsertGenesis o NixopsConfig{..} cardanoBranch preGenesis = do
   echo "Genesis generated and committed, bumping 'iohk-ops'"
   cardanoGenesisCommit <- gitHEADCommit o
   printf ("Committed new genesis as 'cardano-sl' commit "%s%", pushing to 'origin'\n") (fromCommit cardanoGenesisCommit)
-  cmd o "git" ["push", "--force", "origin"]
+  cmd o "git" ["push", "origin"]
   cd ".."
 
   runSetRev o CardanoSL cardanoGenesisCommit (Just $ genesisCommitMsg <> (fromCommit cardanoCommit))
-  cmd o "git" ["push", "--force", "origin"]
+  cmd o "git" ["push", "origin"]
   echo "Don't forget to archive our new genesis:"
   cmd o "ls" ["-l", format fp genesisPath]
   pure (genesisName, genesisPath)
@@ -933,7 +933,7 @@ deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGen
     runSetRev o CardanoSL branchHEAD (Just $ format ("Bump cardano-sl to:  "%s) (fromCommit branchHEAD))
   -- 2. Record first bump and trigger CI
   printf ("Pushing local 'iohk-ops' commit into 'origin'..\n")
-  cmd o "git" ["push", "--force", "origin"]
+  cmd o "git" ["push", "origin"]
   -- 3. Genesis
   when (doGenesis || isJust preGenesis) $ do
     case (doGenesis, preGenesis) of
