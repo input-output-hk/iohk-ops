@@ -5,7 +5,7 @@ in
 , config ? {}
 , pkgs ? (import (localLib.fetchNixPkgs) { inherit system config; })
 , compiler ? pkgs.haskell.packages.ghc802
-, dconfig ? "testnet_staging_full"
+, dconfig ? "testnet_public_full"
 }:
 
 with pkgs.lib;
