@@ -24,7 +24,7 @@ in {
         default = 8080;
       };
       executable = mkOption {
-        type = types.packages;
+        type = types.package;
         default = (import ./../default.nix {}).cardano-report-server-static;
       };
     };
