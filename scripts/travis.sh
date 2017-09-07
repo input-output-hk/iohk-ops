@@ -2,7 +2,7 @@
 
 set -eu
 
-set -x; IOHK_OPS=${1:-iohk-ops};         set +x; shift || true
+set -x; IOHK_OPS=${1:-$(nix-build -A iohk-ops)/bin/iohk-ops};         set +x; shift || true
 set -x; NIXOPS=${1:-nixops};             set +x; shift || true
 set -x; CLEANUP_DEPLOYS=${1:-true};      set +x; shift || true
 set -x; CLEANUP_CONFIGS=${1:-true};      set +x; shift || true
