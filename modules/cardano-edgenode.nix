@@ -3,7 +3,8 @@
 with (import ./../lib.nix);
 
 let
-  instancesPerNode = 8;
+  instancesPerNode = 20;
+  externalRelayIP  = "18.194.64.17";
   config = import ../config.nix;
   mkNode = publicIP: nodes: index: {
     name = "instance${toString index}";
@@ -13,7 +14,7 @@ let
       config = { ... }: {
         imports = [ ./common.nix ];
         networking.extraHosts = ''
-          ${nodes.relay-1.config.services.cardano-node.publicIP} relay-1
+          ${externalRelayIP} relay-1
         '';
         networking.nameservers = [ "127.0.0.1" ];
         services.cardano-node = {
@@ -24,7 +25,7 @@ let
           nodeName = "edgenode";
           type = "edge";
           serveEkg = false;
-          extraArgs = "--peer-relay ${nodes.relay-1.config.services.cardano-node.publicIP}:3000";
+          extraArgs = "--peer-relay ${externalRelayIP}:3000";
           #inherit publicIP;
           inherit systemStart;
         };
@@ -34,6 +35,7 @@ let
 in { config, resources, pkgs, nodes, options, ... }:
 {
   imports = [ ./amazon-base.nix ./cardano-node-scaling.nix ];
+  deployment.ec2.instanceType = mkForce "r4.4xlarge";
   deployment.ec2.region = mkForce region;
   deployment.ec2.accessKeyId = accessKeyId;
   deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor accessKeyId region};
@@ -41,7 +43,7 @@ in { config, resources, pkgs, nodes, options, ... }:
   containers = listToAttrs (map (mkNode config.networking.publicIPv4 nodes) (range 1 instancesPerNode));
   services.dnsmasq.enable = true;
   networking.extraHosts = ''
-    ${nodes.relay-1.config.services.cardano-node.publicIP} relay-1.cardano
+    ${externalRelayIP} relay-1.cardano
     127.0.0.1 edgenode.cardano
   '';
 }

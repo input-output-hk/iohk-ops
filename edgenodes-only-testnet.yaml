@@ -8,12 +8,13 @@ args:
   accessKeyId:
     tag: NixStr
     contents: cardano-deployer
-gen-cmdline: template --here -c edgenodes-testnet.yaml --environment development --topology
-  topology-staging.yaml policy-experiments Nodes
+gen-cmdline: template --here -c edgenodes-only-testnet.yaml --environment development
+  --topology topology-edgenode-only.yaml policy-experiments-100-additional-edgenodes-1
+  Nodes
 environment: Development
 nixpkgs: 9b948ea439ddbaa26740ce35543e7e35d2aa6d18
-topology: topology-edgenode.yaml
-name: policy-experiments
+topology: topology-edgenode-only.yaml
+name: policy-experiments-100-additional-edgenodes-1
 files:
 - deployments/firewalls.nix
 - deployments/keypairs.nix

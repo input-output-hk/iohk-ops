@@ -1,20 +1,31 @@
 #!/usr/bin/env bash
 
 set -e
-CLUSTERNAME=edgenodes-scaling
+YAML_FILE=edgenodes-testnet.yaml
+CLUSTERNAME=policy-experiments
+IO_NEW="./io-new -c $YAML_FILE"
 SENDMODE='send-random'
 TIME=6000    # how many seconds should the generator send transactions
 CONC=1      # number of threads in the generator
-DELAY=500  # number of ms each thread waits between transactions
+DELAY=1000  # number of ms each thread waits between transactions
 COOLDOWN=10 # number of slots for cooldown, i.e., not sending
 	    # transactions, and allowing the mempools to empty
 
 export NIXOPS_DEPLOYMENT=${CLUSTERNAME}
 
 ## TODO: -DCONFIG=benchmark somewhere within the nix setup
-./io-new stop
-./io-new deploy -t 5
-nixops reboot --include edgenode-1 edgenode-2 edgenode-3 edgenode-4 edgenode-5 edgenode-6 edgenode-7 edgenode-8 edgenode-9 edgenode-10
+
+IS_RUNNING=`nixops list | grep ${CLUSTERNAME} | wc -l`
+if [ "$IS_RUNNING" -ne "0" ]; then
+echo "Stopping old cluster"
+$IO_NEW destroy
+$IO_NEW delete
+fi
+
+$IO_NEW create
+$IO_NEW modify
+echo "Running the cluster is 10 from now..."
+$IO_NEW deploy -t 10
 nix-build --no-build-output --cores 0 -A cardano-sl-lwallet-static -o lwallet
 nix-build --no-build-output --cores 0 -A cardano-post-mortem-static -o post-mortem
 
@@ -36,7 +47,7 @@ sleep 2m
     --peer ${RELAY_IP}:3000 \
     --system-start $SYSTEMSTART cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE tps-sent.csv" +RTS -s -RTS
 
-./io-new dumplogs Nodes -p
+$IO_NEW dumplogs Nodes -p
 
 LAST=`ls experiments/ | grep 20 | sort | tail -1`
 echo $LAST

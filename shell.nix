@@ -26,7 +26,7 @@ let
                 export NIX_PATH=nixpkgs=${nixpkgs}
                 export NIX_PATH_LOCKED=1
                 echo   NIX_PATH LOCKED and set to $NIX_PATH >&2
-                export PATH=/home/staging/edgenode-scaling/newnix/bin/:$PATH
+                export PATH=/home/staging/alfredo/policy-experiments/nix-no-gc/bin/:$PATH
               '';
              });
 in
