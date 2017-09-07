@@ -10,6 +10,7 @@ in
 
 with pkgs.lib;
 with pkgs.haskell.lib;
+# with (import <nixpkgs/pkgs/development/haskell-modules/lib.nix> { inherit pkgs; lib = pkgs.lib;});
 
 let
   iohk-ops-extra-runtime-deps = [
@@ -29,4 +30,7 @@ in {
                   --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                 '';
              });
-} // cardano-sl-pkgs
+} // cardano-sl-pkgs // {
+  cardano-sl-tools-static      = justStaticExecutables cardano-sl-pkgs.cardano-sl-tools;
+  cardano-report-server-static = justStaticExecutables cardano-sl-pkgs.cardano-report-server;
+}
