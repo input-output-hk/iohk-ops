@@ -11,7 +11,7 @@ with (import ./../lib.nix);
       ./../modules/datadog.nix
     ];
 
-    services.dd-agent.tags = ["env:production"];
+    services.dd-agent.tags = ["env:${config.deployment.name}"];
 
     deployment.ec2 = {
       elasticIPv4 = resources.elasticIPs.hydra-ip;
@@ -26,7 +26,7 @@ with (import ./../lib.nix);
       ./../modules/papertrail.nix
     ];
 
-    services.dd-agent.tags = ["env:production"];
+    services.dd-agent.tags = ["env:${config.deployment.name}"];
 
     deployment.ec2 = {
       elasticIPv4 = resources.elasticIPs.cardanod-ip;
