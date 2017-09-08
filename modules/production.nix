@@ -6,7 +6,7 @@ with import ./../lib.nix;
 
     global = {
       allocateElasticIP = true;
-      enableEkgWeb      = false;
+      enableEkgWeb      = true;
       dnsDomainname     = "aws.iohk.io";
     };
 
