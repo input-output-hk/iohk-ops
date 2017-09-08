@@ -19,7 +19,7 @@ import           Time.System
 
 import           NixOps                           (Branch(..), Commit(..), Confirmation(..), Environment(..), Deployment(..), IP(..), Target(..)
                                                   ,Options(..), NixopsCmd(..), NixopsDepl(..), Project(..), Exec(..), Arg(..)
-                                                  ,showT, lowerShowT, errorT, cmd, every, fromNodeName, parserBranch, parserCommit)
+                                                  ,showT, lowerShowT, errorT, cmd, incmd, every, fromNodeName, parserBranch, parserCommit)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import           Topology
@@ -89,7 +89,6 @@ data Command where
                            } -> Command
   SetRev                :: Project -> Commit -> Bool -> Command
   FakeKeys              :: Command
-  UpdateNixops          :: Command
 
   -- * building
   Genesis               :: Branch -> Command
@@ -149,8 +148,7 @@ centralCommandParser =
                                 <*> (fromMaybe True
                                       <$> optional (switch "commit" 'n' "pkgs/generate.sh, then commit the *-src.json and pkgs/.")))
     , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
-    , ("update-nixops",         "Rebuild and bump 'nixops' to the version checked out in the 'nixops' subdirectory.  WARNING: non-chainable, since it updates the config file.",
-                                pure UpdateNixops)]
+    ]
 
    <|> subcommandGroup "Build-related:"
     [ ("genesis",               "initiate production of Genesis in cardano-sl/genesis subdir",
@@ -272,7 +270,6 @@ runTop o@Options{..} args topcmd = do
             AMI                      -> Cardano.buildAMI              o c
             -- * deployment lifecycle
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
-            UpdateNixops             -> Ops.updateNixops              o c
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
             Deploy ev bu ch ner buh  -> Ops.deploy                    o c ev bu ch (not ner) buh
@@ -323,7 +320,8 @@ runTemplate o@Options{..} Template{..} args = do
 
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
-  config <- Ops.mkConfig o cmdline tName tNixops tTopology tEnvironment tTarget tDeployments systemStart tDeployerIP
+  nixops <- incmd o "nix-build" ["-A", "nixops"]
+  config <- Ops.mkConfig o cmdline tName (tNixops <|> (Path.fromText <$> Just nixops)) tTopology tEnvironment tTarget tDeployments systemStart tDeployerIP
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

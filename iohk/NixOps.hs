@@ -1171,26 +1171,6 @@ wipeNodeDBs o c@NixopsConfig{..} confirmation = do
   parallelSSH o c "rm" ["-rf", "/var/lib/cardano-node"]
   echo "Done."
 
-updateNixops :: Options -> NixopsConfig -> IO ()
-updateNixops o@Options{..} c@NixopsConfig{..} = do
-  let (,) nixopsDir outLink = (,) "nixops" ("nixops-link" :: FilePath)
-      configFile = flip fromMaybe oConfigFile $
-        error "The 'update-nixops' subcommand requires the -c/--config option to 'iohk-ops'."
-  preExists <- testpath nixopsDir
-  unless preExists $ do
-    errorT $ format ("The 'update-nixops' subcommand requires a '"%fp%"' subdirectory as input.") nixopsDir
-  cd nixopsDir
-  cmd o "nix-build" ["-A", "build.x86_64-linux", "--out-link", "../" <> format fp outLink, "release.nix"]
-  sh $ do
-    gitHeadRev <- inproc "git" ["rev-parse", "HEAD"] empty
-    cd ".."
-    nixopsStorePath <- inproc "readlink" [format fp outLink] empty
-    liftIO $ printf ("Built nixops commit '"%s%"' is at '"%s%"', updating config '"%fp%"'\n")
-      (lineToText gitHeadRev) (lineToText nixopsStorePath) configFile
-    writeConfig (Just configFile) $ c { cNixops = Path.fromText $ lineToText nixopsStorePath <> "/bin/nixops" }
-    -- Unfortunately, Turtle doesn't seem to provide anything of the form Shell a -> IO a,
-    -- that would allow us to smuggle non-Text values out of a Shell monad.
-  echo "Done."
 
 
 -- * Functions for extracting information out of nixops info command
