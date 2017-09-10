@@ -1,4 +1,4 @@
-Collection of tools to deploy IOHK infrastructure.
+Collection of tooling and automation to deploy IOHK infrastructure.
 
 ### Structure
 
@@ -11,46 +11,10 @@ Collection of tools to deploy IOHK infrastructure.
 - `jobsets` is used by Hydra CI
 
 
-### Compiling localy
+### Usage
 
-     $ ./CardanoCSL.hs build
+   $(nix-build -A iohk-ops)/bin/iohk-ops --help
 
-### Deploying changes
-
-    $ ./CardanoCSL.hs deploy
-
-**Note this will not remove machines if they no longer exist.**
-
-### Removing machines
-
-If you want to remove a machine simply remove them in the bottom part of the `nixops.nix` file.
-Then run `nixops deploy` with `-k`:
-
-./Cardano.hs deploy
-
-### List all deployments
-
-    $ nixops list
-
-### Information about all machines (including public IPs)
-
-    $ nixops info -d <deployment-name>
-
-### SSH to a single machine
-
-    $ nixops ssh -d <deployment-name> <machine-name>
-
-Replace `<machine-name>` with the machine you want to connect to (from `info` call).
-
-### Destroy everything
-
-    $ ./CardanoCSL.hs destroy
-
-### Building AMIs
-
-    $ ./CardanoCSL.hs ami -c config.yaml
-
-This will update `modules/amis.nix` so make sure to commit it.
 
 ### Getting SSH access
 
