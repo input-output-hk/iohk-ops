@@ -169,12 +169,12 @@ in {
       getDailyTime = nodeIndex: let
           # how many minutes between each node restarting
           minute = mod (nodeIndex * 4) 60;
+        # Reboot cardano-node every 2h, offset by node id (in ${interval} minute intervals)
         in "0/2:${toString minute}";
     in {
       script = ''
         /run/current-system/sw/bin/systemctl restart cardano-node
       '';
-      # Reboot cardano-node every 4h, offset by node id (in ${interval} minute intervals)
       startAt = getDailyTime cfg.nodeIndex;
     };
 
