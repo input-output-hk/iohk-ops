@@ -5,6 +5,8 @@ let nodeMap = globals.nodeMap; in
 (flip mapAttrs nodeMap (name: import ./../modules/cardano-staging.nix))
 //
 {
+  network.description = "Cardano Staging";
+
   resources = {
     elasticIPs = nodesElasticIPs nodeMap;
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {

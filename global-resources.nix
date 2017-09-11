@@ -2,13 +2,6 @@
 
 with import ./lib.nix;
 {
-  network.description = "Cardano Federated";
-
-  # XXX: Exhibit of a Broken Passthrough
-  # config =  { config, ...}: {
-  #   global.topologyYaml = throw "foo";
-  # };
-
   resources.ec2KeyPairs = globals.allKeyPairs;
 
   resources.ec2SecurityGroups =
