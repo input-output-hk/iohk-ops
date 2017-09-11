@@ -22,7 +22,7 @@ params:
       ''
     else ''
     - name: cardano-node-simple
-      search_string: ['cardano-node-simple']
+      search_string: ['cardano-node']
       '') + ''
       exact_match: True
       thresholds:

@@ -17,7 +17,7 @@ params:
     init_config:
 
     instances:
-    - name: cardano-node
+    - name: cardano-node-simple
       search_string: ['cardano-node']
       exact_match: False
       thresholds:
