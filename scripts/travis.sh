@@ -1,18 +1,18 @@
 #!/bin/sh
 
-set -eu
+set -xeu
 
 NIXOPS=$(nix-build -A nixops)/bin/nixops
 
-set -x; IOHK_OPS=${1:-$(nix-build -A iohk-ops)/bin/iohk-ops};         set +x; shift || true
-set -x; CLEANUP_DEPLOYS=${1:-true};      set +x; shift || true
-set -x; CLEANUP_CONFIGS=${1:-true};      set +x; shift || true
-set -x; WITH_STAGING=${1:-true};         set +x; shift || true
-set -x; WITH_PRODUCTION=${1:-true};      set +x; shift || true
-set -x; WITH_DEVELOPMENT=${1:-};     set +x; shift || true     ## XXX: stop-gap fix for CI
-set -x; WITH_EXPLORER=${1:-true};        set +x; shift || true
-set -x; WITH_REPORT_SERVER=${1:-true};   set +x; shift || true
-set -x; WITH_INFRA=${1:-true};           set +x; shift || true
+IOHK_OPS=${1:-$(nix-build -A iohk-ops)/bin/iohk-ops}
+CLEANUP_DEPLOYS=${2:-true}
+CLEANUP_CONFIGS=${3:-true}
+WITH_STAGING=${4:-true}
+WITH_PRODUCTION=${5:-true}
+WITH_DEVELOPMENT=${6:-}         ## XXX: stop-gap fix for CI
+WITH_EXPLORER=${7:-true}
+WITH_REPORT_SERVER=${8:-true}
+WITH_INFRA=${9:-true}
 
 # 0. Check all scripts compile
 nixops --version
