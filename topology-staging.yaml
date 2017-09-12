@@ -120,13 +120,13 @@ nodes:
     region: eu-central-1
     type: relay
     host: u-r-1.cardano
-    dynamic-subscribe: [ [{"host": "r-a-1.cardano", "port": 3000}]
-                       , [{"host": "r-a-2.cardano", "port": 3000}]
-                       , [{"host": "r-a-3.cardano", "port": 3000}]
-                       , [{"host": "r-b-1.cardano", "port": 3000}]
-                       , [{"host": "r-b-2.cardano", "port": 3000}]
-                       , [{"host": "r-c-1.cardano", "port": 3000}]
-                       , [{"host": "r-c-2.cardano", "port": 3000}] ]
+    dynamic-subscribe: [ [{ "host": "r-a-1.cardano" }]
+                       , [{ "host": "r-a-2.cardano" }]
+                       , [{ "host": "r-a-3.cardano" }]
+                       , [{ "host": "r-b-1.cardano" }]
+                       , [{ "host": "r-b-2.cardano" }]
+                       , [{ "host": "r-c-1.cardano" }]
+                       , [{ "host": "r-c-2.cardano" }] ]
     kademlia: false
     public: true
 
@@ -134,13 +134,13 @@ nodes:
     region: ap-northeast-1
     type: relay
     host: u-r-2.cardano
-    dynamic-subscribe: [ [{"host": "r-a-1.cardano", "port": 3000}]
-                       , [{"host": "r-a-2.cardano", "port": 3000}]
-                       , [{"host": "r-a-3.cardano", "port": 3000}]
-                       , [{"host": "r-b-1.cardano", "port": 3000}]
-                       , [{"host": "r-b-2.cardano", "port": 3000}]
-                       , [{"host": "r-c-1.cardano", "port": 3000}]
-                       , [{"host": "r-c-2.cardano", "port": 3000}] ]
+    dynamic-subscribe: [ [{ "host": "r-a-1.cardano" }]
+                       , [{ "host": "r-a-2.cardano" }]
+                       , [{ "host": "r-a-3.cardano" }]
+                       , [{ "host": "r-b-1.cardano" }]
+                       , [{ "host": "r-b-2.cardano" }]
+                       , [{ "host": "r-c-1.cardano" }]
+                       , [{ "host": "r-c-2.cardano" }] ]
     kademlia: false
     public: true
 
@@ -148,12 +148,12 @@ nodes:
     region: ap-southeast-1
     type: relay
     host: u-r-3.cardano
-    dynamic-subscribe: [ [{"host": "r-a-1.cardano", "port": 3000}]
-                       , [{"host": "r-a-2.cardano", "port": 3000}]
-                       , [{"host": "r-a-3.cardano", "port": 3000}]
-                       , [{"host": "r-b-1.cardano", "port": 3000}]
-                       , [{"host": "r-b-2.cardano", "port": 3000}]
-                       , [{"host": "r-c-1.cardano", "port": 3000}]
-                       , [{"host": "r-c-2.cardano", "port": 3000}] ]
+    dynamic-subscribe: [ [{ "host": "r-a-1.cardano" }]
+                       , [{ "host": "r-a-2.cardano" }]
+                       , [{ "host": "r-a-3.cardano" }]
+                       , [{ "host": "r-b-1.cardano" }]
+                       , [{ "host": "r-b-2.cardano" }]
+                       , [{ "host": "r-c-1.cardano" }]
+                       , [{ "host": "r-c-2.cardano" }] ]
     kademlia: false
     public: true
