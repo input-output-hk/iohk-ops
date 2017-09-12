@@ -116,44 +116,47 @@ nodes:
 
 # now we have 3 unprivileged relays, one in each region
 
-  'u-r-1':
+  'u-a-1':
     region: eu-central-1
     type: relay
-    host: u-r-1.cardano
-    dynamic-subscribe: [ [{ "host": "r-a-1.cardano" }]
-                       , [{ "host": "r-a-2.cardano" }]
-                       , [{ "host": "r-a-3.cardano" }]
-                       , [{ "host": "r-b-1.cardano" }]
-                       , [{ "host": "r-b-2.cardano" }]
-                       , [{ "host": "r-c-1.cardano" }]
-                       , [{ "host": "r-c-2.cardano" }] ]
+    host: u-a-1.cardano
+    dynamic-subscribe: [ [{ "host": "r-a-1.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-3.cardano" }
+                       , { "host": "r-b-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-c-1.cardano" }
+                       , { "host": "r-c-2.cardano" }] ]
+    valency: 2
     kademlia: false
     public: true
 
-  'u-r-2':
+  'u-b-1':
     region: ap-northeast-1
     type: relay
-    host: u-r-2.cardano
-    dynamic-subscribe: [ [{ "host": "r-a-1.cardano" }]
-                       , [{ "host": "r-a-2.cardano" }]
-                       , [{ "host": "r-a-3.cardano" }]
-                       , [{ "host": "r-b-1.cardano" }]
-                       , [{ "host": "r-b-2.cardano" }]
-                       , [{ "host": "r-c-1.cardano" }]
-                       , [{ "host": "r-c-2.cardano" }] ]
+    host: u-b-1.cardano
+    dynamic-subscribe: [ [{ "host": "r-a-1.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-3.cardano" }
+                       , { "host": "r-b-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-c-1.cardano" }
+                       , { "host": "r-c-2.cardano" }] ]
+    valency: 2
     kademlia: false
     public: true
 
-  'u-r-3':
+  'u-c-1':
     region: ap-southeast-1
     type: relay
-    host: u-r-3.cardano
-    dynamic-subscribe: [ [{ "host": "r-a-1.cardano" }]
-                       , [{ "host": "r-a-2.cardano" }]
-                       , [{ "host": "r-a-3.cardano" }]
-                       , [{ "host": "r-b-1.cardano" }]
-                       , [{ "host": "r-b-2.cardano" }]
-                       , [{ "host": "r-c-1.cardano" }]
-                       , [{ "host": "r-c-2.cardano" }] ]
+    host: u-c-1.cardano
+    dynamic-subscribe: [ [{ "host": "r-a-1.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-3.cardano" }
+                       , { "host": "r-b-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-c-1.cardano" }
+                       , { "host": "r-c-2.cardano" }] ]
+    valency: 2
     kademlia: false
     public: true
