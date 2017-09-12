@@ -1,7 +1,4 @@
 args:
-  deployerIP:
-    tag: NixStr
-    contents: '35.156.156.28'
   SGGaccessKeyId:
     tag: NixStr
     contents: fifth-party

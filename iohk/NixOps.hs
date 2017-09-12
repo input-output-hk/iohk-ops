@@ -324,8 +324,9 @@ selectDeployer Staging   delts | elem Nodes delts = "iohk"
                                | otherwise        = "cardano-deployer"
 selectDeployer _ _                                = "cardano-deployer"
 
-detectDeployerIP :: Options -> IO IP
-detectDeployerIP o = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+establishDeployerIP :: Options -> Maybe IP -> IO IP
+establishDeployerIP o Nothing   = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+establishDeployerIP _ (Just ip) = pure ip
 
 
 -- * Deployment file set computation
@@ -447,6 +448,7 @@ data Options = Options
   { oChdir            :: Maybe FilePath
   , oConfigFile       :: Maybe FilePath
   , oOnlyOn           :: Maybe NodeName
+  , oDeployerIP       :: Maybe IP
   , oConfirm          :: Bool
   , oDebug            :: Bool
   , oSerial           :: Bool
@@ -470,6 +472,8 @@ parserOptions = Options
                 <*> optional (optPath "config"    'c' "Configuration file")
                 <*> (optional $ NodeName
                      <$>     (optText "on"        'o' "Limit operation to the specified node"))
+                <*> (optional $ IP
+                     <$>     (optText "deployer"  'd' "Directly specify IP address of the deployer: do not detect"))
                 <*>           switch  "confirm"   'y' "Pass --confirm to nixops"
                 <*>           switch  "debug"     'd' "Pass --debug to nixops"
                 <*>           switch  "serial"    's' "Disable parallelisation"
@@ -541,18 +545,14 @@ deploymentFiles cEnvironment cTarget cElements =
 
 type DeplArgs = Map.Map NixParam NixValue
 
-selectDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe IP -> IO DeplArgs
-selectDeploymentArgs o _ env delts (Elapsed systemStart) mDeployerIP = do
+selectInitialConfigDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> IO DeplArgs
+selectInitialConfigDeploymentArgs _ _ env delts (Elapsed systemStart) = do
     let staticArgs = [ ( NixParam $ fromAccessKeyId akid
                        , NixStr . fromNodeName $ selectDeployer env delts)
                      | akid <- accessKeyChain ]
-    IP deployerIp <- case mDeployerIP of
-                       Nothing -> detectDeployerIP o
-                       Just ip -> pure ip
     pure $ Map.fromList $
       staticArgs
-      <> [ ("deployerIP",   NixStr deployerIp)
-         , ("systemStart",  NixInt $ fromIntegral systemStart)]
+      <> [ ("systemStart",  NixInt $ fromIntegral systemStart) ]
 
 deplArg    :: NixopsConfig -> NixParam -> NixValue -> NixValue
 deplArg      NixopsConfig{..} k def = Map.lookup k cDeplArgs & fromMaybe def
@@ -562,14 +562,14 @@ setDeplArg :: NixopsConfig -> NixParam -> NixValue -> NixopsConfig
 setDeplArg c@NixopsConfig{..} k v = c { cDeplArgs = Map.insert k v cDeplArgs }
 
 -- | Interpret inputs into a NixopsConfig
-mkConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe IP -> IO NixopsConfig
-mkConfig o cGenCmdline cName mNixops   mTopology   cEnvironment cTarget cElements systemStart mDeployerIP = do
+mkConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> IO NixopsConfig
+mkConfig o cGenCmdline cName mNixops   mTopology   cEnvironment cTarget cElements systemStart = do
   let EnvSettings{..} = envSettings                cEnvironment
       cNixops         = fromMaybe "nixops" mNixops
       cFiles          = deploymentFiles            cEnvironment cTarget cElements
       cTopology       = flip fromMaybe mTopology envDefaultTopology
       cNixpkgs        = Nothing
-  cDeplArgs    <- selectDeploymentArgs o cTopology cEnvironment         cElements systemStart mDeployerIP
+  cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
@@ -694,23 +694,22 @@ buildGlobalsImportNixExpr deplArgs =
   NixImport (NixFile "globals.nix")
   $ NixAttrSet $ Map.fromList $ (fromNixParam *** id) <$> deplArgs
 
-computeFinalDeplArgs :: NixopsConfig -> [(NixParam, NixValue)]
-computeFinalDeplArgs NixopsConfig{..} =
-  let deplArgs = Map.toList cDeplArgs
-                 <> [("topologyYaml", NixFile cTopology)
-                    ,("environment",  NixStr  $ lowerShowT cEnvironment)]
-  in ("globals", buildGlobalsImportNixExpr deplArgs): deplArgs
-
-configDeployerIP :: NixopsConfig -> IP
-configDeployerIP c = (\(NixStr x) -> IP x) <$> deplArg c "deployerIP" $ error "Asked to deploy a cluster config without 'deployerIP' set."
+computeFinalDeploymentArgs :: Options -> NixopsConfig -> IO [(NixParam, NixValue)]
+computeFinalDeploymentArgs o@Options{..} NixopsConfig{..} = do
+  IP deployerIP <- establishDeployerIP o oDeployerIP
+  let deplArgs' = Map.toList cDeplArgs
+                  <> [("deployerIP",   NixStr  deployerIP)
+                     ,("topologyYaml", NixFile cTopology)
+                     ,("environment",  NixStr  $ lowerShowT cEnvironment)]
+  pure $ ("globals", buildGlobalsImportNixExpr deplArgs'): deplArgs'
 
 modify :: Options -> NixopsConfig -> IO ()
 modify o@Options{..} c@NixopsConfig{..} = do
   printf ("Syncing Nix->state for deployment "%s%"\n") $ fromNixopsDepl cName
   nixops o c "modify" $ Arg <$> cFiles
 
-  let deplArgs = computeFinalDeplArgs c
   printf ("Setting deployment arguments:\n")
+  deplArgs <- computeFinalDeploymentArgs o c
   forM_ deplArgs $ \(name, val)
     -> printf ("  "%s%": "%s%"\n") (fromNixParam name) (nixValueStr val)
   nixops o c "set-args" $ Arg <$> (concat $ uncurry nixArgCmdline <$> deplArgs)
@@ -733,7 +732,8 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
   when (not evonly && elem Explorer cElements && rebuildExplorerFrontend) $ do
     cmd o "scripts/generate-explorer-frontend.sh" []
   when (not (evonly || buonly)) $ do
-    export "SMART_GEN_IP" $ getIP $ configDeployerIP c
+    deployerIP <- establishDeployerIP o oDeployerIP
+    export "SMART_GEN_IP" $ getIP deployerIP
     when (elem Nodes cElements) $ do
       export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
 
@@ -912,12 +912,12 @@ generateOrInsertGenesis o NixopsConfig{..} cardanoBranch preGenesis = do
   pure (genesisName, genesisPath)
 
 -- * Local phase of a full deployment
-deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> Bool -> Maybe FilePath -> Bool -> Bool -> IO ()
-deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGenesis preGenesis rebuildExplorerFrontend skipValidation = do
+deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> Bool -> Maybe FilePath -> Bool -> Bool -> IP -> IO ()
+deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGenesis preGenesis rebuildExplorerFrontend skipValidation deployerIP = do
   -- XXX: duplicated below
   let EnvSettings{..}   = envSettings cEnvironment
       cardanoSLDir      = "cardano-sl"
-      deploymentAccount = fromUsername envDeployerUser <> "@" <> (getIP $ configDeployerIP c)
+      deploymentAccount = fromUsername envDeployerUser <> "@" <> getIP deployerIP
       deploymentDir     = fromNixopsDepl cName
       deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
   -- 0. Validate
@@ -993,8 +993,9 @@ runningOnDeployer = flip elem ["staging", "live-production"] <$> Sys.getLoginNam
 -- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
 deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Maybe FilePath -> Bool -> Bool -> Bool -> Bool -> IO ()
 deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy newGenesis preGenesis wipeNodeDBs' rebuildExplorerFrontend skipValidation resumeFailed = do
+  deployerIP <- establishDeployerIP o oDeployerIP
   let EnvSettings{..}   = envSettings cEnvironment
-      deploymentAccount = fromUsername envDeployerUser <> "@" <> (getIP $ configDeployerIP c)
+      deploymentAccount = fromUsername envDeployerUser <> "@" <> getIP deployerIP
       deploymentDir     = fromNixopsDepl cName
       deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
       doGenesis         = newGenesis || isJust preGenesis
@@ -1004,7 +1005,7 @@ deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy newG
   when onDeployer $ error "The 'iohk-ops deploy' subcommand is designed to be run from a developer machine."
 
   unless resumeFailed $
-    deployFullLocalPhase o c cardanoBranchToDrive newGenesis preGenesis rebuildExplorerFrontend skipValidation
+    deployFullLocalPhase o c cardanoBranchToDrive newGenesis preGenesis rebuildExplorerFrontend skipValidation deployerIP
 
   -- 5. Remote, on-deployer phase
   opsCommit <- gitHEADCommit o
