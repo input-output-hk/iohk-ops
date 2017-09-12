@@ -15,12 +15,12 @@ WITH_REPORT_SERVER=${8:-true}
 WITH_INFRA=${9:-true}
 
 # 0. Check all scripts compile
-# nixops --version
-# nix-shell --run "./scripts/aws.hs --help"
-# ${IOHK_OPS} --help
+nixops --version
+nix-shell --run "./scripts/aws.hs --help"
+${IOHK_OPS} --help
 
-# # 1. check all packages build
-# nix-instantiate jobsets/cardano.nix --show-trace
+# 1. check all packages build
+nix-instantiate jobsets/cardano.nix --show-trace
 
 # 2. check all environments evaluate
 CLEANUP_DEPLS=""
