@@ -285,7 +285,9 @@ type FileSpec = (Deployment, Target, Text)
 
 envSettings :: HasCallStack => Environment -> EnvSettings
 envSettings env =
-  let deplAgnosticFiles      = [ (Every,          All, "global-resources.nix")
+  let deplAgnosticFiles      = [ (Explorer,       All, "global-resources.nix")
+                               , (ReportServer,   All, "global-resources.nix")
+                               , (Nodes,          All, "global-resources.nix")
                                , (Explorer,       All, "deployments/cardano-explorer.nix")
                                , (ReportServer,   All, "deployments/report-server.nix")
                                , (Nodes,          All, "deployments/cardano-nodes.nix")

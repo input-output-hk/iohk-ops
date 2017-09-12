@@ -1,4 +1,8 @@
-{ IOHKaccessKeyId, ... }:
+{ IOHKaccessKeyId, deployerIP, ... }:
+
+let region = "eu-central-1";
+    org    = "IOHK";
+in
 
 with (import ./../lib.nix);
 {
@@ -34,6 +38,28 @@ with (import ./../lib.nix);
   };
 
   resources = {
+    ec2SecurityGroups = {
+      "allow-deployer-ssh-${region}-${org}" = {
+        inherit region;
+        accessKeyId = IOHKaccessKeyId;
+        description = "SSH";
+        rules = [{
+          protocol = "tcp"; # TCP
+          fromPort = 22; toPort = 22;
+          sourceIp = deployerIP + "/32";
+        }];
+      };
+      "allow-public-www-${region}-${org}" = {
+        inherit region;
+        accessKeyId = IOHKaccessKeyId;
+        description = "WWW";
+        rules = [{
+          protocol = "tcp"; # TCP
+          fromPort = 443; toPort = 443;
+          sourceIp = "0.0.0.0/0";
+        }];
+      };
+    };
     elasticIPs = {
       hydra-ip = { region = centralRegion; accessKeyId = IOHKaccessKeyId; };
       cardanod-ip = { region = centralRegion; accessKeyId = IOHKaccessKeyId; };
