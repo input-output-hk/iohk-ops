@@ -4,9 +4,7 @@
 
 let
   extraDeps = with pkgs;
-    [ cabal-install stack haskellPackages.intero
-      # scripts/aws.hs dependencies:
-      wget awscli
+    [ wget awscli # for scripts/aws.hs
     ];
   drv = pkgs.haskell.lib.overrideCabal
          (import ./default.nix {}).iohk-ops
