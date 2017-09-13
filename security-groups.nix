@@ -1,3 +1,9 @@
+## This file contains most of the security group definitions, but not all.
+##
+## Remaining ones are:
+##  - 'allow-all-*' for the development environment
+##  - 'allow-deployer-ssh-*' for the infrastructure
+
 { globals, ... }:
 
 with import ./lib.nix;
@@ -124,6 +130,4 @@ with import ./lib.nix;
             };
           }];
     in listToAttrs sgs;
-
-  # _module.args.globals = globals; ## This doesn't work : -/
 }
