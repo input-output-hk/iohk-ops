@@ -13,10 +13,9 @@ globals: imports: params:
     cfg                  = config.services.cardano-node;
   in {
     imports = [
-      ./global-options.nix
-      ./global-config.nix
       ./common.nix
       ./amazon-base.nix
+      ./network-wide.nix
       (import ./cardano-service.nix globals params)
     ] ++ map (path: import path globals params) imports;
 
@@ -38,7 +37,8 @@ globals: imports: params:
         ++ optionals typeIsRelay                 [ "allow-kademlia-public-udp-${params.region}"
                                                    "allow-cardano-public-tcp-${params.region}" ]
         ++ optionals config.global.enableEkgWeb  [ "allow-ekg-public-tcp-${params.region}-${params.org}" ];
-      in map (resolveSGName resources) sgNames;
+      in map (resolveSGName resources)
+             (optionals (! config.global.omitDetailedSecurityGroups) sgNames);
 
     networking.extraHosts =
     let hostList = if config.services.cardano-node.enable == false then []

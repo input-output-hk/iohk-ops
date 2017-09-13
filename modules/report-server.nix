@@ -7,10 +7,9 @@ let
   cfg = config.services.report-server;
 in {
   imports = [
-    ./global-options.nix
-    ./global-config.nix
     ./common.nix
     ./amazon-base.nix
+    ./network-wide.nix
   ];
 
   options = {
