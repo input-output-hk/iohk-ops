@@ -81,12 +81,6 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     reportServerNV  = findFirst  (x: x.value.typeIsReportServer) {}   indexed;
     fullMap         = nodeMap // listToAttrs (builtins.filter (x: x != {})
                                               [ explorerNV reportServerNV ]);
-
-    ## allKeyPairs :: Map KeypairName Keypair
-    allKeyPairs     = listToAttrs (flip map orgXRegions
-                                   ({ org, region }:
-                                    nameValuePair (orgRegionKeyPairName org region)
-                                                  { inherit region; accessKeyId = orgAccessKeys.${org}; }));
 in
 {
   inherit topologyYaml;
@@ -96,7 +90,6 @@ in
   inherit allOrgs defaultOrg;
   inherit orgXRegions;
   inherit orgAccessKeys;
-  inherit allKeyPairs;
   ###
   inherit deployerIP systemStart environment;
 }

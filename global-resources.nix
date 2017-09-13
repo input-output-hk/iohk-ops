@@ -2,8 +2,6 @@
 
 with import ./lib.nix;
 {
-  resources.ec2KeyPairs = globals.allKeyPairs;
-
   resources.ec2SecurityGroups =
     let sgs               = flip map securityGroupNames
                             (name: { name = name;
