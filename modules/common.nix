@@ -20,8 +20,11 @@ in {
 
   environment.variables.TERM = "xterm-256color";
 
-  systemd.coredump.enable = hasAttr "cardano-node" config.services &&
-                            config.services.cardano-node.saveCoreDumps;
+  systemd.coredump = {
+    enable = hasAttr "cardano-node" config.services &&
+        config.services.cardano-node.saveCoreDumps;
+    extraConfig = "ExternalSizeMax=${8 * 1024 * 1024 * 1024}";
+  };
 
   services.cron.enable = true;
   #services.cron.systemCronJobs = [
