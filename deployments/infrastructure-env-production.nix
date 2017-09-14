@@ -24,8 +24,6 @@ with (import ./../lib.nix);
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ./../modules/common.nix
-      ./../modules/amazon-base.nix
       ./../modules/datadog.nix
       ./../modules/papertrail.nix
     ];
