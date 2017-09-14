@@ -68,7 +68,7 @@ in {
         input-output-hk = ${builtins.readFile ../static/github_token}
       </github_authorization>
       <githubstatus>
-        jobs = serokell:.*
+        jobs = serokell:iohk-nixops.*
         inputs = jobsets
         excludeBuildFromContext = 1
       </githubstatus>
