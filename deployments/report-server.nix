@@ -5,7 +5,3 @@ flip mapAttrs nodeMap
 (name: import ./../modules/report-server.nix
        globals
        [])
-//
-{
-  resources.elasticIPs = nodesElasticIPs nodeMap;
-}
