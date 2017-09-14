@@ -883,7 +883,7 @@ generateOrInsertGenesis o NixopsConfig{..} cardanoBranch preGenesis = do
           , "--rich-keys",          showT genM
           , "--poor-keys",          showT genN
           , "--output-dir",         genesisName']
-        pure (genesisName', genesisTarball,
+        pure (genesisName', cardanoSLDir <> "/" <> genesisTarball,
               format ("Bump cardano: Regenerated genesis, M="%d%", N="%d%", cardano=") genM genN)
       Just genf -> do
         printf ("PREMADE genesis deployment requested: "%fp%"\n") genf
