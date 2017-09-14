@@ -31,15 +31,18 @@ in {
 
   config = {
 
-    # TODO: remove
-    global.organisation = params.org;
-    global.dnsHostname = mkForce "report-server";
+    global = {
+      organisation             = params.org;
+      dnsHostname              = mkForce "report-server";
+    };
+
     deployment.ec2.region         = mkForce params.region;
     deployment.ec2.accessKeyId    = params.accessKeyId;
     deployment.ec2.keyPair        = resources.ec2KeyPairs.${params.keyPairName};
-    deployment.ec2.securityGroups = map (resolveSGName resources) [
-      "allow-to-report-server-${config.deployment.ec2.region}"
-    ];
+    deployment.ec2.securityGroups = optionals (! config.global.omitDetailedSecurityGroups)
+      (map (resolveSGName resources) [
+         "allow-to-report-server-${config.deployment.ec2.region}"
+       ]);
 
     networking.firewall.allowedTCPPorts = [
       cfg.port
