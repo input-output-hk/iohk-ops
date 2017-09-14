@@ -374,6 +374,7 @@ data SimpleNode
      , snPort     :: PortNo
      , snInPeers  :: [NodeName]                  -- ^ Incoming connection edges
      , snKademlia :: RunKademlia
+     , snPublic   :: Bool
      } deriving (Generic, Show)
 instance ToJSON SimpleNode where-- toJSON = jsonLowerStrip 2
   toJSON SimpleNode{..} = AE.object
@@ -384,7 +385,8 @@ instance ToJSON SimpleNode where-- toJSON = jsonLowerStrip 2
    , "address"     .= fromFQDN snFQDN
    , "port"        .= fromPortNo snPort
    , "peers"       .= snInPeers
-   , "kademlia"    .= snKademlia ]
+   , "kademlia"    .= snKademlia
+   , "public"      .= snPublic ]
 instance ToJSON NodeRegion
 instance ToJSON NodeName
 deriving instance Generic NodeName
@@ -401,7 +403,7 @@ topoNCores (SimpleTopo cmap) = Map.size $ flip Map.filter cmap ((== NodeCore) . 
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
   SimpleTopo $ Map.mapWithKey simplifier nodeMap
-  where simplifier node (NodeMetadata snType snRegion (NodeRoutes outRoutes) nmAddr snKademlia mbOrg) =
+  where simplifier node (NodeMetadata snType snRegion (NodeRoutes outRoutes) nmAddr snKademlia mbOrg snPublic) =
           SimpleNode{..}
           where (mPort,  fqdn)   = case nmAddr of
                                      (NodeAddrExact fqdn'  mPort') -> (mPort', fqdn') -- (Ok, bizarrely, this contains FQDNs, even if, well.. : -)
@@ -411,7 +413,7 @@ summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
                                    $ (FQDN . T.pack . BU.toString) $ fqdn
                 snInPeers = Set.toList . Set.fromList
                             $ [ other
-                              | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _ _)) <- Map.toList nodeMap
+                              | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _ _ _)) <- Map.toList nodeMap
                               , elem node (concat routes) ]
                             <> concat outRoutes
                 snOrg = fromMaybe (trace (T.unpack $ format ("WARNING: node '"%s%"' has no 'org' field specified, defaulting to "%w%".")

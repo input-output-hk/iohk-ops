@@ -91,6 +91,9 @@ data NodeMetadata = NodeMetadata
 
       -- | Should the node register itself with the Kademlia network?
     , nmOrg :: !(Maybe NodeOrg)
+
+      -- | Should the node register itself with the Kademlia network?
+    , nmPublic :: !Bool
     }
     deriving (Show)
 
@@ -215,10 +218,11 @@ instance FromJSON NodeMetadata where
   parseJSON = A.withObject "NodeMetadata" $ \obj -> do
       nmType     <- obj .: "type"
       nmRegion   <- obj .: "region"
-      nmRoutes   <- obj .: "static-routes"
+      nmRoutes   <- obj .:? "static-routes" .!= NodeRoutes []
       nmAddress  <- extractNodeAddr return obj
       nmKademlia <- obj .:? "kademlia" .!= defaultRunKademlia nmType
       nmOrg      <- obj .:? "org"
+      nmPublic   <- obj .:? "public" .!= False
       return NodeMetadata{..}
    where
      defaultRunKademlia :: NodeType -> RunKademlia

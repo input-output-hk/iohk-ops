@@ -17,7 +17,8 @@ environment: Staging
 topology: topology-staging.yaml
 name: staging
 files:
-- global-resources.nix
+- keypairs.nix
+- security-groups.nix
 - deployments/cardano-nodes.nix
 - deployments/cardano-nodes-env-staging.nix
 - deployments/cardano-explorer.nix
