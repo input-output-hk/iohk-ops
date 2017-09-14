@@ -31,6 +31,7 @@ in {
 
   config = {
 
+    # TODO: remove
     global = {
       organisation             = params.org;
       dnsHostname              = mkForce "report-server";
