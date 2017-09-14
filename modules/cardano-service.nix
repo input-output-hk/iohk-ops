@@ -45,6 +45,7 @@ let
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
     "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
+    "--config-name testnet_staging_full"
   ];
 in {
   options = {
