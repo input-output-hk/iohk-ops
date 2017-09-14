@@ -144,7 +144,7 @@ centralCommandParser =
                                 <$> parserProject
                                 <*> parserCommit "Commit to set PROJECT's version to"
                                 <*> (fromMaybe True
-                                      <$> optional (switch "commit" 'n' "pkgs/generate.sh, then commit the *-src.json and pkgs/.")))
+                                      <$> optional (switch "commit" 'n' "nix-prefetch-url, then commit the *-src.json.")))
     , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
     ]
 
@@ -242,7 +242,7 @@ runTop o@Options{..} args topcmd = do
     Template{..}                -> runTemplate        o topcmd  args
     SetRev proj comId mCom      -> Ops.runSetRev      o proj comId $
                                    if not mCom then Nothing
-                                   else Just $ format ("Bump "%s%" revision to "%s%"; pkgs/generate.sh") (lowerShowT proj) (fromCommit comId)
+                                   else Just $ format ("Bump "%s%" revision to "%s) (lowerShowT proj) (fromCommit comId)
 
     _ -> do
       -- XXX: Config filename depends on environment, which defaults to 'Development'
