@@ -6,5 +6,17 @@
 // {
   network.description = "Cardano Development";
 
-  resources.elasticIPs = nodesElasticIPs globals.nodeMap;
+  resources.ec2SecurityGroups =
+    listToAttrs (flip map globals.orgXRegions
+                 ({ org, region }:
+                  nameValuePair "allow-all-${org}-${region}"
+                                { inherit region;
+                                  accessKeyId = globals.orgAccessKeys.${org};
+                                  description = "Allow all ${org}/${region}";
+                                  rules = [{
+                                    protocol = "-1"; # Any
+                                    sourceIp = "0.0.0.0/0";
+                                    fromPort = 0; toPort = 65535;
+                                  }];
+                                }));
 }
