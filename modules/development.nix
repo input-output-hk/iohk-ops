@@ -5,9 +5,11 @@ with import ./../lib.nix;
   config = {
 
     global = {
-      allocateElasticIP = false;
-      enableEkgWeb      = true;
-      dnsDomainname     = null;
+      allocateElasticIP            = false;
+      enableEkgWeb                 = true;
+      dnsHostname                  = null;
+      dnsDomainname                = mkForce null;
+      omitDetailedSecurityGroups   = true;
     };
 
     services = {
