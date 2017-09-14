@@ -318,6 +318,8 @@ envSettings env =
       , envDefaultConfig     = "config.yaml"
       , envDefaultTopology   = "topology.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
+                               , (ReportServer,   All, "deployments/report-server-env-development.nix")
                                ] <> deplAgnosticFiles}
     Any -> error "envSettings called with 'Any'"
 
