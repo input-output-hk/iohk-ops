@@ -1,37 +1,102 @@
 nodes:
 
-# First the 4 cores, in a single region
+# First the 7 cores, in 3 reigions
+# - Frankfurt      (eu-central-1)
+# - Tokyo          (ap-northeast-1)
+# - Singapore      (ap-southeast-1)
 
-  'core-1':
+# TODO: replace "ap-southeast-1" with US, North Cal. (us-west-1)
+
+  'c-a-1':
     region: eu-central-1
     type: core
-    host: core-1.cardano
-    static-routes: [ ['core-2'], ['core-3'], ['core-4'], ['relay-1'] ]
+    host: c-a-1.cardano
+    static-routes: [['c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['r-a-1', 'r-a-2']]
 
-  'core-2':
+  'c-a-2':
     region: eu-central-1
     type: core
-    host: core-2.cardano
-    static-routes: [ ['core-1'], ['core-3'], ['core-4'], ['relay-1'] ]
+    host: c-a-2.cardano
+    static-routes: [['c-a-3', 'c-a-1'], ['c-c-2', 'c-c-1'], ['r-a-2', 'r-a-3']]
 
-  'core-3':
+  'c-a-3':
     region: eu-central-1
     type: core
-    host: core-3.cardano
-    static-routes: [ ['core-1'], ['core-2'], ['core-4'], ['relay-1'] ]
+    host: c-a-3.cardano
+    static-routes: [['c-a-1', 'c-a-2'], ['r-a-3', 'r-a-1'], ['r-b-1', 'r-c-1']]
 
-  'core-4':
-    region: eu-central-1
+  'c-b-1':
+    region: ap-northeast-1
     type: core
-    host: core-4.cardano
-    static-routes: [ ['core-1'], ['core-2'], ['core-3'], ['relay-1'] ]
+    host: c-b-1.cardano
+    static-routes: [['c-b-2', 'r-b-2'], ['c-c-1', 'c-c-2'], ['r-b-1', 'r-b-2']]
 
-# now the relay, in the same reigion
+  'c-b-2':
+    region: ap-northeast-1
+    type: core
+    host: c-b-2.cardano
+    static-routes: [['c-a-2', 'c-a-1'], ['c-b-1', 'r-b-1'], ['r-b-2', 'r-b-1']]
 
-  'relay-1':
+  'c-c-1':
+    region: ap-southeast-1
+    type: core
+    host: c-c-1.cardano
+    static-routes: [['c-a-1', 'c-a-2'], ['c-c-2', 'r-c-1'], ['r-c-1', 'r-c-2']]
+
+  'c-c-2':
+    region: ap-southeast-1
+    type: core
+    host: c-c-2.cardano
+    static-routes: [['c-b-2', 'c-b-1'], ['c-c-1', 'r-c-1'], ['r-c-2', 'r-c-1']]
+
+# now the 7 relays, in the same 3 reigions
+
+  'r-a-1':
     region: eu-central-1
     type: relay
-    host: relay-1.cardano
-    static-routes: [ ['core-1'], ['core-2'], ['core-3'], ['core-4'] ]
+    host: r-a-1.cardano
+    static-routes: [['c-a-1', 'c-a-3'], ['c-a-2', 'c-a-3'], ['r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2']]
     kademlia: false
-    maxSubscrs: 60
+    maxSubscrs: 200
+
+  'r-a-2':
+    region: eu-central-1
+    type: relay
+    host: r-a-2.cardano
+    static-routes: [['c-a-1', 'c-a-2'], ['c-a-3', 'c-a-2'], ['r-a-3', 'r-a-1'], ['r-c-1', 'r-c-2']]
+    kademlia: false
+
+  'r-a-3':
+    region: eu-central-1
+    type: relay
+    host: r-a-3.cardano
+    static-routes: [['c-a-2', 'c-a-1'], ['c-a-3', 'c-a-1'], ['r-a-1', 'r-a-2']]
+    kademlia: false
+
+  'r-b-1':
+    region: ap-northeast-1
+    type: relay
+    host: r-b-1.cardano
+    static-routes: [['c-b-1', 'c-b-2'], ['r-a-1', 'r-a-3'], ['r-b-2', 'r-a-2']]
+    kademlia: false
+
+  'r-b-2':
+    region: ap-northeast-1
+    type: relay
+    host: r-b-2.cardano
+    static-routes: [['c-b-2', 'c-b-1'], ['r-b-1', 'r-a-2'], ['r-c-2', 'r-c-1']]
+    kademlia: false
+
+  'r-c-1':
+    region: ap-southeast-1
+    type: relay
+    host: r-c-1.cardano
+    static-routes: [['c-c-1', 'c-c-2'], ['r-a-3', 'r-a-2'], ['r-c-2', 'r-a-2']]
+    kademlia: false
+
+  'r-c-2':
+    region: ap-southeast-1
+    type: relay
+    host: r-c-2.cardano
+    static-routes: [['c-c-2', 'c-c-1'], ['r-b-2', 'r-b-1'], ['r-c-1', 'r-a-2']]
+    kademlia: false

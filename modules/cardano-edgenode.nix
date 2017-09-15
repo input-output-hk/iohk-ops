@@ -3,7 +3,7 @@
 with (import ./../lib.nix);
 
 let
-  instancesPerNode = 8;
+  instancesPerNode = 20;
   config = import ../config.nix;
   mkNode = publicIP: nodes: index: {
     name = "instance${toString index}";
@@ -34,6 +34,7 @@ let
 in { config, resources, pkgs, nodes, options, ... }:
 {
   imports = [ ./amazon-base.nix ./cardano-node-scaling.nix ];
+  deployment.ec2.instanceType = mkForce "r4.4xlarge";
   deployment.ec2.region = mkForce region;
   deployment.ec2.accessKeyId = accessKeyId;
   deployment.ec2.keyPair = resources.ec2KeyPairs.${keypairFor accessKeyId region};

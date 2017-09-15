@@ -1,4 +1,4 @@
 wallet:
-  relays: [ [ { "host": "relay-1.cardano", "port": 3000 } ] ]
+  relays: [ [ { "host": "r-a-1.cardano", "port": 3000 } ] ]
   valency: 3
   fallbacks: 0

@@ -1,0 +1,107 @@
+#! /nix/store/nsa311yg8h93wfaacjk16c96a98bs09f-perl-5.22.3/bin/perl -w -I/nix/store/367jrnx2rhk9g74zvg4m43h17jnf7371-nix-1.11.11/lib/perl5/site_perl/5.22.3/x86_64-linux-thread-multi -I/nix/store/1kx1ydjpbjvg5fq76y00fa36fb4fc7r8-perl-DBI-1.636/lib/perl5/site_perl -I/nix/store/g5dkn63v63zp15hkp7s3wj39lh2crrwk-perl-DBD-SQLite-1.50/lib/perl5/site_perl -I/nix/store/fgfismdazvinpkxja2xjd489kygxj94v-perl-WWW-Curl-4.17/lib/perl5/site_perl
+
+use utf8;
+use strict;
+use Nix::SSH;
+use Nix::Config;
+use Nix::Store;
+use Nix::CopyClosure;
+use List::Util qw(sum);
+
+binmode STDERR, ":encoding(utf8)";
+
+if (scalar @ARGV < 1) {
+    print STDERR <<EOF
+Usage: nix-copy-closure [--from | --to] HOSTNAME [--sign] [--gzip] [--bzip2] [--xz] PATHS...
+EOF
+    ;
+    exit 1;
+}
+
+
+# Get the target host.
+my $sshHost;
+my $sign = 0;
+my $toMode = 1;
+my $includeOutputs = 0;
+my $dryRun = 0;
+my $useSubstitutes = 0;
+my $verbosity = 1;
+
+
+# !!! Copied from nix-pack-closure, should put this in a module.
+my @storePaths = ();
+
+while (@ARGV) {
+    my $arg = shift @ARGV;
+
+    if ($arg eq "--help") {
+        exec "man nix-copy-closure" or die;
+    }
+    elsif ($arg eq "--sign") {
+        $sign = 1;
+    }
+    elsif ($arg eq "--gzip" || $arg eq "--bzip2" || $arg eq "--xz") {
+        warn "$0: ‘$arg’ is not implemented\n" if $arg ne "--gzip";
+        push @globalSshOpts, "-C";
+    }
+    elsif ($arg eq "--from") {
+        $toMode = 0;
+    }
+    elsif ($arg eq "--to") {
+        $toMode = 1;
+    }
+    elsif ($arg eq "--include-outputs") {
+        $includeOutputs = 1;
+    }
+    elsif ($arg eq "--show-progress") {
+        warn "$0: ‘$arg’ is not implemented\n";
+    }
+    elsif ($arg eq "--dry-run") {
+        $dryRun = 1;
+    }
+    elsif ($arg eq "--use-substitutes" || $arg eq "-s") {
+        $useSubstitutes = 1;
+    }
+    elsif ($arg eq "-v") {
+        $verbosity++;
+        setVerbosity($verbosity);
+    }
+    elsif (!defined $sshHost) {
+        $sshHost = $arg;
+    }
+    else {
+        push @storePaths, $arg;
+    }
+}
+
+die "$0: you did not specify a host name\n" unless defined $sshHost;
+
+
+if ($toMode) { # Copy TO the remote machine.
+    Nix::CopyClosure::copyTo(
+        $sshHost, [ @storePaths ],
+        $includeOutputs, $dryRun, $sign, $useSubstitutes);
+}
+
+else { # Copy FROM the remote machine.
+
+    my ($from, $to) = connectToRemoteNix($sshHost, []);
+
+    # Query the closure of the given store paths on the remote
+    # machine.  Paths are assumed to be store paths; there is no
+    # resolution (following of symlinks).
+    syswrite($to, pack("L<x4L<x4", 7, $includeOutputs ? 1 : 0)) or die;
+    writeStrings(\@storePaths, $to);
+    my @missing = grep { !isValidPath($_) } readStrings($from);
+
+    # Export the store paths on the remote machine and import them locally.
+    if (scalar @missing > 0) {
+        print STDERR "copying ", scalar @missing, " missing paths from ‘$sshHost’...\n";
+        writeInt(5, $to); # == cmdExportPaths
+        writeInt($sign ? 1 : 0, $to);
+        writeStrings(\@missing, $to);
+        importPaths(fileno($from));
+    }
+
+}

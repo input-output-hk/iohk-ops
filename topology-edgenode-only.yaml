@@ -1,0 +1,2 @@
+nodes: {}
+# No nodes, as we want to spawn only edgenodes which lives in a separate file.
