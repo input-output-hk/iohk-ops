@@ -24,7 +24,7 @@ in {
       };
       executable = mkOption {
         type = types.package;
-        default = (import ./../default.nix { dconfig = config.deployment.arguments.DCONFIG; }).cardano-report-server-static;
+        default = (import ./../default.nix { inherit (config.deployment.arguments) dconfig; }).cardano-report-server-static;
       };
     };
   };

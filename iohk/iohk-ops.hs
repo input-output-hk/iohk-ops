@@ -18,7 +18,7 @@ import           Time.System
 
 
 import           NixOps                           (Branch(..), Commit(..), Confirmation(..), Environment(..), Deployment(..), Target(..)
-                                                  ,Options(..), NixopsCmd(..), NixopsDepl(..), Project(..), Exec(..), Arg(..), DCONFIG(..)
+                                                  ,Options(..), NixopsCmd(..), NixopsDepl(..), Project(..), Exec(..), Arg(..), DConfig(..)
                                                   ,showT, lowerShowT, errorT, cmd, incmd, every, fromNodeName, parserBranch, parserCommit)
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
@@ -41,10 +41,10 @@ optReadLower = opt (diagReadCaseInsensitive . T.unpack)
 argReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> Optional HelpMessage -> Parser a
 argReadLower = arg (diagReadCaseInsensitive . T.unpack)
 
-parserDCONFIG :: Parser DCONFIG
-parserDCONFIG = (optReadLower "DCONFIG" 'd' $ pure $
+parserDConfig :: Parser DConfig
+parserDConfig = (optReadLower "dconfig" 'd' $ pure $
                   Turtle.HelpMessage $ "DCONFIG: "
-                  <> T.intercalate ", " (lowerShowT <$> (every :: [DCONFIG])) <> ".  Default: env-specific.")
+                  <> T.intercalate ", " (lowerShowT <$> (every :: [DConfig])) <> ".  Default: env-specific.")
 
 parserEnvironment :: Parser Environment
 parserEnvironment = fromMaybe Ops.defaultEnvironment <$> optional (optReadLower "environment" 'e' $ pure $
@@ -86,7 +86,7 @@ data Command where
   Template              :: { tFile        :: Maybe Turtle.FilePath
                            , tNixops      :: Maybe Turtle.FilePath
                            , tTopology    :: Maybe Turtle.FilePath
-                           , tDCONFIG     :: Maybe DCONFIG
+                           , tDConfig     :: Maybe DConfig
                            , tEnvironment :: Environment
                            , tTarget      :: Target
                            , tName        :: NixopsDepl
@@ -141,7 +141,7 @@ centralCommandParser =
                                 <$> optional (optPath "config"    'c' "Override the default, environment-dependent config filename")
                                 <*> optional (optPath "nixops"    'n' "Use a specific Nixops binary for this cluster")
                                 <*> optional (optPath "topology"  't' "Cluster configuration.  Defaults to 'topology.yaml'")
-                                <*> optional parserDCONFIG
+                                <*> optional parserDConfig
                                 <*> parserEnvironment
                                 <*> parserTarget
                                 <*> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
@@ -326,7 +326,7 @@ runTemplate o@Options{..} Template{..} args = do
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
   nixops <- incmd o "nix-build" ["-A", "nixops"]
-  config <- Ops.mkNewConfig o cmdline tName (tNixops <|> (Path.fromText <$> Just nixops)) tTopology tEnvironment tTarget tDeployments systemStart tDCONFIG
+  config <- Ops.mkNewConfig o cmdline tName (tNixops <|> (Path.fromText <$> Just nixops)) tTopology tEnvironment tTarget tDeployments systemStart tDConfig
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

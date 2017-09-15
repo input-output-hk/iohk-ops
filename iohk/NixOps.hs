@@ -136,7 +136,7 @@ newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (Fro
 newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 
 -- Names and their ordering taken from: https://github.com/input-output-hk/cardano-sl/blob/master/core/constants.yaml
-data DCONFIG
+data DConfig
   = Dev
   | Mainnet
   | Testnet_public_full
@@ -296,7 +296,7 @@ instance FromJSON Target
 data EnvSettings =
   EnvSettings
   { envDeployerUser      :: Username
-  , envDefaultDCONFIG    :: DCONFIG
+  , envDefaultDConfig    :: DConfig
   , envDefaultConfig     :: FilePath
   , envDefaultTopology   :: FilePath
   , envDeploymentFiles   :: [FileSpec]
@@ -315,7 +315,7 @@ envSettings env =
   in case env of
     Staging      -> EnvSettings
       { envDeployerUser      = "staging"
-      , envDefaultDCONFIG    = Testnet_staging_full
+      , envDefaultDConfig    = Testnet_staging_full
       , envDefaultConfig     = "staging-testnet.yaml"
       , envDefaultTopology   = "topology-staging.yaml"
       , envDeploymentFiles   = [ (Every,          All, "security-groups.nix")
@@ -325,7 +325,7 @@ envSettings env =
                                ] <> deplAgnosticFiles}
     Production  -> EnvSettings
       { envDeployerUser      = "live-production"
-      , envDefaultDCONFIG    = Testnet_public_full
+      , envDefaultDConfig    = Testnet_public_full
       , envDefaultConfig     = "production-testnet.yaml"
       , envDefaultTopology   = "topology-production.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "security-groups.nix")
@@ -338,7 +338,7 @@ envSettings env =
                                ] <> deplAgnosticFiles}
     Development -> EnvSettings
       { envDeployerUser      = "staging"
-      , envDefaultDCONFIG    = Devnet_shortep_full
+      , envDefaultDConfig    = Devnet_shortep_full
       , envDefaultConfig     = "config.yaml"
       , envDefaultTopology   = "topology.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
@@ -577,17 +577,17 @@ deploymentFiles cEnvironment cTarget cElements =
 
 type DeplArgs = Map.Map NixParam NixValue
 
-selectInitialConfigDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe DCONFIG -> IO DeplArgs
-selectInitialConfigDeploymentArgs _ _ env delts (Elapsed systemStart) mDCONFIG = do
+selectInitialConfigDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe DConfig -> IO DeplArgs
+selectInitialConfigDeploymentArgs _ _ env delts (Elapsed systemStart) mDConfig = do
     let EnvSettings{..}   = envSettings env
         akidDependentArgs = [ ( NixParam $ fromAccessKeyId akid
                               , NixStr . fromNodeName $ selectDeployer env delts)
                             | akid <- accessKeyChain ]
-        dCONFIG           = fromMaybe envDefaultDCONFIG mDCONFIG
+        dConfig           = fromMaybe envDefaultDConfig mDConfig
     pure $ Map.fromList $
       akidDependentArgs
       <> [ ("systemStart",  NixInt $ fromIntegral systemStart)
-         , ("DCONFIG",      NixStr $ lowerShowT dCONFIG) ]
+         , ("dconfig",      NixStr $ lowerShowT dConfig) ]
 
 deplArg :: NixopsConfig -> NixParam -> NixValue -> NixValue
 deplArg    NixopsConfig{..} k def = Map.lookup k cDeplArgs & fromMaybe def
@@ -600,14 +600,14 @@ defaultDeplArgTo :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 defaultDeplArgTo p v c = setDeplArg p (deplArg c p v) c
 
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe DCONFIG -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTarget cElements systemStart mDCONFIG = do
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe DConfig -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTarget cElements systemStart mDConfig = do
   let EnvSettings{..} = envSettings                             cEnvironment
       cNixops         = fromMaybe "nixops" mNixops
       cFiles          = deploymentFiles                         cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
-  cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mDCONFIG
+  cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mDConfig
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
@@ -774,8 +774,8 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
-  let dconfig = deplArg c (NixParam "DCONFIG") $ errorT $
-          format "'DCONFIG' network argument missing from cluster config"
+  let dconfig = deplArg c (NixParam "dconfig") $ errorT $
+          format "'dconfig' network argument missing from cluster config"
   when (not evonly && elem Explorer cElements && rebuildExplorerFrontend) $ do
     cmd o "scripts/generate-explorer-frontend.sh" [nixValueStr dconfig]
   when (not (evonly || buonly)) $ do

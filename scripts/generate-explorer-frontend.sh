@@ -3,15 +3,15 @@
 
 set -euo pipefail
 
-DCONFIG="$1"
+dconfig="$1"
 
-test -n "${DCONFIG}" || {
-        echo "generate-explorer-frontend.sh: missing DCONFIG as first argument." >&2
+test -n "${dconfig}" || {
+        echo "generate-explorer-frontend.sh: missing dconfig as first argument." >&2
         exit 1
 }
 
 cardano_rev="$(jq -r .rev < cardano-sl-src.json)"
-explorer_path="$(nix-build -A cardano-sl-explorer-static --argstr DCONFIG ${DCONFIG} default.nix)"
+explorer_path="$(nix-build -A cardano-sl-explorer-static --argstr dconfig ${dconfig} default.nix)"
 
 echo "Building explorer frontend from 'cardano-sl' repository revision:  ${cardano_rev}".
 
