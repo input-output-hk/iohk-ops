@@ -23,7 +23,7 @@ in {
   systemd.coredump = {
     enable = hasAttr "cardano-node" config.services &&
         config.services.cardano-node.saveCoreDumps;
-    extraConfig = "ExternalSizeMax=${8 * 1024 * 1024 * 1024}";
+    extraConfig = "ExternalSizeMax=${toString (8 * 1024 * 1024 * 1024)}";
   };
 
   services.cron.enable = true;
