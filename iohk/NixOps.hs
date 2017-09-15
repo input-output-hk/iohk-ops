@@ -774,8 +774,10 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
+  let dconfig = deplArg c (NixParam "DCONFIG") $ errorT $
+          format "'DCONFIG' network argument missing from cluster config"
   when (not evonly && elem Explorer cElements && rebuildExplorerFrontend) $ do
-    cmd o "scripts/generate-explorer-frontend.sh" []
+    cmd o "scripts/generate-explorer-frontend.sh" [nixValueStr dconfig]
   when (not (evonly || buonly)) $ do
     deployerIP <- establishDeployerIP o oDeployerIP
     export "SMART_GEN_IP" $ getIP deployerIP
