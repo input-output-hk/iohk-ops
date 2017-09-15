@@ -6,7 +6,7 @@ install:
   - echo "binary-cache-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" >> ~/nix.conf
   - export NIX_CONF_DIR=~
   - nix-env -f '<nixpkgs>'   -iA git
-  - nix-env -f 'default.nix' -iA iohk-ops nixops
+  - mkdir -p cardano-sl/explorer/frontend/dist
   - touch static/datadog-{api,application}.secret
   - echo "secret" > static/tarsnap-cardano-deployer.secret
   - mkdir keys
