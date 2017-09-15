@@ -51,6 +51,7 @@ import           GHC.Stack
 import           Prelude                   hiding (FilePath)
 import           Safe                             (headMay)
 import qualified System.IO                     as Sys
+import qualified System.IO.Unsafe              as Sys
 import qualified System.Posix.User             as Sys
 import           Time.System
 import           Time.Types
@@ -455,6 +456,7 @@ data Options = Options
   , oConfigFile       :: Maybe FilePath
   , oOnlyOn           :: Maybe NodeName
   , oDeployerIP       :: Maybe IP
+  , oBuildNixops      :: Bool
   , oConfirm          :: Bool
   , oDebug            :: Bool
   , oSerial           :: Bool
@@ -480,6 +482,7 @@ parserOptions = Options
                      <$>     (optText "on"        'o' "Limit operation to the specified node"))
                 <*> (optional $ IP
                      <$>     (optText "deployer"  'd' "Directly specify IP address of the deployer: do not detect"))
+                <*>           switch  "build-nixops" 'b' "Use 'nixops' binary defined by 'default.nix', not config YAML."
                 <*>           switch  "confirm"   'y' "Pass --confirm to nixops"
                 <*>           switch  "debug"     'd' "Pass --debug to nixops"
                 <*>           switch  "serial"    's' "Disable parallelisation"
@@ -664,9 +667,18 @@ gitHEADCommit o = Commit <$> incmd o "git" ["log", "-n1", "--pretty=format:%H"]
 
 -- * Invoking nixops
 --
+iohkNixopsPath :: FilePath -> FilePath
+iohkNixopsPath defaultNix =
+  let storePath  = Sys.unsafePerformIO $ inprocs "nix-build" ["-A", "nixops", format fp defaultNix] $
+                   (trace (T.unpack $ format ("INFO: using "%fp%" expression for its definition of 'nixops'") defaultNix) empty)
+      nixopsPath = Path.fromText $ T.strip storePath <> "/bin/nixops"
+  in trace (T.unpack $ format ("INFO: nixops is "%fp) nixopsPath) nixopsPath
+
 nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO b
-nixops'' executor o c@NixopsConfig{..} com args =
-  executor o (format fp cNixops)
+nixops'' executor o@Options{..} c@NixopsConfig{..} com args =
+  executor o (format fp $ if oBuildNixops
+                          then iohkNixopsPath "default.nix"
+                          else cNixops)
   (fromCmd com : nixopsCmdOptions o c <> fmap fromArg args)
 
 nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO (ExitCode, Text)
