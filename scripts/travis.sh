@@ -15,7 +15,7 @@ WITH_REPORT_SERVER=${8:-true}
 WITH_INFRA=${9:-true}
 
 # 0. Check all scripts compile
-nixops --version
+${NIXOPS} --version
 nix-shell --run "./scripts/aws.hs --help"
 ${IOHK_OPS} --help
 
