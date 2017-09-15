@@ -806,7 +806,7 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
   printf ("Deploying cluster "%s%"\n") $ fromNixopsDepl cName
   nixops o c' "deploy"
     $  [ "--max-concurrent-copy", "50", "-j", "4" ]
-    ++ [ "--evaluate-only" | evonly ]
+    ++ [ "--dry-run"       | evonly ]
     ++ [ "--build-only"    | buonly ]
     ++ [ "--check"         | check  ]
     ++ nixopsMaybeLimitNodes o
