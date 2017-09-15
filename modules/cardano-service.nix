@@ -6,7 +6,7 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node/";
-  cardano = (import ./../default.nix { dconfig = trace ("cardano: DCONFIG is: " + config.deployment.arguments.dconfig)
+  cardano = (import ./../default.nix { dconfig = builtins.trace ("cardano: DCONFIG is: " + config.deployment.arguments.dconfig)
                                                  config.deployment.arguments.dconfig; }).cardano-sl-static;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
