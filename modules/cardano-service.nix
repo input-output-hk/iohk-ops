@@ -117,7 +117,7 @@ in {
 
       neighbours = mkOption {
         default = [];
-        # type = types.list;
+        type = types.listOf types.str;
         description = ''List of name:ip pairs of neighbours.'';
       };
 
