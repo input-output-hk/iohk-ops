@@ -7,7 +7,7 @@ let
   explorer-drv = (import ./../default.nix { inherit (config.deployment.arguments) dconfig; }).cardano-sl-explorer-static;
 in
 {
-  global.dnsHostname = mkForce "cardano-explorer";
+  global.dnsHostname   = mkForce   "cardano-explorer";
 
   services.cardano-node.executable = "${explorer-drv}/bin/cardano-explorer";
 
@@ -17,8 +17,11 @@ in
 
   services.nginx = {
     enable = true;
-    virtualHosts = {
-      "cardano-explorer.${config.global.dnsDomainname}" = {
+    virtualHosts =
+     let vhostDomainName = if config.global.dnsDomainname != null
+                           then config.global.dnsDomainname else "iohkdev.io";
+     in {
+      "cardano-explorer.${vhostDomainName}" = {
         # TLS provided by cloudfront
         locations = {
           "/" = {
