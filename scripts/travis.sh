@@ -33,6 +33,7 @@ cleanup() {
                 test -z "${CLEANUP_CONFIGS}" ||
                         rm -f                ${depl}'.yaml'
         done
+        rm -f static/github_token static/id_buildfarm{,.pub}
 }
 trap cleanup EXIT
 
@@ -67,6 +68,7 @@ fi
 
 if test -n "${WITH_INFRA}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
+touch static/github_token static/id_buildfarm{,.pub}
 ${IOHK_OPS}          template  --config 'test-infra.yaml'  --environment production ${COMMON_OPTIONS} 'test-infra'   Infra
 ${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-infra.yaml'  create fake-keys deploy --evaluate-only
 banner 'Infra evaluated'
