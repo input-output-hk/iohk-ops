@@ -12,6 +12,6 @@ let
   jobs = mapTestOn (packagePlatforms iohkpkgs);
   cardanoSrc = pkgs.fetchgit (builtins.fromJSON (builtins.readFile ./../cardano-sl-src.json));
 in rec {
-  inherit (jobs) iohk-ops;
+  inherit (jobs) iohk-ops nixops;
   tests          = import ./../tests     { inherit pkgs; supportedSystems = [ "x86_64-linux" ]; };
 } // (import "${cardanoSrc}/release.nix" {})
