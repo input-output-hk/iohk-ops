@@ -7,6 +7,7 @@ install:
   - export NIX_CONF_DIR=~
   - nix-env -f '<nixpkgs>'   -iA git
   - mkdir -p cardano-sl/explorer/frontend/dist
+  - touch static/{github_token,id_buildfarm}
   - touch static/datadog-{api,application}.secret
   - echo "secret" > static/tarsnap-cardano-deployer.secret
   - mkdir keys
