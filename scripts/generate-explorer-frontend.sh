@@ -1,9 +1,9 @@
 #!/usr/bin/env nix-shell
 #!nix-shell -i bash -p git jq
 
-set -euo pipefail
-
 dconfig="$1"
+
+set -euo pipefail
 
 test -n "${dconfig}" || {
         echo "generate-explorer-frontend.sh: missing dconfig as first argument." >&2
