@@ -2,8 +2,14 @@
 # nix-repl lib.nix
 
 let
-  hostPkgs = import <nixpkgs> {};
-  lib = hostPkgs.lib;
+  # Allow overriding pinned nixpkgs for debugging purposes via iohkops_pkgs
+  fetchNixPkgs = let try = builtins.tryEval <iohkops_pkgs>;
+    in if try.success
+    then builtins.trace "using host <iohkops_pkgs>" try.value
+    else import ./fetch-nixpkgs.nix;
+
+  pkgs = import fetchNixPkgs {};
+  lib = pkgs.lib;
 in lib // (rec {
   ## nodeElasticIP :: Node -> EIP
   nodeElasticIP = node:
@@ -21,11 +27,7 @@ in lib // (rec {
 
   orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
 
-  # fetch nixpkgs and give the expected hash
-  fetchNixpkgsWithNixpkgs = nixpkgs: nixpkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
-  fetchNixPkgs = if builtins.getEnv "NIX_PATH_LOCKED" == "1"
-    then builtins.trace "using host nixpkgs" <nixpkgs>
-    else builtins.trace "fetching nixpkgs"   fetchNixpkgsWithNixpkgs hostPkgs;
+  inherit fetchNixPkgs;
 
   traceF   = f: x: builtins.trace                         (f x)  x;
   traceSF  = f: x: builtins.trace (builtins.seq     (f x) (f x)) x;

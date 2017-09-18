@@ -52,10 +52,8 @@ in {
     binaryCaches = trustedBinaryCaches;
     binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
   };
-  system.extraSystemBuilderCmds = let
-    setNixpkgs = fetchNixpkgsWithNixpkgs pkgs;
-  in ''
-    ln -sv ${setNixpkgs} $out/nixpkgs
+  system.extraSystemBuilderCmds = ''
+    ln -sv ${fetchNixPkgs} $out/nixpkgs
   '';
 
   # Mosh
