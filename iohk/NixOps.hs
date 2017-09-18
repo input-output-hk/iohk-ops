@@ -768,7 +768,7 @@ modify o@Options{..} c@NixopsConfig{..} = do
   when oDebug $ dumpTopologyNix c
 
 deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> Bool -> Maybe Seconds -> IO ()
-deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFrontend bumpSystemStartHeldBy = do
+deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check rebuildExplorerFrontend bumpSystemStartHeldBy = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
@@ -776,9 +776,9 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
 
   let dconfig = deplArg c (NixParam "dconfig") $ errorT $
           format "'dconfig' network argument missing from cluster config"
-  when (not evonly && elem Explorer cElements && rebuildExplorerFrontend) $ do
+  when (not dryrun && elem Explorer cElements && rebuildExplorerFrontend) $ do
     cmd o "scripts/generate-explorer-frontend.sh" [nixValueStr dconfig]
-  when (not (evonly || buonly)) $ do
+  when (not (dryrun || buonly)) $ do
     deployerIP <- establishDeployerIP o oDeployerIP
     export "SMART_GEN_IP" $ getIP deployerIP
     when (elem Nodes cElements) $ do
@@ -806,7 +806,7 @@ deploy o@Options{..} c@NixopsConfig{..} evonly buonly check rebuildExplorerFront
   printf ("Deploying cluster "%s%"\n") $ fromNixopsDepl cName
   nixops o c' "deploy"
     $  [ "--max-concurrent-copy", "50", "-j", "4" ]
-    ++ [ "--dry-run"       | evonly ]
+    ++ [ "--dry-run"       | dryrun ]
     ++ [ "--build-only"    | buonly ]
     ++ [ "--check"         | check  ]
     ++ nixopsMaybeLimitNodes o

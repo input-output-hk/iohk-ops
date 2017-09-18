@@ -175,8 +175,8 @@ centralCommandParser =
    , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> switch "build-only"          'b' "Pass --build-only to 'nixops deploy'"
-                                <*> switch "dry-run"             'd' "Pass --dry-run to 'nixops deploy'"
+                                <$> switch "dry-run"             'd' "Pass --dry-run to 'nixops deploy'"
+                                <*> switch "build-only"          'b' "Pass --build-only to 'nixops deploy'"
                                 <*> switch "check"               'c' "Pass --check to 'nixops build'"
                                 <*> switch "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
                                 <*> ((Seconds . (* 60) . fromIntegral <$>)
@@ -277,7 +277,7 @@ runTop o@Options{..} args topcmd = do
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy ev bu ch ner buh  -> Ops.deploy                    o c ev bu ch (not ner) buh
+            Deploy dry bu ch ner buh -> Ops.deploy                    o c dry bu ch (not ner) buh
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
