@@ -1022,7 +1022,7 @@ deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExp
       pure $ Just storePath
   let options' = o { oNixpkgs = nixpkgsPath }
 
-  -- 6. --evaluate-only
+  -- 6. --dry-run
   deploy options' c True False False rebuildExplorerFrontend Nothing
 
   -- 7. cleanup

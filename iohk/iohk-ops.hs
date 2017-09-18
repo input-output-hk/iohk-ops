@@ -175,8 +175,8 @@ centralCommandParser =
    , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> switch "evaluate-only"       'e' "Pass --evaluate-only to 'nixops build'"
-                                <*> switch "build-only"          'b' "Pass --build-only to 'nixops build'"
+                                <$> switch "build-only"          'b' "Pass --build-only to 'nixops deploy'"
+                                <*> switch "dry-run"             'd' "Pass --dry-run to 'nixops deploy'"
                                 <*> switch "check"               'c' "Pass --check to 'nixops build'"
                                 <*> switch "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
                                 <*> ((Seconds . (* 60) . fromIntegral <$>)

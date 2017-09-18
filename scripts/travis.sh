@@ -47,27 +47,27 @@ CARDANO_COMPONENTS="Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+Repor
 if test -n "${WITH_STAGING}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-stag"
 ${IOHK_OPS}          template  --config 'test-stag.yaml'   --environment staging    ${COMMON_OPTIONS} 'test-stag'    ${CARDANO_COMPONENTS}
-${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-stag.yaml'   create fake-keys deploy --evaluate-only
+${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-stag.yaml'   create fake-keys deploy --dry-run
 banner 'Staging env evaluated'
 fi
 
 if test -n "${WITH_PRODUCTION}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-prod"
 ${IOHK_OPS}          template  --config 'test-prod.yaml'   --environment production ${COMMON_OPTIONS} 'test-prod'    ${CARDANO_COMPONENTS}
-${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-prod.yaml'   create fake-keys deploy --evaluate-only
+${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-prod.yaml'   create fake-keys deploy --dry-run
 banner 'Production env evaluated'
 fi
 
 if test -n "${WITH_DEVELOPMENT}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-devo"
 ${IOHK_OPS}          template  --config 'test-devo.yaml'                            ${COMMON_OPTIONS} 'test-devo'    ${CARDANO_COMPONENTS}
-${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-devo.yaml'   create fake-keys deploy --evaluate-only
+${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-devo.yaml'   create fake-keys deploy --dry-run
 banner 'Development env evaluated'
 fi
 
 if test -n "${WITH_INFRA}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
 ${IOHK_OPS}          template  --config 'test-infra.yaml'  --environment production ${COMMON_OPTIONS} 'test-infra'   Infra
-${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-infra.yaml'  create fake-keys deploy --evaluate-only
+${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-infra.yaml'  create fake-keys deploy --dry-run
 banner 'Infra evaluated'
 fi
