@@ -14,6 +14,21 @@ WITH_EXPLORER=${7:-true}
 WITH_REPORT_SERVER=${8:-true}
 WITH_INFRA=${9:-true}
 
+
+# PREPARE
+mkdir -p cardano-sl/explorer/frontend/dist
+
+touch static/{github_token,id_buildfarm}
+
+touch static/datadog-{api,application}.secret
+
+test -f static/tarsnap-cardano-deployer.secret ||
+        { echo "secret" > static/tarsnap-cardano-deployer.secret; }
+
+mkdir -p keys
+touch keys/key{0,1,2,3,4,5,6,7,8,9}.sk
+
+
 # 0. Check all scripts compile
 ${NIXOPS} --version
 nix-shell --run "./scripts/aws.hs --help"
