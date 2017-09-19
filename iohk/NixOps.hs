@@ -608,12 +608,12 @@ defaultDeplArgTo p v c = setDeplArg p (deplArg c p v) c
 
 -- | Interpret inputs into a NixopsConfig
 mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe DConfig -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName            mNixops    mTopology mConfiguration cEnvironment cTarget cElements systemStart mDConfig = do
+mkNewConfig o cGenCmdline cName            mNixops    mConfiguration mTopology cEnvironment cTarget cElements systemStart mDConfig = do
   let EnvSettings{..} = envSettings                                            cEnvironment
       cNixops         = fromMaybe "nixops" mNixops
       cFiles          = deploymentFiles                                        cEnvironment cTarget cElements
-      cConfiguration  = flip fromMaybe                          mConfiguration envDefaultConfiguration
-      cTopology       = flip fromMaybe                mTopology envDefaultTopology
+      cConfiguration  = flip fromMaybe                mConfiguration envDefaultConfiguration
+      cTopology       = flip fromMaybe                               mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
   cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment                        cElements systemStart mDConfig
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
