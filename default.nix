@@ -41,8 +41,4 @@ in {
                   --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                 '';
              });
-}
-// cardano-sl-pkgs
-// {
-   cardano-sl-static = pkgs.haskell.lib.dontCheck cardano-sl-pkgs.cardano-sl-static;
-}
+} // cardano-sl-pkgs
