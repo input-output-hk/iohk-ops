@@ -298,6 +298,7 @@ data EnvSettings =
   { envDeployerUser      :: Username
   , envDefaultDConfig    :: DConfig
   , envDefaultConfig     :: FilePath
+  , envDefaultConfiguration :: FilePath
   , envDefaultTopology   :: FilePath
   , envDeploymentFiles   :: [FileSpec]
   }
@@ -317,6 +318,7 @@ envSettings env =
       { envDeployerUser      = "staging"
       , envDefaultDConfig    = Testnet_staging_full
       , envDefaultConfig     = "staging-testnet.yaml"
+      , envDefaultConfiguration = "configuration.mainnet.yaml"
       , envDefaultTopology   = "topology-staging.yaml"
       , envDeploymentFiles   = [ (Every,          All, "security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
@@ -327,6 +329,7 @@ envSettings env =
       { envDeployerUser      = "live-production"
       , envDefaultDConfig    = Testnet_public_full
       , envDefaultConfig     = "production-testnet.yaml"
+      , envDefaultConfiguration = "configuration.mainnet.yaml"
       , envDefaultTopology   = "topology-production.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "security-groups.nix")
                                , (Explorer,       All, "security-groups.nix")
@@ -340,6 +343,7 @@ envSettings env =
       { envDeployerUser      = "staging"
       , envDefaultDConfig    = Devnet_shortep_full
       , envDefaultConfig     = "config.yaml"
+      , envDefaultConfiguration = "configuration.yaml"
       , envDefaultTopology   = "topology.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
@@ -450,8 +454,8 @@ summariseTopology x = errorT $ format ("Unsupported topology type: "%w) x
 dumpTopologyNix :: NixopsConfig -> IO ()
 dumpTopologyNix NixopsConfig{..} = sh $ do
   let nodeSpecExpr prefix =
-        format ("with (import <nixpkgs> {}); "%s%" (import ./globals.nix { deployerIP = \"\"; environment = \""%s%"\"; topologyYaml = ./"%fp%"; systemStart = 0; "%s%" = \"-stub-\"; })")
-               prefix (lowerShowT cEnvironment) cTopology (T.intercalate " = \"-stub-\"; " $ fromAccessKeyId <$> accessKeyChain)
+        format ("with (import <nixpkgs> {}); "%s%" (import ./globals.nix { deployerIP = \"\"; environment = \""%s%"\"; configurationYaml = ./"%fp%"; topologyYaml = ./"%fp%"; systemStart = 0; "%s%" = \"-stub-\"; })")
+               prefix (lowerShowT cEnvironment) cConfiguration cTopology (T.intercalate " = \"-stub-\"; " $ fromAccessKeyId <$> accessKeyChain)
       getNodeArgsAttr prefix attr = inproc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr prefix <> "." <> attr] empty
       liftNixList = inproc "sed" ["s/\" \"/\", \"/g"]
   (cores  :: [NodeName]) <- getNodeArgsAttr "map (x: x.name)" "cores"  & liftNixList <&> ((NodeName <$>) . readT . lineToText)
@@ -534,6 +538,7 @@ data NixopsConfig = NixopsConfig
   , cGenCmdline       :: Text
   , cNixpkgs          :: Maybe Commit
   , cNixops           :: FilePath
+  , cConfiguration    :: FilePath
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
@@ -546,10 +551,11 @@ data NixopsConfig = NixopsConfig
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
-        <*> v .:? "gen-cmdline" .!= "--unknown--"
+        <*> v .:? "gen-cmdline"   .!= "--unknown--"
         <*> v .:? "nixpkgs"
-        <*> v .:? "nixops"      .!= "nixops"
-        <*> v .:? "topology"    .!= "topology-development.yaml"
+        <*> v .:? "nixops"        .!= "nixops"
+        <*> v .:? "configuration" .!= "configuration.yaml"
+        <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "elements"
@@ -564,6 +570,7 @@ instance ToJSON NixopsConfig where
    [ "name"         .= fromNixopsDepl cName
    , "gen-cmdline"  .= cGenCmdline
    , "nixops"       .= cNixops
+   , "configuration" .= cConfiguration
    , "topology"     .= cTopology
    , "environment"  .= showT cEnvironment
    , "target"       .= showT cTarget
@@ -600,14 +607,15 @@ defaultDeplArgTo :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 defaultDeplArgTo p v c = setDeplArg p (deplArg c p v) c
 
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe DConfig -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTarget cElements systemStart mDConfig = do
-  let EnvSettings{..} = envSettings                             cEnvironment
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe DConfig -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName            mNixops    mTopology mConfiguration cEnvironment cTarget cElements systemStart mDConfig = do
+  let EnvSettings{..} = envSettings                                            cEnvironment
       cNixops         = fromMaybe "nixops" mNixops
-      cFiles          = deploymentFiles                         cEnvironment cTarget cElements
+      cFiles          = deploymentFiles                                        cEnvironment cTarget cElements
+      cConfiguration  = flip fromMaybe                          mConfiguration envDefaultConfiguration
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
-  cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mDConfig
+  cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment                        cElements systemStart mDConfig
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
@@ -744,6 +752,7 @@ computeFinalDeploymentArgs o@Options{..} NixopsConfig{..} = do
   IP deployerIP <- establishDeployerIP o oDeployerIP
   let deplArgs' = Map.toList cDeplArgs
                   <> [("deployerIP",   NixStr  deployerIP)
+                     ,("configurationYaml", NixFile cConfiguration)
                      ,("topologyYaml", NixFile cTopology)
                      ,("environment",  NixStr  $ lowerShowT cEnvironment)]
   pure $ ("globals", buildGlobalsImportNixExpr deplArgs'): deplArgs'

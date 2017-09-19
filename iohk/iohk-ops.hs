@@ -85,6 +85,7 @@ data Command where
   Clone                 :: { cBranch      :: Branch } -> Command
   Template              :: { tFile        :: Maybe Turtle.FilePath
                            , tNixops      :: Maybe Turtle.FilePath
+                           , tConfiguration :: Maybe Turtle.FilePath
                            , tTopology    :: Maybe Turtle.FilePath
                            , tDConfig     :: Maybe DConfig
                            , tEnvironment :: Environment
@@ -140,7 +141,8 @@ centralCommandParser =
                                 Template
                                 <$> optional (optPath "config"    'c' "Override the default, environment-dependent config filename")
                                 <*> optional (optPath "nixops"    'n' "Use a specific Nixops binary for this cluster")
-                                <*> optional (optPath "topology"  't' "Cluster configuration.  Defaults to 'topology.yaml'")
+                                <*> optional (optPath "configuration" 'f' "Constants.  Defaults to 'topology.yaml'")
+                                <*> optional (optPath "topology"      't' "Cluster configuration.  Defaults to 'topology.yaml'")
                                 <*> optional parserDConfig
                                 <*> parserEnvironment
                                 <*> parserTarget
@@ -326,7 +328,7 @@ runTemplate o@Options{..} Template{..} args = do
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
   nixops <- incmd o "nix-build" ["-A", "nixops"]
-  config <- Ops.mkNewConfig o cmdline tName (tNixops <|> (Path.fromText <$> Just nixops)) tTopology tEnvironment tTarget tDeployments systemStart tDConfig
+  config <- Ops.mkNewConfig o cmdline tName (tNixops <|> (Path.fromText <$> Just nixops)) tConfiguration tTopology tEnvironment tTarget tDeployments systemStart tDConfig
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""
