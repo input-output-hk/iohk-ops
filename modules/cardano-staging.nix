@@ -24,6 +24,7 @@ params:
     - name: cardano-node-simple
       search_string: ['cardano-node']
       '') + ''
+    # nix string indentation hack (see DEVOPS-341)
       exact_match: False
       thresholds:
         critical: [1, 1]
