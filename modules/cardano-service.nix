@@ -74,6 +74,7 @@ in {
       };
       autoStart = mkOption { type = types.bool; default = true; };
 
+      configurationYaml = mkOption { type = types.path; };
       topologyYaml = mkOption { type = types.path; };
       
       genesisN = mkOption { type = types.int; default = 6; };
