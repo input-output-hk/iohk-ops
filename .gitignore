@@ -21,8 +21,6 @@ smart-gen-*
 static/id_buildfarm
 *prof
 keys/*.key
-/test-*.yaml
 static/*.secret
-static/github_token
 pkgs/stack2nix
 scripts/iohk-nixpkgs
