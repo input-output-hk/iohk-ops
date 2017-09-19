@@ -63,7 +63,7 @@ globals: imports: params:
       relayIndex  = params.relayIndex;
       port        = params.port;
       configurationYaml =
-        "${copyPathToStore globals.configurationYaml}";
+        "${pkgs.copyPathToStore globals.configurationYaml}";
       topologyYaml      =
          if !params.typeIsExplorer
          then globals.topologyYaml
