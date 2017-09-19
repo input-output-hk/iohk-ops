@@ -44,9 +44,9 @@ let
     "--logs-prefix /var/lib/cardano-node"
     "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
+    "--configuration-key ${config.deployment.arguments.dconfig}"
     "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
-    "--custom-config-name ${config.deployment.arguments.dconfig}"
   ];
 in {
   options = {
