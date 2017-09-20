@@ -786,7 +786,7 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check rebuildExplorerFront
   let dconfig = deplArg c (NixParam "dconfig") $ errorT $
           format "'dconfig' network argument missing from cluster config"
   when (not dryrun && elem Explorer cElements && rebuildExplorerFrontend) $ do
-    cmd o "scripts/generate-explorer-frontend.sh" [nixValueStr dconfig]
+    cmd o "scripts/generate-explorer-frontend.sh" []
   when (not (dryrun || buonly)) $ do
     deployerIP <- establishDeployerIP o oDeployerIP
     export "SMART_GEN_IP" $ getIP deployerIP

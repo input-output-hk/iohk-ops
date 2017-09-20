@@ -5,7 +5,6 @@ in
 , config ? {}
 , pkgs ? (import (localLib.fetchNixPkgs) { inherit system config; })
 , compiler ? pkgs.haskell.packages.ghc802
-, dconfig ? "testnet_staging_full"
 }:
 
 with pkgs.lib;
@@ -19,7 +18,6 @@ let
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
   cardano-sl-pkgs = import (pkgs.fetchgit cardano-sl-src) {
                       gitrev = cardano-sl-src.rev;
-                      inherit dconfig;
                     };
 in {
   nixops = 
