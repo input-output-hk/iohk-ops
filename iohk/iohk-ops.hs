@@ -17,9 +17,7 @@ import           Time.Types
 import           Time.System
 
 
-import           NixOps                           (Branch(..), Commit(..), Confirmation(..), Environment(..), Deployment(..), Target(..)
-                                                  ,Options(..), NixopsCmd(..), NixopsDepl(..), Project(..), Exec(..), Arg(..), ConfigurationKey(..)
-                                                  ,showT, lowerShowT, errorT, cmd, incmd, every, fromNodeName, parserBranch, parserCommit)
+import           NixOps
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
 import           Topology
@@ -93,7 +91,7 @@ data Command where
                            , tName        :: NixopsDepl
                            , tDeployments :: [Deployment]
                            } -> Command
-  SetRev                :: Project -> Commit -> Bool -> Command
+  SetRev                :: Project -> Commit -> DoCommit -> Command
   FakeKeys              :: Command
 
   -- * building
@@ -106,15 +104,15 @@ data Command where
   Nixops'               :: NixopsCmd -> [Arg] -> Command
   Create                :: Command
   Modify                :: Command
-  Deploy                :: Bool -> Bool -> Bool -> Bool -> Maybe Seconds -> Command
+  Deploy                :: RebuildExplorer -> BuildOnly -> DryRun -> PassCheck -> Maybe Seconds -> Command
   Destroy               :: Command
   Delete                :: Command
   FromScratch           :: Command
   Info                  :: Command
 
   -- * Deployment
-  DeployFull            :: Branch -> Seconds -> Bool -> Maybe Turtle.FilePath -> Bool -> Bool -> Bool -> Bool -> Command
-  DeployFullDeployerPhase :: Seconds -> Bool -> Bool -> Command
+  DeployFull            :: Branch -> Seconds -> NewGenesis -> Maybe Turtle.FilePath -> WipeNodeDBs -> RebuildExplorer -> Validate -> ResumeFailed -> Command
+  DeployFullDeployerPhase :: Seconds -> WipeNodeDBs -> RebuildExplorer -> Command
 
   -- * live cluster ops
   Ssh                   :: Exec -> [Arg] -> Command
@@ -125,9 +123,9 @@ data Command where
   RunExperiment         :: Deployment -> Command
   PostExperiment        :: Command
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
-  WipeJournals          :: Command
+  CWipeJournals         :: Command
   GetJournals           :: Command
-  WipeNodeDBs           :: Confirmation -> Command
+  CWipeNodeDBs          :: Confirmation -> Command
   PrintDate             :: Command
 deriving instance Show Command
 
@@ -152,8 +150,7 @@ centralCommandParser =
                                 SetRev
                                 <$> parserProject
                                 <*> parserCommit "Commit to set PROJECT's version to"
-                                <*> (fromMaybe True
-                                      <$> optional (switch "commit" 'n' "nix-prefetch-url, then commit the *-src.json.")))
+                                <*> flag DontCommit "dont-commit" 'n' "Don't commit the *-src.json")
     , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
     ]
 
@@ -177,10 +174,10 @@ centralCommandParser =
    , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> switch "dry-run"             'd' "Pass --dry-run to 'nixops deploy'"
-                                <*> switch "build-only"          'b' "Pass --build-only to 'nixops deploy'"
-                                <*> switch "check"               'c' "Pass --check to 'nixops build'"
-                                <*> switch "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
+                                <$> flag NoExplorerRebuild "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
+                                <*> flag BuildOnly         "build-only"          'b' "Pass --build-only to 'nixops deploy'"
+                                <*> flag DryRun            "dry-run"             'd' "Pass --dry-run to 'nixops deploy'"
+                                <*> flag PassCheck         "check"               'c' "Pass --check to 'nixops build'"
                                 <*> ((Seconds . (* 60) . fromIntegral <$>)
                                       <$> optional (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay")))
    , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
@@ -192,19 +189,19 @@ centralCommandParser =
                                 <$> parserBranch "'cardano-sl' branch to update & deploy"
                                 <*> (Seconds . (* 60) . fromIntegral
                                       <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
-                                <*> switch "new-genesis"           'g' "Generate new genesis"
+                                <*> flag NewGenesis "new-genesis"           'g' "Generate new genesis"
                                 <*> (optional
                                      (optPath "premade-genesis"    'e' "Supply an externally pre-made genesis archive in 'standard' format"))
-                                <*> switch "wipe-node-dbs"         'w' "Wipe node databases"
-                                <*> switch "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
-                                <*> switch "skip-local-validation" 's' "Skip local validation of the current iohk-ops checkout"
-                                <*> switch "resume"                'r' "Resume a full remote deployment that failed during on-deployer evaluation.  Pass all the same flags")
+                                <*> flag WipeNodeDBs       "wipe-node-dbs"         'w' "Wipe node databases"
+                                <*> flag NoExplorerRebuild "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
+                                <*> flag SkipValidation    "skip-local-validation" 's' "Skip local validation of the current iohk-ops checkout"
+                                <*> flag ResumeFailed      "resume"                'r' "Resume a full remote deployment that failed during on-deployer evaluation.  Pass all the same flags")
    , ("deploy-full-deployer-phase", "On-deployer phase of 'deploy-full'",
                                 DeployFullDeployerPhase
                                 <$> (Seconds . (* 60) . fromIntegral
                                       <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
-                                <*> switch "wipe-node-dbs"         'w' "Wipe node databases"
-                                <*> switch "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!")]
+                                <*> flag WipeNodeDBs       "wipe-node-dbs"         'w' "Wipe node databases"
+                                <*> flag NoExplorerRebuild "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!")]
 
    <|> subcommandGroup "Live cluster ops:"
    [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
@@ -222,10 +219,10 @@ centralCommandParser =
                                 DumpLogs
                                 <$> parserDeployment
                                 <*> switch "prof"         'p' "Dump profiling data as well (requires service stop)")
-   , ("wipe-journals",          "Wipe *all* journald logs on cluster",                              pure WipeJournals)
+   , ("wipe-journals",          "Wipe *all* journald logs on cluster",                              pure CWipeJournals)
    , ("get-journals",           "Obtain cardano-node journald logs from cluster",                   pure GetJournals)
    , ("wipe-node-dbs",          "Wipe *all* node databases on cluster (--on limits the scope, though)",
-                                WipeNodeDBs
+                                CWipeNodeDBs
                                 <$> parserConfirmation "Wipe node DBs on the entire cluster?")
    , ("date",                   "Print date/time",                                                  pure PrintDate)]
 
@@ -249,8 +246,8 @@ runTop o@Options{..} args topcmd = do
   case topcmd of
     Clone{..}                   -> runClone           o cBranch
     Template{..}                -> runTemplate        o topcmd  args
-    SetRev proj comId mCom      -> Ops.runSetRev      o proj comId $
-                                   if not mCom then Nothing
+    SetRev proj comId comm      -> Ops.runSetRev      o proj comId $
+                                   if comm == DontCommit then Nothing
                                    else Just $ format ("Bump "%s%" revision to "%s) (lowerShowT proj) (fromCommit comId)
 
     _ -> do
@@ -258,7 +255,7 @@ runTop o@Options{..} args topcmd = do
       let cf = flip fromMaybe oConfigFile $ Ops.envDefaultConfig $ Ops.envSettings Ops.defaultEnvironment
       c <- Ops.readConfig o cf
 
-      when oVerbose $
+      when (toBool oVerbose) $
         printf ("-- command "%s%"\n-- config '"%fp%"'\n") (showT topcmd) cf
 
       doCommand o c topcmd
@@ -279,13 +276,13 @@ runTop o@Options{..} args topcmd = do
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
             Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy dry bu ch ner buh -> Ops.deploy                    o c dry bu ch (not ner) buh
+            Deploy ner bu dry ch buh -> Ops.deploy                    o c dry bu ch ner buh
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             FromScratch              -> Ops.fromscratch               o c
             Info                     -> Ops.nixops                    o c "info" []
-            DeployFull              br st genes preGen wipeDB noExRe skipV resume -> Ops.deployFull              o c br st genes preGen wipeDB (not noExRe) skipV resume
-            DeployFullDeployerPhase    st              wipeDB noExRe              -> Ops.deployFullDeployerPhase o c    st              wipeDB (not noExRe)
+            DeployFull              br st genes preGen wipeDB noExRe skipV resume -> Ops.deployFull              o c br st genes preGen wipeDB noExRe skipV resume
+            DeployFullDeployerPhase    st              wipeDB noExRe              -> Ops.deployFullDeployerPhase o c    st              wipeDB noExRe
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c
@@ -299,9 +296,9 @@ runTop o@Options{..} args topcmd = do
             DumpLogs{..}
               | Nodes        <- depl -> Cardano.dumpLogs              o c withProf >> pure ()
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
-            WipeJournals             -> Ops.wipeJournals              o c
+            CWipeJournals            -> Ops.wipeJournals              o c
             GetJournals              -> Ops.getJournals               o c
-            WipeNodeDBs confirm      -> Ops.wipeNodeDBs               o c confirm
+            CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
             Clone{..}                -> error "impossible"
             Template{..}             -> error "impossible"

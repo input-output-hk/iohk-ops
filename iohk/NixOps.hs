@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -87,6 +88,23 @@ simpleTopoFile       :: FilePath
 simpleTopoFile       = "topology.nix"
 
 
+-- * Flags & enumerables
+--
+every :: (Bounded a, Enum a) => [a]
+every = enumFromTo minBound maxBound
+
+class (Bounded a, Eq a) => Flag a where
+  toBool :: a -> Bool
+  toBool = (== enabled)
+  fromBool :: Bool -> a
+  fromBool x = if x then minBound else maxBound
+  enabled, disabled :: a
+  enabled  = minBound
+  disabled = maxBound
+  opposite :: a -> a
+  opposite = fromBool . not . toBool
+
+
 -- * Projects
 --
 data Project
@@ -96,9 +114,6 @@ data Project
   | Stack2nix
   | Nixops
   deriving (Bounded, Enum, Eq, Read, Show)
-
-every :: (Bounded a, Enum a) => [a]
-every = enumFromTo minBound maxBound
 
 projectURL     :: Project -> URL
 projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl"
@@ -134,6 +149,23 @@ newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (Fro
 newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
 newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
 newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+
+data BuildNixops      = BuildNixops      | DontBuildNixops    deriving (Bounded, Eq, Ord, Show); instance Flag BuildNixops
+data Confirmed        = Confirmed        | Unconfirmed        deriving (Bounded, Eq, Ord, Show); instance Flag Confirmed
+data Debug            = Debug            | NoDebug            deriving (Bounded, Eq, Ord, Show); instance Flag Debug
+data Serialize        = Serialize        | DontSerialize      deriving (Bounded, Eq, Ord, Show); instance Flag Serialize
+data Verbose          = Verbose          | NotVerbose         deriving (Bounded, Eq, Ord, Show); instance Flag Verbose
+data ComponentCheck   = ComponentCheck   | NoComponentCheck   deriving (Bounded, Eq, Ord, Show); instance Flag ComponentCheck
+data DoCommit         = DoCommit         | DontCommit         deriving (Bounded, Eq, Ord, Show); instance Flag DoCommit
+data RebuildExplorer  = RebuildExplorer  | NoExplorerRebuild  deriving (Bounded, Eq, Ord, Show); instance Flag RebuildExplorer
+data BuildOnly        = BuildOnly        | NoBuildOnly        deriving (Bounded, Eq, Ord, Show); instance Flag BuildOnly
+data DryRun           = DryRun           | NoDryRun           deriving (Bounded, Eq, Ord, Show); instance Flag DryRun
+data NewGenesis       = NewGenesis       | NoNewGenesis       deriving (Bounded, Eq, Ord, Show); instance Flag NewGenesis
+data Validate         = Validate         | SkipValidation     deriving (Bounded, Eq, Ord, Show); instance Flag Validate
+data PassCheck        = PassCheck        | DontPassCheck      deriving (Bounded, Eq, Ord, Show); instance Flag PassCheck
+data WipeJournals     = WipeJournals     | KeepJournals       deriving (Bounded, Eq, Ord, Show); instance Flag WipeJournals
+data WipeNodeDBs      = WipeNodeDBs      | KeepNodeDBs        deriving (Bounded, Eq, Ord, Show); instance Flag WipeNodeDBs
+data ResumeFailed     = ResumeFailed     | DontResume         deriving (Bounded, Eq, Ord, Show); instance Flag ResumeFailed
 
 -- Names and their ordering taken from: https://github.com/input-output-hk/cardano-sl/blob/master/core/constants.yaml
 data ConfigurationKey
@@ -479,18 +511,20 @@ nodeNames (oOnlyOn -> nodeLimit)  NixopsConfig{..}
   = if Map.member node nodeMap || node == explorerNode then [node]
     else errorT $ format ("Node '"%s%"' doesn't exist in cluster '"%fp%"'.") (showT $ fromNodeName node) cTopology
 
+
 
+
 data Options = Options
   { oChdir            :: Maybe FilePath
   , oConfigFile       :: Maybe FilePath
   , oOnlyOn           :: Maybe NodeName
   , oDeployerIP       :: Maybe IP
-  , oBuildNixops      :: Bool
-  , oConfirm          :: Bool
-  , oDebug            :: Bool
-  , oSerial           :: Bool
-  , oVerbose          :: Bool
-  , oNoComponentCheck :: Bool
+  , oBuildNixops      :: BuildNixops
+  , oConfirm          :: Confirmed
+  , oDebug            :: Debug
+  , oSerial           :: Serialize
+  , oVerbose          :: Verbose
+  , oNoComponentCheck :: ComponentCheck
   , oNixpkgs          :: Maybe FilePath
   } deriving Show
 
@@ -503,6 +537,11 @@ parserCommit desc = Commit <$> argText "commit" desc
 parserNodeLimit :: Parser (Maybe NodeName)
 parserNodeLimit = optional $ NodeName <$> (optText "just-node" 'n' "Limit operation to the specified node")
 
+flag :: Flag a => a -> ArgName -> Char -> Optional HelpMessage -> Parser a
+flag effect long ch help = (\case
+                               True  -> effect
+                               False -> opposite effect) <$> switch long ch help
+
 parserOptions :: Parser Options
 parserOptions = Options
                 <$> optional (optPath "chdir"     'C' "Run as if 'iohk-ops' was started in <path> instead of the current working directory.")
@@ -511,12 +550,12 @@ parserOptions = Options
                      <$>     (optText "on"        'o' "Limit operation to the specified node"))
                 <*> (optional $ IP
                      <$>     (optText "deployer"  'd' "Directly specify IP address of the deployer: do not detect"))
-                <*>           switch  "build-nixops" 'b' "Use 'nixops' binary defined by 'default.nix', not config YAML."
-                <*>           switch  "confirm"   'y' "Pass --confirm to nixops"
-                <*>           switch  "debug"     'd' "Pass --debug to nixops"
-                <*>           switch  "serial"    's' "Disable parallelisation"
-                <*>           switch  "verbose"   'v' "Print all commands that are being run"
-                <*>           switch  "no-component-check" 'p' "Disable deployment/*.nix component check"
+                <*> flag BuildNixops      "build-nixops"       'b' "Use 'nixops' binary defined by 'default.nix', not config YAML."
+                <*> flag Confirmed        "confirm"            'y' "Pass --confirm to nixops"
+                <*> flag Debug            "debug"              'd' "Pass --debug to nixops"
+                <*> flag Serialize        "serial"             's' "Disable parallelisation"
+                <*> flag Verbose          "verbose"            'v' "Print all commands that are being run"
+                <*> flag NoComponentCheck "no-component-check" 'p' "Disable deployment/*.nix component check"
                 <*> (optional $ optPath "nixpkgs" 'i' "Set 'nixpkgs' revision")
 
 nixpkgsCommitPath :: Commit -> Text
@@ -524,8 +563,8 @@ nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
 
 nixopsCmdOptions :: Options -> NixopsConfig -> [Text]
 nixopsCmdOptions Options{..} NixopsConfig{..} =
-  ["--debug"   | oDebug]   <>
-  ["--confirm" | oConfirm] <>
+  ["--debug"   | oDebug   == Debug]   <>
+  ["--confirm" | oConfirm == Confirmed] <>
   ["--show-trace"
   ,"--deployment", fromNixopsDepl cName
   ] <> fromMaybe [] ((["-I"] <>) . (:[]) . ("nixpkgs=" <>) . format fp <$> oNixpkgs)
@@ -642,7 +681,7 @@ readConfig Options{..} cf = do
       deducedFiles   = deploymentFiles cEnvironment cTarget cElements
       deducedFileSet = Set.fromList $ deducedFiles
 
-  unless (storedFileSet == deducedFileSet || oNoComponentCheck) $
+  unless (storedFileSet == deducedFileSet || oNoComponentCheck == NoComponentCheck) $
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.
@@ -652,9 +691,9 @@ readConfig Options{..} cf = do
 
 parallelIO' :: Options -> NixopsConfig -> ([NodeName] -> [a]) -> (a -> IO ()) -> IO ()
 parallelIO' o@Options{..} c@NixopsConfig{..} xform action =
-  ((if oSerial
-    then sequence_
-    else sh . parallel) $
+  ((case oSerial of
+      Serialize     -> sequence_
+      DontSerialize -> sh . parallel) $
    action <$> (xform $ nodeNames o c))
   >> echo ""
 
@@ -689,13 +728,13 @@ cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
 incmd :: Options -> Text -> [Text] -> IO Text
 
 cmd   Options{..} bin args = do
-  when oVerbose $ logCmd bin args
+  when (toBool oVerbose) $ logCmd bin args
   Turtle.procs      bin args empty
 cmd'  Options{..} bin args = do
-  when oVerbose $ logCmd bin args
+  when (toBool oVerbose) $ logCmd bin args
   Turtle.procStrict bin args empty
 incmd Options{..} bin args = do
-  when oVerbose $ logCmd bin args
+  when (toBool oVerbose) $ logCmd bin args
   inprocs bin args empty
 
 gitHEADCommit :: Options -> IO Commit
@@ -713,9 +752,9 @@ iohkNixopsPath defaultNix =
 
 nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO b
 nixops'' executor o@Options{..} c@NixopsConfig{..} com args =
-  executor o (format fp $ if oBuildNixops
-                          then iohkNixopsPath "default.nix"
-                          else cNixops)
+  executor o (format fp $ case oBuildNixops of
+                            BuildNixops     -> iohkNixopsPath "default.nix"
+                            DontBuildNixops -> cNixops)
   (fromCmd com : nixopsCmdOptions o c <> fmap fromArg args)
 
 nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO (ExitCode, Text)
@@ -775,10 +814,10 @@ modify o@Options{..} c@NixopsConfig{..} = do
     die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
   simpleTopo <- summariseTopology <$> readTopology cTopology
   liftIO . writeTextFile simpleTopoFile . T.pack . LBU.toString $ encodePretty simpleTopo
-  when oDebug $ dumpTopologyNix c
+  when (toBool oDebug) $ dumpTopologyNix c
 
-deploy :: Options -> NixopsConfig -> Bool -> Bool -> Bool -> Bool -> Maybe Seconds -> IO ()
-deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check rebuildExplorerFrontend bumpSystemStartHeldBy = do
+deploy :: Options -> NixopsConfig -> DryRun -> BuildOnly -> PassCheck -> RebuildExplorer -> Maybe Seconds -> IO ()
+deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSystemStartHeldBy = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
@@ -786,9 +825,9 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check rebuildExplorerFront
 
   _ <- pure $ deplArg c (NixParam "configurationKey") $ errorT $
        format "'configurationKey' network argument missing from cluster config"
-  when (not dryrun && elem Explorer cElements && rebuildExplorerFrontend) $ do
+  when (dryrun /= DryRun && elem Explorer cElements && reExplorer /= NoExplorerRebuild) $ do
     cmd o "scripts/generate-explorer-frontend.sh" []
-  when (not (dryrun || buonly)) $ do
+  when (dryrun /= DryRun && buonly /= BuildOnly) $ do
     deployerIP <- establishDeployerIP o oDeployerIP
     export "SMART_GEN_IP" $ getIP deployerIP
     when (elem Nodes cElements) $ do
@@ -829,28 +868,28 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check rebuildExplorerFront
   printf ("Deploying cluster "%s%"\n") $ fromNixopsDepl cName
   nixops o c' "deploy"
     $  [ "--max-concurrent-copy", "50", "-j", "4" ]
-    ++ [ "--dry-run"       | dryrun ]
-    ++ [ "--build-only"    | buonly ]
-    ++ [ "--check"         | check  ]
+    ++ [ "--dry-run"       | dryrun == DryRun ]
+    ++ [ "--build-only"    | buonly == BuildOnly ]
+    ++ [ "--check"         | check  == PassCheck  ]
     ++ nixopsMaybeLimitNodes o
   echo "Done."
 
-deployValidate :: Options -> NixopsConfig -> Bool -> IO ()
+deployValidate :: Options -> NixopsConfig -> RebuildExplorer -> IO ()
 deployValidate o c _rebuildExplorerFrontend = do
-  deploy o c True  False False False                   Nothing
+  deploy o c DryRun NoBuildOnly DontPassCheck NoExplorerRebuild  Nothing
   -- deploy o c False True  False rebuildExplorerFrontend Nothing
 
 destroy :: Options -> NixopsConfig -> IO ()
 destroy o c@NixopsConfig{..} = do
   printf ("Destroying cluster "%s%"\n") $ fromNixopsDepl cName
-  nixops (o { oConfirm = True }) c "destroy"
+  nixops (o { oConfirm = Confirmed }) c "destroy"
     $ nixopsMaybeLimitNodes o
   echo "Done."
 
 delete :: Options -> NixopsConfig -> IO ()
 delete o c@NixopsConfig{..} = do
   printf ("Un-defining cluster "%s%"\n") $ fromNixopsDepl cName
-  nixops (o { oConfirm = True }) c "delete"
+  nixops (o { oConfirm = Confirmed }) c "delete"
     $ nixopsMaybeLimitNodes o
   echo "Done."
 
@@ -859,7 +898,7 @@ fromscratch o c = do
   destroy o c
   delete o c
   create o c
-  deploy o c False False False True (Just defaultHold)
+  deploy o c NoDryRun NoBuildOnly DontPassCheck RebuildExplorer (Just defaultHold)
 
 
 -- * Building
@@ -982,7 +1021,7 @@ generateOrInsertGenesis o NixopsConfig{..} cardanoBranch preGenesis = do
   pure (genesisName, genesisPath)
 
 -- * Local phase of a full deployment
-deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> Bool -> Maybe FilePath -> Bool -> Bool -> IP -> IO ()
+deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> NewGenesis -> Maybe FilePath -> RebuildExplorer -> Validate -> IP -> IO ()
 deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGenesis preGenesis rebuildExplorerFrontend skipValidation deployerIP = do
   -- XXX: duplicated below
   let EnvSettings{..}   = envSettings cEnvironment
@@ -991,7 +1030,7 @@ deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGen
       deploymentDir     = fromNixopsDepl cName
       deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
   -- 0. Validate
-  unless skipValidation $ do
+  unless (skipValidation == SkipValidation) $ do
     echo "Validating 'iohk-ops' checkout.."
     create o c
     deployValidate o c rebuildExplorerFrontend
@@ -1007,10 +1046,10 @@ deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGen
   printf ("Pushing local 'iohk-ops' commit into 'origin'..\n")
   cmd o "git" ["push", "origin"]
   -- 3. Genesis
-  when (doGenesis || isJust preGenesis) $ do
+  when (doGenesis == NewGenesis || isJust preGenesis) $ do
     case (doGenesis, preGenesis) of
-      (True, Just _) -> error "Asked to both regenerate and use supplied genesis: these options are exclusive."
-      _              -> pure ()
+      (NewGenesis, Just _) -> error "Asked to both regenerate and use supplied genesis: these options are exclusive."
+      _                    -> pure ()
     (genesisName,
      genesisPath) <- generateOrInsertGenesis o c cardanoBranchToDrive preGenesis
     let richKeys = topoNCores topology
@@ -1035,8 +1074,8 @@ deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGen
   printf ("\nPress 'Enter' when CI has built the evaluation for 'iohk-ops' commit "%s%"\n") (fromCommit opsCommit)
   void readline
 
-deployFullDeployerPhase :: Options -> NixopsConfig -> Seconds -> Bool -> Bool -> IO ()
-deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExplorerFrontend = do
+deployFullDeployerPhase :: Options -> NixopsConfig -> Seconds -> WipeNodeDBs -> RebuildExplorer -> IO ()
+deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs reExplorer = do
   -- 0. If we have nixpkgs commit set in the config, propagate
   nixpkgsPath <- case cNixpkgs of
     Nothing -> pure Nothing
@@ -1046,36 +1085,35 @@ deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs rebuildExp
   let options' = o { oNixpkgs = nixpkgsPath }
 
   -- 6. --dry-run
-  deploy options' c True False False rebuildExplorerFrontend Nothing
+  deploy options' c DryRun BuildOnly DontPassCheck reExplorer Nothing
 
   -- 7. cleanup
   stop o c
   wipeJournals o c
-  when doWipeNodeDBs $
+  when (doWipeNodeDBs == WipeNodeDBs) $
     wipeNodeDBs o c Confirm
 
   -- 8. for real
-  deploy options' c False False False False (Just bumpHeldBy)
+  deploy options' c NoDryRun NoBuildOnly PassCheck NoExplorerRebuild (Just bumpHeldBy)
 
 runningOnDeployer :: IO Bool
 runningOnDeployer = flip elem ["staging", "live-production"] <$> Sys.getLoginName
 
 -- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
-deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> Bool -> Maybe FilePath -> Bool -> Bool -> Bool -> Bool -> IO ()
-deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy newGenesis preGenesis wipeNodeDBs' rebuildExplorerFrontend skipValidation resumeFailed = do
+deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> NewGenesis -> Maybe FilePath -> WipeNodeDBs -> RebuildExplorer -> Validate -> ResumeFailed -> IO ()
+deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy newGenesis preGenesis wipeDBs reExplorer validate resume = do
   deployerIP <- establishDeployerIP o oDeployerIP
   let EnvSettings{..}   = envSettings cEnvironment
       deploymentAccount = fromUsername envDeployerUser <> "@" <> getIP deployerIP
       deploymentDir     = fromNixopsDepl cName
       deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
-      doGenesis         = newGenesis || isJust preGenesis
-      doWipeNodeDBs     = wipeNodeDBs' || doGenesis
+      doWipe            = newGenesis == NewGenesis || wipeDBs == WipeNodeDBs
 
   onDeployer <- runningOnDeployer
   when onDeployer $ error "The 'iohk-ops deploy' subcommand is designed to be run from a developer machine."
 
-  unless resumeFailed $
-    deployFullLocalPhase o c cardanoBranchToDrive newGenesis preGenesis rebuildExplorerFrontend skipValidation deployerIP
+  unless (resume == ResumeFailed) $
+    deployFullLocalPhase o c cardanoBranchToDrive newGenesis preGenesis reExplorer validate deployerIP
 
   -- 5. Remote, on-deployer phase
   opsCommit <- gitHEADCommit o
@@ -1092,8 +1130,8 @@ deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy newG
                              \ deploy-full-deployer-phase \
                              \ --bump-system-start-held-by "%d%" "%s%" "%s%"'")
                   deploymentDir (fromJust oConfigFile) (bumpHeldBy `div` 60)
-                  (if doWipeNodeDBs           then "--wipe-node-dbs" else "")
-                  (if rebuildExplorerFrontend then "" else "--no-explorer-rebuild")
+                  (if doWipe                        then "--wipe-node-dbs" else "")
+                  (if reExplorer == RebuildExplorer then "" else "--no-explorer-rebuild")
                 ]
 
 deploymentBuildTarget :: Deployment -> NixAttr
