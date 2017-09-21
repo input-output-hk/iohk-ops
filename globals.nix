@@ -1,4 +1,4 @@
-{ IOHKaccessKeyId, CFaccessKeyId, SGGaccessKeyId
+{ IOHKaccessKeyId, CFaccessKeyId, EmurgoaccessKeyId
 , deployerIP
 , genesis                       ## Genesis file path or 'null'
 , topologyYaml                  ## The original stuff we're passing on to the nodes.
@@ -39,9 +39,9 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
 
     allRegions     = unique ([centralRegion] ++ map (n: n.value.region) topologySpecList);
 
-    allOrgs        = [ "IOHK" "CF" "SGG" ];
+    allOrgs        = [ "IOHK" "CF" "Emurgo" ];
     defaultOrg     =   "IOHK";
-    orgAccessKeys  = {  IOHK = IOHKaccessKeyId; CF = CFaccessKeyId; SGG = SGGaccessKeyId; };
+    orgAccessKeys  = {  IOHK = IOHKaccessKeyId; CF = CFaccessKeyId; Emurgo = EmurgoaccessKeyId; };
 
     ## All actual (Region * Org) pairs.
     orgXRegions    = unique (flip map topologySpecList

@@ -68,7 +68,7 @@ newtype NodeRegion = NodeRegion Text
 newtype NodeRoutes = NodeRoutes [[NodeName]]
     deriving (Show)
 
-data NodeOrg = IOHK | CF | SGG
+data NodeOrg = IOHK | CF | Emurgo
     deriving (Bounded, Eq, Enum, G.Generic, Read, Show)
 instance FromJSON NodeOrg
 instance ToJSON NodeOrg

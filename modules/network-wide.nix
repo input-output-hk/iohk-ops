@@ -35,12 +35,12 @@ with import ./../lib.nix;
             default = "eu-central-1";
           };
           defaultOrg = mkOption {
-            type = enum [ "CF" "IOHK" "SGG" ];
+            type = enum [ "CF" "IOHK" "Emurgo" ];
             description = "Organisation hosting deployer, report-server and other global services.";
             default = "IOHK";
           };
           organisation = mkOption {
-            type = enum [ "CF" "IOHK" "SGG" ];
+            type = enum [ "CF" "IOHK" "Emurgo" ];
             description = "Organisation managing this machine.";
             default = "IOHK";
           };

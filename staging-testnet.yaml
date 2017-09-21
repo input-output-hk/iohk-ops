@@ -5,7 +5,7 @@ args:
   genesis:
     tag: NixFile
     contents: ./mainnet-genesis-internal-dryrun.json
-  SGGaccessKeyId:
+  EmurgoaccessKeyId:
     tag: NixStr
     contents: fifth-party
   systemStart:

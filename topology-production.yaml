@@ -33,14 +33,14 @@ nodes:
     type: core
     host: c-b-1.cardano
     static-routes: [['c-b-2', 'r-b-2'], ['c-c-1', 'c-c-2'], ['r-b-1', 'r-b-2']]
-    org: SGG
+    org: Emurgo
 
   'c-b-2':
     region: ap-northeast-1
     type: core
     host: c-b-2.cardano
     static-routes: [['c-a-2', 'c-a-1'], ['c-b-1', 'r-b-1'], ['r-b-2', 'r-b-1']]
-    org: SGG
+    org: Emurgo
 
   'c-c-1':
     region: ap-southeast-1
