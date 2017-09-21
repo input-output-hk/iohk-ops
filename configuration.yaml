@@ -14598,7 +14598,7 @@ mainnet_full: &mainnet_full
     genesis:
       src:
         file: mainnet-genesis-internal-dryrun.json
-        hash: 6e54fbc973dbd1cb9a38d386192090d4c7d6587c222883ef97405602dd340b04 # TODO: set proper hash
+        hash: ccd86fd3e2020a3d9b70918a3a78a858fb37447ae28df4710fb77478e315819b # TODO: set proper hash
 
 mainnet_wallet_win64: &mainnet_wallet_win64
   <<: *mainnet_full
