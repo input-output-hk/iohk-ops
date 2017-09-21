@@ -5,7 +5,7 @@ globals: params:
 let
   cfg = config.services.cardano-node;
   name = "cardano-node";
-  stateDir = "/var/lib/cardano-node/";
+  stateDir = "/var/lib/cardano-node";
   cardano = (import ./../default.nix {}).cardano-sl-static;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
@@ -36,7 +36,7 @@ let
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
     (optionalString (cfg.serveEkg)             "--ekg-server ${cfg.privateIP}:8080")
     (optionalString (cfg.productionMode && params.name != "explorer")
-      "--keyfile ${stateDir}key${toString cfg.nodeIndex}.sk")
+      "--keyfile ${stateDir}/key${toString cfg.nodeIndex}.sk")
     (optionalString (cfg.productionMode && globals.systemStart != 0) "--system-start ${toString globals.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
@@ -189,9 +189,9 @@ in {
         keyId = "key" + toString cfg.nodeIndex;
         key = keyId + ".sk";
         genesisDeployCmd = if cfg.genesis == null then ""
-                           else "cp ${pkgs.copyPathToStore globals.genesis} ${stateDir}`echo ${globals.genesis} | cut -d- -f2-`";
+                           else "cp ${pkgs.copyPathToStore globals.genesis} ${stateDir}/`echo ${globals.genesis} | cut -d- -f2-`";
       in ''
-        [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}${key}
+        [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}/${key}
         cp ${pkgs.copyPathToStore ./../configuration.yaml} ${stateDir}/configuration.yaml
         ${genesisDeployCmd}
         ${optionalString (cfg.saveCoreDumps) ''
