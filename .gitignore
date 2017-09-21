@@ -20,6 +20,7 @@ static/*.secret
 static/github_token
 static/id_buildfarm
 
+configuration.yaml
 image
 result
 scripts/iohk-nixpkgs
