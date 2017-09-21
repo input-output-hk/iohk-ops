@@ -4,7 +4,7 @@
 
 let
   extraDeps = with pkgs;
-    [ wget awscli # for scripts/aws.hs
+    [ wget awscli nodejs # for scripts/aws.hs
     ];
   drv = pkgs.haskell.lib.overrideCabal
          (import ./default.nix {}).iohk-ops
