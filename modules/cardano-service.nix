@@ -74,6 +74,7 @@ in {
       };
       autoStart = mkOption { type = types.bool; default = true; };
 
+      genesis = mkOption { type = types.nullOr types.path; };
       topologyYaml = mkOption { type = types.path; };
       
       genesisN = mkOption { type = types.int; default = 6; };
@@ -187,9 +188,12 @@ in {
       script = let
         keyId = "key" + toString cfg.nodeIndex;
         key = keyId + ".sk";
+        genesisDeployCmd = if cfg.genesis == null then ""
+                           else "cp ${pkgs.copyPathToStore globals.genesis} ${stateDir}`echo ${globals.genesis} | cut -d- -f2-`";
       in ''
         [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}${key}
-        cp ${pkgs.copyPathToStore ./configuration.yaml} ${stateDir}
+        cp ${pkgs.copyPathToStore ./../configuration.yaml} ${stateDir}/configuration.yaml
+        ${genesisDeployCmd}
         ${optionalString (cfg.saveCoreDumps) ''
           # only a process with non-zero coresize can coredump (the default is 0)
           ulimit -c unlimited

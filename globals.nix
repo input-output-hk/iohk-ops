@@ -1,5 +1,6 @@
 { IOHKaccessKeyId, CFaccessKeyId, SGGaccessKeyId
 , deployerIP
+, genesis                       ## Genesis file path or 'null'
 , topologyYaml                  ## The original stuff we're passing on to the nodes.
 , topologyFile ? ./topology.nix ## The iohk-ops post-processed thing.
 , systemStart
@@ -83,7 +84,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                                               [ explorerNV reportServerNV ]);
 in
 {
-  inherit configurationYaml topologyYaml;
+  inherit genesis topologyYaml;
   inherit cores relays nodeMap fullMap;
   inherit nRelays firstRelayIndex;
   inherit allRegions centralRegion;

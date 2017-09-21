@@ -62,6 +62,7 @@ globals: imports: params:
       nodeIndex   = params.i;
       relayIndex  = params.relayIndex;
       port        = params.port;
+      genesis     = globals.genesis;
       topologyYaml      =
          if !params.typeIsExplorer
          then globals.topologyYaml

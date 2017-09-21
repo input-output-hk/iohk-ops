@@ -2,6 +2,9 @@ args:
   dconfig:
     tag: NixStr
     contents: mainnet_full
+  genesis:
+    tag: NixFile
+    contents: ./mainnet-genesis-internal-dryrun.json
   SGGaccessKeyId:
     tag: NixStr
     contents: fifth-party
