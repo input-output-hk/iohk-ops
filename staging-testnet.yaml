@@ -7,7 +7,7 @@ args:
     contents: fifth-party
   systemStart:
     tag: NixInt
-    contents: 1506017037
+    contents: 1506016669
   genesis:
     tag: NixFile
     contents: ./mainnet-genesis-internal-dryrun.json
