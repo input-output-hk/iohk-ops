@@ -10,4 +10,7 @@ with import ./lib.nix;
                                   accessKeyId = globals.orgAccessKeys.${org};
                                   description = "Keypair for ${org}/${region}";
                                 }));
+
+  # Create GC generation on deployer machine
+  network.enableRollback = true;
 }
