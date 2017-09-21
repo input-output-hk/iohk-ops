@@ -318,7 +318,7 @@ envSettings env =
       { envDeployerUser      = "staging"
       , envDefaultDConfig    = Testnet_staging_full
       , envDefaultConfig     = "staging-testnet.yaml"
-      , envDefaultConfiguration = "configuration.mainnet.yaml"
+      , envDefaultConfiguration = "configuration.yaml"
       , envDefaultTopology   = "topology-staging.yaml"
       , envDeploymentFiles   = [ (Every,          All, "security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
@@ -329,7 +329,7 @@ envSettings env =
       { envDeployerUser      = "live-production"
       , envDefaultDConfig    = Testnet_public_full
       , envDefaultConfig     = "production-testnet.yaml"
-      , envDefaultConfiguration = "configuration.mainnet.yaml"
+      , envDefaultConfiguration = "configuration.yaml"
       , envDefaultTopology   = "topology-production.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "security-groups.nix")
                                , (Explorer,       All, "security-groups.nix")
