@@ -850,18 +850,17 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
     cmd o "git" (["add", format fp cFp])
     cmd o "git" ["commit", "-m", format ("Bump systemStart to "%s) timePretty]
   let mGenesis = mDeplArg c $ NixParam "genesis"
-  case mGenesis of
-    NixNull   -> pure ()
-    NixFile f -> do
-      let genesisTmpl = format (fp%".tmpl") f
-      cmd o "cp"  ["-f", genesisTmpl,       format fp f]
-      cmd o "sed" ["-i", format fp f,          "-e", format ("s/START_TIME_PLACEHOLDER/"%d%"/") (let Elapsed x = startE in x * 1000000)]
-
-      let configurationTmpl = "configuration.yaml.tmpl"
-      cmd o "cp"  ["-f", configurationTmpl, "configuration.yaml"]
-      genesisHash <- incmd o "cardano-sl/scripts/js/genesis-hash.js" [format fp f]
-      cmd o "sed" ["-i", "configuration.yaml", "-e", format ("s/GENESIS_HASH_PLACEHOLDER/"%s%"/") (T.strip genesisHash)]
-    x         -> errorT $ "'genesis' network argument must be either a NixFile or a NixNull (absent), was: " <> showT x
+      configurationTmpl = "configuration.yaml.tmpl"
+  genesisHash <- case mGenesis of
+                   NixNull   -> pure "0000000000000000000000000000000000000000000000000000000000000000"
+                   NixFile f -> do
+                     let genesisTmpl = format (fp%".tmpl") f
+                     cmd o "cp"  ["-f", genesisTmpl,       format fp f]
+                     cmd o "sed" ["-i", format fp f,          "-e", format ("s/START_TIME_PLACEHOLDER/"%d%"/") (let Elapsed x = startE in x * 1000000)]
+                     incmd o "cardano-sl/scripts/js/genesis-hash.js" [format fp f]
+                   x         -> errorT $ "'genesis' network argument must be either a NixFile or a NixNull (absent), was: " <> showT x
+  cmd o "cp"  ["-f", configurationTmpl, "configuration.yaml"]
+  cmd o "sed" ["-i", "configuration.yaml", "-e", format ("s/GENESIS_HASH_PLACEHOLDER/"%s%"/") (T.strip genesisHash)]
 
   modify o c'
 
