@@ -4,7 +4,7 @@ globals: params:
 { config, pkgs, lib, ... }:
 
 let
-  explorer-drv = (import ./../default.nix { inherit (config.deployment.arguments) dconfig; }).cardano-sl-explorer-static;
+  explorer-drv = (import ./../default.nix {}).cardano-sl-explorer-static;
 in
 {
   global.dnsHostname   = mkForce   "cardano-explorer";

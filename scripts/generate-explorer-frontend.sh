@@ -1,17 +1,10 @@
 #!/usr/bin/env nix-shell
 #!nix-shell -i bash -p git jq
 
-dconfig="$1"
-
 set -euo pipefail
 
-test -n "${dconfig}" || {
-        echo "generate-explorer-frontend.sh: missing dconfig as first argument." >&2
-        exit 1
-}
-
 cardano_rev="$(jq -r .rev < cardano-sl-src.json)"
-explorer_path="$(nix-build -A cardano-sl-explorer-static --argstr dconfig ${dconfig} default.nix)"
+explorer_path="$(nix-build -A cardano-sl-explorer-static default.nix)"
 
 echo "Building explorer frontend from 'cardano-sl' repository revision:  ${cardano_rev}".
 
