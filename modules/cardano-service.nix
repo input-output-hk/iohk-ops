@@ -44,7 +44,7 @@ let
     "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
     "--configuration-file ${stateDir}/configuration.yaml"
-    "--configuration-key ${config.deployment.arguments.dconfig}"
+    "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
   ];

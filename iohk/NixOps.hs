@@ -136,7 +136,7 @@ newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (Fro
 newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 
 -- Names and their ordering taken from: https://github.com/input-output-hk/cardano-sl/blob/master/core/constants.yaml
-data DConfig
+data ConfigurationKey
   = Dev
   | Mainnet
   | Testnet_public_full
@@ -298,7 +298,7 @@ instance FromJSON Target
 data EnvSettings =
   EnvSettings
   { envDeployerUser      :: Username
-  , envDefaultDConfig    :: DConfig
+  , envDefaultConfigurationKey :: ConfigurationKey
   , envDefaultConfig     :: FilePath
   , envDefaultGenesis    :: Maybe FilePath
   , envDefaultTopology   :: FilePath
@@ -318,7 +318,7 @@ envSettings env =
   in case env of
     Staging      -> EnvSettings
       { envDeployerUser      = "staging"
-      , envDefaultDConfig    = Testnet_staging_full
+      , envDefaultConfigurationKey = Testnet_staging_full
       , envDefaultConfig     = "staging-testnet.yaml"
       , envDefaultGenesis    = Just "genesis-staging.json"
       , envDefaultTopology   = "topology-staging.yaml"
@@ -329,7 +329,7 @@ envSettings env =
                                ] <> deplAgnosticFiles}
     Production  -> EnvSettings
       { envDeployerUser      = "live-production"
-      , envDefaultDConfig    = Testnet_public_full
+      , envDefaultConfigurationKey = Testnet_public_full
       , envDefaultConfig     = "production-testnet.yaml"
       , envDefaultGenesis    = Just "genesis-mainnet.json"
       , envDefaultTopology   = "topology-production.yaml"
@@ -343,7 +343,7 @@ envSettings env =
                                ] <> deplAgnosticFiles}
     Development -> EnvSettings
       { envDeployerUser      = "staging"
-      , envDefaultDConfig    = Devnet_shortep_full
+      , envDefaultConfigurationKey = Devnet_shortep_full
       , envDefaultConfig     = "config.yaml"
       , envDefaultGenesis    = Nothing
       , envDefaultTopology   = "topology.yaml"
@@ -583,18 +583,18 @@ deploymentFiles cEnvironment cTarget cElements =
 
 type DeplArgs = Map.Map NixParam NixValue
 
-selectInitialConfigDeploymentArgs :: Options -> Maybe FilePath -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe DConfig -> IO DeplArgs
-selectInitialConfigDeploymentArgs _ mGenesis _ env delts (Elapsed systemStart) mDConfig = do
+selectInitialConfigDeploymentArgs :: Options -> Maybe FilePath -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO DeplArgs
+selectInitialConfigDeploymentArgs _ mGenesis _ env delts (Elapsed systemStart) mConfigurationKey = do
     let EnvSettings{..}   = envSettings env
         akidDependentArgs = [ ( NixParam $ fromAccessKeyId akid
                               , NixStr . fromNodeName $ selectDeployer env delts)
                             | akid <- accessKeyChain ]
-        dConfig           = fromMaybe envDefaultDConfig mDConfig
+        configurationKey  = fromMaybe envDefaultConfigurationKey mConfigurationKey
     pure $ Map.fromList $
       akidDependentArgs
       <> [ ("systemStart",  NixInt $ fromIntegral systemStart)
          , ("genesis",      fromMaybe NixNull $ NixFile <$> mGenesis)
-         , ("dconfig",      NixStr $ lowerShowT dConfig) ]
+         , ("configurationKey", NixStr $ lowerShowT configurationKey) ]
 
 deplArg :: NixopsConfig -> NixParam -> NixValue -> NixValue
 deplArg    NixopsConfig{..} k def = Map.lookup k cDeplArgs & fromMaybe def
@@ -610,14 +610,14 @@ defaultDeplArgTo :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 defaultDeplArgTo p v c = setDeplArg p (deplArg c p v) c
 
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe DConfig -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName            mNixops    mGenesis mTopology cEnvironment cTarget cElements systemStart mDConfig = do
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName            mNixops    mGenesis mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
   let EnvSettings{..} = envSettings                                            cEnvironment
       cNixops         = fromMaybe "nixops" mNixops
       cFiles          = deploymentFiles                                  cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                         mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
-  cDeplArgs    <- selectInitialConfigDeploymentArgs o mGenesis cTopology cEnvironment         cElements systemStart mDConfig
+  cDeplArgs    <- selectInitialConfigDeploymentArgs o mGenesis cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
@@ -750,7 +750,7 @@ buildGlobalsImportNixExpr deplArgs =
   $ NixAttrSet $ Map.fromList $ (fromNixParam *** id) <$> deplArgs
 
 computeFinalDeploymentArgs :: Options -> NixopsConfig -> IO [(NixParam, NixValue)]
-computeFinalDeploymentArgs o@Options{..} c@NixopsConfig{..} = do
+computeFinalDeploymentArgs o@Options{..} NixopsConfig{..} = do
   IP deployerIP <- establishDeployerIP o oDeployerIP
   let deplArgs' = Map.toList cDeplArgs
                   <> [("deployerIP",   NixStr  deployerIP)
@@ -784,8 +784,8 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check rebuildExplorerFront
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
-  let dconfig = deplArg c (NixParam "dconfig") $ errorT $
-          format "'dconfig' network argument missing from cluster config"
+  _ <- pure $ deplArg c (NixParam "configurationKey") $ errorT $
+       format "'configurationKey' network argument missing from cluster config"
   when (not dryrun && elem Explorer cElements && rebuildExplorerFrontend) $ do
     cmd o "scripts/generate-explorer-frontend.sh" []
   when (not (dryrun || buonly)) $ do

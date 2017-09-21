@@ -1,5 +1,5 @@
 args:
-  dconfig:
+  configurationKey:
     tag: NixStr
     contents: mainnet_full
   genesis:
