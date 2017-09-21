@@ -1,6 +1,5 @@
 { IOHKaccessKeyId, CFaccessKeyId, SGGaccessKeyId
 , deployerIP
-, configurationYaml             ## The JSON genesis configuration.
 , topologyYaml                  ## The original stuff we're passing on to the nodes.
 , topologyFile ? ./topology.nix ## The iohk-ops post-processed thing.
 , systemStart

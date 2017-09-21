@@ -298,7 +298,6 @@ data EnvSettings =
   { envDeployerUser      :: Username
   , envDefaultDConfig    :: DConfig
   , envDefaultConfig     :: FilePath
-  , envDefaultConfiguration :: FilePath
   , envDefaultTopology   :: FilePath
   , envDeploymentFiles   :: [FileSpec]
   }
@@ -318,7 +317,6 @@ envSettings env =
       { envDeployerUser      = "staging"
       , envDefaultDConfig    = Testnet_staging_full
       , envDefaultConfig     = "staging-testnet.yaml"
-      , envDefaultConfiguration = "configuration.yaml"
       , envDefaultTopology   = "topology-staging.yaml"
       , envDeploymentFiles   = [ (Every,          All, "security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
@@ -329,7 +327,6 @@ envSettings env =
       { envDeployerUser      = "live-production"
       , envDefaultDConfig    = Testnet_public_full
       , envDefaultConfig     = "production-testnet.yaml"
-      , envDefaultConfiguration = "configuration.yaml"
       , envDefaultTopology   = "topology-production.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "security-groups.nix")
                                , (Explorer,       All, "security-groups.nix")
@@ -343,7 +340,6 @@ envSettings env =
       { envDeployerUser      = "staging"
       , envDefaultDConfig    = Devnet_shortep_full
       , envDefaultConfig     = "config.yaml"
-      , envDefaultConfiguration = "configuration.yaml"
       , envDefaultTopology   = "topology.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
@@ -538,7 +534,6 @@ data NixopsConfig = NixopsConfig
   , cGenCmdline       :: Text
   , cNixpkgs          :: Maybe Commit
   , cNixops           :: FilePath
-  , cConfiguration    :: FilePath
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
@@ -554,7 +549,6 @@ instance FromJSON NixopsConfig where
         <*> v .:? "gen-cmdline"   .!= "--unknown--"
         <*> v .:? "nixpkgs"
         <*> v .:? "nixops"        .!= "nixops"
-        <*> v .:? "configuration" .!= "configuration.yaml"
         <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
@@ -570,7 +564,6 @@ instance ToJSON NixopsConfig where
    [ "name"         .= fromNixopsDepl cName
    , "gen-cmdline"  .= cGenCmdline
    , "nixops"       .= cNixops
-   , "configuration" .= cConfiguration
    , "topology"     .= cTopology
    , "environment"  .= showT cEnvironment
    , "target"       .= showT cTarget
@@ -612,7 +605,6 @@ mkNewConfig o cGenCmdline cName            mNixops    mConfiguration mTopology c
   let EnvSettings{..} = envSettings                                            cEnvironment
       cNixops         = fromMaybe "nixops" mNixops
       cFiles          = deploymentFiles                                        cEnvironment cTarget cElements
-      cConfiguration  = flip fromMaybe                mConfiguration envDefaultConfiguration
       cTopology       = flip fromMaybe                               mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
   cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment                        cElements systemStart mDConfig
@@ -752,7 +744,6 @@ computeFinalDeploymentArgs o@Options{..} NixopsConfig{..} = do
   IP deployerIP <- establishDeployerIP o oDeployerIP
   let deplArgs' = Map.toList cDeplArgs
                   <> [("deployerIP",   NixStr  deployerIP)
-                     ,("configurationYaml", NixFile cConfiguration)
                      ,("topologyYaml", NixFile cTopology)
                      ,("environment",  NixStr  $ lowerShowT cEnvironment)]
   pure $ ("globals", buildGlobalsImportNixExpr deplArgs'): deplArgs'

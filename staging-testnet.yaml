@@ -32,6 +32,5 @@ elements:
 - Nodes
 - Explorer
 - ReportServer
-configuration: configuration.yaml
 nixops: /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
 target: AWS

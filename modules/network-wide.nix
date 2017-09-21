@@ -34,10 +34,6 @@ with import ./../lib.nix;
             description = "Region for deployer, explorer, report-server and other global services.";
             default = "eu-central-1";
           };
-          configurationYaml = mkOption {
-            type = string;
-            description = "DEPL-ARG PASSTHROUGH: configuration file.";
-          };
           defaultOrg = mkOption {
             type = enum [ "CF" "IOHK" "SGG" ];
             description = "Organisation hosting deployer, report-server and other global services.";

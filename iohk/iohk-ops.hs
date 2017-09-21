@@ -85,7 +85,6 @@ data Command where
   Clone                 :: { cBranch      :: Branch } -> Command
   Template              :: { tFile        :: Maybe Turtle.FilePath
                            , tNixops      :: Maybe Turtle.FilePath
-                           , tConfiguration :: Maybe Turtle.FilePath
                            , tTopology    :: Maybe Turtle.FilePath
                            , tDConfig     :: Maybe DConfig
                            , tEnvironment :: Environment
@@ -137,11 +136,10 @@ centralCommandParser =
     [ ("clone",                 "Clone an 'iohk-ops' repository branch",
                                 Clone
                                 <$> parserBranch "'iohk-ops' branch to checkout")
-    , ("template",              "Produce (or update) a checkout of BRANCH with a configuration YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
+    , ("template",              "Produce (or update) a checkout of BRANCH with a cluster config YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
                                 Template
                                 <$> optional (optPath "config"    'c' "Override the default, environment-dependent config filename")
                                 <*> optional (optPath "nixops"    'n' "Use a specific Nixops binary for this cluster")
-                                <*> optional (optPath "configuration" 'f' "Constants.  Defaults to 'topology.yaml'")
                                 <*> optional (optPath "topology"      't' "Cluster configuration.  Defaults to 'topology.yaml'")
                                 <*> optional parserDConfig
                                 <*> parserEnvironment
