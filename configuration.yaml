@@ -14597,8 +14597,8 @@ mainnet_full: &mainnet_full
     <<: *mainnet_base_core
     genesis:
       src:
-        file: sample-mainnet-genesis.json
-        hash: bcfbfcad6cf78f2363568e76af9d6e927f71c3683aafe5e289796579792dccdb # TODO: set proper hash
+        file: mainnet-genesis-internal-dryrun.json
+        hash: 1d781fb9110302ec64f63bb32936aafd16c9f82385abdb9cb7f49c3f16012297 # TODO: set proper hash
 
 mainnet_wallet_win64: &mainnet_wallet_win64
   <<: *mainnet_full
