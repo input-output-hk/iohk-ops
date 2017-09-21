@@ -2,15 +2,15 @@ args:
   configurationKey:
     tag: NixStr
     contents: mainnet_full
-  genesis:
-    tag: NixFile
-    contents: ./mainnet-genesis-internal-dryrun.json
   EmurgoaccessKeyId:
     tag: NixStr
     contents: fifth-party
   systemStart:
     tag: NixInt
-    contents: 0
+    contents: 1506015322
+  genesis:
+    tag: NixFile
+    contents: ./mainnet-genesis-internal-dryrun.json
   CFaccessKeyId:
     tag: NixStr
     contents: third-party
