@@ -192,8 +192,12 @@ in {
                            else "cp -f ${pkgs.copyPathToStore globals.genesis} ${stateDir}/`echo ${globals.genesis} | cut -d- -f2-`";
       in ''
         [ -f /run/keys/${keyId} ] && cp -f /run/keys/${keyId} ${stateDir}/${key}
+
+        ## Citing George:
+        ## > genesis-dryrun.json should be put strictly into {path-to-conf} (i.e. same folder as configuration yaml)
         cp -f ${pkgs.copyPathToStore ./../configuration.yaml} ${stateDir}/configuration.yaml
         ${genesisDeployCmd}
+
         ${optionalString (cfg.saveCoreDumps) ''
           # only a process with non-zero coresize can coredump (the default is 0)
           ulimit -c unlimited
