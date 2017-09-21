@@ -19,7 +19,6 @@ let
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
   cardano-sl-pkgs = import (pkgs.fetchgit cardano-sl-src) {
                       gitrev = cardano-sl-src.rev;
-                      inherit dconfig;
                     };
 in {
   nixops = 
