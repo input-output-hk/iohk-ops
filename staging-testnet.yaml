@@ -1,13 +1,13 @@
 args:
   dconfig:
     tag: NixStr
-    contents: testnet_staging_full
+    contents: mainnet_full
   SGGaccessKeyId:
     tag: NixStr
     contents: fifth-party
   systemStart:
     tag: NixInt
-    contents: 1505865883
+    contents: 0
   CFaccessKeyId:
     tag: NixStr
     contents: third-party
