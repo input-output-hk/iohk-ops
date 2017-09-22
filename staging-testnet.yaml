@@ -7,7 +7,7 @@ args:
     contents: fifth-party
   systemStart:
     tag: NixInt
-    contents: 1506016669
+    contents: 1506083809
   genesis:
     tag: NixFile
     contents: ./mainnet-genesis-dryrun-with-stakeholders.json
