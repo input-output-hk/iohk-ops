@@ -10,7 +10,7 @@ args:
     contents: 1506016669
   genesis:
     tag: NixFile
-    contents: ./mainnet-genesis-internal-dryrun.json
+    contents: ./mainnet-genesis-dryrun-with-stakeholders.json
   CFaccessKeyId:
     tag: NixStr
     contents: third-party
