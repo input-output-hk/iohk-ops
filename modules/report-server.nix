@@ -44,6 +44,7 @@ in {
       (map (resolveSGName resources) [
          "allow-to-report-server-${config.deployment.ec2.region}"
        ]);
+    deployment.ec2.ebsInitialRootDiskSize = 200;
 
     networking.firewall.allowedTCPPorts = [
       cfg.port
