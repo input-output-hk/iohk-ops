@@ -4,7 +4,7 @@ let nodeMap = globals.nodeMap; in
 
 (flip mapAttrs nodeMap (name: import ./../modules/cardano-production.nix))
 // {
-  network.description = "Cardano Production";
+  network.description = "Mainnet";
 
   resources = {
     elasticIPs = nodesElasticIPs nodeMap;

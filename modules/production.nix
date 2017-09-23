@@ -7,7 +7,7 @@ with import ./../lib.nix;
     global = {
       allocateElasticIP = true;
       enableEkgWeb      = false;
-      dnsDomainname     = "aws.iohk.io";
+      dnsDomainname     = "cardano-mainnet.iohk.io";
     };
 
     services = {
