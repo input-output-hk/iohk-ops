@@ -51,6 +51,11 @@ in {
       groups.live-production = {};
     };
 
+    deployment.keys.tarsnap = {
+      keyFile = ./../static/tarsnap-cardano-deployer.secret;
+      destDir = "/var/lib/keys";
+    };
+
     services.tarsnap = {
       enable = true;
       keyfile = "/var/lib/keys/tarsnap";

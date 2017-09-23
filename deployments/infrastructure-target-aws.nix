@@ -33,11 +33,6 @@ in rec {
       ./../modules/amazon-base.nix
     ];
 
-    deployment.keys.tarsnap = {
-      keyFile = ./../static/tarsnap-cardano-deployer.secret;
-      destDir = "/var/lib/keys";
-    };
-
     deployment.ec2 = {
       inherit accessKeyId;
       elasticIPv4 = resources.elasticIPs.cardanod-ip;
