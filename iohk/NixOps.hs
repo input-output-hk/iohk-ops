@@ -144,6 +144,7 @@ newtype NixopsCmd    = NixopsCmd    { fromCmd          :: Text   } deriving (Fro
 newtype NixopsDepl   = NixopsDepl   { fromNixopsDepl   :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype Org          = Org          { fromOrg          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype Region       = Region       { fromRegion       :: Text   } deriving (FromJSON, Generic, Show, IsString)
+newtype Zone         = Zone         { fromZone         :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype URL          = URL          { fromURL          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
@@ -431,6 +432,7 @@ data SimpleNode
   =  SimpleNode
      { snType     :: NodeType
      , snRegion   :: NodeRegion
+     , snZone     :: NodeZone
      , snOrg      :: NodeOrg
      , snFQDN     :: FQDN
      , snPort     :: PortNo
@@ -443,6 +445,7 @@ instance ToJSON SimpleNode where-- toJSON = jsonLowerStrip 2
    [ "type"        .= (lowerShowT snType & T.stripPrefix "node"
                         & fromMaybe (error "A NodeType constructor gone mad: doesn't start with 'Node'."))
    , "region"      .= snRegion
+   , "zone"        .= snZone
    , "org"         .= snOrg
    , "address"     .= fromFQDN snFQDN
    , "port"        .= fromPortNo snPort
@@ -465,7 +468,7 @@ topoNCores (SimpleTopo cmap) = Map.size $ flip Map.filter cmap ((== NodeCore) . 
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
   SimpleTopo $ Map.mapWithKey simplifier nodeMap
-  where simplifier node (NodeMetadata snType snRegion (NodeRoutes outRoutes) nmAddr snKademlia mbOrg snPublic) =
+  where simplifier node (NodeMetadata snType snRegion (NodeRoutes outRoutes) nmAddr snKademlia snPublic mbOrg snZone) =
           SimpleNode{..}
           where (mPort,  fqdn)   = case nmAddr of
                                      (NodeAddrExact fqdn'  mPort') -> (mPort', fqdn') -- (Ok, bizarrely, this contains FQDNs, even if, well.. : -)
@@ -475,7 +478,7 @@ summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
                                    $ (FQDN . T.pack . BU.toString) $ fqdn
                 snInPeers = Set.toList . Set.fromList
                             $ [ other
-                              | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _ _ _)) <- Map.toList nodeMap
+                              | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _ _ _ _)) <- Map.toList nodeMap
                               , elem node (concat routes) ]
                             <> concat outRoutes
                 snOrg = fromMaybe (trace (T.unpack $ format ("WARNING: node '"%s%"' has no 'org' field specified, defaulting to "%w%".")

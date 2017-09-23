@@ -73,6 +73,11 @@ data NodeOrg = IOHK | CF | Emurgo
 instance FromJSON NodeOrg
 instance ToJSON NodeOrg
 
+newtype NodeZone = NodeZone Text
+    deriving (Show, Ord, Eq, G.Generic, IsString)
+instance FromJSON NodeZone
+instance ToJSON NodeZone
+
 data NodeMetadata = NodeMetadata
     { -- | Node type
       nmType    :: !NodeType
@@ -89,11 +94,14 @@ data NodeMetadata = NodeMetadata
       -- | Should the node register itself with the Kademlia network?
     , nmKademlia :: !RunKademlia
 
-      -- | Should the node register itself with the Kademlia network?
+      -- | Should the node be set up for wallets
+    , nmPublic :: !Bool
+
+      -- | What organisation does the node belong to
     , nmOrg :: !(Maybe NodeOrg)
 
-      -- | Should the node register itself with the Kademlia network?
-    , nmPublic :: !Bool
+      -- | Availability zone
+    , nmZone :: !NodeZone
     }
     deriving (Show)
 
@@ -218,6 +226,7 @@ instance FromJSON NodeMetadata where
   parseJSON = A.withObject "NodeMetadata" $ \obj -> do
       nmType     <- obj .: "type"
       nmRegion   <- obj .: "region"
+      nmZone     <- obj .: "zone"
       nmRoutes   <- obj .:? "static-routes" .!= NodeRoutes []
       nmAddress  <- extractNodeAddr return obj
       nmKademlia <- obj .:? "kademlia" .!= defaultRunKademlia nmType
