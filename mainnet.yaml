@@ -10,7 +10,7 @@ args:
     contents: 0
   genesis:
     tag: NixFile
-    contents: ./mainnet-genesis-dryrun-with-stakeholders.json
+    contents: ./mainnet-genesis.json
   CFaccessKeyId:
     tag: NixStr
     contents: mainnet-cf
