@@ -30,14 +30,6 @@ nodes:
     static-routes: [['c-d-1', 'c-a-1'], ['c-b-1', 'c-d-1'], ['c-a-1', 'c-b-1'], ['r-a-2', 'r-c-1']]
     org: IOHK
 
-  'c-d-1':
-    region: us-east-2
-    zone: us-east-2a
-    type: core
-    host: c-d-1.cardano
-    static-routes: [['c-a-1', 'c-a-2'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-d-1', 'r-a-1']]
-    org: IOHK
-
   'c-b-1':
     region: ap-northeast-1
     zone: ap-northeast-1a
@@ -69,6 +61,14 @@ nodes:
     host: c-c-2.cardano
     static-routes: [['c-b-2', 'c-b-1'], ['c-c-1', 'r-c-1'], ['r-c-2', 'r-c-1']]
     org: CF
+
+  'c-d-1':
+    region: us-east-2
+    zone: us-east-2a
+    type: core
+    host: c-d-1.cardano
+    static-routes: [['c-a-1', 'c-a-2'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-d-1', 'r-a-1']]
+    org: IOHK
 
 # now the 7 relays, in the same 3 regions
 
