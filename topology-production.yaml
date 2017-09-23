@@ -9,6 +9,7 @@ nodes:
 
   'c-a-1':
     region: eu-central-1
+    zone:   eu-central-1b
     type: core
     host: c-a-1.cardano
     static-routes: [['c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['r-a-1', 'r-a-2']]
@@ -16,6 +17,7 @@ nodes:
 
   'c-a-2':
     region: eu-central-1
+    zone:   eu-central-1b
     type: core
     host: c-a-2.cardano
     static-routes: [['c-a-3', 'c-a-1'], ['c-c-2', 'c-c-1'], ['r-a-2', 'r-a-3']]
@@ -23,6 +25,7 @@ nodes:
 
   'c-a-3':
     region: eu-central-1
+    zone:   eu-central-1b
     type: core
     host: c-a-3.cardano
     static-routes: [['c-a-1', 'c-a-2'], ['r-a-3', 'r-a-1'], ['r-b-1', 'r-c-1']]
@@ -30,6 +33,7 @@ nodes:
 
   'c-b-1':
     region: ap-northeast-1
+    zone:   ap-northeast-1a
     type: core
     host: c-b-1.cardano
     static-routes: [['c-b-2', 'r-b-2'], ['c-c-1', 'c-c-2'], ['r-b-1', 'r-b-2']]
@@ -37,6 +41,7 @@ nodes:
 
   'c-b-2':
     region: ap-northeast-1
+    zone:   ap-northeast-1a
     type: core
     host: c-b-2.cardano
     static-routes: [['c-a-2', 'c-a-1'], ['c-b-1', 'r-b-1'], ['r-b-2', 'r-b-1']]
@@ -44,6 +49,7 @@ nodes:
 
   'c-c-1':
     region: ap-southeast-1
+    zone:   ap-southeast-1b
     type: core
     host: c-c-1.cardano
     static-routes: [['c-a-1', 'c-a-2'], ['c-c-2', 'r-c-1'], ['r-c-1', 'r-c-2']]
@@ -51,6 +57,7 @@ nodes:
 
   'c-c-2':
     region: ap-southeast-1
+    zone:   ap-southeast-1b
     type: core
     host: c-c-2.cardano
     static-routes: [['c-b-2', 'c-b-1'], ['c-c-1', 'r-c-1'], ['r-c-2', 'r-c-1']]
@@ -60,49 +67,124 @@ nodes:
 
   'r-a-1':
     region: eu-central-1
+    zone:   eu-central-1b
     type: relay
+    org: IOHK
     host: r-a-1.cardano
     static-routes: [['c-a-1', 'c-a-3'], ['c-a-2', 'c-a-3'], ['r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2']]
     kademlia: false
+    public: false
 
   'r-a-2':
     region: eu-central-1
+    zone:   eu-central-1b
     type: relay
+    org: IOHK
     host: r-a-2.cardano
     static-routes: [['c-a-1', 'c-a-2'], ['c-a-3', 'c-a-2'], ['r-a-3', 'r-a-1'], ['r-c-1', 'r-c-2']]
     kademlia: false
+    public: false
 
   'r-a-3':
     region: eu-central-1
+    zone:   eu-central-1b
     type: relay
+    org: IOHK
     host: r-a-3.cardano
     static-routes: [['c-a-2', 'c-a-1'], ['c-a-3', 'c-a-1'], ['r-a-1', 'r-a-2']]
     kademlia: false
+    public: false
 
   'r-b-1':
     region: ap-northeast-1
+    zone:   ap-northeast-1a
     type: relay
+    org: IOHK
     host: r-b-1.cardano
     static-routes: [['c-b-1', 'c-b-2'], ['r-a-1', 'r-a-3'], ['r-b-2', 'r-a-2']]
     kademlia: false
+    public: false
 
   'r-b-2':
     region: ap-northeast-1
+    zone:   ap-northeast-1a
     type: relay
+    org: IOHK
     host: r-b-2.cardano
     static-routes: [['c-b-2', 'c-b-1'], ['r-b-1', 'r-a-2'], ['r-c-2', 'r-c-1']]
     kademlia: false
+    public: false
 
   'r-c-1':
     region: ap-southeast-1
+    zone:   ap-southeast-1b
     type: relay
+    org: IOHK
     host: r-c-1.cardano
     static-routes: [['c-c-1', 'c-c-2'], ['r-a-3', 'r-a-2'], ['r-c-2', 'r-a-2']]
     kademlia: false
+    public: false
 
   'r-c-2':
     region: ap-southeast-1
+    zone:   ap-southeast-1b
     type: relay
+    org: IOHK
     host: r-c-2.cardano
     static-routes: [['c-c-2', 'c-c-1'], ['r-b-2', 'r-b-1'], ['r-c-1', 'r-a-2']]
     kademlia: false
+    public: false
+
+# now we have 3 unprivileged relays, one in each region
+
+  'u-a-1':
+    region: eu-central-1
+    zone:   eu-central-1b
+    type: relay
+    org: IOHK
+    host: u-a-1.cardano
+    dynamic-subscribe: [[{ "host": "r-a-1.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-3.cardano" }
+                       , { "host": "r-b-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-c-1.cardano" }
+                       , { "host": "r-c-2.cardano" } ]]
+    valency: 2
+    kademlia: false
+    public: true
+
+  'u-b-1':
+    region: ap-northeast-1
+    zone:   ap-northeast-1a
+    type: relay
+    org: IOHK
+    host: u-b-1.cardano
+    dynamic-subscribe: [[{ "host": "r-b-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-1.cardano" }
+                       , { "host": "r-a-3.cardano" }
+                       , { "host": "r-c-2.cardano" }
+                       , { "host": "r-c-1.cardano" }
+                       ]]
+    valency: 2
+    kademlia: false
+    public: true
+
+  'u-c-1':
+    region: ap-southeast-1
+    zone:   ap-southeast-1b
+    type: relay
+    org: IOHK
+    host: u-c-1.cardano
+    dynamic-subscribe: [[{ "host": "r-c-1.cardano" }
+                       , { "host": "r-c-2.cardano" }
+                       , { "host": "r-a-3.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-b-1.cardano" } ]]
+    valency: 2
+    kademlia: false
+    public: true
