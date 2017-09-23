@@ -528,7 +528,7 @@ nodes:
 
   'p-d-2':
     region: us-east-2
-    zone: us-east-2b
+    zone: us-east-2a
     type: relay
     org: IOHK
     host: p-d-2.cardano
@@ -562,10 +562,61 @@ nodes:
 
   'p-d-4':
     region: us-east-2
-    zone: us-east-2c
+    zone: us-east-2b
     type: relay
     org: IOHK
     host: p-d-4.cardano
+    dynamic-subscribe: [[{ "host": "r-c-1.cardano" }
+                       , { "host": "r-c-2.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-1.cardano" }
+                       , { "host": "r-d-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-b-1.cardano" } ]]
+    valency: 2
+    kademlia: false
+    public: true
+
+  'p-d-5':
+    region: us-east-2
+    zone: us-east-2c
+    type: relay
+    org: IOHK
+    host: p-d-5.cardano
+    dynamic-subscribe: [[{ "host": "r-c-1.cardano" }
+                       , { "host": "r-c-2.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-1.cardano" }
+                       , { "host": "r-d-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-b-1.cardano" } ]]
+    valency: 2
+    kademlia: false
+    public: true
+
+  'p-d-6':
+    region: us-east-2
+    zone: us-east-2c
+    type: relay
+    org: IOHK
+    host: p-d-6.cardano
+    dynamic-subscribe: [[{ "host": "r-c-1.cardano" }
+                       , { "host": "r-c-2.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-1.cardano" }
+                       , { "host": "r-d-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-b-1.cardano" } ]]
+    valency: 2
+    kademlia: false
+    public: true
+
+  'p-d-7':
+    region: us-east-2
+    zone: us-east-2c
+    type: relay
+    org: IOHK
+    host: p-d-7.cardano
     dynamic-subscribe: [[{ "host": "r-c-1.cardano" }
                        , { "host": "r-c-2.cardano" }
                        , { "host": "r-a-2.cardano" }
