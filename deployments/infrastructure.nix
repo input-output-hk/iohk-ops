@@ -41,15 +41,6 @@ in {
       };
       groups.staging = {};
 
-      users.production = {
-        description     = "cardano production";
-        group           = "production";
-        createHome      = true;
-        isNormalUser = true;
-        openssh.authorizedKeys.keys = [];  # this account is obsolete
-      };
-      groups.production = {};
-
       users.live-production = {
         description     = "cardano live-production";
         group           = "live-production";
