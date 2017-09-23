@@ -40,7 +40,7 @@ nodes:
 
   'c-b-2':
     region: ap-northeast-1
-    zone: ap-northeast-1b
+    zone: ap-northeast-1c
     type: core
     host: c-b-2.cardano
     static-routes: [['c-a-2', 'c-d-1'], ['c-b-1', 'r-b-1'], ['r-b-2', 'r-b-1']]
@@ -56,7 +56,7 @@ nodes:
 
   'c-c-2':
     region: ap-southeast-1
-    zone: ap-southeast-1c
+    zone: ap-southeast-1b
     type: core
     host: c-c-2.cardano
     static-routes: [['c-b-2', 'c-b-1'], ['c-c-1', 'r-c-1'], ['r-c-2', 'r-c-1']]
@@ -104,7 +104,7 @@ nodes:
 
   'r-b-2':
     region: ap-northeast-1
-    zone: ap-northeast-1b
+    zone: ap-northeast-1c
     type: relay
     org: IOHK
     host: r-b-2.cardano
@@ -124,7 +124,7 @@ nodes:
 
   'r-c-2':
     region: ap-southeast-1
-    zone: ap-southeast-1c
+    zone: ap-southeast-1b
     type: relay
     org: IOHK
     host: r-c-2.cardano
@@ -338,7 +338,7 @@ nodes:
 
   'p-b-5':
     region: ap-northeast-1
-    zone: ap-northeast-1b
+    zone: ap-northeast-1c
     type: relay
     org: IOHK
     host: p-b-5.cardano
@@ -356,7 +356,7 @@ nodes:
 
   'p-b-6':
     region: ap-northeast-1
-    zone: ap-northeast-1b
+    zone: ap-northeast-1c
     type: relay
     org: IOHK
     host: p-b-6.cardano
@@ -374,7 +374,7 @@ nodes:
 
   'p-b-7':
     region: ap-northeast-1
-    zone: ap-northeast-1b
+    zone: ap-northeast-1c
     type: relay
     org: IOHK
     host: p-b-7.cardano
@@ -460,7 +460,7 @@ nodes:
 
   'p-c-5':
     region: ap-southeast-1
-    zone: ap-southeast-1c
+    zone: ap-southeast-1b
     type: relay
     org: IOHK
     host: p-c-5.cardano
@@ -477,7 +477,7 @@ nodes:
 
   'p-c-6':
     region: ap-southeast-1
-    zone: ap-southeast-1c
+    zone: ap-southeast-1b
     type: relay
     org: IOHK
     host: p-c-6.cardano
@@ -494,7 +494,7 @@ nodes:
 
   'p-c-7':
     region: ap-southeast-1
-    zone: ap-southeast-1c
+    zone: ap-southeast-1b
     type: relay
     org: IOHK
     host: p-c-7.cardano
