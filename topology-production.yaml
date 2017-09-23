@@ -545,10 +545,27 @@ nodes:
 
   'p-d-3':
     region: us-east-2
-    zone: us-east-2c
+    zone: us-east-2b
     type: relay
     org: IOHK
     host: p-d-3.cardano
+    dynamic-subscribe: [[{ "host": "r-c-1.cardano" }
+                       , { "host": "r-c-2.cardano" }
+                       , { "host": "r-a-2.cardano" }
+                       , { "host": "r-a-1.cardano" }
+                       , { "host": "r-d-1.cardano" }
+                       , { "host": "r-b-2.cardano" }
+                       , { "host": "r-b-1.cardano" } ]]
+    valency: 2
+    kademlia: false
+    public: true
+
+  'p-d-4':
+    region: us-east-2
+    zone: us-east-2c
+    type: relay
+    org: IOHK
+    host: p-d-4.cardano
     dynamic-subscribe: [[{ "host": "r-c-1.cardano" }
                        , { "host": "r-c-2.cardano" }
                        , { "host": "r-a-2.cardano" }
