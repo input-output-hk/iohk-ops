@@ -1,12 +1,21 @@
 args:
-  accessKeyId:
+  IOHKaccessKeyId:
     tag: NixStr
-    contents: cardano-deployer
+    contents: mainnet-iohk
+  CFaccessKeyId:
+    tag: NixStr
+    contents: mainnet-iohk
+  EmurgoaccessKeyId:
+    tag: NixStr
+    contents: mainnet-iohk
+  genesis:
+    tag: NixNull
+topology: topology-mainnet-infra.yaml
 environment: Production
 nixpkgs: 31a956f18c9251064997085fd7732562b1854726
 name: iohk-infra
 files:
-- deployments/keypairs.nix
+- keypairs.nix
 - deployments/infrastructure.nix
 - deployments/infrastructure-env-production.nix
 - deployments/infrastructure-target-aws.nix
