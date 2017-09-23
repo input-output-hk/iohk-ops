@@ -21,6 +21,11 @@ with (import ./../lib.nix);
     ];
 
     services.dd-agent.tags = ["env:production"];
+
+    deployment.keys.tarsnap = {
+      keyFile = ./../static/tarsnap-cardano-deployer.secret;
+      destDir = "/var/lib/keys";
+    };
   };
 
   resources = {
