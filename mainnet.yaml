@@ -1,0 +1,38 @@
+args:
+  configurationKey:
+    tag: NixStr
+    contents: mainnet_full
+  EmurgoaccessKeyId:
+    tag: NixStr
+    contents: mainnet-emurgo
+  systemStart:
+    tag: NixInt
+    contents: 0
+  genesis:
+    tag: NixFile
+    contents: ./mainnet-genesis-dryrun-with-stakeholders.json
+  CFaccessKeyId:
+    tag: NixStr
+    contents: mainnet-cf
+  IOHKaccessKeyId:
+    tag: NixStr
+    contents: mainnet-iohk
+gen-cmdline: manual changes from staging-testnet.yaml
+environment: Production
+topology: topology-production.yaml
+name: mainnet
+files:
+- keypairs.nix
+- security-groups.nix
+- deployments/cardano-nodes.nix
+- deployments/cardano-nodes-env-production.nix
+- deployments/cardano-explorer.nix
+- deployments/cardano-explorer-env-production.nix
+- deployments/report-server.nix
+- deployments/report-server-env-production.nix
+elements:
+- Nodes
+- Explorer
+- ReportServer
+nixops: /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
+target: AWS
