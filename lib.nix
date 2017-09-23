@@ -18,6 +18,7 @@ in lib // (rec {
     };
 
   centralRegion = "eu-central-1";
+  centralZone   = "eu-central-1b";
 
   ## nodesElasticIPs :: Map NodeName Node -> Map EIPName EIP
   nodesElasticIPs = nodes: lib.flip lib.mapAttrs' nodes

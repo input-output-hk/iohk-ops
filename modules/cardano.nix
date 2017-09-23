@@ -27,6 +27,7 @@ globals: imports: params:
     # TODO: DEVOPS-8
     #deployment.ec2.ami = (import ./amis.nix).${config.deployment.ec2.region};
     deployment.ec2.region         = mkForce params.region;
+    deployment.ec2.zone           = mkForce params.zone;
     deployment.ec2.accessKeyId    = params.accessKeyId;
     deployment.ec2.keyPair        = resources.ec2KeyPairs.${params.keyPairName};
     deployment.ec2.securityGroups =

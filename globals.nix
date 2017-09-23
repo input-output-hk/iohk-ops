@@ -22,6 +22,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     explorerSpecElt  = { name  = "explorer";
                          value = { org      = defaultOrg;
                                    region   = centralRegion;
+                                   zone     = centralZone;
                                    type     = "other";
                                    kademlia = false;
                                    peers    = [];
@@ -31,6 +32,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                        { name  = "report-server";
                          value = { org      = defaultOrg;
                                    region   = centralRegion;
+                                   zone     = centralZone;
                                    type     = "other";
                                    kademlia = false;
                                    peers    = [];
@@ -50,7 +52,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     indexed        = imap (n: x:
             { name = x.name;
              value = rec {
-                  inherit (x.value) org region kademlia peers address port;
+                  inherit (x.value) org region zone kademlia peers address port;
                                 i = n - 1;
                              name = x.name;       # This is an important identity, let's not break it.
                          nodeType = x.value.type;
@@ -87,7 +89,7 @@ in
   inherit genesis topologyYaml;
   inherit cores relays nodeMap fullMap;
   inherit nRelays firstRelayIndex;
-  inherit allRegions centralRegion;
+  inherit allRegions;
   inherit allOrgs defaultOrg;
   inherit orgXRegions;
   inherit orgAccessKeys;

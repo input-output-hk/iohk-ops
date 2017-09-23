@@ -13,14 +13,14 @@ with import ./lib.nix;
                             (name: { name = name;
                                     value = { config, resources, ... }: (eIPsSecurityGroups { inherit config resources; })."${name}"; });
         securityGroupNames =
-         (              (centralRegionSGNames  globals.centralRegion)
+         (              (centralRegionSGNames  centralRegion)
           ++  concatMap  regionSGNames         globals.allRegions
           ++  concatMap  orgXRegionSGNames     globals.orgXRegions
           ++  concatMap  coreSGNames           globals.cores
          );
         eIPsSecurityGroups = { config, resources }:
           (fold (x: y: x // y) {}
-          (         (centralRegionSGs  globals.centralRegion)
+          (         (centralRegionSGs  centralRegion)
 
            ++  map  (regionSGs         { nodePort = 3000; }) # TODO: 'config' is mostly empty here.
                     globals.allRegions
