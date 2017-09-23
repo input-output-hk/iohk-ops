@@ -17,7 +17,7 @@ in rec {
       ebsInitialRootDiskSize = mkForce 200;
       associatePublicIpAddress = true;
       securityGroups = [
-        resources.ec2SecurityGroups."allow-all-ssh-${region}-${org}"
+        resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
         resources.ec2SecurityGroups."allow-public-www-${region}-${org}"
       ];
     };
