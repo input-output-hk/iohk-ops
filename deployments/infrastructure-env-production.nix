@@ -1,7 +1,9 @@
 { IOHKaccessKeyId, ... }:
 
 with (import ./../lib.nix);
-{
+let region = "eu-central-1";
+    accessKeyId = IOHKaccessKeyId;
+in {
   network.description = "IOHK infrastructure production";
 
   hydra = { config, pkgs, resources, ... }: {
@@ -12,6 +14,11 @@ with (import ./../lib.nix);
     ];
 
     services.dd-agent.tags = ["env:production"];
+
+    deployment.ec2.elasticIPv4 = resources.elasticIPs.hydra-ip;
+
+    deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
+    deployment.route53.hostName = "hydra.aws.iohkdev.io";
   };
 
   cardano-deployer = { config, pkgs, resources, ... }: {
@@ -26,6 +33,8 @@ with (import ./../lib.nix);
       keyFile = ./../static/tarsnap-cardano-deployer.secret;
       destDir = "/var/lib/keys";
     };
+
+    deployment.ec2.elasticIPv4 = resources.elasticIPs.cardanod-ip;
   };
 
   resources = {
@@ -33,5 +42,9 @@ with (import ./../lib.nix);
       disk = mkMonitor disk_monitor;
       ntp = mkMonitor ntp_monitor;
     });
+    elasticIPs = {
+      hydra-ip    = { inherit region accessKeyId; };
+      cardanod-ip = { inherit region accessKeyId; };
+    };
   };
 }
