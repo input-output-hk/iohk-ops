@@ -27,7 +27,7 @@ nodes:
     zone: eu-central-1b
     type: core
     host: c-a-2.cardano
-    static-routes: [['c-d-1', 'c-a-1'], ['r-a-2', 'r-d-1'], ['r-b-1', 'r-c-1']]
+    static-routes: [['c-d-1', 'c-a-1'], ['c-b-1', 'c-d-1'], ['c-a-1', 'c-b-1'], ['r-a-2', 'r-c-1']]
     org: IOHK
 
   'c-b-1':
@@ -35,7 +35,7 @@ nodes:
     zone: ap-northeast-1a
     type: core
     host: c-b-1.cardano
-    static-routes: [['c-b-2', 'r-b-2'], ['c-c-1', 'c-c-2'], ['r-b-1', 'r-b-2']]
+    static-routes: [['c-b-2', 'r-b-2'], ['c-c-1', 'c-c-2'], ['c-a-1', 'c-d-1'], ['r-b-1', 'r-b-2']]
     org: Emurgo
 
   'c-b-2':
@@ -43,7 +43,7 @@ nodes:
     zone: ap-northeast-1b
     type: core
     host: c-b-2.cardano
-    static-routes: [['c-a-1', 'c-d-1'], ['c-b-1', 'r-b-1'], ['r-b-2', 'r-b-1']]
+    static-routes: [['c-a-2', 'c-d-1'], ['c-b-1', 'r-b-1'], ['r-b-2', 'r-b-1']]
     org: Emurgo
 
   'c-c-1':
@@ -67,7 +67,7 @@ nodes:
     zone: us-east-2a
     type: core
     host: c-d-1.cardano
-    static-routes: [['c-a-1', 'c-a-2'], ['c-b-1', 'c-b-2'], ['r-d-1', 'r-a-1']]
+    static-routes: [['c-a-1', 'c-a-2'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-d-1', 'r-a-1']]
     org: IOHK
 
 # now the 7 relays, in the same 3 regions
@@ -78,7 +78,7 @@ nodes:
     type: relay
     org: IOHK
     host: r-a-1.cardano
-    static-routes: [['c-d-1', 'c-a-1'], ['c-a-2', 'c-a-1'], ['r-a-2', 'r-d-1'], ['r-c-1', 'r-c-2']]
+    static-routes: [['c-d-1', 'c-a-1'], ['c-a-2', 'c-a-1'], ['r-a-2', 'r-d-1']]
     kademlia: false
     public: false
 
@@ -98,7 +98,7 @@ nodes:
     type: relay
     org: IOHK
     host: r-b-1.cardano
-    static-routes: [['c-b-1', 'c-b-2'], ['r-d-1', 'r-a-2'], ['r-b-2', 'r-a-1']]
+    static-routes: [['c-b-1', 'c-b-2'], ['r-d-1', 'r-a-2'], ['r-b-2', 'r-c-1']]
     kademlia: false
     public: false
 
