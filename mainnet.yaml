@@ -7,7 +7,7 @@ args:
     contents: mainnet-emurgo
   systemStart:
     tag: NixInt
-    contents: 0
+    contents: 1506203091
   genesis:
     tag: NixFile
     contents: ./mainnet-genesis.json
