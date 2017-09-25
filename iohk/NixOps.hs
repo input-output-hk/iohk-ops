@@ -1269,11 +1269,11 @@ getJournals o c@NixopsConfig{..} = do
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
   parallelIO' o c (flip zip outfiles) $
     \(node, outfile) -> scpFromNode o c node "log" outfile
-  timeStr <- T.pack . timePrint ISO8601_DateAndTime <$> dateCurrent
+  timeStr <- T.replace ":" "_" . T.pack . timePrint ISO8601_DateAndTime <$> dateCurrent
 
   let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) (fromNixopsDepl cName) timeStr
   printf ("Packing journals into "%s%"\n") archive
-  cmd o "tar" (["czf", archive, "--force-local"] <> outfiles)
+  cmd o "tar" (["czf", archive] <> outfiles)
   cmd o "rm" $ "-f" : outfiles
   echo "Done."
 
