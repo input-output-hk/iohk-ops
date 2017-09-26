@@ -1,7 +1,7 @@
 args:
   configurationKey:
     tag: NixStr
-    contents: mainnet_full
+    contents: mainnet_dryrun_full
   EmurgoaccessKeyId:
     tag: NixStr
     contents: fifth-party
