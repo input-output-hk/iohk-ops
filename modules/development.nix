@@ -6,9 +6,7 @@ with import ./../lib.nix;
 
     global = {
       allocateElasticIP            = false;
-      enableEkgWeb                 = true;
-      dnsHostname                  = null;
-      dnsDomainname                = mkForce null;
+      dnsDomainname                = "awstest2.iohkdev.io";
       omitDetailedSecurityGroups   = true;
     };
 
