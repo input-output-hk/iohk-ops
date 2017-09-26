@@ -137,6 +137,7 @@ newtype Arg          = Arg          { fromArg          :: Text   } deriving (IsS
 newtype Branch       = Branch       { fromBranch       :: Text   } deriving (FromJSON, Generic, Show, IsString)
 newtype Commit       = Commit       { fromCommit       :: Text   } deriving (Eq, FromJSON, Generic, Show, IsString, ToJSON)
 newtype Exec         = Exec         { fromExec         :: Text   } deriving (IsString, Show)
+newtype EnvVar       = EnvVar       { fromEnvVar       :: Text   } deriving (IsString, Show)
 newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
 newtype NixHash      = NixHash      { fromNixHash      :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr      = NixAttr      { fromAttr         :: Text   } deriving (FromJSON, Generic, Show, IsString)
@@ -819,6 +820,12 @@ modify o@Options{..} c@NixopsConfig{..} = do
   liftIO . writeTextFile simpleTopoFile . T.pack . LBU.toString $ encodePretty simpleTopo
   when (toBool oDebug) $ dumpTopologyNix c
 
+setenv :: Options -> EnvVar -> Text -> IO ()
+setenv o@Options{..} (EnvVar k) v = do
+  export k v
+  when (oVerbose == Verbose) $
+    cmd o "/bin/sh" ["-c", format ("echo 'export "%s%"='$"%s) k k]
+
 deploy :: Options -> NixopsConfig -> DryRun -> BuildOnly -> PassCheck -> RebuildExplorer -> Maybe Seconds -> IO ()
 deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSystemStartHeldBy = do
   when (elem Nodes cElements) $ do
@@ -832,9 +839,9 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
     cmd o "scripts/generate-explorer-frontend.sh" []
   when (dryrun /= DryRun && buonly /= BuildOnly) $ do
     deployerIP <- establishDeployerIP o oDeployerIP
-    export "SMART_GEN_IP" $ getIP deployerIP
-    when (elem Nodes cElements) $ do
-      export "GC_INITIAL_HEAP_SIZE" (showT $ 8 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
+    setenv o "SMART_GEN_IP" $ getIP deployerIP
+  when (elem Nodes cElements) $
+    setenv o "GC_INITIAL_HEAP_SIZE" (showT $ 15 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
 
   now <- timeCurrent
   let startParam             = NixParam "systemStart"
