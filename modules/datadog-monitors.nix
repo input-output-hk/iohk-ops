@@ -79,7 +79,7 @@ rec {
   ntp_monitor = {
     name = "Clock out of sync with NTP";
     type = "service check";
-    query = config: "\"ntp.in_sync\".over(\"{env:${config.deployment.name}}\").by(\"host\").last(2).count_by_status()";
+    query = config: "\"ntp.in_sync\".over(\"env:${config.deployment.name}\").by(\"host\").last(2).count_by_status()";
     monitorOptions.thresholds = {
       critical = 1;
     };
