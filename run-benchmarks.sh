@@ -5,20 +5,28 @@ set -o xtrace # print commands
 
 CLUSTERNAME=edgenodes-scaling
 SENDMODE='send-random'
-TIME=100    # how many seconds should the generator send transactions
-CONC=5      # number of threads in the generator
-DELAY=0  # number of ms each thread waits between transactions
-COOLDOWN=10 # number of slots for cooldown, i.e., not sending
-	    # transactions, and allowing the mempools to empty
+TIME=2500     # Number of transactions sent in each thread TODO: rename
+CONC=4        # number of threads in the generator
+DELAY=500     # number of ms each thread waits between transactions
+COOLDOWN=10   # number of slots for cooldown, i.e., not sending
+	      # transactions, and allowing the mempools to empty
+NGENERATORS=4 # Additional generator to spawn
+
+for n in $(seq 1 $NGENERATORS); do
+    OFFSET[$n]="$((${n} * ${TIME} * ${CONC}))" # offset for second transaction generator
+done
+
+for n in $(seq 1 6); do
+    echo "${OFFSET[n]}"
+done
 
 export NIXOPS_DEPLOYMENT=${CLUSTERNAME}
 
-## TODO: -DCONFIG=benchmark somewhere within the nix setup
+nix-build --no-build-output --cores 0 -A cardano-sl-lwallet-static -o lwallet
+nix-build --no-build-output --cores 0 -A cardano-post-mortem-static -o post-mortem
 ./io-new stop
 ./io-new deploy -t 5
 nixops reboot --include edgenode-1 # edgenode-2 edgenode-3 edgenode-4 edgenode-5 edgenode-6 edgenode-7 edgenode-8 edgenode-9 edgenode-10
-nix-build --no-build-output --cores 0 -A cardano-sl-lwallet-static -o lwallet
-nix-build --no-build-output --cores 0 -A cardano-post-mortem-static -o post-mortem
 
 # Take the number of core nodes from the config file instead.  It must be updated there anyway.
 CORENODES=`grep genesisN config.nix | sed 's/\s*genesisN\s*=\s*\([0-9]*\)\s*;\s*/\1/'`
@@ -30,16 +38,32 @@ TOPOLOGY=`grep topology: edgenodes-testnet.yaml | awk '{print $2}'`
 # RELAY_IP=`nixops info | grep 'relay-1 ' | awk 'NF>=2 {print $(NF-1)}'`
 RELAYS=`nixops info | grep 'r-[abc]-[0-9] ' | awk 'NF>=2 {print $(NF-1)}' | sed 's/\([0-9.]*\)/  --peer=\1:3000/'`
 
-sleep 2m
+sleep 5m
+
+for n in $(seq 1 $NGENERATORS); do
+
+    export AUXX_START_AT=${OFFSET[n]}
+
+    ./lwallet/bin/cardano-auxx \
+	--db-path wdb$n \
+	--log-config static/csl-logging.yaml --logs-prefix experiments/wallet/wallet$n  \
+	--rich-poor-distr "($CORENODES,50000,6000000000,0.99)"  \
+	${RELAYS} \
+	--system-start $SYSTEMSTART cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE tps-sent-$n.csv" +RTS -s -N1 -RTS >/dev/null 2>&1 &
+
+done
 
 ./lwallet/bin/cardano-auxx \
     --db-path wdb \
     --log-config static/csl-logging.yaml --logs-prefix experiments/wallet  \
     --rich-poor-distr "($CORENODES,50000,6000000000,0.99)"  \
     ${RELAYS} \
-    --system-start $SYSTEMSTART cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE tps-sent.csv" +RTS -s -N2 -RTS
+    --system-start $SYSTEMSTART cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE tps-sent.csv" +RTS -s -N1 -RTS >/dev/null 2>&1
 
-./io-new dumplogs Nodes -p
+
+sleep 10m # for cooldown
+
+./io-new dumplogs Nodes
 
 LAST=`ls experiments/ | grep 20 | sort | tail -1`
 echo $LAST
@@ -69,6 +93,20 @@ awk 'FNR>2{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commi
     time="$TIME" \
     delay="$DELAY" \
     tps-sent.csv >> $TPSFILE
+for n in $(seq 1 $NGENERATORS); do
+    awk 'FNR>2{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,time,delay}' FS=, OFS=, \
+	slotDuration=$SLOTDURATION \
+	conc=$CONC \
+	sendMode=$SENDMODE \
+	clustersize=$CORENODES \
+	startTime=$STARTTIME \
+	commit=$COMMIT \
+	node="generator$n" \
+	run="$LAST" \
+	time="$TIME" \
+	delay="$DELAY" \
+	tps-sent-$n.csv >> $TPSFILE
+done
 
 ./post-mortem/bin/cardano-post-mortem  overview 0.05 experiments/${LAST}
 awk 'FNR>1{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,$4,run,time,delay}' FS=, OFS=, \
@@ -86,3 +124,5 @@ awk 'FNR>1{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commi
 # move files
 mv $TPSFILE tps-sent.csv "experiments/$LAST/"
 mv experiments/wallet "experiments/$LAST/"
+
+cp policy*.yaml "experiments/$LAST/"
