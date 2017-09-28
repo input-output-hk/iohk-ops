@@ -138,8 +138,8 @@ nodes:
 # now we have 3 unprivileged relays, one in each region
 
   'u-a-1':
-    region: eu-central-1
-    zone:   eu-central-1b
+    region: ap-northeast-1
+    zone:   ap-northeast-1a
     type: relay
     org: IOHK
     host: u-a-1.cardano
