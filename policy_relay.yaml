@@ -42,7 +42,7 @@ enqueue:
           precedence: 'low'
       - all:
           nodeType: 'relay'
-          maxAhead: 20
+          maxAhead: 200
           precedence: 'low'
     forward:
       - all:
@@ -51,14 +51,14 @@ enqueue:
           precedence: 'low'
       - all:
           nodeType: 'relay'
-          maxAhead: 20
+          maxAhead: 200
           precedence: 'low'
 
 dequeue:
 
   core:
-    rateLimit: 20
-    maxInFlight: 200
+    rateLimit: 2
+    maxInFlight: 2
 
   relay:
     rateLimit: 3

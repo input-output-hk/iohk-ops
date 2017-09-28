@@ -3,7 +3,7 @@
 with (import ./../lib.nix);
 
 let
-  instancesPerNode = 8;
+  instancesPerNode = 5;
   config = import ../config.nix;
   mkNode = publicIP: nodes: index: {
     name = "instance${toString index}";
@@ -13,7 +13,7 @@ let
       config = { ... }: {
         imports = [ ./common.nix ];
         networking.extraHosts = ''
-          ${nodes.relay-1.config.services.cardano-node.publicIP} relay-1
+          ${nodes.r-a-1.config.services.cardano-node.publicIP} r-a-1
         '';
         networking.nameservers = [ "127.0.0.1" ];
         services.cardano-node = {
@@ -23,8 +23,8 @@ let
           inherit (config) genesisN enableP2P productionMode richPoorDistr totalMoneyAmount;
           nodeName = "edgenode";
           type = "edge";
-          serveEkg = false;
-          extraArgs = "--peer-relay ${nodes.relay-1.config.services.cardano-node.publicIP}:3000";
+          serveEkg = true;
+          # extraArgs = "--peer-relay ${nodes.r-a-1.config.services.cardano-node.publicIP}:3000";
           #inherit publicIP;
           inherit systemStart;
         };
@@ -41,7 +41,7 @@ in { config, resources, pkgs, nodes, options, ... }:
   containers = listToAttrs (map (mkNode config.networking.publicIPv4 nodes) (range 1 instancesPerNode));
   services.dnsmasq.enable = true;
   networking.extraHosts = ''
-    ${nodes.relay-1.config.services.cardano-node.publicIP} relay-1.cardano
+    ${nodes.r-a-1.config.services.cardano-node.publicIP} r-a-1.cardano
     127.0.0.1 edgenode.cardano
   '';
 }

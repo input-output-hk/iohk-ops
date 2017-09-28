@@ -8,4 +8,4 @@ let
       imports = [ (import ../modules/cardano-edgenode.nix { region = "eu-central-1"; inherit accessKeyId systemStart; }) ];
     };
   };
-in listToAttrs (map mkNode (range 1 10))
+in listToAttrs (map mkNode (range 1 1))

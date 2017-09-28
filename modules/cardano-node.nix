@@ -183,19 +183,19 @@ in {
       allowedUDPPortRanges = [ { from = 1024; to = 65000; } ];
     };
 
-    # Workaround for CSL-1320
-    systemd.services.cardano-restart = let
-      getDailyTime = nodeIndex: let
-          # how many minutes between each node restarting
-          minute = mod (nodeIndex * 4) 60;
-        in "0/2:${toString minute}";
-    in {
-      script = ''
-        /run/current-system/sw/bin/systemctl restart cardano-node
-      '';
-      # Reboot cardano-node every 4h, offset by node id (in ${interval} minute intervals)
-      startAt = getDailyTime cfg.nodeIndex;
-    };
+    # # Workaround for CSL-1320
+    # systemd.services.cardano-restart = let
+    #   getDailyTime = nodeIndex: let
+    #       # how many minutes between each node restarting
+    #       minute = mod (nodeIndex * 4) 60;
+    #     in "0/2:${toString minute}";
+    # in {
+    #   script = ''
+    #     /run/current-system/sw/bin/systemctl restart cardano-node
+    #   '';
+    #   # Reboot cardano-node every 4h, offset by node id (in ${interval} minute intervals)
+    #   startAt = getDailyTime cfg.nodeIndex;
+    # };
 
     systemd.services.cardano-node = {
       description   = "cardano node service";
