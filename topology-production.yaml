@@ -151,13 +151,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-1.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-d-1 },
-                         { "host": r-a-2 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-c-2 },
-                         { "host": r-c-1 },
-                         { "host": r-a-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-a-2.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-c-2.cardano"},
+                         { "host":"r-c-1.cardano"},
+                         { "host":"r-a-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -168,13 +168,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-2.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-d-1 },
-                         { "host": r-c-2 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-a-1 },
-                         { "host": r-a-2 },
-                         { "host": r-c-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-c-2.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-c-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -185,13 +185,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-3.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-d-1 },
-                         { "host": r-c-2 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-c-1 },
-                         { "host": r-a-2 },
-                         { "host": r-a-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-c-2.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-c-1.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-a-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -202,13 +202,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-4.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-a-2 },
-                         { "host": r-c-1 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-c-2 },
-                         { "host": r-a-1 },
-                         { "host": r-d-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-c-1.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-c-2.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-d-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -219,13 +219,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-5.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-c-1 },
-                         { "host": r-a-1 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-d-1 },
-                         { "host": r-a-2 },
-                         { "host": r-c-2 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-c-1.cardano"},
+                         { "host":"r-a-1.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-c-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -236,13 +236,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-6.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-c-2 },
-                         { "host": r-d-1 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-a-2 },
-                         { "host": r-a-1 },
-                         { "host": r-c-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-c-2.cardano"},
+                         { "host":"r-d-1.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-c-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -253,13 +253,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-7.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-d-1 },
-                         { "host": r-c-2 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-c-1 },
-                         { "host": r-a-2 },
-                         { "host": r-a-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-c-2.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-c-1.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-a-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -270,13 +270,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-8.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-d-1 },
-                         { "host": r-c-1 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-c-2 },
-                         { "host": r-a-2 },
-                         { "host": r-a-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-c-1.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-c-2.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-a-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -287,13 +287,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-9.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-a-1 },
-                         { "host": r-c-1 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-c-2 },
-                         { "host": r-d-1 },
-                         { "host": r-a-2 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-c-1.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-c-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-a-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -304,13 +304,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-10.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-c-1 },
-                         { "host": r-c-2 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-d-1 },
-                         { "host": r-a-1 },
-                         { "host": r-a-2 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-c-1.cardano"},
+                         { "host":"r-c-2.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-a-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -321,13 +321,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-11.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-a-1 },
-                         { "host": r-c-1 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-a-2 },
-                         { "host": r-c-2 },
-                         { "host": r-d-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-c-1.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-c-2.cardano"},
+                         { "host":"r-d-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -338,13 +338,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-12.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-c-1 },
-                         { "host": r-a-2 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-a-1 },
-                         { "host": r-c-2 },
-                         { "host": r-d-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-c-1.cardano"},
+                         { "host":"r-a-2.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-c-2.cardano"},
+                         { "host":"r-d-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -355,13 +355,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-13.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-a-1 },
-                         { "host": r-c-1 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-d-1 },
-                         { "host": r-c-2 },
-                         { "host": r-a-2 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-c-1.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-c-2.cardano"},
+                         { "host":"r-a-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -372,13 +372,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-b-14.cardano
-    dynamic-subscribe: [[{ "host": r-b-1 },
-                         { "host": r-a-1 },
-                         { "host": r-c-2 }],
-                        [{ "host": r-b-2 },
-                         { "host": r-a-2 },
-                         { "host": r-d-1 },
-                         { "host": r-c-1 }]
+    dynamic-subscribe: [[{ "host":"r-b-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-c-2.cardano"}],
+                        [{ "host":"r-b-2.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-c-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -389,13 +389,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-1.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-a-2 },
-                         { "host": r-b-2 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-a-1 },
-                         { "host": r-b-1 },
-                         { "host": r-d-1 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-b-2.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-b-1.cardano"},
+                         { "host":"r-d-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -406,13 +406,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-2.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-b-2 },
-                         { "host": r-b-1 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-a-1 },
-                         { "host": r-d-1 },
-                         { "host": r-a-2 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-b-2.cardano"},
+                         { "host":"r-b-1.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-a-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -423,13 +423,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-3.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-d-1 },
-                         { "host": r-a-1 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-a-2 },
-                         { "host": r-b-1 },
-                         { "host": r-b-2 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-a-1.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-b-1.cardano"},
+                         { "host":"r-b-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -440,13 +440,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-4.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-b-2 },
-                         { "host": r-a-2 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-d-1 },
-                         { "host": r-a-1 },
-                         { "host": r-b-1 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-b-2.cardano"},
+                         { "host":"r-a-2.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-b-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -457,13 +457,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-5.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-b-2 },
-                         { "host": r-a-1 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-a-2 },
-                         { "host": r-d-1 },
-                         { "host": r-b-1 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-b-2.cardano"},
+                         { "host":"r-a-1.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-b-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -474,13 +474,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-6.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-d-1 },
-                         { "host": r-a-1 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-b-1 },
-                         { "host": r-b-2 },
-                         { "host": r-a-2 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-a-1.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-b-1.cardano"},
+                         { "host":"r-b-2.cardano"},
+                         { "host":"r-a-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -491,13 +491,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-7.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-a-2 },
-                         { "host": r-d-1 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-b-2 },
-                         { "host": r-a-1 },
-                         { "host": r-b-1 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-d-1.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-b-2.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-b-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -508,13 +508,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-8.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-a-1 },
-                         { "host": r-b-1 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-d-1 },
-                         { "host": r-b-2 },
-                         { "host": r-a-2 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-b-1.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-b-2.cardano"},
+                         { "host":"r-a-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -525,13 +525,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-9.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-a-2 },
-                         { "host": r-b-2 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-d-1 },
-                         { "host": r-a-1 },
-                         { "host": r-b-1 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-b-2.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-b-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -542,13 +542,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-10.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-a-1 },
-                         { "host": r-d-1 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-b-2 },
-                         { "host": r-b-1 },
-                         { "host": r-a-2 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-d-1.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-b-2.cardano"},
+                         { "host":"r-b-1.cardano"},
+                         { "host":"r-a-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -559,13 +559,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-11.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-d-1 },
-                         { "host": r-b-2 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-a-1 },
-                         { "host": r-b-1 },
-                         { "host": r-a-2 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-b-2.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-b-1.cardano"},
+                         { "host":"r-a-2.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -576,13 +576,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-12.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-a-1 },
-                         { "host": r-d-1 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-b-2 },
-                         { "host": r-a-2 },
-                         { "host": r-b-1 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-a-1.cardano"},
+                         { "host":"r-d-1.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-b-2.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-b-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -593,13 +593,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-13.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-a-2 },
-                         { "host": r-b-2 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-d-1 },
-                         { "host": r-b-1 },
-                         { "host": r-a-1 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-b-2.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-b-1.cardano"},
+                         { "host":"r-a-1.cardano"}]
                        ]
     kademlia: false
     public: true
@@ -610,13 +610,13 @@ nodes:
     type: relay
     org: IOHK
     host: p-c-14.cardano
-    dynamic-subscribe: [[{ "host": r-c-1 },
-                         { "host": r-b-1 },
-                         { "host": r-a-1 }],
-                        [{ "host": r-c-2 },
-                         { "host": r-a-2 },
-                         { "host": r-d-1 },
-                         { "host": r-b-2 }]
+    dynamic-subscribe: [[{ "host":"r-c-1.cardano"},
+                         { "host":"r-b-1.cardano"},
+                         { "host":"r-a-1.cardano"}],
+                        [{ "host":"r-c-2.cardano"},
+                         { "host":"r-a-2.cardano"},
+                         { "host":"r-d-1.cardano"},
+                         { "host":"r-b-2.cardano"}]
                        ]
     kademlia: false
     public: true
