@@ -1,6 +1,5 @@
 with (import ./../lib.nix);
 
-{ environment, ...}:
 rec {
   alertMessage = msg: ''
     {{#is_alert}}
@@ -50,7 +49,7 @@ rec {
   cpu_monitor = {
     name = "High CPU usage";
     type = "metric alert";
-    query = config: "avg(last_5m):avg:system.load.norm.1{env:${environment}} by {host} > 0.9";
+    query = config: "avg(last_5m):avg:system.load.norm.1{env:${config.deployment.arguments.environment}} by {host} > 0.9";
     monitorOptions.thresholds = {
       warning = "0.75";
       critical = "0.9";
@@ -60,7 +59,7 @@ rec {
   disk_monitor = {
     name = "High disk usage";
     type = "metric alert";
-    query = config: "max(last_5m):avg:system.disk.in_use{env:${environment}} by {host,device} > 0.9";
+    query = config: "max(last_5m):avg:system.disk.in_use{env:${config.deployment.arguments.environment}} by {host,device} > 0.9";
     monitorOptions.thresholds = {
       warning = "0.8";
       critical = "0.9";
@@ -70,7 +69,7 @@ rec {
   ram_monitor = {
     name = "RAM is running low";
     type = "metric alert";
-    query = config: "avg(last_1m):avg:system.mem.pct_usable{env:${environment}} by {host} < 0.2";
+    query = config: "avg(last_1m):avg:system.mem.pct_usable{env:${config.deployment.arguments.environment}} by {host} < 0.2";
     monitorOptions.thresholds = {
       warning = "0.5";
       critical = "0.2";
@@ -80,7 +79,7 @@ rec {
   ntp_monitor = {
     name = "Clock out of sync with NTP";
     type = "service check";
-    query = config: "\"ntp.in_sync\".over(\"env:${environment}\").by(\"host\").last(2).count_by_status()";
+    query = config: "\"ntp.in_sync\".over(\"env:${config.deployment.arguments.environment}\").by(\"host\").last(2).count_by_status()";
     monitorOptions.thresholds = {
       critical = 1;
     };
@@ -89,7 +88,7 @@ rec {
   cardano_node_simple_process_monitor = {
     name = "cardano-node-simple process is down";
     type = "service check";
-    query = config: "\"process.up\".over(\"env:${environment}\",\"process:cardano-node-simple\").by(\"host\",\"process\").last(5).count_by_status()";
+    query = config: "\"process.up\".over(\"env:${config.deployment.arguments.environment}\",\"process:cardano-node-simple\").by(\"host\",\"process\").last(5).count_by_status()";
     monitorOptions.thresholds = {
       warning = 2;
       critical = 4;
@@ -100,7 +99,7 @@ rec {
   cardano_explorer_process_monitor = {
     name = "cardano-explorer process is down";
     type = "service check";
-    query = config: "\"process.up\".over(\"env:${environment}\",\"process:cardano-explorer\").by(\"host\",\"process\").last(5).count_by_status()";
+    query = config: "\"process.up\".over(\"env:${config.deployment.arguments.environment}\",\"process:cardano-explorer\").by(\"host\",\"process\").last(5).count_by_status()";
     monitorOptions.thresholds = {
       warning = 2;
       critical = 4;
