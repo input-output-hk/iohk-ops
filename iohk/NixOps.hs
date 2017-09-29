@@ -307,6 +307,12 @@ nodeNames (oOnlyOn -> nodeLimit)  NixopsConfig{..}
   = if Map.member node nodeMap || node == explorerNode then [node]
     else errorT $ format ("Node '"%s%"' doesn't exist in cluster '"%fp%"'.") (showT $ fromNodeName node) cTopology
 
+scopeNameDesc :: Options -> NixopsConfig -> (Text, Text)
+scopeNameDesc (oOnlyOn -> nodeLimit)  NixopsConfig{..}
+  | Nothing   <- nodeLimit = (format ("entire '"%s%"' cluster") (fromNixopsDepl cName)
+                             ,"cluster-" <> fromNixopsDepl cName)
+  | Just node <- nodeLimit = (format ("node '"%s%"'") (fromNodeName node)
+                             ,"node-" <> fromNodeName node)
 
 
 
@@ -828,7 +834,7 @@ startForeground o c node =
     ssh o c "bash" ["-c", Arg $ "'sudo -u cardano-node " <> unitStartCmd <> "'"] node
 
 stop :: Options -> NixopsConfig -> IO ()
-stop o c = echo "Stopping nodes..."
+stop o c = echo (unsafeTextToLine $ "Stopping " <> (fst $ scopeNameDesc o c))
   >> parallelSSH o c "systemctl" ["stop", "cardano-node"]
 
 defLogs, profLogs :: [(Text, Text -> Text)]
@@ -861,7 +867,7 @@ date o c = parallelIO o c $
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
-  echo "Wiping journals on cluster.."
+  echo $ unsafeTextToLine $ "Wiping journals on " <> (fst $ scopeNameDesc o c)
   parallelSSH o c "bash"
     ["-c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
   echo "Done."
@@ -869,8 +875,9 @@ wipeJournals o c@NixopsConfig{..} = do
 getJournals :: Options -> NixopsConfig -> JournaldTimeSpec -> Maybe JournaldTimeSpec -> IO ()
 getJournals o c@NixopsConfig{..} timesince mtimeuntil = do
   let nodes = nodeNames o c
+      (scName, scDesc) = scopeNameDesc o c
 
-  echo "Dumping journald logs on cluster.."
+  echo $ unsafeTextToLine $ "Dumping journald logs on " <> scName
   parallelSSH o c "bash"
     ["-c", Arg $ "'rm -f log && journalctl -u cardano-node --since \"" <> fromJournaldTimeSpec timesince <> "\""
       <> fromMaybe "" ((\timeuntil-> " --until \"" <> fromJournaldTimeSpec timeuntil <> "\"") <$> mtimeuntil)
@@ -882,7 +889,7 @@ getJournals o c@NixopsConfig{..} timesince mtimeuntil = do
     \(node, outfile) -> scpFromNode o c node "log" outfile
   timeStr <- T.replace ":" "_" . T.pack . timePrint ISO8601_DateAndTime <$> dateCurrent
 
-  let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) (fromNixopsDepl cName) timeStr
+  let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) scDesc timeStr
   printf ("Packing journals into "%s%"\n") archive
   cmd o "tar" (["czf", archive] <> outfiles)
   cmd o "rm" $ "-f" : outfiles
@@ -890,6 +897,7 @@ getJournals o c@NixopsConfig{..} timesince mtimeuntil = do
 
 wipeNodeDBs :: Options -> NixopsConfig -> Confirmation -> IO ()
 wipeNodeDBs o c@NixopsConfig{..} confirmation = do
+  echo $ unsafeTextToLine $ "About to wipe node databases on " <> (fst $ scopeNameDesc o c)
   confirmOrTerminate confirmation
   echo "Wiping node databases.."
   parallelSSH o c "rm" ["-rf", "/var/lib/cardano-node"]
