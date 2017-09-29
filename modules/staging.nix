@@ -11,7 +11,7 @@ with import ./../lib.nix;
     };
 
     services = {
-      dd-agent.tags              = ["env:staging"];
+      dd-agent.tags              = ["env:staging", "depl:${config.deployment.name}"];
 
       # DEVOPS-64: disable log bursting
       journald.rateLimitBurst    = 0;
