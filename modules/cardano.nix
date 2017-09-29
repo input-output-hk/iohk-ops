@@ -57,6 +57,26 @@ globals: imports: params:
     ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}.cardano") hostList)}
     '';
 
+    services.dd-agent.processConfig = ''
+    init_config:
+
+    instances:
+    '' +
+    (if params.typeIsExplorer
+    then ''
+    - name: cardano-explorer
+      search_string: ['cardano-explorer']
+      ''
+    else ''
+    - name: cardano-node-simple
+      search_string: ['cardano-node-simple']
+      '') + ''
+    # nix string indentation hack (see DEVOPS-341)
+      exact_match: True
+      thresholds:
+        critical: [1, 1]
+    '';
+
     services.cardano-node = {
       enable      = true;
       nodeName    = params.name;
@@ -67,7 +87,7 @@ globals: imports: params:
       topologyYaml      =
          if !params.typeIsExplorer
          then globals.topologyYaml
-         else 
+         else
            let relayAddressSpecs =
              if globals.environment == "development"
              then map (name: { addrType = "addr"; addr = nodeNameToPublicIP name; })
