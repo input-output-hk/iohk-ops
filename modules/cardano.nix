@@ -61,17 +61,8 @@ globals: imports: params:
     init_config:
 
     instances:
-    '' +
-    (if params.typeIsExplorer
-    then ''
-    - name: cardano-explorer
-      search_string: ['cardano-explorer']
-      ''
-    else ''
-    - name: cardano-node-simple
-      search_string: ['cardano-node-simple']
-      '') + ''
-    # nix string indentation hack (see DEVOPS-341)
+    - name:            ${if params.typeIsExplorer then "cardano-explorer" else "cardano-node-simple"}
+      search_string: ['${if params.typeIsExplorer then "cardano-explorer" else "cardano-node-simple"}']
       exact_match: True
       thresholds:
         critical: [1, 1]
