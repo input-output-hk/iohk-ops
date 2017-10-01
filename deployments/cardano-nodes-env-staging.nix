@@ -7,7 +7,7 @@ let nodeMap = globals.nodeMap; in
 {
   network.description = "Cardano Staging";
 
-  resources = { config }: {
+  resources = {
     elasticIPs = nodesElasticIPs nodeMap;
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       cpu = mkMonitor (cpu_monitor // {
