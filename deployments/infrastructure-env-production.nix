@@ -13,7 +13,7 @@ in {
       ./../modules/datadog.nix
     ];
 
-    services.dd-agent.tags = ["env:production", "depl:${config.deployment.name}"];
+    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.hydra-ip;
 
@@ -27,7 +27,7 @@ in {
       ./../modules/papertrail.nix
     ];
 
-    services.dd-agent.tags = ["env:production", "depl:${config.deployment.name}"];
+    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
 
     deployment.keys.tarsnap = {
       keyFile = ./../static/tarsnap-cardano-deployer.secret;
