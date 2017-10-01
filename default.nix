@@ -5,6 +5,8 @@ in
 , config ? {}
 , pkgs ? (import (localLib.fetchNixPkgs) { inherit system config; })
 , compiler ? pkgs.haskell.packages.ghc802
+, enableDebugging ? false
+, enableProfiling ? false
 }:
 
 with pkgs.lib;
@@ -17,8 +19,9 @@ let
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
   cardano-sl-pkgs = import (pkgs.fetchgit cardano-sl-src) {
-                      gitrev = cardano-sl-src.rev;
-                    };
+    gitrev = cardano-sl-src.rev;
+    inherit enableDebugging enableProfiling;
+  };
 in {
   nixops = 
     let
