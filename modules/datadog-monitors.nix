@@ -59,7 +59,7 @@ rec {
   disk_monitor = {
     name = "High disk usage";
     type = "metric alert";
-    query = config: "max(last_5m):avg:system.disk.in_use{env:${config.deployment.name}} by {host} > 0.9";
+    query = config: "max(last_5m):avg:system.disk.in_use{env:${config.deployment.name}} by {host,device} > 0.9";
     monitorOptions.thresholds = {
       warning = "0.8";
       critical = "0.9";
