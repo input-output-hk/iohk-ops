@@ -169,16 +169,17 @@ in {
 
     # Workaround for CSL-1320
     systemd.services.cardano-restart = let
-      getDailyTime = nodeIndex: let
-          # how many minutes between each node restarting
-          minute = mod (nodeIndex * 4) 60;
-        # Reboot cardano-node every 6h, offset by node id (in ${interval} minute intervals)
-        in "0/6:${toString minute}";
+      # how many minutes between nodes restarting
+      nodeMinute = mod (cfg.nodeIndex * 4) 60;
     in {
       script = ''
         /run/current-system/sw/bin/systemctl restart cardano-node
       '';
-      startAt = getDailyTime cfg.nodeIndex;
+      # Reboot cardano-node every 36h (except Mon->Tue gap which is 24h)
+      startAt = [
+        "Tue,Fri,Mon 13:${toString nodeMinute}"
+        "Thu,Sun     01:${toString nodeMinute}"
+      ];
     };
 
     systemd.services.cardano-node = {
