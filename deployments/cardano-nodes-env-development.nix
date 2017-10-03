@@ -6,6 +6,7 @@
 // {
   network.description = "Cardano Development";
 
+  resources.elasticIPs = nodesElasticIPs globals.nodeMap;
   resources.ec2SecurityGroups =
     listToAttrs (flip map globals.orgXRegions
                  ({ org, region }:

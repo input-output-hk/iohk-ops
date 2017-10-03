@@ -5,7 +5,8 @@ with import ./../lib.nix;
   config = {
 
     global = {
-      allocateElasticIP            = false;
+      allocateElasticIP            = true;
+      dnsHostname                  = name;
       dnsDomainname                = "awstest2.iohkdev.io";
       omitDetailedSecurityGroups   = true;
     };
