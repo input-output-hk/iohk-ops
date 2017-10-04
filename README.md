@@ -2,7 +2,7 @@ Collection of tools to deploy IOHK infrastructure.
 
 ### File structure
 
-- `deployments` - includes all NixOps deployments controlled via `.hs` scripts
+- `deployments` - includes all NixOps deployments inputs controlled via `.hs` scripts
 - `modules` - NixOS modules
 - `lib.nix` - wraps upstream `<nixpkgs/lib.nix>` with our common functions
 - `scripts` - has bash scripts not converted to Haskell/Turtle into Cardano.hs yet
@@ -25,11 +25,17 @@ resources that are only needed in all of deployments are provisioned.
 
 Per each set of machines (which can be combined or used standalone in a deployment) there are files:
 
-- `<{purpose}>.nix` set of "logical" machines
-- `<{purpose}-target-{target}.nix` set of physical machines for given target (aws, ...)
-- `<{purpose}-env-{environment}.nix` set of environment specific overrides (currently implies aws target)
+- `{purpose}.nix` set of "logical" machines
+- `{purpose}-target-{target}.nix` set of physical machines for given target (aws, ...)
+- `{purpose}-env-{environment}.nix` set of environment specific overrides (currently implies aws target)
 
-[Explanation about logical vs phystical can be found in Nixops manual](https://nixos.org/nixops/manual/#chap-introduction)
+[Explanation about logical vs physical can be found in Nixops manual](https://nixos.org/nixops/manual/#chap-introduction)
+
+Example for deploying cardano nodes in production:
+
+- cardano-nodes.nix
+- cardano-nodes-target-aws.nix
+- cardano-nodes-env-production.nix
 
 
 ### Getting SSH access
