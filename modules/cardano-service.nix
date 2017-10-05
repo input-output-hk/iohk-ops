@@ -6,7 +6,7 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node";
-  cardano = (import ./../default.nix {}).cardano-sl-static;
+  cardano = (import ./../default.nix { enableProfiling = cfg.enableProfiling; }).cardano-sl-static;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
@@ -47,6 +47,7 @@ let
     "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
+    (optionalString cfg.enableProfiling "+RTS -p -RTS")
   ];
 in {
   options = {
@@ -57,6 +58,7 @@ in {
 
       enableP2P = mkOption { type = types.bool; default = true; };
       supporter = mkOption { type = types.bool; default = false; };
+      enableProfiling = mkOption { type = types.bool; default = false; };
       productionMode = mkOption {
         type = types.bool;
         default = true;
