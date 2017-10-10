@@ -18,7 +18,7 @@ module NixOps where
 import           Control.Arrow                    ((***))
 import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
-import           Control.Monad                    (forM_)
+import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
 import qualified Data.Aeson.Types              as AE
@@ -425,10 +425,11 @@ readTopology file = do
     Right (topology :: Topology) -> pure topology
     Left err -> errorT $ format ("Failed to parse topology file: "%fp%": "%w) file err
 
-data SimpleTopo
-  =  SimpleTopo (Map.Map NodeName SimpleNode)
+newtype SimpleTopo
+  =  SimpleTopo { fromSimpleTopo :: (Map.Map NodeName SimpleNode) }
   deriving (Generic, Show)
 instance ToJSON SimpleTopo
+
 data SimpleNode
   =  SimpleNode
      { snType     :: NodeType
@@ -453,6 +454,7 @@ instance ToJSON SimpleNode where-- toJSON = jsonLowerStrip 2
    , "peers"       .= snInPeers
    , "kademlia"    .= snKademlia
    , "public"      .= snPublic ]
+
 instance ToJSON NodeRegion
 instance ToJSON NodeName
 deriving instance Generic NodeName
@@ -463,8 +465,8 @@ instance ToJSON NodeType
 topoNodes :: SimpleTopo -> [NodeName]
 topoNodes (SimpleTopo cmap) = Map.keys cmap
 
-topoNCores :: SimpleTopo -> Int
-topoNCores (SimpleTopo cmap) = Map.size $ flip Map.filter cmap ((== NodeCore) . snType)
+topoCores :: SimpleTopo -> [NodeName]
+topoCores = (fst <$>) . filter ((== NodeCore) . snType . snd) . Map.toList . fromSimpleTopo
 
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
@@ -817,7 +819,7 @@ modify o@Options{..} c@NixopsConfig{..} = do
   unless preExisting $
     die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
   simpleTopo <- summariseTopology <$> readTopology cTopology
-  liftIO . writeTextFile simpleTopoFile . T.pack . LBU.toString $ encodePretty simpleTopo
+  liftIO . writeTextFile simpleTopoFile . T.pack . LBU.toString $ encodePretty (fromSimpleTopo simpleTopo)
   when (toBool oDebug) $ dumpTopologyNix c
 
 setenv :: Options -> EnvVar -> Text -> IO ()
@@ -883,11 +885,6 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
     ++ nixopsMaybeLimitNodes o
   echo "Done."
 
-deployValidate :: Options -> NixopsConfig -> RebuildExplorer -> IO ()
-deployValidate o c _rebuildExplorerFrontend = do
-  deploy o c DryRun NoBuildOnly DontPassCheck NoExplorerRebuild  Nothing
-  -- deploy o c False True  False rebuildExplorerFrontend Nothing
-
 destroy :: Options -> NixopsConfig -> IO ()
 destroy o c@NixopsConfig{..} = do
   printf ("Destroying cluster "%s%"\n") $ fromNixopsDepl cName
@@ -902,12 +899,38 @@ delete o c@NixopsConfig{..} = do
     $ nixopsMaybeLimitNodes o
   echo "Done."
 
+nodeDestroyElasticIP :: Options -> NixopsConfig -> NodeName -> IO ()
+nodeDestroyElasticIP o c name =
+  let nodeElasticIPResource :: NodeName -> Text
+      nodeElasticIPResource = (<> "-ip") . fromNodeName
+  in nixops (o { oConfirm = Confirmed }) c "destroy" ["--include", Arg $ nodeElasticIPResource name]
+
+
+-- * Higher-level (deploy-based) scenarios
+--
+defaultDeploy :: Options -> NixopsConfig -> IO ()
+defaultDeploy o c =
+  deploy o c NoDryRun NoBuildOnly DontPassCheck RebuildExplorer (Just defaultHold)
+
+deployValidate :: Options -> NixopsConfig -> RebuildExplorer -> IO ()
+deployValidate o c _rebuildExplorerFrontend = do
+  deploy o c DryRun NoBuildOnly DontPassCheck NoExplorerRebuild  Nothing
+
 fromscratch :: Options -> NixopsConfig -> IO ()
 fromscratch o c = do
   destroy o c
   delete o c
   create o c
-  deploy o c NoDryRun NoBuildOnly DontPassCheck RebuildExplorer (Just defaultHold)
+  defaultDeploy o c
+
+-- | Destroy elastic IPs corresponding to the nodes listed and reprovision cluster.
+reallocateElasticIPs :: Options -> NixopsConfig -> [NodeName] -> IO ()
+reallocateElasticIPs o c@NixopsConfig{..} nodes = do
+  mapM_ (nodeDestroyElasticIP o c) nodes
+  defaultDeploy o c
+
+reallocateCoreIPs :: Options -> NixopsConfig -> IO ()
+reallocateCoreIPs o c = reallocateElasticIPs o c (topoCores $ topology c)
 
 
 -- * Building
@@ -970,7 +993,7 @@ generateOrInsertGenesis o NixopsConfig{..} cardanoBranch preGenesis = do
       genSuffix        = "tn"
       genesisName'     = "genesis-" <> genSuffix :: Text
       genesisTarball   = Path.fromText genesisName' <.> "tgz"
-      (,) genM genN    = (,) (topoNCores topology) 1200
+      (,) genM genN    = (,) (length . topoCores $ topology) 1200
       genFiles         = zip [ "genesis-core.bin"
                              , "genesis-godtossing.bin"
                              , "genesisCreation.log" ]
@@ -1061,7 +1084,7 @@ deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGen
       _                    -> pure ()
     (genesisName,
      genesisPath) <- generateOrInsertGenesis o c cardanoBranchToDrive preGenesis
-    let richKeys = topoNCores topology
+    let richKeys = length . topoCores $ topology
     printf ("Updating deployer genesis: "%s%"\n") deploymentSource
     echo "  -- removing old genesis"
     cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'rm -rf ./genesis-tn-*'")]
