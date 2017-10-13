@@ -316,7 +316,6 @@ data EnvSettings =
   { envDeployerUser      :: Username
   , envDefaultConfigurationKey :: ConfigurationKey
   , envDefaultConfig     :: FilePath
-  , envDefaultGenesis    :: Maybe FilePath
   , envDefaultTopology   :: FilePath
   , envDeploymentFiles   :: [FileSpec]
   }
@@ -336,7 +335,6 @@ envSettings env =
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "testnet_staging_full"
       , envDefaultConfig     = "staging-testnet.yaml"
-      , envDefaultGenesis    = Just "genesis-staging.json"
       , envDefaultTopology   = "topology-staging.yaml"
       , envDeploymentFiles   = [ (Every,          All, "deployments/security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
@@ -347,7 +345,6 @@ envSettings env =
       { envDeployerUser      = "live-production"
       , envDefaultConfigurationKey = "testnet_public_full"
       , envDefaultConfig     = "production-testnet.yaml"
-      , envDefaultGenesis    = Just "genesis-mainnet.json"
       , envDefaultTopology   = "topology-production.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
                                , (Explorer,       All, "deployments/security-groups.nix")
@@ -361,7 +358,6 @@ envSettings env =
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "devnet_shortep_full"
       , envDefaultConfig     = "config.yaml"
-      , envDefaultGenesis    = Nothing
       , envDefaultTopology   = "topology-development.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
@@ -474,10 +470,10 @@ summariseTopology x = errorT $ format ("Unsupported topology type: "%w) x
 
 -- | Dump intermediate core/relay info, as parametrised by the simplified topology file.
 dumpTopologyNix :: NixopsConfig -> IO ()
-dumpTopologyNix c@NixopsConfig{..} = sh $ do
+dumpTopologyNix NixopsConfig{..} = sh $ do
   let nodeSpecExpr prefix =
-        format ("with (import <nixpkgs> {}); "%s%" (import ./globals.nix { deployerIP = \"\"; environment = \""%s%"\"; genesis = "%s%"; topologyYaml = ./"%fp%"; systemStart = 0; "%s%" = \"-stub-\"; })")
-               prefix (lowerShowT cEnvironment) (nixValueStr $ mDeplArg c $ NixParam "genesis") cTopology (T.intercalate " = \"-stub-\"; " $ fromAccessKeyId <$> accessKeyChain)
+        format ("with (import <nixpkgs> {}); "%s%" (import ./globals.nix { deployerIP = \"\"; environment = \""%s%"\"; topologyYaml = ./"%fp%"; systemStart = 0; "%s%" = \"-stub-\"; })")
+               prefix (lowerShowT cEnvironment) cTopology (T.intercalate " = \"-stub-\"; " $ fromAccessKeyId <$> accessKeyChain)
       getNodeArgsAttr prefix attr = inproc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr prefix <> "." <> attr] empty
       liftNixList = inproc "sed" ["s/\" \"/\", \"/g"]
   (cores  :: [NodeName]) <- getNodeArgsAttr "map (x: x.name)" "cores"  & liftNixList <&> ((NodeName <$>) . readT . lineToText)
@@ -610,8 +606,8 @@ deploymentFiles cEnvironment cTarget cElements =
 
 type DeplArgs = Map.Map NixParam NixValue
 
-selectInitialConfigDeploymentArgs :: Options -> Maybe FilePath -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO DeplArgs
-selectInitialConfigDeploymentArgs _ mGenesis _ env delts (Elapsed systemStart) mConfigurationKey = do
+selectInitialConfigDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO DeplArgs
+selectInitialConfigDeploymentArgs _ _ env delts (Elapsed systemStart) mConfigurationKey = do
     let EnvSettings{..}   = envSettings env
         akidDependentArgs = [ ( NixParam $ fromAccessKeyId akid
                               , NixStr . fromNodeName $ selectDeployer env delts)
@@ -620,7 +616,6 @@ selectInitialConfigDeploymentArgs _ mGenesis _ env delts (Elapsed systemStart) m
     pure $ Map.fromList $
       akidDependentArgs
       <> [ ("systemStart",  NixInt $ fromIntegral systemStart)
-         , ("genesis",      fromMaybe NixNull $ NixFile <$> mGenesis)
          , ("configurationKey", NixStr $ fromConfigurationKey configurationKey) ]
 
 deplArg :: NixopsConfig -> NixParam -> NixValue -> NixValue
@@ -637,14 +632,14 @@ defaultDeplArgTo :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 defaultDeplArgTo p v c = setDeplArg p (deplArg c p v) c
 
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName            mNixops    mGenesis mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
   let EnvSettings{..} = envSettings                                            cEnvironment
       cNixops         = fromMaybe "nixops" mNixops
       cFiles          = deploymentFiles                                  cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                         mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
-  cDeplArgs    <- selectInitialConfigDeploymentArgs o mGenesis cTopology cEnvironment         cElements systemStart mConfigurationKey
+  cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
@@ -843,18 +838,6 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
     cFp <- writeConfig oConfigFile c'
     cmd o "git" (["add", format fp cFp])
     cmd o "git" ["commit", "-m", format ("Bump systemStart to "%s) timePretty]
-  let mGenesis = mDeplArg c $ NixParam "genesis"
-      configurationTmpl = "configuration.yaml.tmpl"
-  genesisHash <- case mGenesis of
-                   NixNull   -> pure "a000000000000000000000000000000000000000000000000000000000000000"
-                   NixFile f -> do
-                     let genesisTmpl = format (fp%".tmpl") f
-                     cmd o "cp"  ["-f", genesisTmpl,       format fp f]
-                     cmd o "sed" ["-i", format fp f,          "-e", format ("s/START_TIME_PLACEHOLDER/"%d%"/") (let Elapsed x = startE in x)]
-                     incmd o "cardano-sl/scripts/js/genesis-hash.js" [format fp f]
-                   x         -> errorT $ "'genesis' network argument must be either a NixFile or a NixNull (absent), was: " <> showT x
-  cmd o "cp"  ["-f", configurationTmpl, "configuration.yaml"]
-  cmd o "sed" ["-i", "configuration.yaml", "-e", format ("s/GENESIS_HASH_PLACEHOLDER/"%s%"/") (T.strip genesisHash)]
 
   modify o c'
 

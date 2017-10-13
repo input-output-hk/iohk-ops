@@ -8,8 +8,6 @@ args:
   EmurgoaccessKeyId:
     tag: NixStr
     contents: mainnet-iohk
-  genesis:
-    tag: NixNull
 topology: topology-mainnet-infra.yaml
 environment: Production
 nixpkgs: 31a956f18c9251064997085fd7732562b1854726
