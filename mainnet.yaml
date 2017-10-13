@@ -22,8 +22,8 @@ environment: Production
 topology: topology-production.yaml
 name: mainnet
 files:
-- keypairs.nix
-- security-groups.nix
+- deployments/keypairs.nix
+- deployments/security-groups.nix
 - deployments/cardano-nodes.nix
 - deployments/cardano-nodes-env-production.nix
 - deployments/cardano-explorer.nix
