@@ -20,7 +20,6 @@ import           Time.System
 import           NixOps
 import qualified NixOps                        as Ops
 import qualified CardanoCSL                    as Cardano
-import           Topology
 
 
 -- * Elementary parsers

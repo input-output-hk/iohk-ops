@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wall -Wno-orphans -Wno-missing-signatures -Wno-unticked-promoted-constructors -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wall -Wextra -Wno-orphans -Wno-missing-signatures -Wno-unticked-promoted-constructors -Wno-type-defaults #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -13,9 +13,111 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module NixOps where
+module NixOps (
+    nixops
+  , create
+  , modify
+  , deploy
+  , destroy
+  , delete
 
-import           Control.Arrow                    ((***))
+  , build
+  , runFakeKeys
+  , stop
+  , start
+  , fromscratch
+  , getJournals
+  , wipeJournals
+  , wipeNodeDBs
+  , startForeground
+
+  , runSetRev
+  , reallocateCoreIPs
+  , deployedCommit
+  , checkstatus
+  , parallelSSH
+  , NixOps.date
+
+  , awsPublicIPURL
+  , defaultEnvironment
+  , defaultNixpkgs
+  , defaultNode
+  , defaultNodePort
+  , defaultTarget
+  , nixpkgsNixosURL
+
+  , cmd, cmd', incmd
+  , errorT
+  , every
+  , jsonLowerStrip
+  , lowerShowT
+  , parallelIO
+  , showT
+
+  -- * Types
+  , Arg(..)
+  , Branch(..)
+  , Commit(..)
+  , ConfigurationKey(..)
+  , Confirmation(..)
+  , Deployment(..)
+  , EnvVar(..)
+  , Environment(..)
+  , envDefaultConfig
+  , envSettings
+  , Exec(..)
+  , NixopsCmd(..)
+  , NixopsConfig(..)
+  , NixopsDepl(..)
+  , NixSource(..)
+  , githubSource, gitSource, readSource
+  , NodeName(..)
+  , fromNodeName
+  , Options(..)
+  , Org(..)
+  , PortNo(..)
+  , Project(..)
+  , projectURL
+  , Region(..)
+  , Target(..)
+  , URL(..)
+  , Username(..)
+  , Zone(..)
+  
+  -- * Flags
+  , BuildOnly(..)
+  , DoCommit(..)
+  , DryRun(..)
+  , PassCheck(..)
+  , RebuildExplorer(..)
+  , enabled
+  , disabled
+  , opposite
+  , flag
+  , toBool
+
+  -- 
+  , parserBranch
+  , parserCommit
+  , parserNodeLimit
+  , parserOptions
+
+  , mkNewConfig
+  , readConfig
+  , writeConfig
+
+  -- * Legacy
+  , DeploymentInfo(..)
+  , getNodePublicIP
+  , getIP
+  , defLogs, profLogs
+  , info
+  , scpFromNode
+  , toNodesInfo
+  )
+where
+
+import           Control.Arrow                   ((***))
 import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
 import           Control.Monad                    (forM_, mapM_)
