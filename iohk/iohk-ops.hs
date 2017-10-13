@@ -107,8 +107,6 @@ data Command where
   Info                  :: Command
 
   -- * high-level scenarios
-  DeployFull            :: Branch -> Seconds -> NewGenesis -> Maybe Turtle.FilePath -> WipeNodeDBs -> RebuildExplorer -> Validate -> ResumeFailed -> Command
-  DeployFullDeployerPhase :: Seconds -> WipeNodeDBs -> RebuildExplorer -> Command
   FromScratch           :: Command
   ReallocateCoreIPs     :: Command
 
@@ -182,25 +180,7 @@ centralCommandParser =
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
    , ("reallocate-core-ips",    "Destroy elastic IPs corresponding to the nodes listed and redeploy cluster",
                                                                                                     pure ReallocateCoreIPs)
-   , ("info",                   "Invoke 'nixops info'",                                             pure Info)
-   , ("deploy-full",            "Perform a full remote deployment from the specified Cardano branch, optionally with genesis regeneration",
-                                DeployFull
-                                <$> parserBranch "'cardano-sl' branch to update & deploy"
-                                <*> (Seconds . (* 60) . fromIntegral
-                                      <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
-                                <*> flag NewGenesis "new-genesis"           'g' "Generate new genesis"
-                                <*> (optional
-                                     (optPath "premade-genesis"    'e' "Supply an externally pre-made genesis archive in 'standard' format"))
-                                <*> flag WipeNodeDBs       "wipe-node-dbs"         'w' "Wipe node databases"
-                                <*> flag NoExplorerRebuild "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
-                                <*> flag SkipValidation    "skip-local-validation" 's' "Skip local validation of the current iohk-ops checkout"
-                                <*> flag ResumeFailed      "resume"                'r' "Resume a full remote deployment that failed during on-deployer evaluation.  Pass all the same flags")
-   , ("deploy-full-deployer-phase", "On-deployer phase of 'deploy-full'",
-                                DeployFullDeployerPhase
-                                <$> (Seconds . (* 60) . fromIntegral
-                                      <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
-                                <*> flag WipeNodeDBs       "wipe-node-dbs"         'w' "Wipe node databases"
-                                <*> flag NoExplorerRebuild "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!")]
+   , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
 
    <|> subcommandGroup "Live cluster ops:"
    [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
@@ -280,8 +260,6 @@ runTop o@Options{..} args topcmd = do
             Delete                   -> Ops.delete                    o c
             Info                     -> Ops.nixops                    o c "info" []
             -- * High-level scenarios
-            DeployFull              br st genes preGen wipeDB noExRe skipV resume -> Ops.deployFull              o c br st genes preGen wipeDB noExRe skipV resume
-            DeployFullDeployerPhase    st              wipeDB noExRe              -> Ops.deployFullDeployerPhase o c    st              wipeDB noExRe
             FromScratch              -> Ops.fromscratch               o c
             ReallocateCoreIPs        -> Ops.reallocateCoreIPs         o c
             -- * live deployment ops
