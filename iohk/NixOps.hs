@@ -520,7 +520,7 @@ data SimpleNode
      , snKademlia :: RunKademlia
      , snPublic   :: Bool
      } deriving (Generic, Show)
-instance ToJSON SimpleNode where-- toJSON = jsonLowerStrip 2
+instance ToJSON SimpleNode where
   toJSON SimpleNode{..} = AE.object
    [ "type"        .= (lowerShowT snType & T.stripPrefix "node"
                         & fromMaybe (error "A NodeType constructor gone mad: doesn't start with 'Node'."))
@@ -642,9 +642,6 @@ parserOptions = Options
                 <*> flag NoComponentCheck "no-component-check" 'p' "Disable deployment/*.nix component check"
                 <*> (optional $ optPath "nixpkgs" 'i' "Set 'nixpkgs' revision")
 
-nixpkgsCommitPath :: Commit -> Text
-nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
-
 nixopsCmdOptions :: Options -> NixopsConfig -> [Text]
 nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--debug"   | oDebug   == Debug]   <>
@@ -722,14 +719,8 @@ deplArg :: NixopsConfig -> NixParam -> NixValue -> NixValue
 deplArg    NixopsConfig{..} k def = Map.lookup k cDeplArgs & fromMaybe def
   --(errorT $ format ("Deployment arguments don't hold a value for key '"%s%"'.") (showT k))
 
-mDeplArg :: NixopsConfig -> NixParam -> NixValue
-mDeplArg c p = deplArg c p NixNull
-
 setDeplArg :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 setDeplArg p v c@NixopsConfig{..} = c { cDeplArgs = Map.insert p v cDeplArgs }
-
-defaultDeplArgTo :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
-defaultDeplArgTo p v c = setDeplArg p (deplArg c p v) c
 
 -- | Interpret inputs into a NixopsConfig
 mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
@@ -819,9 +810,6 @@ cmd'  Options{..} bin args = do
 incmd Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
   inprocs bin args empty
-
-gitHEADCommit :: Options -> IO Commit
-gitHEADCommit o = Commit <$> incmd o "git" ["log", "-n1", "--pretty=format:%H"]
 
 
 -- * Invoking nixops
@@ -977,10 +965,6 @@ defaultDeploy :: Options -> NixopsConfig -> IO ()
 defaultDeploy o c =
   deploy o c NoDryRun NoBuildOnly DontPassCheck RebuildExplorer (Just defaultHold)
 
-deployValidate :: Options -> NixopsConfig -> RebuildExplorer -> IO ()
-deployValidate o c _rebuildExplorerFrontend = do
-  deploy o c DryRun NoBuildOnly DontPassCheck NoExplorerRebuild  Nothing
-
 fromscratch :: Options -> NixopsConfig -> IO ()
 fromscratch o c = do
   destroy o c
@@ -1034,23 +1018,6 @@ runFakeKeys = do
     (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
   echo "Minimum viable keyset complete."
 
-ensureCardanoBranchCheckout :: Options -> Branch -> FilePath -> IO Commit
-ensureCardanoBranchCheckout o branch dir = do
-  preExisting <- testdir dir
-  if preExisting
-  then do
-    cd dir
-    printf ("Updating local checkout of 'cardano-sl' to the tip of 'origin/"%s%"'..\n") (fromBranch branch)
-    cmd o "git" ["fetch", "origin"]
-    cmd o "git" ["checkout", "-B", fromBranch branch, "origin/" <> fromBranch branch]
-  else do
-    printf ("Cloning 'cardano-sl' branch "%s%"\n") (fromBranch branch)
-    cmd o "git" ["clone", "--branch", fromBranch branch, fromURL $ projectURL CardanoSL, "cardano-sl"]
-    cd dir
-  commit <- gitHEADCommit o
-  cd ".."
-  pure commit
-
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"
 deploymentBuildTarget x     = error $ "'deploymentBuildTarget' has no idea what to build for " <> show x
@@ -1100,10 +1067,6 @@ scpFromNode o c (fromNodeName -> node) from to = do
   case exitcode of
     ExitSuccess -> return ()
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
-
-sshForEach :: Options -> NixopsConfig -> [Text] -> IO ()
-sshForEach o c command =
-  nixops o c "ssh-for-each" $ Arg <$> "--": command
 
 deployedCommit :: Options -> NixopsConfig -> NodeName -> IO ()
 deployedCommit o c m = do
@@ -1260,5 +1223,7 @@ lowerShowT = T.toLower . T.pack . show
 errorT :: Text -> a
 errorT = error . T.unpack
 
+-- Currently unused, but that's mere episode of the used/unused/used/unused event train.
+-- Let's keep it, because it's too painful to reinvent every time we need it.
 jsonLowerStrip :: (Generic a, AE.GToJSON AE.Zero (Rep a)) => Int -> a -> AE.Value
 jsonLowerStrip n = AE.genericToJSON $ AE.defaultOptions { AE.fieldLabelModifier = map toLower . drop n }
