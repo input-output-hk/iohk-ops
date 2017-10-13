@@ -325,7 +325,7 @@ type FileSpec = (Deployment, Target, Text)
 
 envSettings :: HasCallStack => Environment -> EnvSettings
 envSettings env =
-  let deplAgnosticFiles      = [ (Every,          All, "keypairs.nix")
+  let deplAgnosticFiles      = [ (Every,          All, "deployments/keypairs.nix")
                                , (Explorer,       All, "deployments/cardano-explorer.nix")
                                , (ReportServer,   All, "deployments/report-server.nix")
                                , (Nodes,          All, "deployments/cardano-nodes.nix")
@@ -338,7 +338,7 @@ envSettings env =
       , envDefaultConfig     = "staging-testnet.yaml"
       , envDefaultGenesis    = Just "genesis-staging.json"
       , envDefaultTopology   = "topology-staging.yaml"
-      , envDeploymentFiles   = [ (Every,          All, "security-groups.nix")
+      , envDeploymentFiles   = [ (Every,          All, "deployments/security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-staging.nix")
                                , (ReportServer,   All, "deployments/report-server-env-staging.nix")
@@ -349,9 +349,9 @@ envSettings env =
       , envDefaultConfig     = "production-testnet.yaml"
       , envDefaultGenesis    = Just "genesis-mainnet.json"
       , envDefaultTopology   = "topology-production.yaml"
-      , envDeploymentFiles   = [ (Nodes,          All, "security-groups.nix")
-                               , (Explorer,       All, "security-groups.nix")
-                               , (ReportServer,   All, "security-groups.nix")
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
+                               , (Explorer,       All, "deployments/security-groups.nix")
+                               , (ReportServer,   All, "deployments/security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-production.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-production.nix")
                                , (ReportServer,   All, "deployments/report-server-env-production.nix")

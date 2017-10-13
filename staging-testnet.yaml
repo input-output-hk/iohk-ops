@@ -23,8 +23,8 @@ environment: Staging
 topology: topology-staging.yaml
 name: rc-staging
 files:
-- keypairs.nix
-- security-groups.nix
+- deployments/keypairs.nix
+- deployments/security-groups.nix
 - deployments/cardano-nodes.nix
 - deployments/cardano-nodes-env-staging.nix
 - deployments/cardano-explorer.nix

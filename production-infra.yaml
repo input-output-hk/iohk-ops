@@ -15,7 +15,7 @@ environment: Production
 nixpkgs: 31a956f18c9251064997085fd7732562b1854726
 name: iohk-infra
 files:
-- keypairs.nix
+- deployments/keypairs.nix
 - deployments/infrastructure.nix
 - deployments/infrastructure-env-production.nix
 - deployments/infrastructure-target-aws.nix

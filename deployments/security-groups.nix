@@ -6,7 +6,7 @@
 
 { globals, ... }:
 
-with import ./lib.nix;
+with import ../lib.nix;
 {
   resources.ec2SecurityGroups =
     let sgs               = flip map securityGroupNames
