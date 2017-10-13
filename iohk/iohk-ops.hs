@@ -92,7 +92,6 @@ data Command where
   FakeKeys              :: Command
 
   -- * building
-  Genesis               :: Branch -> Command
   GenerateIPDHTMappings :: Command
   Build                 :: Deployment -> Command
   AMI                   :: Command
@@ -150,10 +149,7 @@ centralCommandParser =
     ]
 
    <|> subcommandGroup "Build-related:"
-    [ ("genesis",               "initiate production of Genesis in cardano-sl/genesis subdir",
-                                Genesis
-                                <$> parserBranch "'cardano-sl' branch to update with the new genesis")
-    , ("generate-ipdht",        "Generate IP/DHT mappings for wallet use",                          pure GenerateIPDHTMappings)
+    [ ("generate-ipdht",        "Generate IP/DHT mappings for wallet use",                          pure GenerateIPDHTMappings)
     , ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
     , ("ami",                   "Build ami",                                                        pure AMI) ]
 
@@ -245,8 +241,6 @@ runTop o@Options{..} args topcmd = do
             -- * setup
             FakeKeys                 -> Ops.runFakeKeys
             -- * building
-            Genesis branch           -> void $
-                                        Ops.generateOrInsertGenesis   o c branch Nothing
             GenerateIPDHTMappings    -> void $
                                         Cardano.generateIPDHTMappings o c
             Build depl               -> Ops.build                     o c depl

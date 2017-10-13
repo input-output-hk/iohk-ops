@@ -53,7 +53,6 @@ import           Prelude                   hiding (FilePath)
 import           Safe                             (headMay)
 import qualified System.IO                     as Sys
 import qualified System.IO.Unsafe              as Sys
-import qualified System.Posix.User             as Sys
 import           Time.System
 import           Time.Types
 import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x)
@@ -163,7 +162,6 @@ data DoCommit         = DoCommit         | DontCommit         deriving (Bounded,
 data RebuildExplorer  = RebuildExplorer  | NoExplorerRebuild  deriving (Bounded, Eq, Ord, Show); instance Flag RebuildExplorer
 data BuildOnly        = BuildOnly        | NoBuildOnly        deriving (Bounded, Eq, Ord, Show); instance Flag BuildOnly
 data DryRun           = DryRun           | NoDryRun           deriving (Bounded, Eq, Ord, Show); instance Flag DryRun
-data NewGenesis       = NewGenesis       | NoNewGenesis       deriving (Bounded, Eq, Ord, Show); instance Flag NewGenesis
 data Validate         = Validate         | SkipValidation     deriving (Bounded, Eq, Ord, Show); instance Flag Validate
 data PassCheck        = PassCheck        | DontPassCheck      deriving (Bounded, Eq, Ord, Show); instance Flag PassCheck
 data WipeJournals     = WipeJournals     | KeepJournals       deriving (Bounded, Eq, Ord, Show); instance Flag WipeJournals
@@ -950,72 +948,6 @@ ensureCardanoBranchCheckout o branch dir = do
   commit <- gitHEADCommit o
   cd ".."
   pure commit
-
--- | Generate genesis driving the tip of specified 'cardano-sl' branch.
-generateOrInsertGenesis :: Options -> NixopsConfig -> Branch -> Maybe FilePath -> IO (Text, FilePath)
-generateOrInsertGenesis o NixopsConfig{..} cardanoBranch preGenesis = do
-  let cardanoSLDir     = "cardano-sl"
-      genSuffix        = "tn"
-      genesisName'     = "genesis-" <> genSuffix :: Text
-      genesisTarball   = Path.fromText genesisName' <.> "tgz"
-      (,) genM genN    = (,) (length . topoCores $ topology) 1200
-      genFiles         = zip [ "genesis-core.bin"
-                             , "genesis-godtossing.bin"
-                             , "genesisCreation.log" ]
-                         $   [ "core/genesis-core-"%s%".bin"
-                             , "godtossing/genesis-godtossing-"%s%".bin"
-                             , "genesis-info/"%s%".log" ]
-                         <&> flip format genSuffix
-  cardanoCommit <- ensureCardanoBranchCheckout o cardanoBranch cardanoSLDir
-  printf ("Generating genesis using cardano-sl branch '"%s%"' (commit "%s%")\n  M:"%d%"\n  N:"%d%"\n")
-    (fromBranch cardanoBranch) (fromCommit cardanoCommit) genM genN
-  (genesisName,
-   genesisPath,
-   genesisCommitMsg) <- do
-    case preGenesis of
-      Nothing -> do
-        echo "NEW genesis deployment requested"
-        cd cardanoSLDir
-        cmd o "rm" ["-rf", genesisName', format fp genesisTarball]
-        cmd o "scripts/generate/genesis.sh"
-          [ "--build-mode",        "nix"
-          , "--install-as-suffix",  genSuffix
-          , "--rich-keys",          showT genM
-          , "--poor-keys",          showT genN
-          , "--output-dir",         genesisName']
-        pure (genesisName', cardanoSLDir </> genesisTarball,
-              format ("Bump cardano: Regenerated genesis, M="%d%", N="%d%", cardano=") genM genN)
-      Just genf -> do
-        printf ("PREMADE genesis deployment requested: "%fp%"\n") genf
-        existsp <- testfile genf
-        unless existsp $
-          errorT $ format ("PREMADE genesis file missing: "%fp%"\n") genf
-        let stdGenesisName = dropExtension $ last $ splitDirectories genf
-        echo "Installing genesis.."
-        cmd o "rm" ["-rf", format ("./"%fp%"/"%s) cardanoSLDir genesisName', format fp genesisTarball]
-        cmd o "tar" ["xaf", format fp genf, "-C", format fp cardanoSLDir]
-        cd cardanoSLDir
-        forM_ genFiles $
-          \(from, to)-> cmd o "cp" ["-f", format fp $ stdGenesisName </> from, to]
-        pure $ (format fp stdGenesisName, genf,
-                format ("Bump cardano: Implanted genesis "%fp%", cardano=") stdGenesisName)
-
-  printf ("Genesis NAME: "%s%"\n")  genesisName
-  printf ("Genesis FILE: "%fp%"\n") genesisPath
-
-  cmd o "git" (["add"] <> (snd <$> genFiles))
-  cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
-  echo "Genesis generated and committed, bumping 'iohk-ops'"
-  cardanoGenesisCommit <- gitHEADCommit o
-  printf ("Committed new genesis as 'cardano-sl' commit "%s%", pushing to 'origin'\n") (fromCommit cardanoGenesisCommit)
-  cmd o "git" ["push", "origin"]
-  cd ".."
-
-  runSetRev o CardanoSL cardanoGenesisCommit (Just $ genesisCommitMsg <> (fromCommit cardanoCommit))
-  cmd o "git" ["push", "origin"]
-  echo "Don't forget to archive our new genesis:"
-  cmd o "ls" ["-l", format fp genesisPath]
-  pure (genesisName, genesisPath)
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"
