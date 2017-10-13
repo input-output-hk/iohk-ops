@@ -19,6 +19,16 @@ let nodeMap = globals.nodeMap; in
         };
       });
 
+      disk = mkMonitor (disk_monitor // {
+        message = pagerDutyPolicy.nonCritical;
+      });
+      ram = mkMonitor (ram_monitor // {
+        message = pagerDutyPolicy.nonCritical;
+      });
+      ntp = mkMonitor (ntp_monitor // {
+        message = pagerDutyPolicy.nonCritical;
+      });
+
       cardano_node_simple_process = mkMonitor (cardano_node_simple_process_monitor // {
         message = pagerDutyPolicy.nonCritical;
         monitorOptions.thresholds = {
@@ -27,6 +37,10 @@ let nodeMap = globals.nodeMap; in
           ok = 1;
         };
       });
+
+      chain_quality = mkMonitor chain_quality_monitor;
+      failed_cherish_loop = mkMonitor failed_cherish_loop_monitor;
+      mem_pool_size = mkMonitor mem_pool_size_monitor;
     });
   };
 }
