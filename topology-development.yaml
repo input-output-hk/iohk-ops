@@ -23,7 +23,7 @@ nodes:
   'd1':
     type: core
     region: eu-central-1
-    zone:   eu-central-11
+    zone:   eu-central-1a
     static-routes: [["a1","b1"], ["c1"]]
     host: d1.cardano
     port: 3000
