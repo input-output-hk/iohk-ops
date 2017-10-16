@@ -2,37 +2,37 @@
 # nix-repl lib.nix
 
 let
-  hostPkgs = import <nixpkgs> {};
-  lib = hostPkgs.lib;
+  # Allow overriding pinned nixpkgs for debugging purposes via iohkops_pkgs
+  fetchNixPkgs = let try = builtins.tryEval <iohkops_pkgs>;
+    in if try.success
+    then builtins.trace "using host <iohkops_pkgs>" try.value
+    else import ./fetch-nixpkgs.nix;
+
+  pkgs = import fetchNixPkgs {};
+  lib = pkgs.lib;
 in lib // (rec {
-  # Allows to also generate the key compared to upstream genAttrs
-  genAttrs' = names: fkey: fname:
-    lib.listToAttrs (map (n: lib.nameValuePair (fkey n) (fname n)) names);
+  ## nodeElasticIP :: Node -> EIP
+  nodeElasticIP = node:
+    { name = "${node.name}-ip";
+      value = { inherit (node) region accessKeyId; };
+    };
 
-  # Given a list of integers and a function,
-  # generate an attribute set with that many nodes and call the function with node index
-  genNodes = nodeLimit: ids: f:
-             genAttrs' (lib.flip builtins.filter ids
-                          (id: id < nodeLimit))
-                       (i: "node${toString i}") f;
+  centralRegion = "eu-central-1";
+  centralZone   = "eu-central-1b";
 
-  # TODO: sanity check there's no duplicate nodes for same index
-  # https://github.com/NixOS/nixops/blob/e2015bbfcbcf7594824755e39f838d7aab258b6e/nix/eval-machine-info.nix#L173
-  mergeNodes = mergeAttrs;
-  mergeAttrs = nodes: lib.foldAttrs (a: b: a) [] nodes;
+  ## nodesElasticIPs :: Map NodeName Node -> Map EIPName EIP
+  nodesElasticIPs = nodes: lib.flip lib.mapAttrs' nodes
+    (name: node: nodeElasticIP node);
 
-  mkNodes = nodes: config: lib.mapAttrs (name: value: config value.i value.region) nodes;
-  mkNodeIPs = nodes: accessKeyId: lib.mapAttrs' (name: value:
-      { name = "nodeip${toString value.i}";
-        value = { inherit (value) region; inherit accessKeyId;};
-      }
-    ) nodes;
+  resolveSGName = resources: name: resources.ec2SecurityGroups.${name};
 
-  # fetch nixpkgs and give the expected hash
-  fetchNixpkgsWithNixpkgs = nixpkgs: nixpkgs.fetchFromGitHub (builtins.fromJSON (builtins.readFile ./nixpkgs-src.json));
-  fetchNixPkgs = if builtins.getEnv "NIX_PATH_LOCKED" == "1"
-    then builtins.trace "using host nixpkgs" <nixpkgs>
-    else builtins.trace "fetching nixpkgs"   fetchNixpkgsWithNixpkgs hostPkgs;
+  orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
+
+  inherit fetchNixPkgs;
+
+  traceF   = f: x: builtins.trace                         (f x)  x;
+  traceSF  = f: x: builtins.trace (builtins.seq     (f x) (f x)) x;
+  traceDSF = f: x: builtins.trace (builtins.deepSeq (f x) (f x)) x;
 
   # Parse peers from a file
   #
@@ -50,27 +50,6 @@ in lib // (rec {
   # mod 11 10 == 1
   # mod 1 10 == 1
   mod = base: int: base - (int * (builtins.div base int));
-
-  cconf = import ./config.nix;
-
-  # Function to generate DHT key
-  genDhtKey = i: (builtins.fromJSON (builtins.readFile ./static/dht.json))."node${toString i}";
-
-  region = "eu-central-1";
-
-  # Given a region, returns it's keypair
-  # TODO: meaningful error if keypair for region doesn't exist
-  keypairFor = accessKeyId: region: lib.head (lib.attrNames (lib.filterAttrs (n: v: v.region == region) (ec2KeyPairs accessKeyId)));
-
-  ec2KeyPairs = accessKeyId: {
-    cardano-test-eu-central = { inherit accessKeyId; region = "eu-central-1"; };
-    cardano-test-eu-west-1 = { inherit accessKeyId; region = "eu-west-1"; };
-    cardano-test-eu-west-2 = { inherit accessKeyId; region = "eu-west-2"; };
-    cardano-test-ap-southeast-1 = { inherit accessKeyId; region = "ap-southeast-1"; };
-    cardano-test-ap-southeast-2 = { inherit accessKeyId; region = "ap-southeast-2"; };
-    cardano-test-ap-northeast-1 = { inherit accessKeyId; region = "ap-northeast-1"; };
-    cardano-test-ap-northeast-2 = { inherit accessKeyId; region = "ap-northeast-2"; };
-  };
 
   volhovmKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRMQ16PB/UvIEF+UIHfy66FNaBUWgviE2xuD5qoq/nXURBsHogGzv1ssdj1uaLdh7pZxmo/cRC+Y5f6dallIHHwdiKKOdRq1R/IWToMxnL/TTre+px6rxq21al9r4lvibelIU9vDn0R6OFZo+pRWyXUm33bQ4DVhwWiSls3Hw+9xRq4Pf2aWy//ey5CUTW+QkVdDIOFQG97kHDO3OdoNuaOMdeS+HBgH25bzSlcMw044T/NV9Cyi3y1eEBCoyqA9ba28GIl3vNADBdoQb5YYhBViFLaFsadzgWv5XWTpXV4Kwnq8ekmTcBkDzoTng/QOrDLsFMLo1nEMvhbFZopAfZ volhovm.cs@gmail.com";
   georgeeeKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCymYrIVeNUd9TUPc3cTdHIAatTg3qPbuTENNNHCKQyM4PPvWE+DzmyVDki07NpBk9Ivge3whklcTpRVTMXs7AFX3YIdIxpvc+XVgKhweqd8H0QZkC4/gsJNVTBuY1ZQ2Ldw/rRmbiA9lx/z3vtoI5p4oLSumP2qd5l/KwjDvj66X8K4KOofkFFEiPqBztQwt+A2Hh6XH5qeakQQm/TFeNL6SU0X0zKRdhjyzYAEa2Nt/Te1KK+Jkof7vZ2YnJ3jQFUhC/yRej4o3MPde0HoEP7L86rm9ORcSyQe4jZJ/d6qXMNFAG/7LfU+3LVJ+T584kHXBm5Jl5rOyX2MngNxLxP georgeee@georgeee-laptop";

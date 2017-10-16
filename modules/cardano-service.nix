@@ -1,31 +1,20 @@
-{ config, pkgs, lib, options, ... }:
-
 with (import ./../lib.nix);
 
+globals: params:
+{ config, pkgs, lib, options, ... }:
 let
   cfg = config.services.cardano-node;
   name = "cardano-node";
-  stateDir = "/var/lib/cardano-node/";
-  cardano = (import ./../default.nix { }).cardano-sl-static;
+  stateDir = "/var/lib/cardano-node";
+  cardano = (import ./../default.nix { enableProfiling = cfg.enableProfiling; }).cardano-sl-static;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
-  smartGenPeer =
-    if (smartGenIP != "")
-    then "--kademlia-peer ${smartGenIP}:24962"
-    else "";
-
-  # Given a list of dht/ip mappings, generate peers line
-  #
-  # > genPeers ["ip:port/dht" "ip:port/dht" ...]
-  # "--kademlia-peer ip:port/dht --peer ip:port/dht ..."
-  genPeers = peers: toString (map (p: "--kademlia-peer " + p) peers);
 
   command = toString [
     cfg.executable
     (optionalString (cfg.publicIP != null) "--address ${cfg.publicIP}:${toString cfg.port}")
     "--listen ${cfg.privateIP}:${toString cfg.port}"
-    "--kademlia-address ${cfg.privateIP}:${toString cfg.port}"
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
@@ -45,14 +34,20 @@ let
        else "--flat-distr \"${distributionParam}\""))
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
-    "--kademlia-id ${cfg.dhtKey}"
-    (optionalString cfg.productionMode "--keyfile ${stateDir}key${toString (cfg.nodeIndex + 1)}.sk")
-    (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
+    (optionalString (cfg.serveEkg)             "--ekg-server ${cfg.privateIP}:8080")
+    (optionalString (cfg.productionMode && params.name != "explorer")
+      "--keyfile ${stateDir}/key${toString cfg.nodeIndex}.sk")
+    (optionalString (cfg.productionMode && globals.systemStart != 0) "--system-start ${toString globals.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${./../static/csl-logging.yaml}"
     "--logs-prefix /var/lib/cardano-node"
+    "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
-    (genPeers cfg.initialKademliaPeers)
+    "--configuration-file ${cardano.src}/configuration.yaml"
+    "--configuration-key ${config.deployment.arguments.configurationKey}"
+    "--topology ${cfg.topologyYaml}"
+    "--node-id ${params.name}"
+    (optionalString cfg.enableProfiling "+RTS -p -RTS")
   ];
 in {
   options = {
@@ -61,47 +56,35 @@ in {
       port = mkOption { type = types.int; default = 3000; };
       systemStart = mkOption { type = types.int; default = 0; };
 
-      enableP2P = mkOption { type = types.bool; default = false; };
+      enableP2P = mkOption { type = types.bool; default = true; };
       supporter = mkOption { type = types.bool; default = false; };
-      dhtKey = mkOption {
-        type = types.str;
-        description = "base64-url string describing dht key";
-      };
+      enableProfiling = mkOption { type = types.bool; default = false; };
       productionMode = mkOption {
         type = types.bool;
-        default = false;
+        default = true;
       };
       saveCoreDumps = mkOption {
         type = types.bool;
-        default = false;
+        default = true;
         description = "automatically save coredumps when cardano-node segfaults";
       };
 
       executable = mkOption {
         type = types.str;
         description = "Executable to run as the daemon.";
-        default = "${cardano}/bin/cardano-node";
+        default = "${cardano}/bin/cardano-node-simple";
       };
       autoStart = mkOption { type = types.bool; default = true; };
-      initialKademliaPeers = mkOption {
-        type = types.nullOr (types.listOf types.str);
-        description = "A file with peer/dht mappings";
-        default = null;
-      };
 
-      genesisN = mkOption { type = types.int; };
-      slotDuration = mkOption { type = types.int; };
-      networkDiameter = mkOption { type = types.int; };
-      mpcRelayInterval = mkOption { type = types.int; };
-      statsdServer = mkOption {
-        type = types.nullOr types.str;
-        description = "IP:Port of the EKG telemetry sink";
-        default = null;
-      };
-
+      topologyYaml = mkOption { type = types.path; };
+      
+      genesisN = mkOption { type = types.int; default = 6; };
+      slotDuration = mkOption { type = types.int; default = 20; };
+      networkDiameter = mkOption { type = types.int; default = 15; };
+      mpcRelayInterval = mkOption { type = types.int; default = 45; };
       stats = mkOption { type = types.bool; default = false; };
       jsonLog = mkOption { type = types.bool; default = true; };
-      totalMoneyAmount = mkOption { type = types.int; default = 100000; };
+      totalMoneyAmount = mkOption { type = types.int; default = 60000000; };
       distribution = mkOption {
         type = types.bool;
         default = true;
@@ -117,14 +100,11 @@ in {
         default = false;
         description = "Enable rich-poor distr";
       };
-      hasExplorer = mkOption {
-        type = types.bool;
-        default = false;
-        description = "Does the node has explorer running?";
-      };
 
-      nodeIndex = mkOption { type = types.int; };
-      nodeName  = mkOption { type = types.str; };
+      nodeIndex  = mkOption { type = types.int; };
+      relayIndex = mkOption { type = types.int; };
+      nodeName   = mkOption { type = types.str; };
+      nodeType   = mkOption { type = types.enum [ "core" "relay" "other" ]; default = null; };
 
       publicIP = mkOption {
         type = types.nullOr types.str;
@@ -137,13 +117,33 @@ in {
         description = "Private IP to bind to";
         default = "0.0.0.0";
       };
+
+      neighbours = mkOption {
+        default = [];
+        type = types.listOf types.str;
+        description = ''List of name:ip pairs of neighbours.'';
+      };
+
+      statsdServer = mkOption {
+        type = types.nullOr types.str;
+        description = "IP:Port of the EKG telemetry sink";
+        default = null;
+      };
+
+      serveEkg = mkOption {
+        type = types.bool;
+        description = "Serve EKG web UI on port 8080";
+        default = false;
+      };
     };
   };
 
   config = mkIf cfg.enable {
+    services.cardano-node.serveEkg = config.global.enableEkgWeb;
+
     assertions = [
-    { assertion = cfg.initialKademliaPeers != null;
-      message = "services.cardano-node.initialKademliaPeers must be set, even if to an empty list (nodeIndex: ${toString cfg.nodeIndex})"; }
+    { assertion = cfg.nodeType != null;
+      message = "services.cardano-node.type must be set to one of: core relay other"; }
     ];
 
     users = {
@@ -160,10 +160,8 @@ in {
       };
     };
 
-    services.cardano-node.dhtKey = mkDefault (genDhtKey cfg.nodeIndex);
-
     networking.firewall = {
-      allowedTCPPorts = [ cfg.port ];
+      allowedTCPPorts = [ cfg.port ] ++ optionals cfg.serveEkg [ 8080 ];
 
       # TODO: securing this depends on CSLA-27
       # NOTE: this implicitly blocks DHCPCD, which uses port 68
@@ -172,16 +170,17 @@ in {
 
     # Workaround for CSL-1320
     systemd.services.cardano-restart = let
-      getDailyTime = nodeIndex: let
-          # how many minutes between each node restarting
-          minute = mod (nodeIndex * 4) 60;
-        in "0/2:${toString minute}";
+      # how many minutes between nodes restarting
+      nodeMinute = mod (cfg.nodeIndex * 4) 60;
     in {
       script = ''
         /run/current-system/sw/bin/systemctl restart cardano-node
       '';
-      # Reboot cardano-node every 4h, offset by node id (in ${interval} minute intervals)
-      startAt = getDailyTime cfg.nodeIndex;
+      # Reboot cardano-node every 36h (except Mon->Tue gap which is 24h)
+      startAt = [
+        "Tue,Fri,Mon 13:${toString nodeMinute}"
+        "Thu,Sun     01:${toString nodeMinute}"
+      ];
     };
 
     systemd.services.cardano-node = {
@@ -189,10 +188,10 @@ in {
       after         = [ "network.target" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       script = let
-        keyId = "key" + toString (cfg.nodeIndex + 1);
+        keyId = "key" + toString cfg.nodeIndex;
         key = keyId + ".sk";
       in ''
-        [ -f /run/keys/${keyId} ] && cp /run/keys/${keyId} ${stateDir}${key}
+        [ -f /run/keys/${keyId} ] && cp -f /run/keys/${keyId} ${stateDir}/${key}
         ${optionalString (cfg.saveCoreDumps) ''
           # only a process with non-zero coresize can coredump (the default is 0)
           ulimit -c unlimited

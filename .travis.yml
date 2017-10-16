@@ -1,39 +1,13 @@
 language: nix
 
 install:
-  - source scripts/set_nixpath.sh
   - cat /etc/nix/nix.conf || true > ~/nix.conf
   - echo "binary-caches = https://cache.nixos.org https://hydra.iohk.io" >> ~/nix.conf
   - echo "binary-cache-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" >> ~/nix.conf
   - export NIX_CONF_DIR=~
-  - nix-env -f '<nixpkgs>' -i -A nixopsUnstable -A git
-  - nix-env -iA iohk-ops       -f 'default.nix'
-  - touch static/datadog-{api,application}.secret
-  - echo "secret" > static/tarsnap-cardano-deployer.secret
-  - mkdir keys
-  - touch keys/key{0,1,2,3,4,5,6,7,8,9,10,11,12,13,41}.sk
 script:
-  - git --version
-  - ./scripts/find-all-revisions.sh
-  - nix-shell --run "./scripts/aws.hs --help"
-  - nixops --version
-  # check all scripts compile
-  - iohk-ops --help
-  # check all packages build
-  - nix-instantiate jobsets/cardano.nix --show-trace
-  # check deploy evaluations
-  - iohk-ops template --here --environment production --config 'csl-production.yaml'       'csl-production'       Nodes Explorer ReportServer
-  - iohk-ops template --here --environment staging    --config 'csl-staging.yaml'          'csl-staging'          Nodes Explorer ReportServer
-  - iohk-ops template --here                          --config 'csl.yaml'                  'csl'                  Nodes Explorer ReportServer
-  - iohk-ops template --here --environment staging    --config 'csl-explorer-staging.yaml' 'csl-explorer-staging'       Explorer
-  - iohk-ops template --here                          --config 'tw.yaml'                   'tw'          Timewarp
-  - iohk-ops template --here --environment production --config 'inf.yaml'                  'inf'         Infra
-  - iohk-ops                                --verbose --config 'csl-production.yaml'       do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'csl-staging.yaml'          do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'csl.yaml'                  do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'csl-explorer-staging.yaml' do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'tw.yaml'                   do create deploy --evaluate-only
-  - iohk-ops                                --verbose --config 'inf.yaml'                  do create deploy --evaluate-only
+  - travis_wait 30 sleep 1800 &
+  - ./scripts/travis.sh
 
 notifications:
   email: false

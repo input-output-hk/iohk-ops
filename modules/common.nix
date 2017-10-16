@@ -5,16 +5,12 @@ with (import ./../lib.nix);
 let
   iohk-pkgs = import ../default.nix {};
 in {
-  imports = [
-    ./cardano-node.nix
-  ];
-
   environment.systemPackages = with pkgs;
     # nixopsUnstable: wait for 1.5.1 release
-    [ git tmux vim sysstat nixopsUnstable lsof ncdu tree mosh tig
-      cabal2nix stack iptables graphviz iohk-pkgs.iohk-ops ];
+    [ git tmux vim sysstat iohk-pkgs.nixops lsof ncdu tree mosh tig
+      cabal2nix stack iptables graphviz tcpdump strace gdb binutils nix-repl ];
 
-  services.openssh.passwordAuthentication = true;
+  services.openssh.passwordAuthentication = false;
   services.openssh.enable = true;
 
   services.ntp.enable = true;
@@ -24,7 +20,11 @@ in {
 
   environment.variables.TERM = "xterm-256color";
 
-  systemd.coredump.enable = config.services.cardano-node.saveCoreDumps;
+  systemd.coredump = {
+    enable = hasAttr "cardano-node" config.services &&
+        config.services.cardano-node.saveCoreDumps;
+    extraConfig = "ExternalSizeMax=${toString (8 * 1024 * 1024 * 1024)}";
+  };
 
   services.cron.enable = true;
   #services.cron.systemCronJobs = [
@@ -52,10 +52,8 @@ in {
     binaryCaches = trustedBinaryCaches;
     binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
   };
-  system.extraSystemBuilderCmds = let
-    setNixpkgs = fetchNixpkgsWithNixpkgs pkgs;
-  in ''
-    ln -sv ${setNixpkgs} $out/nixpkgs
+  system.extraSystemBuilderCmds = ''
+    ln -sv ${fetchNixPkgs} $out/nixpkgs
   '';
 
   # Mosh

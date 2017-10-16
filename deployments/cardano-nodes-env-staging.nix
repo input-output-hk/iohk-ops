@@ -1,23 +1,35 @@
-{ accessKeyId, nodeLimit, ... }:
+{ globals, ... }: with (import ./../lib.nix);
+let nodeMap = globals.nodeMap; in
 
-with (import ./../lib.nix);
-let
-  nodes = import ./cardano-nodes-config.nix { inherit nodeLimit; };
-  nodeStagConf = import ./../modules/cardano-node-staging.nix;
-in {
+
+(flip mapAttrs nodeMap (name: import ./../modules/cardano-staging.nix))
+//
+{
+  network.description = "Cardano Staging";
+
   resources = {
-    elasticIPs = mkNodeIPs nodes accessKeyId;
+    elasticIPs = nodesElasticIPs nodeMap;
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       cpu = mkMonitor (cpu_monitor // {
         message = pagerDutyPolicy.nonCritical;
-        query = config: "avg(last_5m):avg:system.load.norm.1{env:${config.deployment.name}} by {host} > 0.99";
+        query = config: "avg(last_5m):avg:system.load.norm.1{env:staging,depl:${config.deployment.name}} by {host} > 0.99";
         monitorOptions.thresholds = {
           warning = "0.98";
           critical = "0.99";
         };
       });
 
-      cardano_node_process = mkMonitor (cardano_node_process_monitor // {
+      disk = mkMonitor (disk_monitor // {
+        message = pagerDutyPolicy.nonCritical;
+      });
+      ram = mkMonitor (ram_monitor // {
+        message = pagerDutyPolicy.nonCritical;
+      });
+      ntp = mkMonitor (ntp_monitor // {
+        message = pagerDutyPolicy.nonCritical;
+      });
+
+      cardano_node_simple_process = mkMonitor (cardano_node_simple_process_monitor // {
         message = pagerDutyPolicy.nonCritical;
         monitorOptions.thresholds = {
           warning = 3;
@@ -25,6 +37,10 @@ in {
           ok = 1;
         };
       });
+
+      chain_quality = mkMonitor chain_quality_monitor;
+      failed_cherish_loop = mkMonitor failed_cherish_loop_monitor;
+      mem_pool_size = mkMonitor mem_pool_size_monitor;
     });
   };
-} // (mkNodes nodes (i: r: nodeStagConf))
+}

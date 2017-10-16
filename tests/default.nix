@@ -11,6 +11,6 @@ let
   callTest = fn: args: forAllSystems (system: hydraJob (importTest fn args system));
 in rec {
   # TODO: tests of images
-  simpleNode = callTest ./simple-node.nix {};
-  simpleNodeNixOps = callTest ./simple-node-nixops.nix {};
+  # simpleNode = callTest ./simple-node.nix {};
+  # simpleNodeNixOps = callTest ./simple-node-nixops.nix {};
 }

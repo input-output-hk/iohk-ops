@@ -1,26 +1,36 @@
 args:
-  nodeLimit:
+  configurationKey:
+    tag: NixStr
+    contents: mainnet_dryrun_full
+  EmurgoaccessKeyId:
+    tag: NixStr
+    contents: fifth-party
+  systemStart:
     tag: NixInt
-    contents: 14
-  accessKeyId:
+    contents: 1506450213
+  CFaccessKeyId:
+    tag: NixStr
+    contents: third-party
+  IOHKaccessKeyId:
     tag: NixStr
     contents: iohk
+gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
+  --here staging nodes reportserver explorer
 environment: Staging
-nixpkgs: 9b948ea439ddbaa26740ce35543e7e35d2aa6d18
-name: staging
+topology: topology-staging.yaml
+name: rc-staging
 files:
 - deployments/keypairs.nix
+- deployments/security-groups.nix
 - deployments/cardano-nodes.nix
 - deployments/cardano-nodes-env-staging.nix
-- deployments/cardano-nodes-target-aws.nix
 - deployments/cardano-explorer.nix
 - deployments/cardano-explorer-env-staging.nix
-- deployments/cardano-explorer-target-aws.nix
 - deployments/report-server.nix
 - deployments/report-server-env-staging.nix
-- deployments/report-server-target-aws.nix
 elements:
 - Nodes
 - Explorer
 - ReportServer
+nixops: /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
 target: AWS

@@ -1,7 +1,9 @@
-{ accessKeyId, ... }:
+{ IOHKaccessKeyId, ... }:
 
 with (import ./../lib.nix);
-{
+let region = "eu-central-1";
+    accessKeyId = IOHKaccessKeyId;
+in {
   network.description = "IOHK infrastructure production";
 
   hydra = { config, pkgs, resources, ... }: {
@@ -11,36 +13,38 @@ with (import ./../lib.nix);
       ./../modules/datadog.nix
     ];
 
-    services.dd-agent.tags = ["env:production"];
+    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
 
-    deployment.ec2 = {
-      elasticIPv4 = resources.elasticIPs.hydra-ip;
-    };
+    deployment.ec2.elasticIPv4 = resources.elasticIPs.hydra-ip;
+
+    deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
+    deployment.route53.hostName = "hydra.aws.iohkdev.io";
   };
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ./../modules/common.nix
-      ./../modules/amazon-base.nix
       ./../modules/datadog.nix
       ./../modules/papertrail.nix
     ];
 
-    services.dd-agent.tags = ["env:production"];
+    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
 
-    deployment.ec2 = {
-      elasticIPv4 = resources.elasticIPs.cardanod-ip;
+    deployment.keys.tarsnap = {
+      keyFile = ./../static/tarsnap-cardano-deployer.secret;
+      destDir = "/var/lib/keys";
     };
+
+    deployment.ec2.elasticIPv4 = resources.elasticIPs.cardanod-ip;
   };
 
   resources = {
-    elasticIPs = {
-      hydra-ip = { inherit region accessKeyId; };
-      cardanod-ip = { inherit region accessKeyId; };
-    };
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       disk = mkMonitor disk_monitor;
       ntp = mkMonitor ntp_monitor;
     });
+    elasticIPs = {
+      hydra-ip    = { inherit region accessKeyId; };
+      cardanod-ip = { inherit region accessKeyId; };
+    };
   };
 }

@@ -1,19 +1,20 @@
-{ accessKeyId, ... }:
+{ globals, ... }: with (import ./../lib.nix);
+let nodeMap = { inherit (globals.fullMap) explorer; }; in
 
-with (import ./../lib.nix);
 
+(flip mapAttrs nodeMap (name: import ./../modules/cardano-production.nix))
+//
 {
-  sl-explorer = { config, ... }: {
-    imports = [ ./../modules/cardano-node-prod.nix ];
-
-    deployment.route53 = {
-      hostName = mkForce "cardano-explorer.aws.iohk.io";
-    };
-  };
-
   resources = {
-    elasticIPs = {
-      nodeip40 = { inherit region accessKeyId; };
-    };
+    elasticIPs = nodesElasticIPs nodeMap;
+    datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
+      cardano_explorer_process = mkMonitor (cardano_explorer_process_monitor // {
+        monitorOptions.thresholds = {
+          warning = 3;
+          critical = 4;
+          ok = 1;
+        };
+      });
+    });
   };
 }

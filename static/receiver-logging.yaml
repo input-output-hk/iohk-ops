@@ -1,8 +1,0 @@
-severity: Warning
-receiver:
-    file: node.log
-    severity: Info
-    comm:
-        severity: Error
-
-

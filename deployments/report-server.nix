@@ -1,6 +1,7 @@
-{ ... }:
+{ globals, ... }: with (import ./../lib.nix);
+let nodeMap = { inherit (globals.fullMap) report-server; }; in
 
-with (import ./../lib.nix);
-{
-  report-server = import ./../modules/report-server.nix;
-}
+flip mapAttrs nodeMap
+(name: import ./../modules/report-server.nix
+       globals
+       [])

@@ -25,10 +25,13 @@ executable iohk-ops
   other-extensions:    DeriveGeneric, GeneralizedNewtypeDeriving, OverloadedStrings, RecordWildCards, TupleSections, ViewPatterns
 
   build-depends:       aeson >=0.11
+                     , aeson-pretty
                      , base >=4.9
                      , bytestring >=0.10
                      , cassava >=0.4
                      , containers >=0.5
+                     , dns
+                     , hourglass
                      , lens >=4.14
                      , lens-aeson >=1.0
                      , mtl >=2.2
@@ -37,6 +40,8 @@ executable iohk-ops
                      , system-filepath >=0.4
                      , text >=1.2
                      , turtle >=1.3
+                     , unix
+                     , unordered-containers
                      , utf8-string
                      , vector >=0.11
                      , yaml >=0.8

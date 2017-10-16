@@ -3,6 +3,7 @@
 with lib;
 
 let
+  iohk-pkgs = import ../default.nix {};
   commonBuildMachineOpt = {
     speedFactor = 1;
     sshKey = "/etc/nix/id_buildfarm";
@@ -29,6 +30,8 @@ in {
     gid = config.ids.gids.hydra;
     mode = "0440";
   };
+
+  environment.systemPackages = [ iohk-pkgs.iohk-ops ];
 
   nix = {
     distributedBuilds = true;

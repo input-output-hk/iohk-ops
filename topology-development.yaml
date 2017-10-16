@@ -1,0 +1,39 @@
+nodes:
+  'a1':
+    type: core
+    region: eu-central-1
+    zone:   eu-central-1b
+    static-routes: [["b1","c1"], ["r1"], ["d1"]]
+    host: a1.cardano
+    port: 3000
+  'b1':
+    type: core
+    region: eu-central-1
+    zone:   eu-central-1b
+    static-routes: [["c1","d1"], ["r2"], ["a1"]]
+    host: b1.cardano
+    port: 3000
+  'c1':
+    type: core
+    region: eu-central-1
+    zone:   eu-central-1a
+    static-routes: [["d1","a1"], ["r3"], ["b1"]]
+    host: c1.cardano
+    port: 3000
+  'd1':
+    type: core
+    region: eu-central-1
+    zone:   eu-central-11
+    static-routes: [["a1","b1"], ["c1"]]
+    host: d1.cardano
+    port: 3000
+
+  'r1':
+    type: relay
+    region: eu-central-1
+    zone:   eu-central-1b
+    static-routes: [["a1"], ["b1"], ["c1"]]
+    host: r1.cardano
+    port: 3000
+    kademlia: false
+    public: true

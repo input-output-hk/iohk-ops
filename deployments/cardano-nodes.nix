@@ -1,9 +1,7 @@
-{ nodeLimit, ... }:
+{ globals, ... }: with (import ./../lib.nix);
+let nodeMap = globals.nodeMap; in
 
-with (import ./../lib.nix);
-let
-  nodeConfig = import ./../modules/cardano-node-config.nix;
-  nodes = import ./cardano-nodes-config.nix { inherit nodeLimit; };
-in {
-  network.description = "Cardano SL";
-} // (mkNodes nodes nodeConfig)
+flip mapAttrs nodeMap
+(name: import ./../modules/cardano.nix
+       globals
+       [])

@@ -1,12 +1,12 @@
 { ... }:
 
 with (import ./../lib.nix);
-
 let
+  iohk-pkgs = import ../default.nix {};
   mkHydraBuildSlave = { config, pkgs, ... }: {
     imports = [
-      ./../modules/hydra-slave.nix
       ./../modules/common.nix
+      ./../modules/hydra-slave.nix
     ];
   };
 in {
@@ -17,9 +17,9 @@ in {
     # On Hydra: $ /run/current-system/sw/bin/hydra-create-user alice --full-name 'Alice Q. User' --email-address 'alice@example.org' --password foobar --role admin
 
     imports = [
+      ./../modules/common.nix
       ./../modules/hydra-slave.nix
       ./../modules/hydra-master.nix
-      ./../modules/common.nix
     ];
   };
 
@@ -31,6 +31,8 @@ in {
       ./../modules/common.nix
     ];
 
+    environment.systemPackages = [ iohk-pkgs.iohk-ops ];
+
     users = {
       users.staging = {
         description     = "cardano staging";
@@ -40,15 +42,6 @@ in {
         openssh.authorizedKeys.keys = devKeys;
       };
       groups.staging = {};
-
-      users.production = {
-        description     = "cardano production";
-        group           = "production";
-        createHome      = true;
-        isNormalUser = true;
-        openssh.authorizedKeys.keys = [];  # this account is obsolete
-      };
-      groups.production = {};
 
       users.live-production = {
         description     = "cardano live-production";

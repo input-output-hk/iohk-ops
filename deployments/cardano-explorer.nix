@@ -1,13 +1,7 @@
-{ ... }:
+{ globals, ... }: with (import ./../lib.nix);
+let nodeMap = { inherit (globals.fullMap) explorer; }; in
 
-with (import ./../lib.nix);
-{
-  network.description = "Cardano Explorer";
-
-  sl-explorer = {
-    imports = [
-      (import ./../modules/cardano-node-config.nix 40 "")
-      ./../modules/cardano-explorer.nix
-    ];
-  };
-}
+flip mapAttrs nodeMap
+(name: import ./../modules/cardano.nix
+       globals
+       [./../modules/cardano-explorer.nix])

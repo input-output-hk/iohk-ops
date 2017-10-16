@@ -1,0 +1,15 @@
+nodes:
+  'left':
+    type: core
+    region: eu-central-1
+    zone:   eu-central-1b
+    static-routes: [["right"]]
+    host: left.cardano
+    port: 3000
+  'right':
+    type: relay
+    region: ap-southeast-1
+    zone:   ap-southeast-1b
+    static-routes: [["left"]]
+    host: right.cardano
+    port: 3000
