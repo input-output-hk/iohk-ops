@@ -5,10 +5,8 @@ install:
   - echo "binary-caches = https://cache.nixos.org https://hydra.iohk.io" >> ~/nix.conf
   - echo "binary-cache-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" >> ~/nix.conf
   - export NIX_CONF_DIR=~
-  - nix-env -f '<nixpkgs>'   -iA git
 script:
-  - git --version
-  - ./scripts/find-all-revisions.sh
+  - travis_wait 30 sleep 1800 &
   - ./scripts/travis.sh
 
 notifications:

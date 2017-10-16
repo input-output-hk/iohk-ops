@@ -48,14 +48,15 @@ rec {
   mkMonitor = { name, type, query, message ? pagerDutyPolicy.normal, monitorOptions ? {} }:
     { config, ... }:
     baseMonitor // {
-      inherit name type message;
+      inherit type message;
+      name = "${config.deployment.name}: ${name}";
       query = query config;
       monitorOptions = builtins.toJSON (baseMonitor.monitorOptions // monitorOptions);
     };
 
   # Common monitors
   cpu_monitor = {
-    name = "${config.deployment.name}: High CPU usage";
+    name = "High CPU usage";
     type = "metric alert";
     query = config: "avg(last_5m):avg:system.load.norm.1{env:${config.deployment.arguments.environment},depl:${config.deployment.name},!host:iohk-infra.ec2.cardano-deployer,!host:iohk-infra.ec2.hydra} by {host} > 0.9";
     monitorOptions.thresholds = {
@@ -65,7 +66,7 @@ rec {
   };
 
   disk_monitor = {
-    name = "${config.deployment.name}: High disk usage";
+    name = "High disk usage";
     type = "metric alert";
     query = config: "max(last_5m):avg:system.disk.in_use{env:${config.deployment.arguments.environment},depl:${config.deployment.name},!host:mainnet.ec2.report-server} by {host,device} > 0.9";
     monitorOptions.thresholds = {
@@ -75,7 +76,7 @@ rec {
   };
 
   ram_monitor = {
-    name = "${config.deployment.name}: RAM is running low";
+    name = "RAM is running low";
     type = "metric alert";
     query = config: "avg(last_1m):avg:system.mem.pct_usable{env:${config.deployment.arguments.environment},depl:${config.deployment.name}} by {host} < 0.2";
     monitorOptions.thresholds = {
@@ -85,7 +86,7 @@ rec {
   };
 
   ntp_monitor = {
-    name = "${config.deployment.name}: Clock out of sync with NTP";
+    name = "Clock out of sync with NTP";
     type = "service check";
     query = config: "\"ntp.in_sync\".over(\"env:${config.deployment.arguments.environment},depl:${config.deployment.name}\").by(\"host\").last(2).count_by_status()";
     monitorOptions.thresholds = {
@@ -94,7 +95,7 @@ rec {
   };
 
   cardano_node_simple_process_monitor = {
-    name = "${config.deployment.name}: cardano-node-simple process is down";
+    name = "cardano-node-simple process is down";
     type = "service check";
     query = config: "\"process.up\".over(\"env:${config.deployment.arguments.environment},depl:${config.deployment.name}\",\"process:cardano-node-simple\").exclude(\"host:mainnet.ec2.explorer\").by(\"host\",\"process\").last(5).count_by_status()";
     monitorOptions.thresholds = {
@@ -105,7 +106,7 @@ rec {
   };
 
   cardano_explorer_process_monitor = {
-    name = "${config.deployment.name}: cardano-explorer process is down";
+    name = "cardano-explorer process is down";
     type = "service check";
     query = config: "\"process.up\".over(\"env:${config.deployment.arguments.environment},depl:${config.deployment.name}\",\"process:cardano-explorer\").by(\"host\",\"process\").last(6).count_by_status()";
     monitorOptions.thresholds = {
@@ -116,9 +117,9 @@ rec {
   };
 
   chain_quality_monitor = {
-    name = "${config.deployment.name}: Degraded Chain Quality over last 2160 blocks";
+    name = "Degraded Chain Quality over last 2160 blocks";
     type = "metric alert";
-    query = "max(last_1m):avg:cardano.chain_quality_last_k_2160_blocks{depl:${config.deployment.name}} by {host} < 97";
+    query = config: "max(last_1m):avg:cardano.chain_quality_last_k_2160_blocks{depl:${config.deployment.name}} by {host} < 97";
     monitorOptions = {
       notify_no_data = true;
       no_data_timeframe = 5;
@@ -130,9 +131,9 @@ rec {
   };
 
   failed_cherish_loop_monitor = {
-    name = "${config.deployment.name}: Failed Cherish Loop";
+    name = "Failed Cherish Loop";
     type = "query alert";
-    query = "max(last_1m):sum:cardano.queue.FailedCherishLoop{depl:${config.deployment.name}} by {host}.as_count() > 0";
+    query = config: "max(last_1m):sum:cardano.queue.FailedCherishLoop{depl:${config.deployment.name}} by {host}.as_count() > 0";
     message = "Looping indefinitely while trying to re-enqueue a message that failed to send.\n\nAs stated in [queue metrics](https://github.com/serokell/time-warp-nt/blob/master/QUEUE_METRICS.md), \"Any value above zero for this counter indicates queue misconfiguration.\"\n\n${pagerDutyPolicy.normal}";
     monitorOptions = {
       notify_no_data = true;
@@ -144,9 +145,9 @@ rec {
   };
 
   mem_pool_size_monitor = {
-    name = "${config.deployment.name}: MemPoolSize tx count is larger than expected";
+    name = "MemPoolSize tx count is larger than expected";
     type = "metric alert";
-    query = "max(last_5m):avg:cardano.MemPoolSize{depl:${config.deployment.name}} by {host} > 190";
+    query = config: "max(last_5m):avg:cardano.MemPoolSize{depl:${config.deployment.name}} by {host} > 190";
     message = "When a node's MemPoolSize grows larger than the system can handle, transactions will be dropped. The actual thresholds for that in mainnet are unknown, but [based on benchmarks done beforehand](https://input-output-rnd.slack.com/archives/C2VJ41WDP/p1506563332000201) transactions started getting dropped when the MemPoolSize was ~200 txs.\n\n${pagerDutyPolicy.normal}";
     monitorOptions = {
       notify_no_data = true;

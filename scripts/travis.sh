@@ -1,6 +1,8 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -xeu
+
+source ./scripts/set_nixpath.sh
 
 NIXOPS=$(nix-build -A nixops)/bin/nixops
 
@@ -88,3 +90,5 @@ ${IOHK_OPS}          template  --config 'test-infra.yaml'  --environment product
 ${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-infra.yaml'  create fake-keys deploy --dry-run
 banner 'Infra evaluated'
 fi
+
+./scripts/find-all-revisions.sh
