@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wall -Wno-orphans -Wno-missing-signatures -Wno-unticked-promoted-constructors -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wall -Wextra -Wno-orphans -Wno-missing-signatures -Wno-unticked-promoted-constructors -Wno-type-defaults #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -13,9 +13,113 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module NixOps where
+module NixOps (
+    nixops
+  , create
+  , modify
+  , deploy
+  , destroy
+  , delete
 
-import           Control.Arrow                    ((***))
+  , build
+  , buildAMI
+  , runFakeKeys
+  , stop
+  , start
+  , fromscratch
+  , dumpLogs
+  , getJournals
+  , wipeJournals
+  , wipeNodeDBs
+  , startForeground
+
+  , runSetRev
+  , reallocateCoreIPs
+  , deployedCommit
+  , checkstatus
+  , parallelSSH
+  , NixOps.date
+
+  , awsPublicIPURL
+  , defaultEnvironment
+  , defaultNixpkgs
+  , defaultNode
+  , defaultNodePort
+  , defaultTarget
+  , nixpkgsNixosURL
+
+  , cmd, cmd', incmd
+  , errorT
+  , every
+  , jsonLowerStrip
+  , lowerShowT
+  , parallelIO
+  , showT
+
+  -- * Types
+  , Arg(..)
+  , Branch(..)
+  , Commit(..)
+  , ConfigurationKey(..)
+  , Confirmation(..)
+  , Deployment(..)
+  , EnvVar(..)
+  , Environment(..)
+  , envDefaultConfig
+  , envSettings
+  , Exec(..)
+  , NixopsCmd(..)
+  , NixopsConfig(..)
+  , NixopsDepl(..)
+  , NixSource(..)
+  , githubSource, gitSource, readSource
+  , NodeName(..)
+  , fromNodeName
+  , Options(..)
+  , Org(..)
+  , PortNo(..)
+  , Project(..)
+  , projectURL
+  , Region(..)
+  , Target(..)
+  , URL(..)
+  , Username(..)
+  , Zone(..)
+  
+  -- * Flags
+  , BuildOnly(..)
+  , DoCommit(..)
+  , DryRun(..)
+  , PassCheck(..)
+  , RebuildExplorer(..)
+  , enabled
+  , disabled
+  , opposite
+  , flag
+  , toBool
+
+  -- 
+  , parserBranch
+  , parserCommit
+  , parserNodeLimit
+  , parserOptions
+
+  , mkNewConfig
+  , readConfig
+  , writeConfig
+
+  -- * Legacy
+  , DeploymentInfo(..)
+  , getNodePublicIP
+  , getIP
+  , defLogs, profLogs
+  , info
+  , scpFromNode
+  , toNodesInfo
+  )
+where
+
+import           Control.Arrow                   ((***))
 import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
 import           Control.Monad                    (forM_, mapM_)
@@ -53,7 +157,6 @@ import           Prelude                   hiding (FilePath)
 import           Safe                             (headMay)
 import qualified System.IO                     as Sys
 import qualified System.IO.Unsafe              as Sys
-import qualified System.Posix.User             as Sys
 import           Time.System
 import           Time.Types
 import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x)
@@ -163,7 +266,6 @@ data DoCommit         = DoCommit         | DontCommit         deriving (Bounded,
 data RebuildExplorer  = RebuildExplorer  | NoExplorerRebuild  deriving (Bounded, Eq, Ord, Show); instance Flag RebuildExplorer
 data BuildOnly        = BuildOnly        | NoBuildOnly        deriving (Bounded, Eq, Ord, Show); instance Flag BuildOnly
 data DryRun           = DryRun           | NoDryRun           deriving (Bounded, Eq, Ord, Show); instance Flag DryRun
-data NewGenesis       = NewGenesis       | NoNewGenesis       deriving (Bounded, Eq, Ord, Show); instance Flag NewGenesis
 data Validate         = Validate         | SkipValidation     deriving (Bounded, Eq, Ord, Show); instance Flag Validate
 data PassCheck        = PassCheck        | DontPassCheck      deriving (Bounded, Eq, Ord, Show); instance Flag PassCheck
 data WipeJournals     = WipeJournals     | KeepJournals       deriving (Bounded, Eq, Ord, Show); instance Flag WipeJournals
@@ -316,7 +418,6 @@ data EnvSettings =
   { envDeployerUser      :: Username
   , envDefaultConfigurationKey :: ConfigurationKey
   , envDefaultConfig     :: FilePath
-  , envDefaultGenesis    :: Maybe FilePath
   , envDefaultTopology   :: FilePath
   , envDeploymentFiles   :: [FileSpec]
   }
@@ -336,7 +437,6 @@ envSettings env =
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "testnet_staging_full"
       , envDefaultConfig     = "staging-testnet.yaml"
-      , envDefaultGenesis    = Just "genesis-staging.json"
       , envDefaultTopology   = "topology-staging.yaml"
       , envDeploymentFiles   = [ (Every,          All, "deployments/security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
@@ -347,7 +447,6 @@ envSettings env =
       { envDeployerUser      = "live-production"
       , envDefaultConfigurationKey = "testnet_public_full"
       , envDefaultConfig     = "production-testnet.yaml"
-      , envDefaultGenesis    = Just "genesis-mainnet.json"
       , envDefaultTopology   = "topology-production.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
                                , (Explorer,       All, "deployments/security-groups.nix")
@@ -361,7 +460,6 @@ envSettings env =
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "devnet_shortep_full"
       , envDefaultConfig     = "config.yaml"
-      , envDefaultGenesis    = Nothing
       , envDefaultTopology   = "topology-development.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
@@ -424,7 +522,7 @@ data SimpleNode
      , snKademlia :: RunKademlia
      , snPublic   :: Bool
      } deriving (Generic, Show)
-instance ToJSON SimpleNode where-- toJSON = jsonLowerStrip 2
+instance ToJSON SimpleNode where
   toJSON SimpleNode{..} = AE.object
    [ "type"        .= (lowerShowT snType & T.stripPrefix "node"
                         & fromMaybe (error "A NodeType constructor gone mad: doesn't start with 'Node'."))
@@ -474,10 +572,10 @@ summariseTopology x = errorT $ format ("Unsupported topology type: "%w) x
 
 -- | Dump intermediate core/relay info, as parametrised by the simplified topology file.
 dumpTopologyNix :: NixopsConfig -> IO ()
-dumpTopologyNix c@NixopsConfig{..} = sh $ do
+dumpTopologyNix NixopsConfig{..} = sh $ do
   let nodeSpecExpr prefix =
-        format ("with (import <nixpkgs> {}); "%s%" (import ./globals.nix { deployerIP = \"\"; environment = \""%s%"\"; genesis = "%s%"; topologyYaml = ./"%fp%"; systemStart = 0; "%s%" = \"-stub-\"; })")
-               prefix (lowerShowT cEnvironment) (nixValueStr $ mDeplArg c $ NixParam "genesis") cTopology (T.intercalate " = \"-stub-\"; " $ fromAccessKeyId <$> accessKeyChain)
+        format ("with (import <nixpkgs> {}); "%s%" (import ./globals.nix { deployerIP = \"\"; environment = \""%s%"\"; topologyYaml = ./"%fp%"; systemStart = 0; "%s%" = \"-stub-\"; })")
+               prefix (lowerShowT cEnvironment) cTopology (T.intercalate " = \"-stub-\"; " $ fromAccessKeyId <$> accessKeyChain)
       getNodeArgsAttr prefix attr = inproc "nix-instantiate" ["--strict", "--show-trace", "--eval" ,"-E", nodeSpecExpr prefix <> "." <> attr] empty
       liftNixList = inproc "sed" ["s/\" \"/\", \"/g"]
   (cores  :: [NodeName]) <- getNodeArgsAttr "map (x: x.name)" "cores"  & liftNixList <&> ((NodeName <$>) . readT . lineToText)
@@ -546,9 +644,6 @@ parserOptions = Options
                 <*> flag NoComponentCheck "no-component-check" 'p' "Disable deployment/*.nix component check"
                 <*> (optional $ optPath "nixpkgs" 'i' "Set 'nixpkgs' revision")
 
-nixpkgsCommitPath :: Commit -> Text
-nixpkgsCommitPath = ("nixpkgs=" <>) . fromURL . nixpkgsNixosURL
-
 nixopsCmdOptions :: Options -> NixopsConfig -> [Text]
 nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--debug"   | oDebug   == Debug]   <>
@@ -610,8 +705,8 @@ deploymentFiles cEnvironment cTarget cElements =
 
 type DeplArgs = Map.Map NixParam NixValue
 
-selectInitialConfigDeploymentArgs :: Options -> Maybe FilePath -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO DeplArgs
-selectInitialConfigDeploymentArgs _ mGenesis _ env delts (Elapsed systemStart) mConfigurationKey = do
+selectInitialConfigDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO DeplArgs
+selectInitialConfigDeploymentArgs _ _ env delts (Elapsed systemStart) mConfigurationKey = do
     let EnvSettings{..}   = envSettings env
         akidDependentArgs = [ ( NixParam $ fromAccessKeyId akid
                               , NixStr . fromNodeName $ selectDeployer env delts)
@@ -620,31 +715,24 @@ selectInitialConfigDeploymentArgs _ mGenesis _ env delts (Elapsed systemStart) m
     pure $ Map.fromList $
       akidDependentArgs
       <> [ ("systemStart",  NixInt $ fromIntegral systemStart)
-         , ("genesis",      fromMaybe NixNull $ NixFile <$> mGenesis)
          , ("configurationKey", NixStr $ fromConfigurationKey configurationKey) ]
 
 deplArg :: NixopsConfig -> NixParam -> NixValue -> NixValue
 deplArg    NixopsConfig{..} k def = Map.lookup k cDeplArgs & fromMaybe def
   --(errorT $ format ("Deployment arguments don't hold a value for key '"%s%"'.") (showT k))
 
-mDeplArg :: NixopsConfig -> NixParam -> NixValue
-mDeplArg c p = deplArg c p NixNull
-
 setDeplArg :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 setDeplArg p v c@NixopsConfig{..} = c { cDeplArgs = Map.insert p v cDeplArgs }
 
-defaultDeplArgTo :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
-defaultDeplArgTo p v c = setDeplArg p (deplArg c p v) c
-
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName            mNixops    mGenesis mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
   let EnvSettings{..} = envSettings                                            cEnvironment
       cNixops         = fromMaybe "nixops" mNixops
       cFiles          = deploymentFiles                                  cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                         mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
-  cDeplArgs    <- selectInitialConfigDeploymentArgs o mGenesis cTopology cEnvironment         cElements systemStart mConfigurationKey
+  cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
 
@@ -724,9 +812,6 @@ cmd'  Options{..} bin args = do
 incmd Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
   inprocs bin args empty
-
-gitHEADCommit :: Options -> IO Commit
-gitHEADCommit o = Commit <$> incmd o "git" ["log", "-n1", "--pretty=format:%H"]
 
 
 -- * Invoking nixops
@@ -843,18 +928,6 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
     cFp <- writeConfig oConfigFile c'
     cmd o "git" (["add", format fp cFp])
     cmd o "git" ["commit", "-m", format ("Bump systemStart to "%s) timePretty]
-  let mGenesis = mDeplArg c $ NixParam "genesis"
-      configurationTmpl = "configuration.yaml.tmpl"
-  genesisHash <- case mGenesis of
-                   NixNull   -> pure "a000000000000000000000000000000000000000000000000000000000000000"
-                   NixFile f -> do
-                     let genesisTmpl = format (fp%".tmpl") f
-                     cmd o "cp"  ["-f", genesisTmpl,       format fp f]
-                     cmd o "sed" ["-i", format fp f,          "-e", format ("s/START_TIME_PLACEHOLDER/"%d%"/") (let Elapsed x = startE in x)]
-                     incmd o "cardano-sl/scripts/js/genesis-hash.js" [format fp f]
-                   x         -> errorT $ "'genesis' network argument must be either a NixFile or a NixNull (absent), was: " <> showT x
-  cmd o "cp"  ["-f", configurationTmpl, "configuration.yaml"]
-  cmd o "sed" ["-i", "configuration.yaml", "-e", format ("s/GENESIS_HASH_PLACEHOLDER/"%s%"/") (T.strip genesisHash)]
 
   modify o c'
 
@@ -894,10 +967,6 @@ defaultDeploy :: Options -> NixopsConfig -> IO ()
 defaultDeploy o c =
   deploy o c NoDryRun NoBuildOnly DontPassCheck RebuildExplorer (Just defaultHold)
 
-deployValidate :: Options -> NixopsConfig -> RebuildExplorer -> IO ()
-deployValidate o c _rebuildExplorerFrontend = do
-  deploy o c DryRun NoBuildOnly DontPassCheck NoExplorerRebuild  Nothing
-
 fromscratch :: Options -> NixopsConfig -> IO ()
 fromscratch o c = do
   destroy o c
@@ -917,6 +986,35 @@ reallocateCoreIPs o c = reallocateElasticIPs o c (topoCores $ topology c)
 
 -- * Building
 --
+
+buildAMI :: Options -> NixopsConfig -> IO ()
+buildAMI o _ = do
+  cmd o "nix-build" ["jobsets/cardano.nix", "-A", "cardano-node-image", "-o", "image"]
+  cmd o "./scripts/create-amis.sh" []
+
+dumpLogs :: Options -> NixopsConfig -> Bool -> IO Text
+dumpLogs o c withProf = do
+    TIO.putStrLn $ "WithProf: " <> T.pack (show withProf)
+    when withProf $ do
+        stop o c
+        sleep 2
+        echo "Dumping logs..."
+    (_, dt) <- fmap T.strip <$> cmd' o "date" ["+%F_%H%M%S"]
+    let workDir = "experiments/" <> dt
+    TIO.putStrLn workDir
+    cmd o "mkdir" ["-p", workDir]
+    parallelIO o c $ dump workDir
+    return dt
+  where
+    dump workDir node =
+        forM_ logs $ \(rpath, fname) -> do
+          scpFromNode o c node rpath (workDir <> "/" <> fname (fromNodeName node))
+    logs = mconcat
+             [ if withProf
+                  then profLogs
+                  else []
+             , defLogs
+             ]
 prefetchURL :: Options -> Project -> Commit -> IO (NixHash, FilePath)
 prefetchURL o proj rev = do
   let url = projectURL proj
@@ -950,203 +1048,6 @@ runFakeKeys = do
   forM_ ([0..41]) $
     (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
   echo "Minimum viable keyset complete."
-
-ensureCardanoBranchCheckout :: Options -> Branch -> FilePath -> IO Commit
-ensureCardanoBranchCheckout o branch dir = do
-  preExisting <- testdir dir
-  if preExisting
-  then do
-    cd dir
-    printf ("Updating local checkout of 'cardano-sl' to the tip of 'origin/"%s%"'..\n") (fromBranch branch)
-    cmd o "git" ["fetch", "origin"]
-    cmd o "git" ["checkout", "-B", fromBranch branch, "origin/" <> fromBranch branch]
-  else do
-    printf ("Cloning 'cardano-sl' branch "%s%"\n") (fromBranch branch)
-    cmd o "git" ["clone", "--branch", fromBranch branch, fromURL $ projectURL CardanoSL, "cardano-sl"]
-    cd dir
-  commit <- gitHEADCommit o
-  cd ".."
-  pure commit
-
--- | Generate genesis driving the tip of specified 'cardano-sl' branch.
-generateOrInsertGenesis :: Options -> NixopsConfig -> Branch -> Maybe FilePath -> IO (Text, FilePath)
-generateOrInsertGenesis o NixopsConfig{..} cardanoBranch preGenesis = do
-  let cardanoSLDir     = "cardano-sl"
-      genSuffix        = "tn"
-      genesisName'     = "genesis-" <> genSuffix :: Text
-      genesisTarball   = Path.fromText genesisName' <.> "tgz"
-      (,) genM genN    = (,) (length . topoCores $ topology) 1200
-      genFiles         = zip [ "genesis-core.bin"
-                             , "genesis-godtossing.bin"
-                             , "genesisCreation.log" ]
-                         $   [ "core/genesis-core-"%s%".bin"
-                             , "godtossing/genesis-godtossing-"%s%".bin"
-                             , "genesis-info/"%s%".log" ]
-                         <&> flip format genSuffix
-  cardanoCommit <- ensureCardanoBranchCheckout o cardanoBranch cardanoSLDir
-  printf ("Generating genesis using cardano-sl branch '"%s%"' (commit "%s%")\n  M:"%d%"\n  N:"%d%"\n")
-    (fromBranch cardanoBranch) (fromCommit cardanoCommit) genM genN
-  (genesisName,
-   genesisPath,
-   genesisCommitMsg) <- do
-    case preGenesis of
-      Nothing -> do
-        echo "NEW genesis deployment requested"
-        cd cardanoSLDir
-        cmd o "rm" ["-rf", genesisName', format fp genesisTarball]
-        cmd o "scripts/generate/genesis.sh"
-          [ "--build-mode",        "nix"
-          , "--install-as-suffix",  genSuffix
-          , "--rich-keys",          showT genM
-          , "--poor-keys",          showT genN
-          , "--output-dir",         genesisName']
-        pure (genesisName', cardanoSLDir </> genesisTarball,
-              format ("Bump cardano: Regenerated genesis, M="%d%", N="%d%", cardano=") genM genN)
-      Just genf -> do
-        printf ("PREMADE genesis deployment requested: "%fp%"\n") genf
-        existsp <- testfile genf
-        unless existsp $
-          errorT $ format ("PREMADE genesis file missing: "%fp%"\n") genf
-        let stdGenesisName = dropExtension $ last $ splitDirectories genf
-        echo "Installing genesis.."
-        cmd o "rm" ["-rf", format ("./"%fp%"/"%s) cardanoSLDir genesisName', format fp genesisTarball]
-        cmd o "tar" ["xaf", format fp genf, "-C", format fp cardanoSLDir]
-        cd cardanoSLDir
-        forM_ genFiles $
-          \(from, to)-> cmd o "cp" ["-f", format fp $ stdGenesisName </> from, to]
-        pure $ (format fp stdGenesisName, genf,
-                format ("Bump cardano: Implanted genesis "%fp%", cardano=") stdGenesisName)
-
-  printf ("Genesis NAME: "%s%"\n")  genesisName
-  printf ("Genesis FILE: "%fp%"\n") genesisPath
-
-  cmd o "git" (["add"] <> (snd <$> genFiles))
-  cmd o "git" ["commit", "-m", format ("Regenerate genesis, M="%d%", N="%d) genM genN]
-  echo "Genesis generated and committed, bumping 'iohk-ops'"
-  cardanoGenesisCommit <- gitHEADCommit o
-  printf ("Committed new genesis as 'cardano-sl' commit "%s%", pushing to 'origin'\n") (fromCommit cardanoGenesisCommit)
-  cmd o "git" ["push", "origin"]
-  cd ".."
-
-  runSetRev o CardanoSL cardanoGenesisCommit (Just $ genesisCommitMsg <> (fromCommit cardanoCommit))
-  cmd o "git" ["push", "origin"]
-  echo "Don't forget to archive our new genesis:"
-  cmd o "ls" ["-l", format fp genesisPath]
-  pure (genesisName, genesisPath)
-
--- * Local phase of a full deployment
-deployFullLocalPhase :: Options -> NixopsConfig -> Branch -> NewGenesis -> Maybe FilePath -> RebuildExplorer -> Validate -> IP -> IO ()
-deployFullLocalPhase o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive doGenesis preGenesis rebuildExplorerFrontend skipValidation deployerIP = do
-  -- XXX: duplicated below
-  let EnvSettings{..}   = envSettings cEnvironment
-      cardanoSLDir      = "cardano-sl"
-      deploymentAccount = fromUsername envDeployerUser <> "@" <> getIP deployerIP
-      deploymentDir     = fromNixopsDepl cName
-      deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
-  -- 0. Validate
-  unless (skipValidation == SkipValidation) $ do
-    echo "Validating 'iohk-ops' checkout.."
-    create o c
-    deployValidate o c rebuildExplorerFrontend
-    -- XXX: re-enable this.. after figuring out how to use local 'iohk-ops'..
-    -- cmd o "bash" ["scripts/travis.sh", "iohk-ops", format fp cNixops]
-    -- cmd o "nix-build" ["--keep-failed", "jobsets/cardano.nix", "-A", "tests.simpleNode.x86_64-linux", "--show-trace"]
-  -- 1. Bump Cardano
-  branchHEAD <- ensureCardanoBranchCheckout o cardanoBranchToDrive cardanoSLDir
-  GitSource{..} <- readSource gitSource CardanoSL
-  unless (branchHEAD == gRev) $ do
-    runSetRev o CardanoSL branchHEAD (Just $ format ("Bump cardano-sl to:  "%s) (fromCommit branchHEAD))
-  -- 2. Record first bump and trigger CI
-  printf ("Pushing local 'iohk-ops' commit into 'origin'..\n")
-  cmd o "git" ["push", "origin"]
-  -- 3. Genesis
-  when (doGenesis == NewGenesis || isJust preGenesis) $ do
-    case (doGenesis, preGenesis) of
-      (NewGenesis, Just _) -> error "Asked to both regenerate and use supplied genesis: these options are exclusive."
-      _                    -> pure ()
-    (genesisName,
-     genesisPath) <- generateOrInsertGenesis o c cardanoBranchToDrive preGenesis
-    let richKeys = length . topoCores $ topology
-    printf ("Updating deployer genesis: "%s%"\n") deploymentSource
-    echo "  -- removing old genesis"
-    cmd o "ssh" [ deploymentAccount, "bash", "-c", format ("'rm -rf ./genesis-tn-*'")]
-    echo "  -- uploading generated genesis archive"
-    cmd o "scp" [ format fp genesisPath, deploymentSource ]
-    echo "  -- unpacking genesis archive"
-    cmd o "ssh" [ deploymentAccount, "tar", "xaf", deploymentDir <> "/" <> genesisName <> ".tgz", "-C", deploymentDir ]
-    echo "  -- removing old rich keys"
-    cmd o "ssh" [ deploymentAccount, "bash", "-c"
-                , format ("'cd "%s%" && rm -f ./keys/*'") deploymentDir]
-    echo "  -- installing genesis rich keys"
-    cmd o "ssh" [ deploymentAccount, "bash", "-c"
-                , format ("'cd "%s%" && for x in {1.."%d%"}; do cp "%s%"/keys-testnet/rich/testnet$x.key keys/key$((x-1)).sk; done'")
-                  deploymentDir richKeys genesisName]
-  -- 4. Wait for CI (either after first or second bump)
-  opsCommit <- gitHEADCommit o
-  echo ""
-  echo "CI status:  https://hydra.iohk.io/jobset/serokell/iohk-nixops-staging#tabs-evaluations"
-  printf ("\nPress 'Enter' when CI has built the evaluation for 'iohk-ops' commit "%s%"\n") (fromCommit opsCommit)
-  void readline
-
-deployFullDeployerPhase :: Options -> NixopsConfig -> Seconds -> WipeNodeDBs -> RebuildExplorer -> IO ()
-deployFullDeployerPhase o c@NixopsConfig{..} bumpHeldBy doWipeNodeDBs reExplorer = do
-  -- 0. If we have nixpkgs commit set in the config, propagate
-  nixpkgsPath <- case cNixpkgs of
-    Nothing -> pure Nothing
-    Just commit -> do
-      (_, storePath) <- prefetchURL o Nixpkgs commit
-      pure $ Just storePath
-  let options' = o { oNixpkgs = nixpkgsPath }
-
-  -- 6. --dry-run
-  deploy options' c DryRun BuildOnly DontPassCheck reExplorer Nothing
-
-  -- 7. cleanup
-  stop o c
-  wipeJournals o c
-  when (doWipeNodeDBs == WipeNodeDBs) $
-    wipeNodeDBs o c Confirm
-
-  -- 8. for real
-  deploy options' c NoDryRun NoBuildOnly PassCheck NoExplorerRebuild (Just bumpHeldBy)
-
-runningOnDeployer :: IO Bool
-runningOnDeployer = flip elem ["staging", "live-production"] <$> Sys.getLoginName
-
--- | Deploy the specified 'cardano-sl' branch, possibly with new genesis.
-deployFull :: Options -> NixopsConfig -> Branch -> Seconds -> NewGenesis -> Maybe FilePath -> WipeNodeDBs -> RebuildExplorer -> Validate -> ResumeFailed -> IO ()
-deployFull o@Options{..} c@NixopsConfig{..} cardanoBranchToDrive bumpHeldBy newGenesis preGenesis wipeDBs reExplorer validate resume = do
-  deployerIP <- establishDeployerIP o oDeployerIP
-  let EnvSettings{..}   = envSettings cEnvironment
-      deploymentAccount = fromUsername envDeployerUser <> "@" <> getIP deployerIP
-      deploymentDir     = fromNixopsDepl cName
-      deploymentSource  = format (s%":"%s%"/") deploymentAccount deploymentDir
-      doWipe            = newGenesis == NewGenesis || wipeDBs == WipeNodeDBs
-
-  onDeployer <- runningOnDeployer
-  when onDeployer $ error "The 'iohk-ops deploy' subcommand is designed to be run from a developer machine."
-
-  unless (resume == ResumeFailed) $
-    deployFullLocalPhase o c cardanoBranchToDrive newGenesis preGenesis reExplorer validate deployerIP
-
-  -- 5. Remote, on-deployer phase
-  opsCommit <- gitHEADCommit o
-
-  printf ("Updating deployment source: "%s%"\n") deploymentSource
-  cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "fetch", "origin" ]
-  cmd o "ssh"   [ deploymentAccount, "git", "-C", deploymentDir, "reset", "--hard", fromCommit opsCommit ]
-  cmd o "ssh" $ [ "--", deploymentAccount, "bash",  "-c",
-                  format ("'echo && \
-                          \ cd ~/"%s%" && \
-                          \ pwd && \
-                          \ $(nix-build -A iohk-ops default.nix)/bin/iohk-ops \
-                             \ --config "%fp%" \
-                             \ deploy-full-deployer-phase \
-                             \ --bump-system-start-held-by "%d%" "%s%" "%s%"'")
-                  deploymentDir (fromJust oConfigFile) (bumpHeldBy `div` 60)
-                  (if doWipe                        then "--wipe-node-dbs" else "")
-                  (if reExplorer == RebuildExplorer then "" else "--no-explorer-rebuild")
-                ]
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"
@@ -1197,10 +1098,6 @@ scpFromNode o c (fromNodeName -> node) from to = do
   case exitcode of
     ExitSuccess -> return ()
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
-
-sshForEach :: Options -> NixopsConfig -> [Text] -> IO ()
-sshForEach o c command =
-  nixops o c "ssh-for-each" $ Arg <$> "--": command
 
 deployedCommit :: Options -> NixopsConfig -> NodeName -> IO ()
 deployedCommit o c m = do
@@ -1357,5 +1254,7 @@ lowerShowT = T.toLower . T.pack . show
 errorT :: Text -> a
 errorT = error . T.unpack
 
+-- Currently unused, but that's mere episode of the used/unused/used/unused event train.
+-- Let's keep it, because it's too painful to reinvent every time we need it.
 jsonLowerStrip :: (Generic a, AE.GToJSON AE.Zero (Rep a)) => Int -> a -> AE.Value
 jsonLowerStrip n = AE.genericToJSON $ AE.defaultOptions { AE.fieldLabelModifier = map toLower . drop n }

@@ -8,9 +8,6 @@ args:
   systemStart:
     tag: NixInt
     contents: 1506203091
-  genesis:
-    tag: NixFile
-    contents: ./mainnet-genesis.json
   CFaccessKeyId:
     tag: NixStr
     contents: mainnet-cf

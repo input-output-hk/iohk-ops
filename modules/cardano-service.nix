@@ -43,7 +43,7 @@ let
     "--logs-prefix /var/lib/cardano-node"
     "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
-    "--configuration-file ${stateDir}/configuration.yaml"
+    "--configuration-file ${cardano.src}/configuration.yaml"
     "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
@@ -76,7 +76,6 @@ in {
       };
       autoStart = mkOption { type = types.bool; default = true; };
 
-      genesis = mkOption { type = types.nullOr types.path; };
       topologyYaml = mkOption { type = types.path; };
       
       genesisN = mkOption { type = types.int; default = 6; };
@@ -191,16 +190,8 @@ in {
       script = let
         keyId = "key" + toString cfg.nodeIndex;
         key = keyId + ".sk";
-        genesisDeployCmd = if cfg.genesis == null then ""
-                           else "cp -f ${pkgs.copyPathToStore globals.genesis} ${stateDir}/`echo ${globals.genesis} | cut -d- -f2-`";
       in ''
         [ -f /run/keys/${keyId} ] && cp -f /run/keys/${keyId} ${stateDir}/${key}
-
-        ## Citing George:
-        ## > genesis-dryrun.json should be put strictly into {path-to-conf} (i.e. same folder as configuration yaml)
-        cp -f ${pkgs.copyPathToStore ./../configuration.yaml} ${stateDir}/configuration.yaml
-        ${genesisDeployCmd}
-
         ${optionalString (cfg.saveCoreDumps) ''
           # only a process with non-zero coresize can coredump (the default is 0)
           ulimit -c unlimited

@@ -19,8 +19,6 @@ import           Time.System
 
 import           NixOps
 import qualified NixOps                        as Ops
-import qualified CardanoCSL                    as Cardano
-import           Topology
 
 
 -- * Elementary parsers
@@ -81,7 +79,6 @@ data Command where
   Clone                 :: { cBranch      :: Branch } -> Command
   Template              :: { tFile        :: Maybe Turtle.FilePath
                            , tNixops      :: Maybe Turtle.FilePath
-                           , tGenesis     :: Maybe Turtle.FilePath
                            , tTopology    :: Maybe Turtle.FilePath
                            , tConfigurationKey :: Maybe ConfigurationKey
                            , tEnvironment :: Environment
@@ -93,8 +90,6 @@ data Command where
   FakeKeys              :: Command
 
   -- * building
-  Genesis               :: Branch -> Command
-  GenerateIPDHTMappings :: Command
   Build                 :: Deployment -> Command
   AMI                   :: Command
 
@@ -108,8 +103,6 @@ data Command where
   Info                  :: Command
 
   -- * high-level scenarios
-  DeployFull            :: Branch -> Seconds -> NewGenesis -> Maybe Turtle.FilePath -> WipeNodeDBs -> RebuildExplorer -> Validate -> ResumeFailed -> Command
-  DeployFullDeployerPhase :: Seconds -> WipeNodeDBs -> RebuildExplorer -> Command
   FromScratch           :: Command
   ReallocateCoreIPs     :: Command
 
@@ -119,8 +112,6 @@ data Command where
   CheckStatus           :: Command
   StartForeground       :: Command
   Stop                  :: Command
-  RunExperiment         :: Deployment -> Command
-  PostExperiment        :: Command
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
   CWipeJournals         :: Command
   GetJournals           :: Command
@@ -138,7 +129,6 @@ centralCommandParser =
                                 Template
                                 <$> optional (optPath "config"        'c' "Override the default, environment-dependent config filename")
                                 <*> optional (optPath "nixops"        'n' "Use a specific Nixops binary for this cluster")
-                                <*> optional (optPath "genesis"       'g' "Genesis file.  Environment-dependent defaults")
                                 <*> optional (optPath "topology"      't' "Cluster configuration.  Defaults to 'topology.yaml'")
                                 <*> optional parserConfigurationKey
                                 <*> parserEnvironment
@@ -154,11 +144,7 @@ centralCommandParser =
     ]
 
    <|> subcommandGroup "Build-related:"
-    [ ("genesis",               "initiate production of Genesis in cardano-sl/genesis subdir",
-                                Genesis
-                                <$> parserBranch "'cardano-sl' branch to update with the new genesis")
-    , ("generate-ipdht",        "Generate IP/DHT mappings for wallet use",                          pure GenerateIPDHTMappings)
-    , ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
+    [ ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
     , ("ami",                   "Build ami",                                                        pure AMI) ]
 
    -- * cluster lifecycle
@@ -184,25 +170,7 @@ centralCommandParser =
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
    , ("reallocate-core-ips",    "Destroy elastic IPs corresponding to the nodes listed and redeploy cluster",
                                                                                                     pure ReallocateCoreIPs)
-   , ("info",                   "Invoke 'nixops info'",                                             pure Info)
-   , ("deploy-full",            "Perform a full remote deployment from the specified Cardano branch, optionally with genesis regeneration",
-                                DeployFull
-                                <$> parserBranch "'cardano-sl' branch to update & deploy"
-                                <*> (Seconds . (* 60) . fromIntegral
-                                      <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
-                                <*> flag NewGenesis "new-genesis"           'g' "Generate new genesis"
-                                <*> (optional
-                                     (optPath "premade-genesis"    'e' "Supply an externally pre-made genesis archive in 'standard' format"))
-                                <*> flag WipeNodeDBs       "wipe-node-dbs"         'w' "Wipe node databases"
-                                <*> flag NoExplorerRebuild "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
-                                <*> flag SkipValidation    "skip-local-validation" 's' "Skip local validation of the current iohk-ops checkout"
-                                <*> flag ResumeFailed      "resume"                'r' "Resume a full remote deployment that failed during on-deployer evaluation.  Pass all the same flags")
-   , ("deploy-full-deployer-phase", "On-deployer phase of 'deploy-full'",
-                                DeployFullDeployerPhase
-                                <$> (Seconds . (* 60) . fromIntegral
-                                      <$> (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))
-                                <*> flag WipeNodeDBs       "wipe-node-dbs"         'w' "Wipe node databases"
-                                <*> flag NoExplorerRebuild "no-explorer-rebuild"   'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!")]
+   , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
 
    <|> subcommandGroup "Live cluster ops:"
    [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
@@ -214,8 +182,6 @@ centralCommandParser =
    , ("start-foreground",       "Start cardano (or explorer) on the specified node (--on), in foreground",
                                  pure StartForeground)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
-   , ("runexperiment",          "Deploy cluster and perform measurements",                          RunExperiment <$> parserDeployment)
-   , ("postexperiment",         "Post-experiments logs dumping (if failed)",                        pure PostExperiment)
    , ("dumplogs",               "Dump logs",
                                 DumpLogs
                                 <$> parserDeployment
@@ -267,12 +233,8 @@ runTop o@Options{..} args topcmd = do
             -- * setup
             FakeKeys                 -> Ops.runFakeKeys
             -- * building
-            Genesis branch           -> void $
-                                        Ops.generateOrInsertGenesis   o c branch Nothing
-            GenerateIPDHTMappings    -> void $
-                                        Cardano.generateIPDHTMappings o c
             Build depl               -> Ops.build                     o c depl
-            AMI                      -> Cardano.buildAMI              o c
+            AMI                      -> Ops.buildAMI              o c
             -- * deployment lifecycle
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
             Create                   -> Ops.create                    o c
@@ -282,8 +244,6 @@ runTop o@Options{..} args topcmd = do
             Delete                   -> Ops.delete                    o c
             Info                     -> Ops.nixops                    o c "info" []
             -- * High-level scenarios
-            DeployFull              br st genes preGen wipeDB noExRe skipV resume -> Ops.deployFull              o c br st genes preGen wipeDB noExRe skipV resume
-            DeployFullDeployerPhase    st              wipeDB noExRe              -> Ops.deployFullDeployerPhase o c    st              wipeDB noExRe
             FromScratch              -> Ops.fromscratch               o c
             ReallocateCoreIPs        -> Ops.reallocateCoreIPs         o c
             -- * live deployment ops
@@ -293,11 +253,8 @@ runTop o@Options{..} args topcmd = do
                                         flip fromMaybe oOnlyOn $ error "'start-foreground' requires a global value for --on/-o"
             Ssh exec args            -> Ops.parallelSSH               o c exec args
             Stop                     -> Ops.stop                      o c
-            RunExperiment Nodes      -> Cardano.runexperiment     o c
-            RunExperiment x          -> die $ "RunExperiment undefined for deployment " <> showT x
-            PostExperiment           -> Cardano.postexperiment        o c
             DumpLogs{..}
-              | Nodes        <- depl -> Cardano.dumpLogs              o c withProf >> pure ()
+              | Nodes        <- depl -> Ops.dumpLogs              o c withProf >> pure ()
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
             CWipeJournals            -> Ops.wipeJournals              o c
             GetJournals              -> Ops.getJournals               o c
@@ -328,7 +285,7 @@ runTemplate o@Options{..} Template{..} args = do
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
   nixops <- (<> "/bin/nixops") . T.strip <$> incmd o "nix-build" ["-A", "nixops"]
-  config <- Ops.mkNewConfig o cmdline tName (tNixops <|> (Path.fromText <$> Just nixops)) tGenesis tTopology tEnvironment tTarget tDeployments systemStart tConfigurationKey
+  config <- Ops.mkNewConfig o cmdline tName (tNixops <|> (Path.fromText <$> Just nixops)) tTopology tEnvironment tTarget tDeployments systemStart tConfigurationKey
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""
