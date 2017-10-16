@@ -19,7 +19,6 @@ import           Time.System
 
 import           NixOps
 import qualified NixOps                        as Ops
-import qualified CardanoCSL                    as Cardano
 
 
 -- * Elementary parsers
@@ -91,7 +90,6 @@ data Command where
   FakeKeys              :: Command
 
   -- * building
-  GenerateIPDHTMappings :: Command
   Build                 :: Deployment -> Command
   AMI                   :: Command
 
@@ -114,8 +112,6 @@ data Command where
   CheckStatus           :: Command
   StartForeground       :: Command
   Stop                  :: Command
-  RunExperiment         :: Deployment -> Command
-  PostExperiment        :: Command
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
   CWipeJournals         :: Command
   GetJournals           :: Command
@@ -148,8 +144,7 @@ centralCommandParser =
     ]
 
    <|> subcommandGroup "Build-related:"
-    [ ("generate-ipdht",        "Generate IP/DHT mappings for wallet use",                          pure GenerateIPDHTMappings)
-    , ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
+    [ ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
     , ("ami",                   "Build ami",                                                        pure AMI) ]
 
    -- * cluster lifecycle
@@ -187,8 +182,6 @@ centralCommandParser =
    , ("start-foreground",       "Start cardano (or explorer) on the specified node (--on), in foreground",
                                  pure StartForeground)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
-   , ("runexperiment",          "Deploy cluster and perform measurements",                          RunExperiment <$> parserDeployment)
-   , ("postexperiment",         "Post-experiments logs dumping (if failed)",                        pure PostExperiment)
    , ("dumplogs",               "Dump logs",
                                 DumpLogs
                                 <$> parserDeployment
@@ -240,10 +233,8 @@ runTop o@Options{..} args topcmd = do
             -- * setup
             FakeKeys                 -> Ops.runFakeKeys
             -- * building
-            GenerateIPDHTMappings    -> void $
-                                        Cardano.generateIPDHTMappings o c
             Build depl               -> Ops.build                     o c depl
-            AMI                      -> Cardano.buildAMI              o c
+            AMI                      -> Ops.buildAMI              o c
             -- * deployment lifecycle
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
             Create                   -> Ops.create                    o c
@@ -262,11 +253,8 @@ runTop o@Options{..} args topcmd = do
                                         flip fromMaybe oOnlyOn $ error "'start-foreground' requires a global value for --on/-o"
             Ssh exec args            -> Ops.parallelSSH               o c exec args
             Stop                     -> Ops.stop                      o c
-            RunExperiment Nodes      -> Cardano.runexperiment     o c
-            RunExperiment x          -> die $ "RunExperiment undefined for deployment " <> showT x
-            PostExperiment           -> Cardano.postexperiment        o c
             DumpLogs{..}
-              | Nodes        <- depl -> Cardano.dumpLogs              o c withProf >> pure ()
+              | Nodes        <- depl -> Ops.dumpLogs              o c withProf >> pure ()
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
             CWipeJournals            -> Ops.wipeJournals              o c
             GetJournals              -> Ops.getJournals               o c

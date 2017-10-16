@@ -22,10 +22,12 @@ module NixOps (
   , delete
 
   , build
+  , buildAMI
   , runFakeKeys
   , stop
   , start
   , fromscratch
+  , dumpLogs
   , getJournals
   , wipeJournals
   , wipeNodeDBs
@@ -984,6 +986,35 @@ reallocateCoreIPs o c = reallocateElasticIPs o c (topoCores $ topology c)
 
 -- * Building
 --
+
+buildAMI :: Options -> NixopsConfig -> IO ()
+buildAMI o _ = do
+  cmd o "nix-build" ["jobsets/cardano.nix", "-A", "cardano-node-image", "-o", "image"]
+  cmd o "./scripts/create-amis.sh" []
+
+dumpLogs :: Options -> NixopsConfig -> Bool -> IO Text
+dumpLogs o c withProf = do
+    TIO.putStrLn $ "WithProf: " <> T.pack (show withProf)
+    when withProf $ do
+        stop o c
+        sleep 2
+        echo "Dumping logs..."
+    (_, dt) <- fmap T.strip <$> cmd' o "date" ["+%F_%H%M%S"]
+    let workDir = "experiments/" <> dt
+    TIO.putStrLn workDir
+    cmd o "mkdir" ["-p", workDir]
+    parallelIO o c $ dump workDir
+    return dt
+  where
+    dump workDir node =
+        forM_ logs $ \(rpath, fname) -> do
+          scpFromNode o c node rpath (workDir <> "/" <> fname (fromNodeName node))
+    logs = mconcat
+             [ if withProf
+                  then profLogs
+                  else []
+             , defLogs
+             ]
 prefetchURL :: Options -> Project -> Commit -> IO (NixHash, FilePath)
 prefetchURL o proj rev = do
   let url = projectURL proj
