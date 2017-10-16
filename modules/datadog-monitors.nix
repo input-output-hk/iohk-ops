@@ -119,7 +119,7 @@ rec {
   chain_quality_monitor = {
     name = "Degraded Chain Quality over last 2160 blocks";
     type = "metric alert";
-    query = config: "max(last_1m):avg:cardano.chain_quality_last_k_2160_blocks{depl:${config.deployment.name}} by {host} < 97";
+    query = config: "max(last_1m):avg:cardano.chain_quality_last_k_2160_blocks{depl:${config.deployment.name}} by {host} < 99";
     monitorOptions = {
       notify_no_data = true;
       no_data_timeframe = 5;
