@@ -910,7 +910,7 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
     deployerIP <- establishDeployerIP o oDeployerIP
     setenv o "SMART_GEN_IP" $ getIP deployerIP
   when (elem Nodes cElements) $
-    setenv o "GC_INITIAL_HEAP_SIZE" (showT $ 3 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
+    setenv o "GC_INITIAL_HEAP_SIZE" (showT $ 6 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
 
   now <- timeCurrent
   let startParam             = NixParam "systemStart"
