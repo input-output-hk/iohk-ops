@@ -38,10 +38,10 @@ in rec {
              (compiler.callPackage ./iohk/default.nix {})
              (drv: {
                 executableToolDepends = [ pkgs.makeWrapper ];
-                libraryHaskellDepends = iohk-ops-extra-runtime-deps ++ [ nixops ];
+                libraryHaskellDepends = iohk-ops-extra-runtime-deps ++ [ cardano-sl-pkgs.cardano-sl-auxx pkgs.file nixops ];
                 postInstall = ''
                   wrapProgram $out/bin/iohk-ops \
-                  --prefix PATH : "${pkgs.lib.makeBinPath (iohk-ops-extra-runtime-deps ++ [ nixops ])}"
+                  --prefix PATH : "${pkgs.lib.makeBinPath (iohk-ops-extra-runtime-deps ++ [ cardano-sl-pkgs.cardano-sl-auxx pkgs.file nixops ])}"
                 '';
              });
 } // cardano-sl-pkgs
