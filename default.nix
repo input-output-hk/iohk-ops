@@ -23,7 +23,7 @@ let
     gitrev = cardano-sl-src.rev;
     inherit enableDebugging enableProfiling;
   };
-in {
+in rec {
   nixops = 
     let
       # nixopsUnstable = /path/to/local/src
@@ -38,10 +38,10 @@ in {
              (compiler.callPackage ./iohk/default.nix {})
              (drv: {
                 executableToolDepends = [ pkgs.makeWrapper ];
-                libraryHaskellDepends = iohk-ops-extra-runtime-deps;
+                libraryHaskellDepends = iohk-ops-extra-runtime-deps ++ [ nixops ];
                 postInstall = ''
                   wrapProgram $out/bin/iohk-ops \
-                  --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
+                  --prefix PATH : "${pkgs.lib.makeBinPath (iohk-ops-extra-runtime-deps ++ [ nixops ])}"
                 '';
              });
 } // cardano-sl-pkgs
