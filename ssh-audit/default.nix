@@ -8,6 +8,6 @@ in runCommand "ssh-audit" {
   inherit keys;
 } ''
   mkdir -pv $out/bin/
-  cp -vi ${./.}/* .
+  cp -vi ${./.}/*.hs .
   ghc ssh-audit.hs -o $out/bin/ssh-audit
 ''

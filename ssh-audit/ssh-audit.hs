@@ -1,79 +1,108 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports    #-}
 
 module Main where
 
-import qualified Crypto.Hash as Hash
-import Crypto.Hash.Algorithms
-import Data.ByteArray
-import Data.ByteString.Base64
-import Data.ByteString hiding (putStrLn)
-import Data.Monoid
-import qualified Data.ByteString.Char8 as BSC
-import System.Environment
-import Data.Text
-import Data.Text.Encoding
-import Data.Maybe
-import Systemd.Journal
-import Pipes.Core
-import Pipes.Safe
-import Pipes
-import qualified Data.HashMap.Strict as HashMap
-import Safe
-import Control.Monad
-import qualified Data.Text.IO as Text
+import           Control.Monad
+import           Data.Maybe
+import           Data.Monoid
 
-data PubKey = PubKey { attrName :: Text, keyType :: Text, pubKeyHash :: Text, user :: Text } deriving Show
---data PubKeys = PubKeys (HashMap Text PubKey)
+import           Control.Monad.IO.Class              (MonadIO (liftIO))
+
+import           System.Environment                  (getEnv)
+
+import qualified "cryptonite" Crypto.Hash            as Hash
+import qualified "cryptonite" Crypto.Hash.Algorithms as Hash
+import qualified Data.ByteArray                      as ByteArray
+
+import           Data.ByteString                     (ByteString)
+import qualified Data.ByteString                     as BS
+import qualified Data.ByteString.Char8               as BSC
+
+import qualified Data.ByteString.Base64              as Base64
+
+import           Data.HashMap.Strict                 (HashMap)
+import qualified Data.HashMap.Strict                 as HM
+
+import           Data.Text                           (Text)
+import qualified Data.Text                           as Text
+import qualified Data.Text.Encoding                  as Text
+import qualified Data.Text.IO                        as Text
+
+import qualified Pipes                               as Pipes
+import qualified Pipes.Core                          as Pipes
+import qualified Pipes.Safe                          as Pipes
+
+import qualified Safe
+
+import qualified Systemd.Journal                     as Journal
+
+data PubKey
+  = PubKey
+    { pubKeyAttrName   :: !Text
+    , pubKeyKeyType    :: !Text
+    , pubKeySubKeyHash :: !Text
+    , pubKeyUser       :: !Text
+    }
+  deriving (Eq, Show)
 
 hashSHA256 :: ByteString -> ByteString
-hashSHA256 bs = convert (Hash.hash bs :: Hash.Digest Crypto.Hash.Algorithms.SHA256)
+hashSHA256 bs = ByteArray.convert (Hash.hash bs :: Hash.Digest Hash.SHA256)
 
 hashPubKey :: ByteString -> Either String ByteString
-hashPubKey pubkey = encode . hashSHA256 <$> decode pubkey
+hashPubKey pubkey = Base64.encode . hashSHA256 <$> Base64.decode pubkey
 
 parseLine :: ByteString -> Either String PubKey
 parseLine line = do
-  case BSC.words line of
-    (attrName':keyType':pubkey:rawUser) -> do
-      let
-        user' = BSC.unwords rawUser
-        stripEquals str = Data.Maybe.fromMaybe str (Data.Text.stripSuffix "=" str)
-      case hashPubKey pubkey of
-        Left errorMsg -> Left $ "base64 decode error on key " <> (show attrName') <> ": " <> errorMsg
-        Right hash -> Right $ PubKey (decodeUtf8 attrName') (decodeUtf8 keyType') (stripEquals $ decodeUtf8 hash) (decodeUtf8 user')
-    other -> do
-      Left $ "unable to parse " <> (show other)
+  (attrName, keyType, pubkey, rawUser) <- do
+    case BSC.words line of
+      (a:k:p:ru) -> pure (a, k, p, ru)
+      other      -> Left $ "unable to parse " <> show other
+  let user = BSC.unwords rawUser
+  let stripEquals str = fromMaybe str (Text.stripSuffix "=" str)
+  let decodeError e = mconcat
+                      ["base64 decode error on key ", show attrName, ": ", e]
+  hash <- either (Left . decodeError) pure (hashPubKey pubkey)
+  pure $ PubKey { pubKeyAttrName   = Text.decodeUtf8 attrName
+                , pubKeyKeyType    = Text.decodeUtf8 keyType
+                , pubKeySubKeyHash = stripEquals (Text.decodeUtf8 hash)
+                , pubKeyUser       = Text.decodeUtf8 user
+                }
 
-pipe :: (MonadSafe m) => Producer' JournalEntry m ()
-pipe = openJournal [ SystemOnly ] (FromEnd Forwards) (Just (Match (mkJournalField "_SYSTEMD_UNIT") "sshd.service")) Nothing
+pipe :: (Pipes.MonadSafe m) => Pipes.Producer' Journal.JournalEntry m ()
+pipe = Journal.openJournal
+       [Journal.SystemOnly]
+       (Journal.FromEnd Journal.Forwards)
+       (Just (Journal.Match systemdUnitField "sshd.service"))
+       Nothing
+  where
+    systemdUnitField = Journal.mkJournalField "_SYSTEMD_UNIT"
 
-myeffect :: (MonadIO m) => HashMap.HashMap Text PubKey -> JournalEntry -> Effect (SafeT m) ()
+myeffect :: (MonadIO m)
+         => HashMap Text PubKey
+         -> Journal.JournalEntry
+         -> Pipes.Effect (Pipes.SafeT m) ()
 myeffect keyMap je = do
-  let
-    fields = journalEntryFields je
-    msg = HashMap.lookup (mkJournalField "MESSAGE") fields
-  case msg of
-    Just msg' -> do
-      let
-        reportUser hash = do
-          case HashMap.lookup hash keyMap of
-            Just pubkey -> Text.putStrLn $ "ssh-audit: attribute: " <> (attrName pubkey) <> " user: " <> (user pubkey)
-            Nothing -> putStrLn $ "ssh-audit: ALERT, unknown ssh keypair"
-        maybeHash :: Maybe Text
-        maybeHash = do
-          case lastMay $ Data.Text.words $ decodeUtf8 msg' of
-            Just lastword -> do
-              ["SHA256", hash ] <- pure (Data.Text.splitOn ":" lastword)
-              Just hash
-            Nothing -> Nothing
-      maybe (pure ()) (liftIO . reportUser) maybeHash
-    Nothing -> return ()
+  let messageField = Journal.mkJournalField "MESSAGE"
+  case HM.lookup messageField (Journal.journalEntryFields je) of
+    Just msg -> do
+      maybe (pure ()) id $ do
+        lastword <- Safe.lastMay $ Text.words $ Text.decodeUtf8 msg
+        ["SHA256", hash] <- pure (Text.splitOn ":" lastword)
+        pure $ liftIO $ do
+          let msg = case HM.lookup hash keyMap of
+                      Just pubkey -> mconcat
+                                     [ "attribute: ", pubKeyAttrName pubkey, " "
+                                     , "user: ",      pubKeyUser pubkey ]
+                      Nothing     -> "ALERT, unknown ssh keypair"
+          Text.putStrLn ("ssh-audit: " <> msg)
+    Nothing -> pure ()
 
 main :: IO ()
 main = do
   inputFile <- getEnv "keys"
   rawKeys <- BSC.readFile inputFile
-  keyMap <- HashMap.fromList <$> forM (BSC.lines rawKeys) (\line -> do
+  keyMap <- HM.fromList <$> forM (BSC.lines rawKeys) (\line -> do
     value <- either fail pure $ parseLine line
-    pure (pubKeyHash value, value))
-  (runSafeT (runEffect (Pipes.for pipe (myeffect keyMap))))
+    pure (pubKeySubKeyHash value, value))
+  Pipes.runSafeT (Pipes.runEffect (Pipes.for pipe (myeffect keyMap)))
