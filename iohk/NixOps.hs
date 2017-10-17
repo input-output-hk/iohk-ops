@@ -498,6 +498,11 @@ elementDeploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNe
 
 -- * Topology
 --
+-- Design:
+--  1. we have the full Topology, and its SimpleTopo subset, which is converted to JSON for Nix's consumption.
+--  2. the SimpleTopo is only really needed when we have Nodes to deploy
+--  3. 'getSimpleTopo' is what executes the decision in #2
+--
 readTopology :: FilePath -> IO Topology
 readTopology file = do
   eTopo <- liftIO $ YAML.decodeFileEither $ Path.encodeString file
@@ -548,6 +553,9 @@ topoNodes (SimpleTopo cmap) = Map.keys cmap
 topoCores :: SimpleTopo -> [NodeName]
 topoCores = (fst <$>) . filter ((== NodeCore) . snType . snd) . Map.toList . fromSimpleTopo
 
+stubTopology :: SimpleTopo
+stubTopology = SimpleTopo Map.empty
+
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
   SimpleTopo $ Map.mapWithKey simplifier nodeMap
@@ -569,6 +577,15 @@ summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
                                    defaultOrg)
                         mbOrg
 summariseTopology x = errorT $ format ("Unsupported topology type: "%w) x
+
+getSimpleTopo :: [Deployment] -> FilePath -> IO SimpleTopo
+getSimpleTopo cElements cTopology =
+  if not $ elem Nodes cElements then pure stubTopology
+  else do
+    topoExists <- testpath cTopology
+    unless topoExists $
+      die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
+    summariseTopology <$> readTopology cTopology
 
 -- | Dump intermediate core/relay info, as parametrised by the simplified topology file.
 dumpTopologyNix :: NixopsConfig -> IO ()
@@ -733,7 +750,7 @@ mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTa
       cTopology       = flip fromMaybe                         mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
   cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
-  topology <- liftIO $ summariseTopology <$> readTopology cTopology
+  topology <- getSimpleTopo cElements cTopology
   pure NixopsConfig{..}
 
 -- | Write the config file
@@ -761,7 +778,7 @@ readConfig Options{..} cf = do
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.
-  topo <- liftIO $ summariseTopology <$> readTopology cTopology
+  topo <- liftIO $ getSimpleTopo cElements cTopology
   pure c { topology = topo }
 
 
@@ -881,11 +898,7 @@ modify o@Options{..} c@NixopsConfig{..} = do
     -> printf ("  "%s%": "%s%"\n") (fromNixParam name) (nixValueStr val)
   nixops o c "set-args" $ Arg <$> (concat $ uncurry nixArgCmdline <$> deplArgs)
 
-  printf ("Generating '"%fp%"' from '"%fp%"'..\n") simpleTopoFile cTopology
-  preExisting <- testpath cTopology
-  unless preExisting $
-    die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
-  simpleTopo <- summariseTopology <$> readTopology cTopology
+  simpleTopo <- getSimpleTopo cElements cTopology
   liftIO . writeTextFile simpleTopoFile . T.pack . LBU.toString $ encodePretty (fromSimpleTopo simpleTopo)
   when (toBool oDebug) $ dumpTopologyNix c
 
