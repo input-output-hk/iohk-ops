@@ -88,7 +88,7 @@ rec {
   ntp_monitor = {
     name = "Clock out of sync with NTP";
     type = "service check";
-    query = config: "\"ntp.in_sync\".over(\"env:${config.deployment.arguments.environment},depl:${config.deployment.name}\").by(\"host\").last(2).count_by_status()";
+    query = config: "\"ntp.in_sync\".over(\"depl:${config.deployment.name}\").by(\"host\").last(2).count_by_status()";
     monitorOptions.thresholds = {
       critical = 1;
     };
@@ -97,7 +97,7 @@ rec {
   cardano_node_simple_process_monitor = {
     name = "cardano-node-simple process is down";
     type = "service check";
-    query = config: "\"process.up\".over(\"env:${config.deployment.arguments.environment},depl:${config.deployment.name}\",\"process:cardano-node-simple\").exclude(\"host:mainnet.ec2.explorer\").by(\"host\",\"process\").last(5).count_by_status()";
+    query = config: "\"process.up\".over(\"depl:${config.deployment.name}\",\"process:cardano-node-simple\").exclude(\"host:mainnet.ec2.explorer\").by(\"host\",\"process\").last(5).count_by_status()";
     monitorOptions.thresholds = {
       warning = 2;
       critical = 4;
@@ -108,7 +108,7 @@ rec {
   cardano_explorer_process_monitor = {
     name = "cardano-explorer process is down";
     type = "service check";
-    query = config: "\"process.up\".over(\"env:${config.deployment.arguments.environment},depl:${config.deployment.name}\",\"process:cardano-explorer\").by(\"host\",\"process\").last(6).count_by_status()";
+    query = config: "\"process.up\".over(\"depl:${config.deployment.name}\",\"process:cardano-explorer\").by(\"host\",\"process\").last(6).count_by_status()";
     monitorOptions.thresholds = {
       warning = 4;
       critical = 5;
