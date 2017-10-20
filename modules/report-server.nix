@@ -1,6 +1,6 @@
 with (import ./../lib.nix);
 
-globals: imports: params:
+params:
 { pkgs, config, resources, options, ...}:
 
 let
@@ -66,6 +66,7 @@ in {
       description   = "Cardano report server";
       after         = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
+      unitConfig.RequiresMountsFor = cfg.logsdir;
       serviceConfig = {
         User = "report-server";
         Group = "report-server";
