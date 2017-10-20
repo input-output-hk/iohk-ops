@@ -4,6 +4,7 @@
   # this file will create an S3 bucket, and IAM role with access to that bucket
   # then give the report-server machine access to that role, and mount the bucket within the instance
   report-server = { pkgs, resources, ... }: {
+    # nixops can only set this at creation, it will need to be manualy set
     deployment.ec2.instanceProfile = resources.iamRoles.report-role.name;
     fileSystems."/var/lib/report-server" = {
       # mount unsets PATH when running this
