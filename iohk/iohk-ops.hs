@@ -279,7 +279,8 @@ runClone o@Options{..} branch = do
 
 runTemplate :: Options -> Command -> [Arg] -> IO ()
 runTemplate o@Options{..} Template{..} args = do
-  when (elem (fromNixopsDepl tName) $ showT <$> (every :: [Deployment])) $
+  when (elem (fromNixopsDepl tName) $ let names = showT <$> (every :: [Deployment])
+                                      in names <> (T.toLower <$> names)) $
     die $ format ("the deployment name "%w%" ambiguously refers to a deployment _type_.  Cannot have that!") (fromNixopsDepl tName)
 
   systemStart <- timeCurrent
