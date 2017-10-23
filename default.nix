@@ -16,6 +16,9 @@ let
   iohk-ops-extra-runtime-deps = [
     pkgs.git pkgs.nix-prefetch-scripts compiler.yaml
     pkgs.wget pkgs.awscli # for scripts/aws.hs
+    pkgs.file
+    cardano-sl-pkgs.cardano-sl-auxx
+    cardano-sl-pkgs.cardano-sl-tools
   ];
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
@@ -38,10 +41,10 @@ in rec {
              (compiler.callPackage ./iohk/default.nix {})
              (drv: {
                 executableToolDepends = [ pkgs.makeWrapper ];
-                libraryHaskellDepends = iohk-ops-extra-runtime-deps ++ [ cardano-sl-pkgs.cardano-sl-auxx pkgs.file nixops ];
+                libraryHaskellDepends = iohk-ops-extra-runtime-deps ++ [ nixops ];
                 postInstall = ''
                   wrapProgram $out/bin/iohk-ops \
-                  --prefix PATH : "${pkgs.lib.makeBinPath (iohk-ops-extra-runtime-deps ++ [ cardano-sl-pkgs.cardano-sl-auxx pkgs.file nixops ])}"
+                  --prefix PATH : "${pkgs.lib.makeBinPath (iohk-ops-extra-runtime-deps ++ [ nixops ])}"
                 '';
              });
 } // cardano-sl-pkgs
