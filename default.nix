@@ -13,20 +13,6 @@ with pkgs.lib;
 with pkgs.haskell.lib;
 
 let
-  iohk-ops-extra-runtime-deps = [
-    pkgs.git pkgs.nix-prefetch-scripts compiler.yaml
-    pkgs.wget pkgs.awscli # for scripts/aws.hs
-    pkgs.file
-    cardano-sl-pkgs.cardano-sl-auxx
-    cardano-sl-pkgs.cardano-sl-tools
-  ];
-  # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
-  cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
-  cardano-sl-pkgs = import (pkgs.fetchgit cardano-sl-src) {
-    gitrev = cardano-sl-src.rev;
-    inherit enableDebugging enableProfiling;
-  };
-in rec {
   nixops = 
     let
       # nixopsUnstable = /path/to/local/src
@@ -37,14 +23,31 @@ in rec {
         sha256 = "1fly6ry7ksj7v5rl27jg5mnxdbjwn40kk47gplyvslpvijk65m4q";
       };
     in (import "${nixopsUnstable}/release.nix" {}).build.${system};
+  iohk-ops-extra-runtime-deps = [
+    pkgs.git pkgs.nix-prefetch-scripts compiler.yaml
+    pkgs.wget pkgs.awscli # for scripts/aws.hs
+    pkgs.file
+    cardano-sl-pkgs.cardano-sl-auxx
+    cardano-sl-pkgs.cardano-sl-tools
+    nixops
+  ];
+  # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
+  cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
+  cardano-sl-pkgs = import (pkgs.fetchgit cardano-sl-src) {
+    gitrev = cardano-sl-src.rev;
+    inherit enableDebugging enableProfiling;
+  };
+in {
+  inherit nixops;
+
   iohk-ops = pkgs.haskell.lib.overrideCabal
              (compiler.callPackage ./iohk/default.nix {})
              (drv: {
                 executableToolDepends = [ pkgs.makeWrapper ];
-                libraryHaskellDepends = iohk-ops-extra-runtime-deps ++ [ nixops ];
+                libraryHaskellDepends = iohk-ops-extra-runtime-deps;
                 postInstall = ''
                   wrapProgram $out/bin/iohk-ops \
-                  --prefix PATH : "${pkgs.lib.makeBinPath (iohk-ops-extra-runtime-deps ++ [ nixops ])}"
+                  --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                 '';
              });
 } // cardano-sl-pkgs
