@@ -58,7 +58,7 @@ rec {
   cpu_monitor = {
     name = "High CPU usage";
     type = "metric alert";
-    query = config: "avg(last_5m):avg:system.load.norm.1{env:${config.deployment.arguments.environment},depl:${config.deployment.name},!host:iohk-infra.ec2.cardano-deployer,!host:iohk-infra.ec2.hydra} by {host} > 0.9";
+    query = config: "avg(last_5m):avg:system.load.norm.1{depl:${config.deployment.name},!host:iohk-infra.ec2.cardano-deployer,!host:iohk-infra.ec2.hydra} by {host} > 0.9";
     monitorOptions.thresholds = {
       warning = "0.75";
       critical = "0.9";
@@ -68,7 +68,7 @@ rec {
   disk_monitor = {
     name = "High disk usage";
     type = "metric alert";
-    query = config: "max(last_5m):avg:system.disk.in_use{env:${config.deployment.arguments.environment},depl:${config.deployment.name},!host:mainnet.ec2.report-server} by {host,device} > 0.9";
+    query = config: "max(last_5m):avg:system.disk.in_use{depl:${config.deployment.name},!host:mainnet.ec2.report-server} by {host,device} > 0.9";
     monitorOptions.thresholds = {
       warning = "0.8";
       critical = "0.9";
@@ -78,7 +78,7 @@ rec {
   ram_monitor = {
     name = "RAM is running low";
     type = "metric alert";
-    query = config: "avg(last_1m):avg:system.mem.pct_usable{env:${config.deployment.arguments.environment},depl:${config.deployment.name}} by {host} < 0.2";
+    query = config: "avg(last_1m):avg:system.mem.pct_usable{depl:${config.deployment.name}} by {host} < 0.2";
     monitorOptions.thresholds = {
       warning = "0.5";
       critical = "0.2";
