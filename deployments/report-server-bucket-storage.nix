@@ -8,7 +8,7 @@
     deployment.ec2.instanceProfile = resources.iamRoles.report-role.name;
     fileSystems."/var/lib/report-server" = {
       # mount unsets PATH when running this
-      device = "/run/current-system/sw/bin/s3fs#${resources.s3Buckets.report-bucket-3.name}";
+      device = "/run/current-system/sw/bin/s3fs#${resources.s3Buckets.report-server-logs.name}";
       fsType = "fuse";
       options = [ "_netdev" "allow_other" "iam_role" ];
     };
@@ -17,7 +17,7 @@
   resources = {
     s3Buckets = {
       # if moved to another region, you must rename the bucket
-      report-bucket-3 = { config, uuid, ... }: {
+      report-server-logs = { config, uuid, ... }: {
         region = "ap-northeast-1";
         accessKeyId = IOHKaccessKeyId;
       };
@@ -45,12 +45,12 @@
             {
               Effect = "Allow";
               Action = "s3:*";
-              Resource = "arn:aws:s3:::charon-${uuid}-report-bucket-3";
+              Resource = "arn:aws:s3:::charon-${uuid}-report-server-logs";
             }
             {
               Effect = "Allow";
               Action = "s3:*";
-              Resource = "arn:aws:s3:::charon-${uuid}-report-bucket-3/*";
+              Resource = "arn:aws:s3:::charon-${uuid}-report-server-logs/*";
             }
           ];
         };
