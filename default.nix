@@ -24,7 +24,7 @@ let
       };
     in (import "${nixopsUnstable}/release.nix" {}).build.${system};
   iohk-ops-extra-runtime-deps = [
-    pkgs.git pkgs.nix-prefetch-scripts compiler.yaml
+    pkgs.gitFull pkgs.nix-prefetch-scripts compiler.yaml
     pkgs.wget pkgs.awscli # for scripts/aws.hs
     pkgs.file
     cardano-sl-pkgs.cardano-sl-auxx
