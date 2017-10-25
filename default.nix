@@ -44,13 +44,13 @@ let
   } ) ]; };
   nixops = 
     let
-      # nixopsUnstable = /path/to/local/src
-      nixopsUnstable = pkgs.fetchFromGitHub {
-        owner = "NixOS";
-        repo = "nixops";
-        rev = "c06c0e79ab8d7a58d80b1c38b7ae4ed1a04322f0";
-        sha256 = "1fly6ry7ksj7v5rl27jg5mnxdbjwn40kk47gplyvslpvijk65m4q";
-      };
+      nixopsUnstable = ../nixops;
+      # nixopsUnstable = pkgs.fetchFromGitHub {
+      #   owner = "NixOS";
+      #   repo = "nixops";
+      #   rev = "c06c0e79ab8d7a58d80b1c38b7ae4ed1a04322f0";
+      #   sha256 = "1fly6ry7ksj7v5rl27jg5mnxdbjwn40kk47gplyvslpvijk65m4q";
+      # };
     in (import "${nixopsUnstable}/release.nix" { py2pkgs = pkgs'.python27Packages; }).build.${system};
   iohk-ops-extra-runtime-deps = [
     pkgs.gitFull pkgs.nix-prefetch-scripts compiler.yaml
