@@ -622,7 +622,6 @@ data Options = Options
   , oConfigFile       :: Maybe FilePath
   , oOnlyOn           :: Maybe NodeName
   , oDeployerIP       :: Maybe IP
-  , oBuildNixops      :: BuildNixops
   , oConfirm          :: Confirmed
   , oDebug            :: Debug
   , oSerial           :: Serialize
@@ -653,7 +652,6 @@ parserOptions = Options
                      <$>     (optText "on"        'o' "Limit operation to the specified node"))
                 <*> (optional $ IP
                      <$>     (optText "deployer"  'd' "Directly specify IP address of the deployer: do not detect"))
-                <*> flag BuildNixops      "build-nixops"       'b' "Use 'nixops' binary defined by 'default.nix', not config YAML."
                 <*> flag Confirmed        "confirm"            'y' "Pass --confirm to nixops"
                 <*> flag Debug            "debug"              'd' "Pass --debug to nixops"
                 <*> flag Serialize        "serial"             's' "Disable parallelisation"
@@ -678,7 +676,6 @@ data NixopsConfig = NixopsConfig
   { cName             :: NixopsDepl
   , cGenCmdline       :: Text
   , cNixpkgs          :: Maybe Commit
-  , cNixops           :: FilePath
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
@@ -693,7 +690,6 @@ instance FromJSON NixopsConfig where
         <$> v .: "name"
         <*> v .:? "gen-cmdline"   .!= "--unknown--"
         <*> v .:? "nixpkgs"
-        <*> v .:? "nixops"        .!= "nixops"
         <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
@@ -708,7 +704,6 @@ instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
    [ "name"         .= fromNixopsDepl cName
    , "gen-cmdline"  .= cGenCmdline
-   , "nixops"       .= cNixops
    , "topology"     .= cTopology
    , "environment"  .= showT cEnvironment
    , "target"       .= showT cTarget
@@ -742,12 +737,11 @@ setDeplArg :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 setDeplArg p v c@NixopsConfig{..} = c { cDeplArgs = Map.insert p v cDeplArgs }
 
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
-  let EnvSettings{..} = envSettings                                            cEnvironment
-      cNixops         = fromMaybe "nixops" mNixops
-      cFiles          = deploymentFiles                                  cEnvironment cTarget cElements
-      cTopology       = flip fromMaybe                         mTopology envDefaultTopology
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
+  let EnvSettings{..} = envSettings                             cEnvironment
+      cFiles          = deploymentFiles                         cEnvironment cTarget cElements
+      cTopology       = flip fromMaybe                mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
   cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology <- getSimpleTopo cElements cTopology
@@ -842,9 +836,7 @@ iohkNixopsPath defaultNix =
 
 nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO b
 nixops'' executor o@Options{..} c@NixopsConfig{..} com args =
-  executor o (format fp $ case oBuildNixops of
-                            BuildNixops     -> iohkNixopsPath "default.nix"
-                            DontBuildNixops -> cNixops)
+  executor o (format fp $ iohkNixopsPath "default.nix")
   (fromCmd com : nixopsCmdOptions o c <> fmap fromArg args)
 
 nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO (ExitCode, Text)
