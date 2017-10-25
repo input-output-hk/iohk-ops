@@ -18,7 +18,7 @@
     s3Buckets = {
       # if moved to another region, you must rename the bucket
       report-server-logs = { config, uuid, ... }: {
-        region = "ap-northeast-1";
+        region = "eu-central-1";
         accessKeyId = IOHKaccessKeyId;
       };
     };
