@@ -39,7 +39,8 @@ module NixOps (
   , checkstatus
   , parallelSSH
   , NixOps.date
-  , s3UploadTest
+  , s3Upload
+  , findInstallers
 
   , awsPublicIPURL
   , defaultEnvironment
@@ -122,7 +123,8 @@ where
 
 import           Control.Arrow                   ((***))
 import           Control.Exception                (throwIO)
-import           Control.Lens                     ((<&>), set, view)
+import           Control.Lens                     ((<&>), set, view, (^.), (.~))
+import qualified Control.Lens                  as Lens
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
@@ -174,6 +176,7 @@ import           Network.AWS.S3.PutObject
 import           Network.AWS.S3.Types      hiding (All, URL, Region)
 import           Control.Monad.Trans.Resource
 import           Data.Coerce
+import qualified Data.HashMap.Strict as HMS
 
 
 import           Topology
@@ -1177,8 +1180,8 @@ date o c = parallelIO o c $
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
 
-s3UploadTest :: String -> String -> Options -> NixopsConfig -> IO ()
-s3UploadTest win64 mac64 o c = do
+s3Upload :: String -> String -> String -> Options -> NixopsConfig -> IO ()
+s3Upload daedalus_rev win64 mac64 o c = do
   let
     --f (Ref t _) = print $ "[Amazonka Auth] { <thread:" <> build (show t) <> "> }"
     --f (Auth  e) = print $ build e
@@ -1186,27 +1189,32 @@ s3UploadTest win64 mac64 o c = do
     uploadOneFile :: BucketName -> Sys.FilePath -> ObjectKey -> AWST (ResourceT IO) ()
     uploadOneFile bucketName localPath remoteKey = do
       bdy <- chunkedFile defaultChunkSize localPath
-      void . send $ putObject bucketName remoteKey bdy
-  --manager <- newTlsManager
-  --(auth, region) <- getAuth manager Discover
-  --hPutBuilder Sys.stderr $ AWS.build auth
-  --print region
-  print "foo"
+      let
+        metadata :: HMS.HashMap Text Text
+        metadata = HMS.fromList [ ("daedalus-revision", T.pack daedalus_rev)]
+      void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata metadata $ putObject bucketName remoteKey bdy
+    hashInstaller :: Sys.FilePath -> IO Text
+    hashInstaller path = do
+      (exitStatus, res) <- procStrict "/nix/store/myla1pqh1hzif9b1k5pv8kj25fqyhjff-cardano-sl-auxx-1.0.2/bin/cardano-hash-installer" [ (T.pack path) ] empty
+      let cleanHash = fromMaybe res (T.stripSuffix "\n" res)
+      return cleanHash
+    uploadHashedInstaller :: BucketName -> Sys.FilePath -> AWST (ResourceT IO) Text
+    uploadHashedInstaller bucketName localPath = do
+      hash <- (liftIO . hashInstaller) localPath
+      uploadOneFile bucketName localPath (ObjectKey hash)
+      return hash
   --lgr <- newLogger Trace Sys.stdout
-  env <- newEnv Discover -- <&> set envLogger lgr . set envRegion NorthVirginia
+  env <- newEnv Discover -- <&> set envLogger lgr -- . set envRegion NorthVirginia
   runResourceT . runAWST env $ do
-    --say "Listing buckets"
-    --bs <- view lbrsBuckets <$> send listBuckets
-    --say $ "Found "
-    --liftIO . print $ (length bs)
-    --say " Buckets."
-    --forM_ bs $ \(view bName -> b) -> do
-    --  say $ "Listing Object Versions in: "
-    --  liftIO . print $ b
     say $ "uploading things to " <> (coerce $ cUpdateBucket c)
-    uploadOneFile (cUpdateBucket c) win64 "installer.exe"
-    uploadOneFile (cUpdateBucket c) mac64 "installer.pkg"
-  print "bar"
+    win64hash <- uploadHashedInstaller (cUpdateBucket c) win64
+    mac64hash <- uploadHashedInstaller (cUpdateBucket c) mac64
+    say $ "win64 hash " <> win64hash
+    say $ "mac64 hash " <> mac64hash
+
+findInstallers :: String -> Options -> NixopsConfig -> IO ()
+findInstallers daedalus_rev o c = do
+  print "foo"
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
