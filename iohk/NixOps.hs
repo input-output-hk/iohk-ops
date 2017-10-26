@@ -164,16 +164,16 @@ import           Time.Types
 import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText)
 import qualified Turtle                        as Turtle
 
-import           Network.HTTP.Client.TLS
+--import           Network.HTTP.Client.TLS
 import           Network.AWS.Auth
-import           Network.AWS.Types         hiding (Seconds, Debug, Region)
-import qualified Network.AWS.Data.Log          as AWS
-import           Data.ByteString.Builder
+--import qualified Network.AWS.Data.Log          as AWS
+--import           Data.ByteString.Builder
 import           Network.AWS               hiding (Seconds, Debug, Region)
-import           Control.Monad.Trans.AWS          (runAWST)
-import           Network.AWS.S3.ListBuckets
+import           Control.Monad.Trans.AWS          (runAWST, AWST)
 import           Network.AWS.S3.PutObject
 import           Network.AWS.S3.Types      hiding (All, URL, Region)
+import           Control.Monad.Trans.Resource
+import           Data.Coerce
 
 
 import           Topology
@@ -678,6 +678,7 @@ data NixopsConfig = NixopsConfig
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
+  , cUpdateBucket     :: BucketName
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
   , cDeplArgs         :: DeplArgs
@@ -693,10 +694,13 @@ instance FromJSON NixopsConfig where
         <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
+        <*> v .: "installer-bucket"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
         <*> pure undefined -- this is filled in in readConfig
+
+instance FromJSON BucketName
 instance ToJSON Environment
 instance ToJSON Target
 instance ToJSON Deployment
@@ -1172,8 +1176,6 @@ date o c = parallelIO o c $
   \n -> ssh' o c "date" [] n
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
-instance Show Auth where
-
 
 s3UploadTest :: String -> String -> Options -> NixopsConfig -> IO ()
 s3UploadTest win64 mac64 o c = do
@@ -1181,16 +1183,17 @@ s3UploadTest win64 mac64 o c = do
     --f (Ref t _) = print $ "[Amazonka Auth] { <thread:" <> build (show t) <> "> }"
     --f (Auth  e) = print $ build e
     say = liftIO . TIO.putStrLn
+    uploadOneFile :: BucketName -> Sys.FilePath -> ObjectKey -> AWST (ResourceT IO) ()
     uploadOneFile bucketName localPath remoteKey = do
       bdy <- chunkedFile defaultChunkSize localPath
       void . send $ putObject bucketName remoteKey bdy
-  manager <- newTlsManager
-  (auth, region) <- getAuth manager Discover
-  hPutBuilder Sys.stderr $ AWS.build auth
+  --manager <- newTlsManager
+  --(auth, region) <- getAuth manager Discover
+  --hPutBuilder Sys.stderr $ AWS.build auth
   --print region
   print "foo"
-  lgr <- newLogger Trace Sys.stdout
-  env <- newEnv Discover <&> set envLogger lgr . set envRegion NorthVirginia
+  --lgr <- newLogger Trace Sys.stdout
+  env <- newEnv Discover -- <&> set envLogger lgr . set envRegion NorthVirginia
   runResourceT . runAWST env $ do
     --say "Listing buckets"
     --bs <- view lbrsBuckets <$> send listBuckets
@@ -1200,9 +1203,9 @@ s3UploadTest win64 mac64 o c = do
     --forM_ bs $ \(view bName -> b) -> do
     --  say $ "Listing Object Versions in: "
     --  liftIO . print $ b
-    say "uploading things"
-    uploadOneFile "binary-cache" win64 "installer.exe"
-    uploadOneFile "binary-cache" mac64 "installer.pkg"
+    say $ "uploading things to " <> (coerce $ cUpdateBucket c)
+    uploadOneFile (cUpdateBucket c) win64 "installer.exe"
+    uploadOneFile (cUpdateBucket c) mac64 "installer.pkg"
   print "bar"
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
