@@ -39,6 +39,7 @@ module NixOps (
   , checkstatus
   , parallelSSH
   , NixOps.date
+  , s3UploadTest
 
   , awsPublicIPURL
   , defaultEnvironment
@@ -121,7 +122,7 @@ where
 
 import           Control.Arrow                   ((***))
 import           Control.Exception                (throwIO)
-import           Control.Lens                     ((<&>))
+import           Control.Lens                     ((<&>), set, view)
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
@@ -146,6 +147,7 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Text.Lazy                   (fromStrict)
 import           Data.Text.Lazy.Encoding          (encodeUtf8)
+import           Data.Text.Encoding               (decodeLatin1)
 import qualified Data.Vector                   as V
 import qualified Data.Yaml                     as YAML
 import           Data.Yaml                        (FromJSON(..), ToJSON(..))
@@ -159,8 +161,19 @@ import qualified System.IO                     as Sys
 import qualified System.IO.Unsafe              as Sys
 import           Time.System
 import           Time.Types
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x)
+import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText)
 import qualified Turtle                        as Turtle
+
+import           Network.HTTP.Client.TLS
+import           Network.AWS.Auth
+import           Network.AWS.Types         hiding (Seconds, Debug, Region)
+import qualified Network.AWS.Data.Log          as AWS
+import           Data.ByteString.Builder
+import           Network.AWS               hiding (Seconds, Debug, Region)
+import           Control.Monad.Trans.AWS          (runAWST)
+import           Network.AWS.S3.ListBuckets
+import           Network.AWS.S3.PutObject
+import           Network.AWS.S3.Types      hiding (All, URL, Region)
 
 
 import           Topology
@@ -744,7 +757,7 @@ writeConfig mFp c@NixopsConfig{..} = do
   pure configFilename
 
 -- | Read back config, doing validation
-readConfig :: MonadIO m => Options -> FilePath -> m NixopsConfig
+readConfig :: HasCallStack => MonadIO m => Options -> FilePath -> m NixopsConfig
 readConfig Options{..} cf = do
   cfParse <- liftIO $ YAML.decodeFileEither $ Path.encodeString $ cf
   let c@NixopsConfig{..}
@@ -1159,6 +1172,39 @@ date o c = parallelIO o c $
   \n -> ssh' o c "date" [] n
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
+instance Show Auth where
+
+
+s3UploadTest :: String -> String -> Options -> NixopsConfig -> IO ()
+s3UploadTest win64 mac64 o c = do
+  let
+    --f (Ref t _) = print $ "[Amazonka Auth] { <thread:" <> build (show t) <> "> }"
+    --f (Auth  e) = print $ build e
+    say = liftIO . TIO.putStrLn
+    uploadOneFile bucketName localPath remoteKey = do
+      bdy <- chunkedFile defaultChunkSize localPath
+      void . send $ putObject bucketName remoteKey bdy
+  manager <- newTlsManager
+  (auth, region) <- getAuth manager Discover
+  hPutBuilder Sys.stderr $ AWS.build auth
+  --print region
+  print "foo"
+  lgr <- newLogger Trace Sys.stdout
+  env <- newEnv Discover <&> set envLogger lgr . set envRegion NorthVirginia
+  runResourceT . runAWST env $ do
+    --say "Listing buckets"
+    --bs <- view lbrsBuckets <$> send listBuckets
+    --say $ "Found "
+    --liftIO . print $ (length bs)
+    --say " Buckets."
+    --forM_ bs $ \(view bName -> b) -> do
+    --  say $ "Listing Object Versions in: "
+    --  liftIO . print $ b
+    say "uploading things"
+    uploadOneFile "binary-cache" win64 "installer.exe"
+    uploadOneFile "binary-cache" mac64 "installer.pkg"
+  print "bar"
+
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
   echo "Wiping journals on cluster.."
@@ -1251,7 +1297,7 @@ readT = read . T.unpack
 lowerShowT :: Show a => a -> Text
 lowerShowT = T.toLower . T.pack . show
 
-errorT :: Text -> a
+errorT :: HasCallStack => Text -> a
 errorT = error . T.unpack
 
 -- Currently unused, but that's mere episode of the used/unused/used/unused event train.

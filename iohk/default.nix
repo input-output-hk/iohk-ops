@@ -1,6 +1,7 @@
-{ mkDerivation, aeson, aeson-pretty, base, bytestring, cassava
-, containers, dns, hourglass, lens, lens-aeson, mtl, optional-args
-, safe, stdenv, system-filepath, text, turtle, unordered-containers
+{ mkDerivation, aeson, aeson-pretty, amazonka, amazonka-s3, base
+, bytestring, cassava, containers, dns, hourglass, http-client-tls
+, lens, lens-aeson, mtl, optional-args, safe, stdenv
+, system-filepath, text, turtle, unix, unordered-containers
 , utf8-string, vector, yaml
 }:
 mkDerivation {
@@ -10,8 +11,9 @@ mkDerivation {
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
-    aeson aeson-pretty base bytestring cassava containers dns hourglass
-    lens lens-aeson mtl optional-args safe system-filepath text turtle
+    aeson aeson-pretty amazonka amazonka-s3 base bytestring cassava
+    containers dns hourglass http-client-tls lens lens-aeson mtl
+    optional-args safe system-filepath text turtle unix
     unordered-containers utf8-string vector yaml
   ];
   license = stdenv.lib.licenses.bsd3;
