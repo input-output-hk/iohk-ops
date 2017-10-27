@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module UpdateLogic (realFindInstallers, CiResult, CiResult(..)) where
 
@@ -14,6 +15,8 @@ import           Data.Aeson
 import           Control.Monad.Managed
 import           Turtle.Prelude
 import           Filesystem.Path.CurrentOS hiding (decode)
+import qualified Data.Aeson                    as AE
+import Data.Maybe
 
 data Status = Status {
     description :: T.Text
@@ -29,6 +32,11 @@ data CommitStatus = CommitStatus {
 
 data TravisBuild = TravisBuild {
     number :: T.Text
+    , matrix :: [ TravisJobInfo ]
+    } deriving (Show, Generic)
+
+data TravisJobInfo = TravisJobInfo {
+    tjiId :: Integer
     } deriving (Show, Generic)
 
 data AppveyorBuild = AppveyorBuild {
@@ -53,6 +61,9 @@ data CiResult = TravisResult T.Text | AppveyorResult T.Text deriving (Show)
 instance FromJSON CommitStatus
 instance FromJSON Status
 instance FromJSON TravisBuild
+instance FromJSON TravisJobInfo where
+    parseJSON = AE.withObject "TravisJobInfo" $ \v -> TravisJobInfo
+        <$> v .: "id"
 instance FromJSON AppveyorBuild
 instance FromJSON AppveyorBuild2
 instance FromJSON AppveyorBuild3
@@ -96,14 +107,11 @@ realFindInstallers daedalus_rev = do
   case maybeObj of
     Just obj -> do
       tempdir <- mktempdir "/tmp" "iohk-ops"
-      liftIO $ print tempdir
       results <- liftIO $ mapM (findInstaller $ T.pack $ encodeString tempdir) (statuses obj)
-      liftIO $ print results
       return $ results
 
 findInstaller :: T.Text -> Status -> IO CiResult
 findInstaller tempdir status = do
-  print ""
   let
     fetchTravis :: T.Text -> IO (Maybe TravisBuild)
     fetchTravis buildId = fetchJson $ T.unpack $ "https://api.travis-ci.org/repos/input-output-hk/daedalus/builds/" <> buildId
@@ -116,17 +124,18 @@ findInstaller tempdir status = do
       let 
         [part1] = drop 6 (T.splitOn "/" (target_url status))
         buildId = head  $ T.splitOn "?" part1
-      print $ "its travis buildId: " <> buildId
+      --print $ "its travis buildId: " <> buildId
       maybeObj <- fetchTravis buildId
       case maybeObj of
         Just obj -> do
           let
             filename = "Daedalus-installer-0.6." <> (number obj) <> ".pkg"
             url = "http://s3.eu-central-1.amazonaws.com/daedalus-travis/" <> filename
+          buildLog <- fetchUrl mempty $ "https://api.travis-ci.org/jobs/" <> (show $ tjiId $ head $ drop 1 $ matrix obj) <> "/log"
+          --print $ "Log: " <> buildLog
           print $ "travis URL: " <> url
           stream <- fetchUrl mempty (T.unpack url)
           LBS.writeFile (T.unpack $ tempdir <> "/" <> filename) stream
-          print "done"
           pure $ TravisResult $ tempdir <> "/" <> filename
     "continuous-integration/appveyor/branch" -> do
       let
@@ -134,14 +143,12 @@ findInstaller tempdir status = do
       maybeObj <- fetchAppveyorBuild url
       case maybeObj of
         Just (AppveyorBuild {build = AppveyorBuild2 {jobs = [AppveyorBuild3 {jobId = jobId}]}}) -> do
-          print $ "job id is " <> jobId
+          --print $ "job id is " <> jobId
           maybeArtifacts <- fetchAppveyorArtifacts $ "https://ci.appveyor.com/api/buildjobs/" <> jobId <> "/artifacts"
           case maybeArtifacts of
             Just artifacts -> do
-              print $ head artifacts
               case head artifacts of
                 AppveyorArtifact filename "Daedalus Win64 Installer" -> do
-                  print filename
                   stream <- fetchUrl mempty $ T.unpack $ "https://ci.appveyor.com/api/buildjobs/" <> jobId <> "/artifacts/" <> filename
                   print $ "appveyor URL: " <>  "https://ci.appveyor.com/api/buildjobs/" <> jobId <> "/artifacts/" <> filename
                   let
