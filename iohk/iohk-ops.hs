@@ -120,7 +120,7 @@ data Command where
   GetJournals           :: Command
   CWipeNodeDBs          :: Confirmation -> Command
   PrintDate             :: Command
-  S3Upload              :: String -> String -> String -> Command
+  S3Upload              :: String -> Command
   FindInstallers        :: String -> Command
 deriving instance Show Command
 
@@ -197,7 +197,7 @@ centralCommandParser =
                                 CWipeNodeDBs
                                 <$> parserConfirmation "Wipe node DBs on the entire cluster?")
    , ("date",                   "Print date/time",                                                  pure PrintDate)
-   , ("s3upload",               "test S3 upload",                                                   S3Upload <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")) <*> (strOption (long "win64" <> short 'w' <> metavar "WIN64")) <*> (strOption (long "mac64" <> short 'm' <> metavar "MAC64")) )
+   , ("s3upload",               "test S3 upload",                                                   S3Upload <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV"))  )
    , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
    ]
 
@@ -268,7 +268,7 @@ runTop o@Options{..} args topcmd = do
             GetJournals              -> Ops.getJournals               o c
             CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
-            S3Upload         d w m   -> Ops.s3Upload                  d w m o c
+            S3Upload         d       -> Ops.s3Upload                  d o c
             FindInstallers         d -> Ops.findInstallers            d o c
             Clone{..}                -> error "impossible"
             Template{..}             -> error "impossible"

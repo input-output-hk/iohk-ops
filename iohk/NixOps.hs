@@ -177,6 +177,7 @@ import           Network.AWS.S3.Types      hiding (All, URL, Region)
 import           Control.Monad.Trans.Resource
 import           Data.Coerce
 import qualified Data.HashMap.Strict as HMS
+import UpdateLogic
 
 
 import           Topology
@@ -1180,11 +1181,9 @@ date o c = parallelIO o c $
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
 
-s3Upload :: String -> String -> String -> Options -> NixopsConfig -> IO ()
-s3Upload daedalus_rev win64 mac64 o c = do
+s3Upload :: String -> Options -> NixopsConfig -> IO ()
+s3Upload daedalus_rev o c = do
   let
-    --f (Ref t _) = print $ "[Amazonka Auth] { <thread:" <> build (show t) <> "> }"
-    --f (Auth  e) = print $ build e
     say = liftIO . TIO.putStrLn
     uploadOneFile :: BucketName -> Sys.FilePath -> ObjectKey -> AWST (ResourceT IO) ()
     uploadOneFile bucketName localPath remoteKey = do
@@ -1203,18 +1202,28 @@ s3Upload daedalus_rev win64 mac64 o c = do
       hash <- (liftIO . hashInstaller) localPath
       uploadOneFile bucketName localPath (ObjectKey hash)
       return hash
+    hashAndUpload :: CiResult -> AWST (ResourceT IO) ()
+    hashAndUpload ciResult = do
+      case ciResult of
+        TravisResult localPath -> do
+          hash <- uploadHashedInstaller (cUpdateBucket c) (T.unpack localPath)
+          say $ "darwin installer " <> localPath <> " hash " <> hash
+        AppveyorResult localPath -> do
+          hash <- uploadHashedInstaller (cUpdateBucket c) (T.unpack localPath)
+          say $ "windows installer " <> localPath <> " hash " <> hash
+
   --lgr <- newLogger Trace Sys.stdout
   env <- newEnv Discover -- <&> set envLogger lgr -- . set envRegion NorthVirginia
-  runResourceT . runAWST env $ do
-    say $ "uploading things to " <> (coerce $ cUpdateBucket c)
-    win64hash <- uploadHashedInstaller (cUpdateBucket c) win64
-    mac64hash <- uploadHashedInstaller (cUpdateBucket c) mac64
-    say $ "win64 hash " <> win64hash
-    say $ "mac64 hash " <> mac64hash
+  with (realFindInstallers daedalus_rev) $ \res -> do
+    print res
+    liftIO $ runResourceT . runAWST env $ do
+      say $ "uploading things to " <> (coerce $ cUpdateBucket c)
+      mapM_ hashAndUpload res
 
 findInstallers :: String -> Options -> NixopsConfig -> IO ()
 findInstallers daedalus_rev o c = do
-  print "foo"
+  with (realFindInstallers daedalus_rev) $ \res -> do
+    print res
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
