@@ -123,7 +123,7 @@ where
 
 import           Control.Arrow                   ((***))
 import           Control.Exception                (throwIO)
-import           Control.Lens                     ((<&>), set, view, (^.), (.~))
+import           Control.Lens                     ((<&>))
 import qualified Control.Lens                  as Lens
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
@@ -149,7 +149,6 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Text.Lazy                   (fromStrict)
 import           Data.Text.Lazy.Encoding          (encodeUtf8)
-import           Data.Text.Encoding               (decodeLatin1)
 import qualified Data.Vector                   as V
 import qualified Data.Yaml                     as YAML
 import           Data.Yaml                        (FromJSON(..), ToJSON(..))

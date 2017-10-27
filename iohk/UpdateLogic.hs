@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module UpdateLogic (realFindInstallers, CiResult, CiResult(..)) where
+module UpdateLogic (realFindInstallers, CiResult(..)) where
 
 import           Data.Monoid                      ((<>))
 import qualified Data.ByteString.Lazy          as LBS
@@ -56,7 +56,7 @@ data AppveyorArtifact = AppveyorArtifact {
     , name :: T.Text
     } deriving (Show, Generic)
 
-data CiResult = TravisResult T.Text | AppveyorResult T.Text deriving (Show)
+data CiResult = TravisResult T.Text | AppveyorResult T.Text | Other deriving (Show)
 
 instance FromJSON CommitStatus
 instance FromJSON Status
@@ -119,6 +119,8 @@ findInstaller tempdir status = do
     fetchAppveyorBuild url = fetchJson $ T.unpack url
     fetchAppveyorArtifacts :: T.Text -> IO (Maybe [AppveyorArtifact])
     fetchAppveyorArtifacts url = fetchJson $ T.unpack url
+  -- TODO check for 404's
+  -- TODO check file contents with libmagic
   case (context status) of
     "continuous-integration/travis-ci/push" -> do
       let 
@@ -155,3 +157,6 @@ findInstaller tempdir status = do
                     basename = head $ drop 1 $ T.splitOn "/" filename
                   LBS.writeFile (T.unpack $ tempdir <> "/" <> basename) stream
                   pure $ AppveyorResult $ tempdir <> "/" <> basename
+    other -> do
+      print $ "other CI status found: " <> other
+      pure Other
