@@ -19,6 +19,7 @@ gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /ni
 environment: Staging
 topology: topology-staging.yaml
 name: rc-staging
+installer-bucket: update-system-testing
 files:
 - deployments/keypairs.nix
 - deployments/security-groups.nix
