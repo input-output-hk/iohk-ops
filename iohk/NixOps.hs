@@ -39,6 +39,8 @@ module NixOps (
   , checkstatus
   , parallelSSH
   , NixOps.date
+  , s3Upload
+  , findInstallers
 
   , awsPublicIPURL
   , defaultEnvironment
@@ -122,6 +124,7 @@ where
 import           Control.Arrow                   ((***))
 import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
+import qualified Control.Lens                  as Lens
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
@@ -159,8 +162,21 @@ import qualified System.IO                     as Sys
 import qualified System.IO.Unsafe              as Sys
 import           Time.System
 import           Time.Types
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x)
+import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText)
 import qualified Turtle                        as Turtle
+
+--import           Network.HTTP.Client.TLS
+import           Network.AWS.Auth
+--import qualified Network.AWS.Data.Log          as AWS
+--import           Data.ByteString.Builder
+import           Network.AWS               hiding (Seconds, Debug, Region)
+import           Control.Monad.Trans.AWS          (runAWST, AWST)
+import           Network.AWS.S3.PutObject
+import           Network.AWS.S3.Types      hiding (All, URL, Region)
+import           Control.Monad.Trans.Resource
+import           Data.Coerce
+import qualified Data.HashMap.Strict as HMS
+import UpdateLogic
 
 
 import           Topology
@@ -679,6 +695,7 @@ data NixopsConfig = NixopsConfig
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
+  , cUpdateBucket     :: BucketName
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
   , cDeplArgs         :: DeplArgs
@@ -693,10 +710,13 @@ instance FromJSON NixopsConfig where
         <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
+        <*> v .: "installer-bucket"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
         <*> pure undefined -- this is filled in in readConfig
+
+instance FromJSON BucketName
 instance ToJSON Environment
 instance ToJSON Target
 instance ToJSON Deployment
@@ -755,7 +775,7 @@ writeConfig mFp c@NixopsConfig{..} = do
   pure configFilename
 
 -- | Read back config, doing validation
-readConfig :: MonadIO m => Options -> FilePath -> m NixopsConfig
+readConfig :: HasCallStack => MonadIO m => Options -> FilePath -> m NixopsConfig
 readConfig Options{..} cf = do
   cfParse <- liftIO $ YAML.decodeFileEither $ Path.encodeString $ cf
   let c@NixopsConfig{..}
@@ -1164,6 +1184,51 @@ date o c = parallelIO o c $
   \n -> ssh' o c "date" [] n
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
+
+s3Upload :: String -> Options -> NixopsConfig -> IO ()
+s3Upload daedalus_rev o c = do
+  let
+    say = liftIO . TIO.putStrLn
+    uploadOneFile :: BucketName -> Sys.FilePath -> ObjectKey -> AWST (ResourceT IO) ()
+    uploadOneFile bucketName localPath remoteKey = do
+      bdy <- chunkedFile defaultChunkSize localPath
+      let
+        metadata :: HMS.HashMap Text Text
+        metadata = HMS.fromList [ ("daedalus-revision", T.pack daedalus_rev)]
+      void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata metadata $ putObject bucketName remoteKey bdy
+    hashInstaller :: Sys.FilePath -> IO Text
+    hashInstaller path = do
+      (exitStatus, res) <- procStrict "/nix/store/myla1pqh1hzif9b1k5pv8kj25fqyhjff-cardano-sl-auxx-1.0.2/bin/cardano-hash-installer" [ (T.pack path) ] empty
+      let cleanHash = fromMaybe res (T.stripSuffix "\n" res)
+      return cleanHash
+    uploadHashedInstaller :: BucketName -> Sys.FilePath -> AWST (ResourceT IO) Text
+    uploadHashedInstaller bucketName localPath = do
+      hash <- (liftIO . hashInstaller) localPath
+      uploadOneFile bucketName localPath (ObjectKey hash)
+      return hash
+    hashAndUpload :: CiResult -> AWST (ResourceT IO) ()
+    hashAndUpload ciResult = do
+      case ciResult of
+        TravisResult localPath -> do
+          hash <- uploadHashedInstaller (cUpdateBucket c) (T.unpack localPath)
+          say $ "darwin installer " <> localPath <> " hash " <> hash
+        AppveyorResult localPath -> do
+          hash <- uploadHashedInstaller (cUpdateBucket c) (T.unpack localPath)
+          say $ "windows installer " <> localPath <> " hash " <> hash
+
+  --lgr <- newLogger Trace Sys.stdout
+  env <- newEnv Discover -- <&> set envLogger lgr -- . set envRegion NorthVirginia
+  with (realFindInstallers daedalus_rev) $ \res -> do
+    print res
+    liftIO $ runResourceT . runAWST env $ do
+      say $ "uploading things to " <> (coerce $ cUpdateBucket c)
+      mapM_ hashAndUpload res
+
+findInstallers :: String -> Options -> NixopsConfig -> IO ()
+findInstallers daedalus_rev o c = do
+  with (realFindInstallers daedalus_rev) $ \res -> do
+    print res
+
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
   echo "Wiping journals on cluster.."
@@ -1256,7 +1321,7 @@ readT = read . T.unpack
 lowerShowT :: Show a => a -> Text
 lowerShowT = T.toLower . T.pack . show
 
-errorT :: Text -> a
+errorT :: HasCallStack => Text -> a
 errorT = error . T.unpack
 
 -- Currently unused, but that's mere episode of the used/unused/used/unused event train.

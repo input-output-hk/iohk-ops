@@ -45,3 +45,11 @@ executable iohk-ops
                      , utf8-string
                      , vector >=0.11
                      , yaml >=0.8
+                     , http-client-tls
+                     , optparse-applicative
+                     , resourcet
+                     , http-client
+                     , managed
+                     , http-types
+                     , amazonka
+                     , amazonka-s3
