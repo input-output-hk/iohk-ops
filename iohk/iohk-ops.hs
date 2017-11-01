@@ -287,6 +287,9 @@ runTemplate o@Options{..} Template{..} args = do
   echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
   cmd o "cat" [configFilename]
 
+  -- nixops create:
+  Ops.create o config
+
   -- generate dev-keys:
   when (tEnvironment == Development) $
     generateDevKeys o (clusterConfigurationKey config) "keys"
