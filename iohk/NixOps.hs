@@ -624,7 +624,7 @@ create o c@NixopsConfig{..} = do
   deplExists <- exists o c
   if deplExists
   then do
-    printf ("Deployment already exists?: '"%s%"'") $ fromNixopsDepl cName
+    printf ("Deployment already exists?: '"%s%"'\n") $ fromNixopsDepl cName
   else do
     printf ("Creating deployment "%s%"\n") $ fromNixopsDepl cName
     nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements

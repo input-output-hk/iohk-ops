@@ -300,9 +300,12 @@ runTemplate o@Options{..} Template{..} args = do
                   , "static/datadog-api.secret"
                   , "static/datadog-application.secret" ]
     forM_ secrets touch
+    echo "Ensured secrets exist"
 
-    when (tGenerateKeys == GenerateKeys) $
-      generateDevKeys o (clusterConfigurationKey config) "keys"
+    if (tGenerateKeys == GenerateKeys)
+    then generateDevKeys o (clusterConfigurationKey config) "keys"
+    else echo "Skipping key generation, due to user request"
+  echo "Cluster deployment has been prepared."
 
 runTemplate _ _ _ = error "impossible"
 
