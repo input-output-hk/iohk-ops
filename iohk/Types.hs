@@ -36,6 +36,9 @@ newtype IP           = IP           { getIP            :: Text   } deriving (Sho
 newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
 newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 
+
+-- * Flags
+--
 data BuildNixops      = BuildNixops      | DontBuildNixops    deriving (Bounded, Eq, Ord, Show); instance Flag BuildNixops
 data Confirmed        = Confirmed        | Unconfirmed        deriving (Bounded, Eq, Ord, Show); instance Flag Confirmed
 data Debug            = Debug            | NoDebug            deriving (Bounded, Eq, Ord, Show); instance Flag Debug
@@ -51,6 +54,7 @@ data PassCheck        = PassCheck        | DontPassCheck      deriving (Bounded,
 data WipeJournals     = WipeJournals     | KeepJournals       deriving (Bounded, Eq, Ord, Show); instance Flag WipeJournals
 data WipeNodeDBs      = WipeNodeDBs      | KeepNodeDBs        deriving (Bounded, Eq, Ord, Show); instance Flag WipeNodeDBs
 data ResumeFailed     = ResumeFailed     | DontResume         deriving (Bounded, Eq, Ord, Show); instance Flag ResumeFailed
+data GenerateKeys     = GenerateKeys     | DontGenerateKeys   deriving (Bounded, Eq, Ord, Show); instance Flag GenerateKeys
 
 deriving instance Eq NodeType
 deriving instance Read NodeName

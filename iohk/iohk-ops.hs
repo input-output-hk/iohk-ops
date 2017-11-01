@@ -18,6 +18,7 @@ import           Time.System
 
 import           NixOps
 import qualified NixOps                        as Ops
+import           Types
 import           Utils
 
 
@@ -80,6 +81,7 @@ data Command where
   Template              :: { tFile        :: Maybe Turtle.FilePath
                            , tTopology    :: Maybe Turtle.FilePath
                            , tConfigurationKey :: Maybe ConfigurationKey
+                           , tGenerateKeys :: GenerateKeys
                            , tEnvironment :: Environment
                            , tTarget      :: Target
                            , tName        :: NixopsDepl
@@ -128,6 +130,7 @@ centralCommandParser =
                                 <$> optional (optPath "config"        'c' "Override the default, environment-dependent config filename")
                                 <*> optional (optPath "topology"      't' "Cluster configuration.  Defaults to 'topology.yaml'")
                                 <*> optional parserConfigurationKey
+                                <*> flag DontGenerateKeys "dont-generate-keys" 'd' "Don't generate development keys"
                                 <*> parserEnvironment
                                 <*> parserTarget
                                 <*> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
@@ -298,7 +301,8 @@ runTemplate o@Options{..} Template{..} args = do
                   , "static/datadog-application.secret" ]
     forM_ secrets touch
 
-    generateDevKeys o (clusterConfigurationKey config) "keys"
+    when (tGenerateKeys == GenerateKeys) $
+      generateDevKeys o (clusterConfigurationKey config) "keys"
 
 runTemplate _ _ _ = error "impossible"
 
