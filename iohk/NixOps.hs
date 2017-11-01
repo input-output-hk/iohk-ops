@@ -23,7 +23,6 @@ module NixOps (
 
   , build
   , buildAMI
-  , runFakeKeys
   , stop
   , start
   , fromscratch
@@ -1044,15 +1043,6 @@ runSetRev o proj rev mCommitChanges = do
     Just msg -> do
       cmd o "git" (["add", revspecFile])
       cmd o "git" ["commit", "-m", msg]
-
-runFakeKeys :: IO ()
-runFakeKeys = do
-  echo "Faking keys/key*.sk"
-  testdir "keys"
-    >>= flip unless (mkdir "keys")
-  forM_ ([0..41]) $
-    (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
-  echo "Minimum viable keyset complete."
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"

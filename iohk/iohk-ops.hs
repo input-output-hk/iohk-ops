@@ -86,7 +86,6 @@ data Command where
                            , tDeployments :: [Deployment]
                            } -> Command
   SetRev                :: Project -> Commit -> DoCommit -> Command
-  FakeKeys              :: Command
 
   -- * building
   Build                 :: Deployment -> Command
@@ -138,7 +137,6 @@ centralCommandParser =
                                 <$> parserProject
                                 <*> parserCommit "Commit to set PROJECT's version to"
                                 <*> flag DontCommit "dont-commit" 'n' "Don't commit the *-src.json")
-    , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
     ]
 
    <|> subcommandGroup "Build-related:"
@@ -228,8 +226,6 @@ runTop o@Options{..} args topcmd = do
         doCommand :: Options -> Ops.NixopsConfig -> Command -> IO ()
         doCommand o@Options{..} c@Ops.NixopsConfig{..} cmd = do
           case cmd of
-            -- * setup
-            FakeKeys                 -> Ops.runFakeKeys
             -- * building
             Build depl               -> Ops.build                     o c depl
             AMI                      -> Ops.buildAMI              o c
