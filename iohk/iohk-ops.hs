@@ -290,8 +290,14 @@ runTemplate o@Options{..} Template{..} args = do
   -- nixops create:
   Ops.create o config
 
-  -- generate dev-keys:
-  when (tEnvironment == Development) $
+  -- generate dev-keys & ensure secrets exist:
+  when (tEnvironment == Development) $ do
+    let secrets = [ "static/github_token"
+                  , "static/id_buildfarm"
+                  , "static/datadog-api.secret"
+                  , "static/datadog-application.secret" ]
+    forM_ secrets touch
+
     generateDevKeys o (clusterConfigurationKey config) "keys"
 
 runTemplate _ _ _ = error "impossible"
