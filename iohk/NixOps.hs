@@ -68,6 +68,7 @@ module NixOps (
   , Exec(..)
   , NixopsCmd(..)
   , NixopsConfig(..)
+  , clusterConfigurationKey
   , NixopsDepl(..)
   , NixSource(..)
   , githubSource, gitSource, readSource
@@ -533,6 +534,11 @@ readConfig Options{..} cf = do
   topo <- liftIO $ getSimpleTopo cElements cTopology
   pure c { topology = topo }
 
+clusterConfigurationKey :: NixopsConfig -> ConfigurationKey
+clusterConfigurationKey c =
+  ConfigurationKey . fromNixStr $ deplArg c (NixParam "configurationKey") $ errorT $
+                                  format "'configurationKey' network argument missing from cluster config"
+
 
 parallelIO' :: Options -> NixopsConfig -> ([NodeName] -> [a]) -> (a -> IO ()) -> IO ()
 parallelIO' o@Options{..} c@NixopsConfig{..} xform action =
@@ -665,8 +671,7 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
-  _ <- pure $ deplArg c (NixParam "configurationKey") $ errorT $
-       format "'configurationKey' network argument missing from cluster config"
+  _ <- pure $ clusterConfigurationKey c
   when (dryrun /= DryRun && elem Explorer cElements && reExplorer /= NoExplorerRebuild) $ do
     cmd o "scripts/generate-explorer-frontend.sh" []
   when (dryrun /= DryRun && buonly /= BuildOnly) $ do

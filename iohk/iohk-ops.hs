@@ -16,9 +16,9 @@ import           Turtle                    hiding (env, err, fold, inproc, prefi
 import           Time.Types
 import           Time.System
 
-
 import           NixOps
 import qualified NixOps                        as Ops
+import           Utils
 
 
 -- * Elementary parsers
@@ -277,6 +277,7 @@ runTemplate o@Options{..} Template{..} args = do
                                       in names <> (T.toLower <$> names)) $
     die $ format ("the deployment name "%w%" ambiguously refers to a deployment _type_.  Cannot have that!") (fromNixopsDepl tName)
 
+  -- generate config:
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
   config <- Ops.mkNewConfig o cmdline tName tTopology tEnvironment tTarget tDeployments systemStart tConfigurationKey
@@ -285,4 +286,26 @@ runTemplate o@Options{..} Template{..} args = do
   echo ""
   echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
   cmd o "cat" [configFilename]
+
+  -- generate dev-keys:
+  when (tEnvironment == Development) $
+    generateDevKeys o (clusterConfigurationKey config) "keys"
+
 runTemplate _ _ _ = error "impossible"
+
+-- | Use 'cardano-keygen' to create keys for a develoment cluster.
+generateDevKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
+generateDevKeys o configurationKey outdir = do
+  -- XXX: compute cardano source path globally
+  configuration <- (<> "/configuration.yaml") . T.strip <$> incmd o "nix-instantiate"
+    [ "--eval"
+    , "-A", "cardano-sl.src"
+    , "default.nix"
+    ]
+  cmd o "cardano-keygen"
+    [ "--system-start", "0"
+    , "--configuration-file", configuration
+    , "--configuration-key", fromConfigurationKey configurationKey
+    , "generate-keys-by-spec"
+    , "--genesis-out-dir", T.pack $ Path.encodeString outdir
+    ]

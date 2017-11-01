@@ -108,3 +108,7 @@ nixValueStr (NixFile f)         = let txt = format fp f
 nixArgCmdline :: NixParam -> NixValue -> [Text]
 nixArgCmdline (NixParam name) x@(NixStr _) = ["--argstr", name, T.drop 1 $ nixValueStr x & T.dropEnd 1]
 nixArgCmdline (NixParam name) x            = ["--arg",    name, nixValueStr x]
+
+fromNixStr :: NixValue -> Text
+fromNixStr (NixStr s) = s
+fromNixStr x = error $ "fromNixStr, got a non-NixStr: " <> show x
