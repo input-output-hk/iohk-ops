@@ -84,7 +84,7 @@ module NixOps (
   , URL(..)
   , Username(..)
   , Zone(..)
-  
+
   -- * Flags
   , BuildOnly(..)
   , DoCommit(..)
@@ -97,7 +97,7 @@ module NixOps (
   , flag
   , toBool
 
-  -- 
+  --
   , parserBranch
   , parserCommit
   , parserNodeLimit
@@ -576,6 +576,7 @@ inprocs bin args inp = do
 
 cmd   :: Options -> Text -> [Text] -> IO ()
 cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
+cmd'' :: Options -> Text           -> IO (ExitCode, Text, Text)
 incmd :: Options -> Text -> [Text] -> IO Text
 
 cmd   Options{..} bin args = do
@@ -584,6 +585,9 @@ cmd   Options{..} bin args = do
 cmd'  Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
   Turtle.procStrict bin args empty
+cmd'' Options{..} command  = do
+  when (toBool oVerbose) $ logCmd command []
+  Turtle.shellStrictWithErr command empty
 incmd Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
   inprocs bin args empty
@@ -591,22 +595,23 @@ incmd Options{..} bin args = do
 
 -- * Invoking nixops
 --
-iohkNixopsPath :: FilePath -> FilePath
-iohkNixopsPath defaultNix =
-  let storePath  = Sys.unsafePerformIO $ inprocs "nix-build" ["-A", "nixops", format fp defaultNix] $
+iohkNixopsPath :: FilePath
+iohkNixopsPath =
+  let defaultNix = "default.nix"
+      storePath  = Sys.unsafePerformIO $ inprocs "nix-build" ["-A", "nixops", format fp defaultNix] $
                    (trace (T.unpack $ format ("INFO: using "%fp%" expression for its definition of 'nixops'") defaultNix) empty)
-      nixopsPath = Path.fromText $ T.strip storePath <> "/bin/nixops"
-  in trace (T.unpack $ format ("INFO: nixops is "%fp) nixopsPath) nixopsPath
+      opsPath    = Path.fromText $ T.strip storePath <> "/bin/nixops"
+  in trace (T.unpack $ format ("INFO: nixops is "%fp) opsPath) opsPath
 
 nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO b
 nixops'' executor o@Options{..} c@NixopsConfig{..} com args =
-  executor o (format fp $ iohkNixopsPath "default.nix")
-  (fromCmd com : nixopsCmdOptions o c <> fmap fromArg args)
+  executor o (format fp iohkNixopsPath)
+    (fromCmd com : nixopsCmdOptions o c <> fmap fromArg args)
 
-nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO (ExitCode, Text)
-nixops  :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO ()
-nixops' = nixops'' cmd'
-nixops  = nixops'' cmd
+nixops'  :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO (ExitCode, Text)
+nixops   :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO ()
+nixops'  = nixops'' cmd'
+nixops   = nixops'' cmd
 
 nixopsMaybeLimitNodes :: Options -> [Arg]
 nixopsMaybeLimitNodes (oOnlyOn -> maybeNode) = ((("--include":) . (:[]) . Arg . fromNodeName) <$> maybeNode & fromMaybe [])
@@ -615,8 +620,9 @@ nixopsMaybeLimitNodes (oOnlyOn -> maybeNode) = ((("--include":) . (:[]) . Arg . 
 -- * Deployment lifecycle
 --
 exists :: Options -> NixopsConfig -> IO Bool
-exists o c@NixopsConfig{..} = do
-  (code, _) <- nixops' o c "info" []
+exists o NixopsConfig{..} = do
+  let ops = format fp iohkNixopsPath
+  (code, _, _) <- cmd'' o (ops <> " info -d " <> (fromNixopsDepl cName))
   pure $ code == ExitSuccess
 
 create :: Options -> NixopsConfig -> IO ()
