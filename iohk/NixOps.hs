@@ -53,7 +53,6 @@ module NixOps (
   , jsonLowerStrip
   , lowerShowT
   , parallelIO
-  , showT
 
   -- * Types
   , Arg(..)
@@ -124,16 +123,12 @@ import           Control.Lens                     ((<&>))
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
-import qualified Data.Aeson.Types              as AE
 import           Data.Aeson.Encode.Pretty         (encodePretty)
-import qualified Data.ByteString.Lazy          as BL
-import           Data.ByteString.Lazy.Char8       (ByteString)
 import qualified Data.ByteString.UTF8          as BU
 import qualified Data.ByteString.Lazy.UTF8     as LBU
-import           Data.Char                        (ord, toLower)
+import           Data.Char                        (ord)
 import           Data.Csv                         (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
 import           Data.Either
-import           Data.Foldable                    (asum)
 import           Data.Hourglass                   (timeAdd, timeFromElapsed, timePrint, Duration(..), ISO8601_DateAndTime(..))
 import           Data.List                        (nub, sort)
 import           Data.Maybe
@@ -161,253 +156,17 @@ import           Time.Types
 import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x)
 import qualified Turtle                        as Turtle
 
-
+import           Constants
+import           Nix
 import           Topology
-
-
--- * Constants
---
-awsPublicIPURL :: URL
-awsPublicIPURL = "http://169.254.169.254/latest/meta-data/public-ipv4"
-
-defaultEnvironment   = Development
-defaultTarget        = AWS
-defaultNode          = NodeName "c-a-1"
-defaultNodePort      = PortNo 3000
-defaultNixpkgs       = Nothing
-
-defaultHold          = 1200 :: Seconds -- 20 minutes
-
-explorerNode         = NodeName "explorer"
-
-orgs :: [NodeOrg]
-orgs                 = enumFromTo minBound maxBound
-defaultOrg           = IOHK
-accessKeyChain       = [ AccessKeyId $ showT org <> "accessKeyId"
-                       | org <- orgs ]
-
-simpleTopoFile       :: FilePath
-simpleTopoFile       = "topology.nix"
-
-
--- * Flags & enumerables
---
-every :: (Bounded a, Enum a) => [a]
-every = enumFromTo minBound maxBound
-
-class (Bounded a, Eq a) => Flag a where
-  toBool :: a -> Bool
-  toBool = (== enabled)
-  fromBool :: Bool -> a
-  fromBool x = if x then minBound else maxBound
-  enabled, disabled :: a
-  enabled  = minBound
-  disabled = maxBound
-  opposite :: a -> a
-  opposite = fromBool . not . toBool
-
-
--- * Projects
---
-data Project
-  = CardanoSL
-  | IOHKOps
-  | Nixpkgs
-  | Stack2nix
-  | Nixops
-  deriving (Bounded, Enum, Eq, Read, Show)
-
-projectURL     :: Project -> URL
-projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl"
-projectURL     IOHKOps         = "https://github.com/input-output-hk/iohk-nixops"
-projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs"
-projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix"
-projectURL     Nixops          = "https://github.com/input-output-hk/nixops"
-
-projectSrcFile :: Project -> FilePath
-projectSrcFile CardanoSL       = "cardano-sl-src.json"
-projectSrcFile Nixpkgs         = "nixpkgs-src.json"
-projectSrcFile Stack2nix       = "stack2nix-src.json"
-projectSrcFile IOHKOps         = error "Feeling self-referential?"
-projectSrcFile Nixops          = error "No corresponding -src.json spec for 'nixops' yet."
-
-
--- * Primitive types
---
-newtype AccessKeyId  = AccessKeyId  { fromAccessKeyId  :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype Arg          = Arg          { fromArg          :: Text   } deriving (IsString, Show)
-newtype Branch       = Branch       { fromBranch       :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype ConfigurationKey = ConfigurationKey { fromConfigurationKey :: Text } deriving (IsString, Show)
-newtype Commit       = Commit       { fromCommit       :: Text   } deriving (Eq, FromJSON, Generic, Show, IsString, ToJSON)
-newtype Exec         = Exec         { fromExec         :: Text   } deriving (IsString, Show)
-newtype EnvVar       = EnvVar       { fromEnvVar       :: Text   } deriving (IsString, Show)
-newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
-newtype NixHash      = NixHash      { fromNixHash      :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype NixAttr      = NixAttr      { fromAttr         :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype NixopsCmd    = NixopsCmd    { fromCmd          :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype NixopsDepl   = NixopsDepl   { fromNixopsDepl   :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype Org          = Org          { fromOrg          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype Region       = Region       { fromRegion       :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype Zone         = Zone         { fromZone         :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype URL          = URL          { fromURL          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
-newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
-newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-
-data BuildNixops      = BuildNixops      | DontBuildNixops    deriving (Bounded, Eq, Ord, Show); instance Flag BuildNixops
-data Confirmed        = Confirmed        | Unconfirmed        deriving (Bounded, Eq, Ord, Show); instance Flag Confirmed
-data Debug            = Debug            | NoDebug            deriving (Bounded, Eq, Ord, Show); instance Flag Debug
-data Serialize        = Serialize        | DontSerialize      deriving (Bounded, Eq, Ord, Show); instance Flag Serialize
-data Verbose          = Verbose          | NotVerbose         deriving (Bounded, Eq, Ord, Show); instance Flag Verbose
-data ComponentCheck   = ComponentCheck   | NoComponentCheck   deriving (Bounded, Eq, Ord, Show); instance Flag ComponentCheck
-data DoCommit         = DoCommit         | DontCommit         deriving (Bounded, Eq, Ord, Show); instance Flag DoCommit
-data RebuildExplorer  = RebuildExplorer  | NoExplorerRebuild  deriving (Bounded, Eq, Ord, Show); instance Flag RebuildExplorer
-data BuildOnly        = BuildOnly        | NoBuildOnly        deriving (Bounded, Eq, Ord, Show); instance Flag BuildOnly
-data DryRun           = DryRun           | NoDryRun           deriving (Bounded, Eq, Ord, Show); instance Flag DryRun
-data Validate         = Validate         | SkipValidation     deriving (Bounded, Eq, Ord, Show); instance Flag Validate
-data PassCheck        = PassCheck        | DontPassCheck      deriving (Bounded, Eq, Ord, Show); instance Flag PassCheck
-data WipeJournals     = WipeJournals     | KeepJournals       deriving (Bounded, Eq, Ord, Show); instance Flag WipeJournals
-data WipeNodeDBs      = WipeNodeDBs      | KeepNodeDBs        deriving (Bounded, Eq, Ord, Show); instance Flag WipeNodeDBs
-data ResumeFailed     = ResumeFailed     | DontResume         deriving (Bounded, Eq, Ord, Show); instance Flag ResumeFailed
-
-deriving instance Eq NodeType
-deriving instance Read NodeName
-deriving instance AE.ToJSONKey NodeName
-
-fromNodeName :: NodeName -> Text
-fromNodeName (NodeName x) = x
-
--- | Sum to track assurance
-data Confirmation = Confirm | Ask Text
-  deriving (Eq, Read, Show)
-
-confirmOrTerminate :: Confirmation -> IO ()
-confirmOrTerminate  Confirm       = pure ()
-confirmOrTerminate (Ask question) = do
-  echo $ unsafeTextToLine question <> "  Enter 'yes' to proceed:"
-  reply <- readline
-  unless (reply == Just "yes") $ do
-    echo "User declined to proceed, exiting."
-    exit $ ExitFailure 1
+import           Types
+import           Utils
 
 
 -- * Some orphan instances..
 --
-instance FromJSON FilePath where parseJSON = AE.withText "filepath" $ \v -> pure $ fromText v
-instance ToJSON   FilePath where toJSON    = AE.String . format fp
 deriving instance Generic Seconds; instance FromJSON Seconds; instance ToJSON Seconds
 deriving instance Generic Elapsed; instance FromJSON Elapsed; instance ToJSON Elapsed
-
-
--- * A bit of Nix types
---
-data SourceKind = Git | Github
-
-data NixSource (a :: SourceKind) where
-  -- | The output of 'nix-prefetch-git'
-  GitSource ::
-    { gUrl             :: URL
-    , gRev             :: Commit
-    , gSha256          :: NixHash
-    , gFetchSubmodules :: Bool
-    } -> NixSource Git
-  GithubSource ::
-    { ghOwner           :: Text
-    , ghRepo            :: Text
-    , ghRev             :: Commit
-    , ghSha256          :: NixHash
-    } -> NixSource Github
-deriving instance Show (NixSource a)
-instance ToJSON (NixSource Git) where
-  toJSON GitSource{..} = AE.object
-   [ "url"             .= fromURL gUrl
-   , "rev"             .= fromCommit gRev
-   , "sha256"          .= fromNixHash gSha256
-   , "fetchSubmodules" .= lowerShowT gFetchSubmodules ]
-instance FromJSON (NixSource Git) where
-  parseJSON = AE.withObject "GitSource" $ \v -> GitSource
-      <$> v .: "url"
-      <*> v .: "rev"
-      <*> v .: "sha256"
-      <*> asum [ (v .: "fetchSubmodules")
-               , readT . T.toTitle <$> (v .: "fetchSubmodules")]
-instance FromJSON (NixSource Github) where
-  parseJSON = AE.withObject "GithubSource" $ \v -> GithubSource
-      <$> v .: "owner"
-      <*> v .: "repo"
-      <*> v .: "rev"
-      <*> v .: "sha256"
-
-githubSource :: ByteString -> Maybe (NixSource Github)
-githubSource = AE.decode
-gitSource    :: ByteString -> Maybe (NixSource Git)
-gitSource    = AE.decode
-
-readSource :: (ByteString -> Maybe (NixSource a)) -> Project -> IO (NixSource a)
-readSource parser (projectSrcFile -> path) =
-  (fromMaybe (errorT $ format ("File doesn't parse as NixSource: "%fp) path) . parser)
-  <$> BL.readFile (T.unpack $ format fp path)
-
-nixpkgsNixosURL :: Commit -> URL
-nixpkgsNixosURL (Commit rev) = URL $
-  "https://github.com/NixOS/nixpkgs/archive/" <> rev <> ".tar.gz"
-
--- | The set of first-class types present in Nix
-data NixValue
-  = NixBool Bool
-  | NixInt  Integer
-  | NixStr  Text
-  | NixAttrSet (Map.Map Text NixValue)
-  | NixImport NixValue NixValue
-  | NixFile FilePath
-  | NixNull
-  deriving (Generic, Show)
-instance FromJSON NixValue
-instance ToJSON NixValue
-
-nixValueStr :: NixValue -> Text
-nixValueStr (NixBool bool)      = T.toLower $ showT bool
-nixValueStr (NixAttrSet attrs)  = ("{ " <>) . (<> " }") . T.concat
-                                  $ [ k <> " = " <> nixValueStr v <> "; "
-                                    | (k, v) <- Map.toList attrs ]
-nixValueStr (NixImport f as)    = "import " <> nixValueStr f <> " " <>  nixValueStr as
-nixValueStr (NixInt  int)       = showT int
-nixValueStr (NixNull)           = "null"
-nixValueStr (NixStr  str)       = "\"" <> str <>"\""          -- XXX: this is naive, as it doesn't do escaping
-nixValueStr (NixFile f)         = let txt = format fp f
-                                  in if T.isPrefixOf "/" txt
-                                     then txt else ("./" <> txt)
-
-nixArgCmdline :: NixParam -> NixValue -> [Text]
-nixArgCmdline (NixParam name) x@(NixStr _) = ["--argstr", name, T.drop 1 $ nixValueStr x & T.dropEnd 1]
-nixArgCmdline (NixParam name) x            = ["--arg",    name, nixValueStr x]
-
-
--- * Domain
---
-data Deployment
-  = Every
-  | Explorer
-  | Infra
-  | Nodes
-  | ReportServer
-  deriving (Bounded, Eq, Enum, Generic, Read, Show)
-instance FromJSON Deployment
-
-data Environment
-  = Any               -- ^ Wildcard or unspecified, depending on context.
-  | Production
-  | Staging
-  | Development
-  deriving (Bounded, Eq, Enum, Generic, Read, Show)
-instance FromJSON Environment
-
-data Target
-  = All               -- ^ Wildcard or unspecified, depending on context.
-  | AWS
-  deriving (Bounded, Eq, Enum, Generic, Read, Show)
-instance FromJSON Target
 
 
 -- * Environment-specificity
@@ -1234,22 +993,3 @@ toNodesInfo vector =
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
 getNodePublicIP name vector =
     headMay $ V.toList $ fmap (getIP . diPublicIP) $ V.filter (\di -> fromNodeName (diName di) == name) vector
-
-
--- * Utils
-showT :: Show a => a -> Text
-showT = T.pack . show
-
-readT :: Read a => Text -> a
-readT = read . T.unpack
-
-lowerShowT :: Show a => a -> Text
-lowerShowT = T.toLower . T.pack . show
-
-errorT :: Text -> a
-errorT = error . T.unpack
-
--- Currently unused, but that's mere episode of the used/unused/used/unused event train.
--- Let's keep it, because it's too painful to reinvent every time we need it.
-jsonLowerStrip :: (Generic a, AE.GToJSON AE.Zero (Rep a)) => Int -> a -> AE.Value
-jsonLowerStrip n = AE.genericToJSON $ AE.defaultOptions { AE.fieldLabelModifier = map toLower . drop n }
