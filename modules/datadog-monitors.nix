@@ -130,19 +130,19 @@ rec {
     };
   };
 
-  failed_cherish_loop_monitor = {
-    name = "Failed Cherish Loop";
-    type = "query alert";
-    query = config: "max(last_1m):sum:cardano.queue.FailedCherishLoop{depl:${config.deployment.name}} by {host}.as_count().sum() > 0";
-    message = "Looping indefinitely while trying to re-enqueue a message that failed to send.\n\nAs stated in [queue metrics](https://github.com/serokell/time-warp-nt/blob/master/QUEUE_METRICS.md), \"Any value above zero for this counter indicates queue misconfiguration.\"\n\n${pagerDutyPolicy.normal}";
-    monitorOptions = {
-      notify_no_data = true;
-      no_data_timeframe = 2;
-      thresholds = {
-        critical = 0;
-      };
-    };
-  };
+  # failed_cherish_loop_monitor = {
+  #   name = "Failed Cherish Loop";
+  #   type = "query alert";
+  #   query = config: "max(last_1m):sum:cardano.queue.FailedCherishLoop{depl:${config.deployment.name}} by {host}.as_count().sum() > 0";
+  #   message = "Looping indefinitely while trying to re-enqueue a message that failed to send.\n\nAs stated in [queue metrics](https://github.com/serokell/time-warp-nt/blob/master/QUEUE_METRICS.md), \"Any value above zero for this counter indicates queue misconfiguration.\"\n\n${pagerDutyPolicy.normal}";
+  #   monitorOptions = {
+  #     notify_no_data = true;
+  #     no_data_timeframe = 2;
+  #     thresholds = {
+  #       critical = 0;
+  #     };
+  #   };
+  # };
 
   mem_pool_size_monitor = {
     name = "MemPoolSize tx count is larger than expected";

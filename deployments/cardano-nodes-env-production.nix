@@ -15,7 +15,7 @@ let nodeMap = globals.nodeMap; in
       ntp = mkMonitor ntp_monitor;
       cardano_node_simple_process = mkMonitor cardano_node_simple_process_monitor;
       chain_quality = mkMonitor chain_quality_monitor;
-      failed_cherish_loop = mkMonitor failed_cherish_loop_monitor;
+      # failed_cherish_loop = mkMonitor failed_cherish_loop_monitor;
       mem_pool_size = mkMonitor mem_pool_size_monitor;
     });
   };
