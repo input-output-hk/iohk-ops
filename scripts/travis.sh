@@ -4,8 +4,6 @@ set -xeu
 
 source ./scripts/set_nixpath.sh
 
-NIXOPS=$(nix-build -A nixops)/bin/nixops
-
 IOHK_OPS=${1:-$(nix-build -A iohk-ops)/bin/iohk-ops}
 CLEANUP_DEPLOYS=${2:-true}
 CLEANUP_CONFIGS=${3:-true}
@@ -34,7 +32,6 @@ done
 
 
 # 0. Check all scripts compile
-${NIXOPS} --version
 nix-shell --run "./scripts/aws.hs --help"
 ${IOHK_OPS} --help
 
@@ -60,7 +57,7 @@ banner() {
 }
 
 GENERAL_OPTIONS="--verbose --deployer 0.0.0.0"
-COMMON_OPTIONS="--nixops ${NIXOPS} --topology topology-min.yaml"
+COMMON_OPTIONS="--topology topology-min.yaml"
 CARDANO_COMPONENTS="Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer}"
 
 if test -n "${WITH_STAGING}"; then
