@@ -498,6 +498,11 @@ elementDeploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNe
 
 -- * Topology
 --
+-- Design:
+--  1. we have the full Topology, and its SimpleTopo subset, which is converted to JSON for Nix's consumption.
+--  2. the SimpleTopo is only really needed when we have Nodes to deploy
+--  3. 'getSimpleTopo' is what executes the decision in #2
+--
 readTopology :: FilePath -> IO Topology
 readTopology file = do
   eTopo <- liftIO $ YAML.decodeFileEither $ Path.encodeString file
@@ -548,6 +553,9 @@ topoNodes (SimpleTopo cmap) = Map.keys cmap
 topoCores :: SimpleTopo -> [NodeName]
 topoCores = (fst <$>) . filter ((== NodeCore) . snType . snd) . Map.toList . fromSimpleTopo
 
+stubTopology :: SimpleTopo
+stubTopology = SimpleTopo Map.empty
+
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
   SimpleTopo $ Map.mapWithKey simplifier nodeMap
@@ -569,6 +577,15 @@ summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
                                    defaultOrg)
                         mbOrg
 summariseTopology x = errorT $ format ("Unsupported topology type: "%w) x
+
+getSimpleTopo :: [Deployment] -> FilePath -> IO SimpleTopo
+getSimpleTopo cElements cTopology =
+  if not $ elem Nodes cElements then pure stubTopology
+  else do
+    topoExists <- testpath cTopology
+    unless topoExists $
+      die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
+    summariseTopology <$> readTopology cTopology
 
 -- | Dump intermediate core/relay info, as parametrised by the simplified topology file.
 dumpTopologyNix :: NixopsConfig -> IO ()
@@ -605,7 +622,6 @@ data Options = Options
   , oConfigFile       :: Maybe FilePath
   , oOnlyOn           :: Maybe NodeName
   , oDeployerIP       :: Maybe IP
-  , oBuildNixops      :: BuildNixops
   , oConfirm          :: Confirmed
   , oDebug            :: Debug
   , oSerial           :: Serialize
@@ -636,7 +652,6 @@ parserOptions = Options
                      <$>     (optText "on"        'o' "Limit operation to the specified node"))
                 <*> (optional $ IP
                      <$>     (optText "deployer"  'd' "Directly specify IP address of the deployer: do not detect"))
-                <*> flag BuildNixops      "build-nixops"       'b' "Use 'nixops' binary defined by 'default.nix', not config YAML."
                 <*> flag Confirmed        "confirm"            'y' "Pass --confirm to nixops"
                 <*> flag Debug            "debug"              'd' "Pass --debug to nixops"
                 <*> flag Serialize        "serial"             's' "Disable parallelisation"
@@ -661,7 +676,6 @@ data NixopsConfig = NixopsConfig
   { cName             :: NixopsDepl
   , cGenCmdline       :: Text
   , cNixpkgs          :: Maybe Commit
-  , cNixops           :: FilePath
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
@@ -676,7 +690,6 @@ instance FromJSON NixopsConfig where
         <$> v .: "name"
         <*> v .:? "gen-cmdline"   .!= "--unknown--"
         <*> v .:? "nixpkgs"
-        <*> v .:? "nixops"        .!= "nixops"
         <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
@@ -691,7 +704,6 @@ instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
    [ "name"         .= fromNixopsDepl cName
    , "gen-cmdline"  .= cGenCmdline
-   , "nixops"       .= cNixops
    , "topology"     .= cTopology
    , "environment"  .= showT cEnvironment
    , "target"       .= showT cTarget
@@ -725,15 +737,14 @@ setDeplArg :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 setDeplArg p v c@NixopsConfig{..} = c { cDeplArgs = Map.insert p v cDeplArgs }
 
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
-  let EnvSettings{..} = envSettings                                            cEnvironment
-      cNixops         = fromMaybe "nixops" mNixops
-      cFiles          = deploymentFiles                                  cEnvironment cTarget cElements
-      cTopology       = flip fromMaybe                         mTopology envDefaultTopology
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
+  let EnvSettings{..} = envSettings                             cEnvironment
+      cFiles          = deploymentFiles                         cEnvironment cTarget cElements
+      cTopology       = flip fromMaybe                mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
   cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
-  topology <- liftIO $ summariseTopology <$> readTopology cTopology
+  topology <- getSimpleTopo cElements cTopology
   pure NixopsConfig{..}
 
 -- | Write the config file
@@ -761,7 +772,7 @@ readConfig Options{..} cf = do
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.
-  topo <- liftIO $ summariseTopology <$> readTopology cTopology
+  topo <- liftIO $ getSimpleTopo cElements cTopology
   pure c { topology = topo }
 
 
@@ -825,9 +836,7 @@ iohkNixopsPath defaultNix =
 
 nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO b
 nixops'' executor o@Options{..} c@NixopsConfig{..} com args =
-  executor o (format fp $ case oBuildNixops of
-                            BuildNixops     -> iohkNixopsPath "default.nix"
-                            DontBuildNixops -> cNixops)
+  executor o (format fp $ iohkNixopsPath "default.nix")
   (fromCmd com : nixopsCmdOptions o c <> fmap fromArg args)
 
 nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO (ExitCode, Text)
@@ -881,11 +890,7 @@ modify o@Options{..} c@NixopsConfig{..} = do
     -> printf ("  "%s%": "%s%"\n") (fromNixParam name) (nixValueStr val)
   nixops o c "set-args" $ Arg <$> (concat $ uncurry nixArgCmdline <$> deplArgs)
 
-  printf ("Generating '"%fp%"' from '"%fp%"'..\n") simpleTopoFile cTopology
-  preExisting <- testpath cTopology
-  unless preExisting $
-    die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
-  simpleTopo <- summariseTopology <$> readTopology cTopology
+  simpleTopo <- getSimpleTopo cElements cTopology
   liftIO . writeTextFile simpleTopoFile . T.pack . LBU.toString $ encodePretty (fromSimpleTopo simpleTopo)
   when (toBool oDebug) $ dumpTopologyNix c
 
