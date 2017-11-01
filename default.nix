@@ -19,8 +19,8 @@ let
       nixopsUnstable = pkgs.fetchFromGitHub {
         owner = "NixOS";
         repo = "nixops";
-        rev = "c06c0e79ab8d7a58d80b1c38b7ae4ed1a04322f0";
-        sha256 = "1fly6ry7ksj7v5rl27jg5mnxdbjwn40kk47gplyvslpvijk65m4q";
+        rev = "379b1f933b930aafc8d386d8bfec97ce0e775628";
+        sha256 = "0f21p1rlb3cmj6g43v185rh5abx23nj1zx5fizfpsqmswd3yl9k8";
       };
     in (import "${nixopsUnstable}/release.nix" {}).build.${system};
   iohk-ops-extra-runtime-deps = [
