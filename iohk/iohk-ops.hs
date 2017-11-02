@@ -78,7 +78,7 @@ data Command where
 
   -- * setup
   Clone                 :: { cBranch      :: Branch } -> Command
-  Template              :: { tFile        :: Maybe Turtle.FilePath
+  New                   :: { tFile        :: Maybe Turtle.FilePath
                            , tTopology    :: Maybe Turtle.FilePath
                            , tConfigurationKey :: Maybe ConfigurationKey
                            , tGenerateKeys :: GenerateKeys
@@ -125,8 +125,8 @@ centralCommandParser =
     [ ("clone",                 "Clone an 'iohk-ops' repository branch",
                                 Clone
                                 <$> parserBranch "'iohk-ops' branch to checkout")
-    , ("template",              "Produce (or update) a checkout of BRANCH with a cluster config YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
-                                Template
+    , ("new",                   "Produce (or update) a checkout of BRANCH with a cluster config YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
+                                New
                                 <$> optional (optPath "config"        'c' "Override the default, environment-dependent config filename")
                                 <*> optional (optPath "topology"      't' "Cluster configuration.  Defaults to 'topology.yaml'")
                                 <*> optional parserConfigurationKey
@@ -211,7 +211,7 @@ runTop :: Options -> [Arg] -> Command -> IO ()
 runTop o@Options{..} args topcmd = do
   case topcmd of
     Clone{..}                   -> runClone           o cBranch
-    Template{..}                -> runTemplate        o topcmd  args
+    New{..}                     -> runNew             o topcmd  args
     SetRev proj comId comm      -> Ops.runSetRev      o proj comId $
                                    if comm == DontCommit then Nothing
                                    else Just $ format ("Bump "%s%" revision to "%s) (lowerShowT proj) (fromCommit comId)
@@ -258,7 +258,7 @@ runTop o@Options{..} args topcmd = do
             CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
             Clone{..}                -> error "impossible"
-            Template{..}             -> error "impossible"
+            New{..}                  -> error "impossible"
             SetRev   _ _ _           -> error "impossible"
 
 
@@ -274,8 +274,8 @@ runClone o@Options{..} branch = do
   cd branchDir
   cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
 
-runTemplate :: Options -> Command -> [Arg] -> IO ()
-runTemplate o@Options{..} Template{..} args = do
+runNew :: Options -> Command -> [Arg] -> IO ()
+runNew o@Options{..} New{..} args = do
   when (elem (fromNixopsDepl tName) $ let names = showT <$> (every :: [Deployment])
                                       in names <> (T.toLower <$> names)) $
     die $ format ("the deployment name "%w%" ambiguously refers to a deployment _type_.  Cannot have that!") (fromNixopsDepl tName)
@@ -307,7 +307,7 @@ runTemplate o@Options{..} Template{..} args = do
     else echo "Skipping key generation, due to user request"
   echo "Cluster deployment has been prepared."
 
-runTemplate _ _ _ = error "impossible"
+runNew _ _ _ = error "impossible"
 
 -- | Use 'cardano-keygen' to create keys for a develoment cluster.
 generateDevKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
