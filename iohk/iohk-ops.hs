@@ -12,7 +12,7 @@ import           Data.Optional                    (Optional)
 import qualified Data.Text                     as T
 import qualified Filesystem.Path.CurrentOS     as Path
 import qualified System.Environment            as Sys
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, shells, e, f, o, x)
+import           Turtle                    hiding (env, err, fold, inproc, procs, shells, e, f, o, x)
 import           Time.Types
 import           Time.System
 
@@ -302,9 +302,14 @@ runNew o@Options{..} New{..} args = do
     forM_ secrets touch
     echo "Ensured secrets exist"
 
-    if (tGenerateKeys == GenerateKeys)
-    then generateDevKeys o (clusterConfigurationKey config) "keys"
-    else echo "Skipping key generation, due to user request"
+    if (tGenerateKeys /= GenerateKeys)
+    then echo "Skipping key generation, due to user request"
+    else do
+      generateDevKeys o (clusterConfigurationKey config) "keys"
+      sh $ do
+        k <- Turtle.find ((prefix "keys/keys-testnet/rich/key") <> (suffix ".sk"))
+          "keys/keys-testnet/rich"
+        cp k $ "keys" </> Path.filename k
   echo "Cluster deployment has been prepared."
 
 runNew _ _ _ = error "impossible"
