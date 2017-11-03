@@ -108,7 +108,7 @@ envSettings env =
                                ] <> deplAgnosticFiles}
     Development -> EnvSettings
       { envDeployerUser      = "staging"
-      , envDefaultConfigurationKey = "devnet_shortep_full"
+      , envDefaultConfigurationKey = "devnet"
       , envDefaultConfig     = "config.yaml"
       , envDefaultTopology   = "topology-development.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
