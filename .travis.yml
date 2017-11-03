@@ -1,15 +1,14 @@
 language: nix
-
 install:
-  - cat /etc/nix/nix.conf || true > ~/nix.conf
-  - echo "binary-caches = https://cache.nixos.org https://hydra.iohk.io" >> ~/nix.conf
-  - echo "binary-cache-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" >> ~/nix.conf
-  - export NIX_CONF_DIR=~
+- cat /etc/nix/nix.conf || true > ~/nix.conf
+- echo "binary-caches = https://cache.nixos.org https://hydra.iohk.io" >> ~/nix.conf
+- echo "binary-cache-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+  cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" >> ~/nix.conf
+- export NIX_CONF_DIR=~
 script:
-  - travis_wait 30 sleep 1800 &
-  - ./scripts/travis.sh
-
+- travis_wait 30 sleep 1800 &
+- "./scripts/travis.sh"
 notifications:
   email: false
   slack:
-    secure: "ir2BctpXIP5h7isDeJk04HFfVzp7AFjzAB+WD8G31I+llISXuKq+KWkbkQSFe8/p74rMAnpaInJ9vlKHLj2AQ9KzTTEwzWevupXHJQ0VXgt4Jftl6aE42PZPTRZ9BrmNvuodKBflk0DAxWczJnkv7qHWvmWnBT3D648rWM4tsAgPKcOFUxamxUYXgq5RWVpNbERjFk3oM1LpfPPHw/hxrwOgj6TMReEDWYmV+7Z9QH29Kt28L6CH4E5a9ZTGErq0o8dP4NM8t2ZSLXcVpiA6gdyeMnm9xgcsjA4eAGZOgF+RgxLZfh0uI4Ml4eiueRQG/pDZjM4L+sg9Mpuj+8iZQxiXernPyQuIvQwK/CxV3KR7+Aenl/7Fh3Z6FXwD2ReqfxSNuh3NWa97sD7KvECK0BrWwtprdaQpGyqEhpIObHNCtHUS2//2BxAFuLHcnJuHdJZZimfm4meR2Jbhj52EXpQpKRHViDEcgIXtA04+NKsgYwldXF6SIyFsv+/LpbKO9CyCSrZ405VtN0kN9KzISnMHP0yJitVpE1DVtfRb8hkW899r9E6c5eX7fIcZHSXogcxm45dKFTymGUxamsYlOntleKakKwTsUIPS04AkPkzMXEYHYUAE+UdkVjVaCkhyVao9EwBwxCHAMowNXHavTvZdOfy7eeX5CRTBCdbJzwI="
+    secure: X1Y5MxPbx0S6Quy1DhT8rUj+GJEOW759EpFrU1Vp2+Zfs/07HKrZv5tJQ04ikuPbnrc3xgCNUc3wgiE+yEhzfDpo64KiyjvOvFMBL530rZoeZYWOTi5/+Sg/EO1/OoaWM+3viIyzqrA+C+QSQVWsFD9ajetfGhXZQsoAjwyDcqRBaOB8uZTnwET0R0u7Y+PNBMrc9dhMMiy6OU9CZtoJDWr7jBrooh43/k3D1PaVZN46j5nVhwcHl56kWmlaANAmSWf8q9ThCQIxRBubrgMJHLk1ysRV5gI2Twb0ChmtqdJRUb7b2div9xhbNT85ypjwSorU1Yhe3XuGlltEJLDGbaFkWLtsV+GOVJt94DhGoZUyJ+vcjfWsXLyGqY3gaYXtp+GViPtyciHCxDi/KE6/jtjTK2C1+kaybz2H/Svl6G/gnwH14LWliItrwOf6YWVyDs7M8OnflFiuDehbFBEjez0roQsAAi/bDdB7WOHj/+4jvmsk79GCtVPTX1qERns9trdNYGTL6m8Au4dZ06ntyf/iwBS0B8m/ayEjUoLEr7VsNCa+RYyxWHojWhq/PqbHNp5qhms2AyM5Nz6j904GYJ6+G/pIn1Esiufjs9QaLkm0qU0Ov3UqN8DwlhPwOAuNmLEpAcDEXPaRjMnIsEhutF7DVYvLmgKNuU5XAfDnis0=
