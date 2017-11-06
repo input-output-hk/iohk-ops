@@ -688,6 +688,8 @@ data NixopsConfig = NixopsConfig
   -- this isn't stored in the config file, but is, instead filled in during initialisation
   , topology          :: SimpleTopo
   } deriving (Generic, Show)
+
+instance ToJSON BucketName
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
@@ -715,6 +717,7 @@ instance ToJSON NixopsConfig where
    , "topology"     .= cTopology
    , "environment"  .= showT cEnvironment
    , "target"       .= showT cTarget
+   , "installer-bucket" .= cUpdateBucket
    , "elements"     .= cElements
    , "files"        .= cFiles
    , "args"         .= cDeplArgs ]
@@ -752,7 +755,7 @@ mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTa
       cFiles          = deploymentFiles                                  cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                         mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
-      cUpdateBucket   = undefined
+      cUpdateBucket   = "default-bucket"
   cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
