@@ -54,3 +54,5 @@ executable iohk-ops
                      , amazonka
                      , amazonka-s3
                      , filepath
+                     , git
+                     , directory

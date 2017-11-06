@@ -752,6 +752,7 @@ mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTa
       cFiles          = deploymentFiles                                  cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                         mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
+      cUpdateBucket   = undefined
   cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology <- liftIO $ summariseTopology <$> readTopology cTopology
   pure NixopsConfig{..}
@@ -1180,22 +1181,25 @@ date o c = parallelIO o c $
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
 
-s3Upload :: String -> Options -> NixopsConfig -> IO ()
-s3Upload daedalus_rev o c = do
+s3Upload :: T.Text -> NixopsConfig -> IO ()
+s3Upload daedalus_rev c = do
   let
     say = liftIO . TIO.putStrLn
     uploadOneFile :: BucketName -> Sys.FilePath -> ObjectKey -> AWST (ResourceT IO) ()
     uploadOneFile bucketName localPath remoteKey = do
       bdy <- chunkedFile defaultChunkSize localPath
       let
-        metadata :: HMS.HashMap Text Text
-        metadata = HMS.fromList [ ("daedalus-revision", T.pack daedalus_rev)]
-      void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata metadata $ putObject bucketName remoteKey bdy
+        newMetaData :: HMS.HashMap Text Text
+        newMetaData = HMS.fromList [ ("daedalus-revision", daedalus_rev)]
+      void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata newMetaData $ putObject bucketName remoteKey bdy
     hashInstaller :: Sys.FilePath -> IO Text
     hashInstaller path = do
       (exitStatus, res) <- procStrict "/nix/store/myla1pqh1hzif9b1k5pv8kj25fqyhjff-cardano-sl-auxx-1.0.2/bin/cardano-hash-installer" [ (T.pack path) ] empty
-      let cleanHash = fromMaybe res (T.stripSuffix "\n" res)
-      return cleanHash
+      case exitStatus of
+        ExitSuccess -> do
+          let cleanHash = fromMaybe res (T.stripSuffix "\n" res)
+          return cleanHash
+        ExitFailure _ -> error "error running cardano-hash-installer"
     uploadHashedInstaller :: BucketName -> Sys.FilePath -> AWST (ResourceT IO) Text
     uploadHashedInstaller bucketName localPath = do
       hash <- (liftIO . hashInstaller) localPath
@@ -1219,8 +1223,8 @@ s3Upload daedalus_rev o c = do
       say $ "uploading things to " <> (coerce $ cUpdateBucket c)
       mapM_ hashAndUpload res
 
-findInstallers :: String -> Options -> NixopsConfig -> IO ()
-findInstallers daedalus_rev o c = do
+findInstallers :: T.Text -> IO ()
+findInstallers daedalus_rev = do
   with (realFindInstallers daedalus_rev) $ \res -> do
     print res
 

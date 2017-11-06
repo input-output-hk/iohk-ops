@@ -268,8 +268,8 @@ runTop o@Options{..} args topcmd = do
             GetJournals              -> Ops.getJournals               o c
             CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
-            S3Upload         d       -> Ops.s3Upload                  d o c
-            FindInstallers         d -> Ops.findInstallers            d o c
+            S3Upload         d       -> Ops.s3Upload                  (T.pack d) c
+            FindInstallers         d -> Ops.findInstallers            (T.pack d)
             Clone{..}                -> error "impossible"
             Template{..}             -> error "impossible"
             SetRev   _ _ _           -> error "impossible"
