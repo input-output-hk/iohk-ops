@@ -1,26 +1,39 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module Appveyor where
 
-import qualified Data.Text                 as T
-import           GHC.Generics              hiding (from, to)
+import           Control.Lens.TH
 import           Data.Aeson
-import Utils
-import           Data.Monoid               ((<>))
+import           Data.Monoid     ((<>))
+import           Data.String
+import qualified Data.Text       as T
+import           GHC.Generics    hiding (from, to)
+import           Utils
 
-type JobId = T.Text
+newtype JobId = JobId T.Text deriving (Show, Monoid)
+newtype Version = Version { versionToText :: T.Text } deriving (Show, Monoid, IsString)
+newtype BuildNumber = BuildNumber Integer deriving (Show)
+newtype Username = Username { usernameToText :: T.Text } deriving (Show, Monoid, IsString)
+newtype Project = Project { projectToText :: T.Text } deriving (Show, Monoid, IsString)
 
 data AppveyorBuild = AppveyorBuild {
-    build :: AppveyorBuild2
+    _appveyorBuildBuild :: AppveyorBuild2
     } deriving (Show, Generic)
 
 data AppveyorBuild2 = AppveyorBuild2 {
-    jobs :: [AppveyorBuild3]
+    _appveyorBuild2Jobs         :: [AppveyorBuild3]
+    ,_appveyorBuild2BuildNumber :: BuildNumber
+    ,_appveyorBuild2Version     :: Version
     } deriving (Show, Generic)
 
 data AppveyorBuild3 = AppveyorBuild3 {
-    jobId :: JobId
+    _appveyorBuild3JobId :: JobId
     } deriving (Show, Generic)
 
 data AppveyorArtifact = AppveyorArtifact {
@@ -28,17 +41,37 @@ data AppveyorArtifact = AppveyorArtifact {
     , name   :: T.Text
     } deriving (Show, Generic)
 
-instance FromJSON AppveyorBuild
-instance FromJSON AppveyorBuild2
-instance FromJSON AppveyorBuild3
+makeFields ''AppveyorBuild
+makeFields ''AppveyorBuild2
+makeFields ''AppveyorBuild3
+makeFields ''AppveyorArtifact
+
+instance FromJSON AppveyorBuild where
+  parseJSON = withObject "AppveyorBuild" $ \v -> AppveyorBuild
+    <$> v .: "build"
+instance FromJSON AppveyorBuild2 where
+  parseJSON = withObject "AppveyorBuild2" $ \v -> AppveyorBuild2
+    <$> v .: "jobs"
+    <*> (BuildNumber <$> v .: "buildNumber")
+    <*> (Version <$> v .: "version")
+instance FromJSON AppveyorBuild3 where
+  parseJSON = withObject "AppveyorBuild3" $ \v -> AppveyorBuild3
+    . JobId <$> v .: "jobId"
 instance FromJSON AppveyorArtifact
 
 getArtifactUrl :: JobId -> T.Text -> T.Text
-getArtifactUrl jobid filename = "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts/" <> filename
+getArtifactUrl (JobId jobid) filename = "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts/" <> filename
 
-fetchAppveyorBuild :: T.Text -> IO AppveyorBuild
-fetchAppveyorBuild = fetchJson
+-- input: "https://ci.appveyor.com/api/projects/jagajaga/daedalus/build/0.6.3356"
+fetchAppveyorBuild :: Username -> Project -> Version -> IO AppveyorBuild
+fetchAppveyorBuild user project version = fetchJson $ "https://ci.appveyor.com/api/projects/" <> (T.intercalate "/" [ usernameToText user, projectToText project, "build", versionToText version ])
 
 fetchAppveyorArtifacts :: JobId -> IO [AppveyorArtifact]
-fetchAppveyorArtifacts jobid = do
-  fetchJson $ "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts"
+fetchAppveyorArtifacts (JobId jobid) = fetchJson $ "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts"
+
+-- input: https://ci.appveyor.com/project/jagajaga/daedalus/build/0.6.3356
+-- output:
+parseCiUrl :: T.Text -> (Username, Project, Version)
+parseCiUrl input = case T.splitOn "/" input of
+  ["https:", "", "ci.appveyor.com", "project", username, project, "build", version] -> (Username username, Project project, Version version)
+  other -> error $ show other

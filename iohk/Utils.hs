@@ -8,6 +8,8 @@ import           Data.Aeson                (FromJSON, decode)
 import qualified Data.ByteString.Lazy      as LBS
 import           Data.Monoid               ((<>))
 import qualified Data.Text                 as T
+import qualified Data.Text.Lazy            as LT
+import qualified Data.Text.Lazy.Encoding   as LT
 import           GHC.Stack                 (HasCallStack)
 import           Network.HTTP.Client       (httpLbs, parseRequest,
                                             requestHeaders, responseBody)
@@ -34,7 +36,7 @@ fetchJson' extraHeaders url = do
     maybeObj = decode reply
   case maybeObj of
     Just v  -> return v
-    Nothing -> error $ "unable to parse json: " <> show reply
+    Nothing -> error $ "unable to parse json: " <> (LT.unpack $ LT.decodeUtf8 reply) <> " from: " <> T.unpack url
 
 fetchUrl :: RequestHeaders -> T.Text -> IO LBS.ByteString
 fetchUrl extraHeaders url = do

@@ -10,8 +10,11 @@ import           Control.Monad.Managed (Managed, liftIO, with)
 import qualified Data.ByteString           as BS
 import qualified Data.ByteString.Char8     as BSC
 import qualified Data.ByteString.Lazy      as LBS
-import           Data.Git.Ref (SHA1)
-import           Data.Git.Storage (Git, isRepo, openRepo)
+import Data.Git (Commit(commitTreeish), Tree(treeGetEnts), Blob, Blob(..), blobGetContent)
+import           Data.Git.Ref (SHA1, fromHexString)
+import           Data.Git.Storage (Git, isRepo, openRepo, getObjectRaw, getObject)
+import Data.Git.Storage.Object (Object(ObjBlob))
+import Data.Git.Repository
 import           Data.Monoid               ((<>))
 import qualified Data.Text                 as T
 import qualified Filesystem.Path.CurrentOS as FP
@@ -19,13 +22,28 @@ import           System.Exit               (ExitCode (ExitFailure, ExitSuccess))
 import           Turtle.Prelude (mktempdir, proc, pushd)
 import Utils (fetchUrl, fetchCachedUrl)
 import Travis (BuildNumber, fetchTravis, TravisBuild(..), TravisJobInfo(..), fetchTravis2, TravisInfo2(..))
-import Appveyor
+import qualified Appveyor as AP
+import Appveyor hiding (BuildNumber)
 import Github (Status, fetchGithubStatus, CommitStatus(..), Status(..))
+import Control.Lens
 
 data CiResult = TravisResult T.Text | AppveyorResult T.Text | Other deriving (Show)
 
 realFindInstallers :: T.Text -> Managed [CiResult]
 realFindInstallers daedalus_rev = do
+  let
+    travisFiler (_, ".travis.yml", _) = True
+    travisFiler _ = False
+  liftIO $ do
+    repo <- fetchOrClone "/tmp/gitcache/" "https://github.com/input-output-hk/daedalus"
+    commit <- getCommit repo (fromHexString $ T.unpack daedalus_rev)
+    root_dir <- getTree repo $ commitTreeish commit
+    let (_,_,travisRef) = head $ filter travisFiler (treeGetEnts root_dir)
+    print commit
+    obj <- getObject repo travisRef True
+    case obj of
+      Just (ObjBlob (Blob { blobGetContent = content })) -> print content
+      _ -> print "other"
   obj <- liftIO $ fetchGithubStatus "input-output-hk" "daedalus" daedalus_rev
   -- https://api.travis-ci.org/repos/input-output-hk/daedalus/builds/285552368
   -- this url returns json, containing the short build#
@@ -34,7 +52,10 @@ realFindInstallers daedalus_rev = do
   _ <- proc "ls" [ "-ltrha", T.pack $ FP.encodeString tempdir ] mempty
   return $ results
 
-fetchOrClone :: T.Text -> T.Text -> IO (Git SHA1)
+type TextPath = T.Text
+type RepoUrl = T.Text
+
+fetchOrClone :: TextPath -> RepoUrl -> IO (Git SHA1)
 fetchOrClone localpath url = do
   res <- isRepo (FP.decodeString $ T.unpack localpath)
   case res of
@@ -93,9 +114,9 @@ findInstaller tempdir status = do
       pure $ TravisResult outFile
     "continuous-integration/appveyor/branch" -> do
       let
-        url = "https://ci.appveyor.com/api/projects/" <> (T.intercalate "/" $ drop 4 $ T.splitOn "/" (target_url status))
-      appveyorBuild <- fetchAppveyorBuild url
-      let jobid = (jobId . head . jobs . build) appveyorBuild
+        (user, project, version) = parseCiUrl $ target_url status
+      appveyorBuild <- fetchAppveyorBuild user project version
+      let jobid = appveyorBuild ^. build . jobs . to head . jobId
       --print $ "job id is " <> jobId
       artifacts <- fetchAppveyorArtifacts jobid
       case head artifacts of
