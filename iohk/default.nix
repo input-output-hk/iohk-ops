@@ -1,7 +1,7 @@
 { mkDerivation, aeson, aeson-pretty, base, bytestring, cassava
 , containers, dns, hourglass, lens, lens-aeson, mtl, optional-args
-, safe, stdenv, system-filepath, text, turtle, unordered-containers
-, utf8-string, vector, yaml
+, safe, stdenv, system-filepath, text, turtle, unix
+, unordered-containers, utf8-string, vector, yaml
 }:
 mkDerivation {
   pname = "iohk-ops";
@@ -12,7 +12,7 @@ mkDerivation {
   executableHaskellDepends = [
     aeson aeson-pretty base bytestring cassava containers dns hourglass
     lens lens-aeson mtl optional-args safe system-filepath text turtle
-    unordered-containers utf8-string vector yaml
+    unix unordered-containers utf8-string vector yaml
   ];
   license = stdenv.lib.licenses.bsd3;
 }
