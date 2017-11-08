@@ -39,9 +39,6 @@ in
           if_modified_since off;
           add_header Last-Modified "";
           etag off;
-          location /api/search/epoch/ {
-            return 404;
-          }
         '';
       };
     };
