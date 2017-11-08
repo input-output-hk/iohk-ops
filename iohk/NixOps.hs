@@ -42,7 +42,6 @@ module NixOps (
   , defaultNode
   , defaultNodePort
   , defaultTarget
-  , nixpkgsNixosURL
 
   , cmd, cmd', incmd
   , errorT

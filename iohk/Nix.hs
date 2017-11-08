@@ -72,10 +72,6 @@ readSource parser (projectSrcFile -> path) =
   (fromMaybe (errorT $ format ("File doesn't parse as NixSource: "%fp) path) . parser)
   <$> BL.readFile (T.unpack $ format fp path)
 
-nixpkgsNixosURL :: Commit -> URL
-nixpkgsNixosURL (Commit rev) = URL $
-  "https://github.com/NixOS/nixpkgs/archive/" <> rev <> ".tar.gz"
-
 instance FromJSON FilePath where parseJSON = AE.withText "filepath" $ \v -> pure $ fromText v
 instance ToJSON   FilePath where toJSON    = AE.String . format fp
 
