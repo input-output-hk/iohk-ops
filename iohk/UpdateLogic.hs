@@ -62,10 +62,6 @@ extractVersionFromTravis yaml = do
     f3 = global $ env (f2 f1)
   lookup' "VERSION" f3
 
-third :: Maybe (a,b,c) -> Maybe c
-third (Just (_,_,v)) = Just v
-third Nothing        = Nothing
-
 data GitNotFound = GitFileNotFound T.Text | GitDirNotFound deriving Show
 
 instance Exception GitNotFound
@@ -80,23 +76,15 @@ readFileFromGit rev path url = do
       dir <- getTree repo dirRef
       let
         resultList = filter (travisFiler $ BSC.pack $ T.unpack name) (treeGetEnts dir)
-      return $ third $ listToMaybe resultList
-    iterate' :: HasCallStack => [T.Text] -> Ref SHA1 -> IO (Ref SHA1)
-    iterate' [ file ] ref = do
-      maybeResult <- lookupTree file ref
-      case maybeResult of
-        Just refOut -> return refOut
-        Nothing     -> throwIO $ GitFileNotFound path
-    iterate' ( dirName : rest ) ref = do
-      maybeResult <- lookupTree dirName ref
-      case maybeResult of
-        Just refOut -> iterate' rest refOut
-        Nothing     -> throwIO GitDirNotFound
-    iterate' [] _ = error "empty path??"
+      return $ fmap (\(_, _, x) -> x) $ listToMaybe resultList
+    go :: HasCallStack => [T.Text] -> Ref SHA1 -> IO (Ref SHA1)
+    go [] _ = error "empty path??"
+    go [ file ] ref = lookupTree file ref >>= \refOut -> maybe (throwIO (GitFileNotFound path)) pure refOut
+    go ( dir : rest ) ref = lookupTree dir ref >>= maybe (throwIO GitDirNotFound) (go rest)
     travisFiler :: BS.ByteString -> (ModePerm, EntName, Ref SHA1) -> Bool
     travisFiler needle (_, currentFile, _) = currentFile == entName needle
   commit <- getCommit repo (fromHexString $ T.unpack rev)
-  travisRef <- iterate' pathParts (commitTreeish commit)
+  travisRef <- go pathParts (commitTreeish commit)
   obj <- getObject repo travisRef True
   case obj of
     Just (ObjBlob (Blob { blobGetContent = content })) -> do
