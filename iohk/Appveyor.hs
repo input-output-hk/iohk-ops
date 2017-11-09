@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude -Wno-semigroup #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
@@ -7,13 +8,13 @@
 
 module Appveyor where
 
-import           Control.Lens.TH
-import           Data.Aeson
+import           Control.Lens.TH (makeFields)
+import           Data.Aeson      (FromJSON, parseJSON, withObject, (.:))
 import           Data.Monoid     ((<>))
-import           Data.String
+import           Data.String     (IsString)
 import qualified Data.Text       as T
-import           GHC.Generics    hiding (from, to)
-import           Utils
+import           GHC.Generics    (Generic)
+import           Utils           (fetchJson)
 
 newtype JobId = JobId T.Text deriving (Show, Monoid)
 newtype Version = Version { versionToText :: T.Text } deriving (Show, Monoid, IsString)
@@ -63,7 +64,7 @@ getArtifactUrl (JobId jobid) filename = "https://ci.appveyor.com/api/buildjobs/"
 
 -- input: "https://ci.appveyor.com/api/projects/jagajaga/daedalus/build/0.6.3356"
 fetchAppveyorBuild :: Username -> Project -> Version -> IO AppveyorBuild
-fetchAppveyorBuild user project version = fetchJson $ "https://ci.appveyor.com/api/projects/" <> (T.intercalate "/" [ usernameToText user, projectToText project, "build", versionToText version ])
+fetchAppveyorBuild user project version' = fetchJson $ "https://ci.appveyor.com/api/projects/" <> (T.intercalate "/" [ usernameToText user, projectToText project, "build", versionToText version' ])
 
 fetchAppveyorArtifacts :: JobId -> IO [AppveyorArtifact]
 fetchAppveyorArtifacts (JobId jobid) = fetchJson $ "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts"
@@ -72,5 +73,5 @@ fetchAppveyorArtifacts (JobId jobid) = fetchJson $ "https://ci.appveyor.com/api/
 -- output:
 parseCiUrl :: T.Text -> (Username, Project, Version)
 parseCiUrl input = case T.splitOn "/" input of
-  ["https:", "", "ci.appveyor.com", "project", username, project, "build", version] -> (Username username, Project project, Version version)
+  ["https:", "", "ci.appveyor.com", "project", username, project, "build", version'] -> (Username username, Project project, Version version')
   other -> error $ show other

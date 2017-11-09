@@ -1,15 +1,16 @@
+{-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude -Wno-semigroup #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Github where
 
-import           Data.Aeson
+import           Data.Aeson           (FromJSON)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text            as T
-import           GHC.Generics         hiding (from, to)
+import           GHC.Generics         (Generic)
 import           GHC.Stack            (HasCallStack)
-import           System.Directory
-import           Utils
+import           System.Directory     (doesFileExist)
+import           Utils                (fetchJson')
 
 type Rev = T.Text
 type Org = T.Text
@@ -31,10 +32,12 @@ instance FromJSON Status
 
 fetchGithubJson :: HasCallStack => FromJSON a => T.Text -> IO a
 fetchGithubJson url = do
-  let fn = "github_token"
+  let
+    fn :: String
+    fn = "github_token"
   exists <- doesFileExist fn
   headers <- if exists then do
-    githubToken <- LBS.readFile "github_token"
+    githubToken <- LBS.readFile fn
     return $ [ ("Authorization", LBS.toStrict githubToken) ]
   else pure []
   fetchJson' headers url

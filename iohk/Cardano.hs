@@ -1,11 +1,12 @@
-{-# LANGUAGE DeriveGeneric              #-}
+{-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Cardano where
 
-import           GHC.Generics    hiding (from, to)
-import           Data.Aeson
+import           Data.Aeson          (FromJSON)
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Text       as T
+import qualified Data.Text           as T
+import           GHC.Generics        (Generic)
 
 type ConfigurationYaml = HashMap.HashMap T.Text ConfigurationRoot
 

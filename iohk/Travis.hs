@@ -1,16 +1,17 @@
+{-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Travis where
 
-import           Control.Monad
+import           Control.Monad        (guard)
 import           Data.Aeson           (FromJSON, defaultOptions,
                                        genericParseJSON, (.:))
 import qualified Data.Aeson           as AE
 import           Data.Aeson.Types     (fieldLabelModifier)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict  as HashMap
-import           Data.Maybe
+import           Data.Maybe           (listToMaybe, mapMaybe)
 import           Data.Monoid          ((<>))
 import qualified Data.Text            as T
 import qualified Data.Yaml            as Y
@@ -69,18 +70,19 @@ instance FromJSON TravisEnvEntry where
     parseJSON value = case value of
       Y.String txt -> do
         let
-          (key, value) = T.breakOn "=" txt
-        pure $ TravisEnvPlain key (T.drop 1 value)
+          (key, value') = T.breakOn "=" txt
+        pure $ TravisEnvPlain key (T.drop 1 value')
       Y.Object obj -> case HashMap.lookup "secure" obj of
         Nothing -> fail "no secure in env"
         Just x  -> pure $ TravisEnvSecure x
+      _ -> error "unexpected type in .travis.yml env"
 
 lookup' :: T.Text -> [TravisEnvEntry] -> Maybe T.Text
 lookup' key = do
   let
     f3 :: T.Text -> TravisEnvEntry -> Maybe T.Text
-    f3 needle (TravisEnvPlain key value) = guard (needle == key) *> Just value
-    f3 needle _                          = Nothing
+    f3 needle (TravisEnvPlain key' value') = guard (needle == key') *> Just value'
+    f3 _ _                                 = Nothing
   listToMaybe . mapMaybe (f3 key)
 
 fetchTravis2 :: RepoId -> BuildNumber -> IO TravisInfo2

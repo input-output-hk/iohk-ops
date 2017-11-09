@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Weverything -Wno-unsafe #-}
+{-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
