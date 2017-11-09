@@ -1,59 +1,125 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE ExplicitForAll    #-}
+{-# OPTIONS_GHC -Weverything -Wno-unsafe #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
 
 module UpdateLogic (realFindInstallers, CiResult(..)) where
 
-import           Control.Monad.Managed (Managed, liftIO, with)
+import           Appveyor                  (AppveyorArtifact (AppveyorArtifact),
+                                            build, fetchAppveyorArtifacts,
+                                            fetchAppveyorBuild, getArtifactUrl,
+                                            jobId, jobs, parseCiUrl)
+import           Cardano                   (ConfigurationYaml,
+                                            applicationVersion, update)
+import           Control.Exception         (Exception, catch, throwIO)
+import           Control.Lens              (to, (^.))
+import           Control.Monad.Managed     (Managed, liftIO, with)
 import qualified Data.ByteString           as BS
 import qualified Data.ByteString.Char8     as BSC
 import qualified Data.ByteString.Lazy      as LBS
-import Data.Git (Commit(commitTreeish), Tree(treeGetEnts), Blob, Blob(..), blobGetContent)
-import           Data.Git.Ref (SHA1, fromHexString)
-import           Data.Git.Storage (Git, isRepo, openRepo, getObjectRaw, getObject)
-import Data.Git.Storage.Object (Object(ObjBlob))
-import Data.Git.Repository
+import           Data.Git                  (Blob (Blob), Commit (commitTreeish),
+                                            EntName, ModePerm, Ref,
+                                            Tree (treeGetEnts), blobGetContent,
+                                            entName, getCommit, getTree)
+import           Data.Git.Ref              (SHA1, fromHexString)
+import           Data.Git.Repository       ()
+import           Data.Git.Storage          (Git, getObject, isRepo, openRepo)
+import           Data.Git.Storage.Object   (Object (ObjBlob))
+import qualified Data.HashMap.Strict       as HashMap
+import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Monoid               ((<>))
 import qualified Data.Text                 as T
+import qualified Data.Text.IO              as T
+import qualified Data.Yaml                 as Y
 import qualified Filesystem.Path.CurrentOS as FP
+import           GHC.Stack                 (HasCallStack)
+import           Github                    (Status, context, fetchGithubStatus,
+                                            statuses, target_url)
+import           System.Console.ANSI       (Color (Green, Red),
+                                            ColorIntensity (Dull),
+                                            ConsoleLayer (Background, Foreground),
+                                            SGR (Reset, SetColor), setSGR)
 import           System.Exit               (ExitCode (ExitFailure, ExitSuccess))
-import           Turtle.Prelude (mktempdir, proc, pushd)
-import Utils (fetchUrl, fetchCachedUrl)
-import Travis (BuildNumber, fetchTravis, TravisBuild(..), TravisJobInfo(..), fetchTravis2, TravisInfo2(..))
-import qualified Appveyor as AP
-import Appveyor hiding (BuildNumber)
-import Github (Status, fetchGithubStatus, CommitStatus(..), Status(..))
-import Control.Lens
+import           Travis                    (BuildId, BuildNumber,
+                                            TravisBuild (matrix, number),
+                                            TravisInfo2 (ti2commit),
+                                            TravisJobInfo (tjiId), TravisYaml,
+                                            env, fetchTravis, fetchTravis2,
+                                            global, lookup', parseTravisYaml)
+import           Turtle.Prelude            (mktempdir, proc, pushd)
+import           Utils                     (fetchCachedUrl, fetchUrl)
 
 data CiResult = TravisResult T.Text | AppveyorResult T.Text | Other deriving (Show)
+type TextPath = T.Text
+type RepoUrl = T.Text
 
-realFindInstallers :: T.Text -> Managed [CiResult]
-realFindInstallers daedalus_rev = do
+extractVersionFromTravis :: LBS.ByteString -> Maybe T.Text
+extractVersionFromTravis yaml = do
   let
-    travisFiler (_, ".travis.yml", _) = True
-    travisFiler _ = False
-  liftIO $ do
-    repo <- fetchOrClone "/tmp/gitcache/" "https://github.com/input-output-hk/daedalus"
-    commit <- getCommit repo (fromHexString $ T.unpack daedalus_rev)
-    root_dir <- getTree repo $ commitTreeish commit
-    let (_,_,travisRef) = head $ filter travisFiler (treeGetEnts root_dir)
-    print commit
-    obj <- getObject repo travisRef True
-    case obj of
-      Just (ObjBlob (Blob { blobGetContent = content })) -> print content
-      _ -> print "other"
+    f1 = parseTravisYaml yaml
+    f2 :: Either String TravisYaml -> TravisYaml
+    f2 (Right v)  = v
+    f2 (Left err) = error $ "unable to parse .travis.yml: " <> err
+    f3 = global $ env (f2 f1)
+  lookup' "VERSION" f3
+
+third :: Maybe (a,b,c) -> Maybe c
+third (Just (_,_,v)) = Just v
+third Nothing        = Nothing
+
+data GitNotFound = GitFileNotFound T.Text | GitDirNotFound deriving Show
+
+instance Exception GitNotFound
+
+readFileFromGit :: HasCallStack => T.Text -> T.Text -> RepoUrl -> IO (Maybe LBS.ByteString)
+readFileFromGit rev path url = do
+  repo <- fetchOrClone "/tmp/gitcache" url
+  let
+    pathParts = T.splitOn "/" path
+    lookupTree :: T.Text -> Ref SHA1 -> IO (Maybe (Ref SHA1))
+    lookupTree name dirRef = do
+      dir <- getTree repo dirRef
+      let
+        resultList = filter (travisFiler $ BSC.pack $ T.unpack name) (treeGetEnts dir)
+      return $ third $ listToMaybe resultList
+    iterate' :: HasCallStack => [T.Text] -> Ref SHA1 -> IO (Ref SHA1)
+    iterate' [ file ] ref = do
+      maybeResult <- lookupTree file ref
+      case maybeResult of
+        Just refOut -> return refOut
+        Nothing     -> throwIO $ GitFileNotFound path
+    iterate' ( dirName : rest ) ref = do
+      maybeResult <- lookupTree dirName ref
+      case maybeResult of
+        Just refOut -> iterate' rest refOut
+        Nothing     -> throwIO GitDirNotFound
+    iterate' [] _ = error "empty path??"
+    travisFiler :: BS.ByteString -> (ModePerm, EntName, Ref SHA1) -> Bool
+    travisFiler needle (_, currentFile, _) = currentFile == entName needle
+  commit <- getCommit repo (fromHexString $ T.unpack rev)
+  travisRef <- iterate' pathParts (commitTreeish commit)
+  obj <- getObject repo travisRef True
+  case obj of
+    Just (ObjBlob (Blob { blobGetContent = content })) -> do
+      return $ Just content
+    _ -> return Nothing
+
+realFindInstallers :: HasCallStack => T.Text -> Managed [CiResult]
+realFindInstallers daedalus_rev = do
+  daedalus_version <- liftIO $ do
+    contentMaybe <- readFileFromGit daedalus_rev ".travis.yml" "https://github.com/input-output-hk/daedalus"
+    case contentMaybe of
+      Just content -> do
+        case extractVersionFromTravis content of
+          Just version -> return version
+          Nothing -> fail "unable to find daedalus version in .travis.yml"
+      _ -> fail ".travis.yml not found"
   obj <- liftIO $ fetchGithubStatus "input-output-hk" "daedalus" daedalus_rev
   -- https://api.travis-ci.org/repos/input-output-hk/daedalus/builds/285552368
   -- this url returns json, containing the short build#
   tempdir <- mktempdir "/tmp" "iohk-ops"
-  results <- liftIO $ mapM (findInstaller $ T.pack $ FP.encodeString tempdir) (statuses obj)
+  results <- liftIO $ mapM (findInstaller daedalus_version $ T.pack $ FP.encodeString tempdir) (statuses obj)
   _ <- proc "ls" [ "-ltrha", T.pack $ FP.encodeString tempdir ] mempty
   return $ results
-
-type TextPath = T.Text
-type RepoUrl = T.Text
 
 fetchOrClone :: TextPath -> RepoUrl -> IO (Git SHA1)
 fetchOrClone localpath url = do
@@ -62,7 +128,7 @@ fetchOrClone localpath url = do
     True -> do
       fetchRepo localpath url
     False -> do
-      exitCode <- proc "git" [ "clone", "--bare", url, localpath ] mempty
+      exitCode <- proc "git" [ "clone", "--mirror", url, localpath ] mempty
       case exitCode of
         ExitSuccess   -> fetchRepo localpath url
         ExitFailure _ -> error "cant clone repo"
@@ -82,36 +148,77 @@ fetchRepo localpath url = do
         ExitFailure _ -> error "cant fetch repo"
   with fetcher $ \res -> pure res
 
-findInstaller :: T.Text -> Status -> IO CiResult
-findInstaller tempdir status = do
+processDarwinBuild :: T.Text -> T.Text -> BuildId -> IO CiResult
+processDarwinBuild daedalus_version tempdir buildId = do
+  obj <- fetchTravis buildId
+  let
+    filename = "Daedalus-installer-" <> daedalus_version <> "." <> (number obj) <> ".pkg"
+    url = "http://s3.eu-central-1.amazonaws.com/daedalus-travis/" <> filename
+    outFile = tempdir <> "/" <> filename
+  buildLog <- fetchUrl mempty $ "https://api.travis-ci.org/jobs/" <> (T.pack $ show $ tjiId $ head $ drop 1 $ matrix obj) <> "/log"
+  let
+    cardanoBuildNumber = extractBuildId buildLog
+  cardanoInfo <- fetchTravis2 "input-output-hk/cardano-sl" cardanoBuildNumber
+
+  setSGR [ SetColor Background Dull Red ]
+  putStr "cardano build number: "
+  putStrLn $ show cardanoBuildNumber
+
+  putStr "cardano commit: "
+  putStr (T.unpack $ ti2commit cardanoInfo)
+  setSGR [ Reset ]
+  putStr "\n"
+
+  putStr "travis URL: "
+  setSGR [ SetColor Foreground Dull Green ]
+  putStrLn $ T.unpack url
+  setSGR [ Reset ]
+
+  liftIO $ do
+    let
+      readPath name = readFileFromGit (ti2commit cardanoInfo) name "https://github.com/input-output-hk/cardano-sl"
+      readPath1 = readPath "lib/configuration.yaml"
+      readPath2 = readPath "node/configuration.yaml"
+      fallback :: GitNotFound -> IO (Maybe LBS.ByteString)
+      fallback _ = readPath2
+    contentMaybe <- catch readPath1 fallback
+    let
+      -- TODO
+      winKey :: T.Text
+      winKey = "mainnet_wallet_win64"
+      macosKey :: T.Text
+      macosKey = "mainnet_wallet_macos64"
+    let
+      content = fromMaybe undefined contentMaybe
+      fullConfiguration :: ConfigurationYaml
+      fullConfiguration = fromMaybe undefined (Y.decode $ LBS.toStrict content)
+      winVersion = HashMap.lookup winKey fullConfiguration
+      macosVersion = HashMap.lookup macosKey fullConfiguration
+    -- relies on only parsing out the subset that should match
+    if winVersion == macosVersion then
+      case winVersion of
+        Just val -> T.putStrLn ("applicationVersion is " <> (T.pack $ show $ applicationVersion $ update val))
+        Nothing -> error $ "configuration-key missing"
+    else
+      error $ "applicationVersions dont match"
+
+  fetchCachedUrl url filename outFile
+
+  pure $ TravisResult outFile
+
+findInstaller :: HasCallStack => T.Text -> T.Text -> Status -> IO CiResult
+findInstaller daedalus_version tempdir status = do
   let
   -- TODO check for 404's
   -- TODO check file contents with libmagic
   case (context status) of
     "continuous-integration/travis-ci/push" -> do
       let
+        -- TODO, break this out into a parse function like Appveyor.parseCiUrl
         [part1] = drop 6 (T.splitOn "/" (target_url status))
         buildId = head  $ T.splitOn "?" part1
       --print $ "its travis buildId: " <> buildId
-      obj <- fetchTravis buildId
-      let
-        -- TODO use .env.global.VERSION from daedalus .travis.yml
-        version :: T.Text
-        version = "1.0"
-        filename = "Daedalus-installer-" <> version <> "." <> (number obj) <> ".pkg"
-        url = "http://s3.eu-central-1.amazonaws.com/daedalus-travis/" <> filename
-        outFile = tempdir <> "/" <> filename
-      buildLog <- fetchUrl mempty $ "https://api.travis-ci.org/jobs/" <> (T.pack $ show $ tjiId $ head $ drop 1 $ matrix obj) <> "/log"
-      let
-        cardanoBuildNumber = extractBuildId buildLog
-      print $ "cardano build number: " <> (show cardanoBuildNumber)
-      cardanoInfo <- fetchTravis2 "input-output-hk/cardano-sl" cardanoBuildNumber
-      print $ "cardano commit: " <> (ti2commit cardanoInfo)
-      print $ "travis URL: " <> url
-
-      fetchCachedUrl url filename outFile
-
-      pure $ TravisResult outFile
+      processDarwinBuild daedalus_version tempdir buildId
     "continuous-integration/appveyor/branch" -> do
       let
         (user, project, version) = parseCiUrl $ target_url status
@@ -125,7 +232,10 @@ findInstaller tempdir status = do
             artifactUrl = getArtifactUrl jobid filename
             basename = head $ drop 1 $ T.splitOn "/" filename
             outFile = tempdir <> "/" <> basename
-          print $ "appveyor URL: " <>  artifactUrl
+          putStr "appveyor URL: "
+          setSGR [ SetColor Foreground Dull Green ]
+          putStrLn $ T.unpack artifactUrl
+          setSGR [ Reset ]
           fetchCachedUrl artifactUrl basename outFile
           pure $ AppveyorResult outFile
     other -> do
@@ -145,4 +255,3 @@ extractBuildId fullLog = do
 
 sampleInput :: LBS.ByteString
 sampleInput = "junk\nbuild id is 13711'\r\r\njunk"
-

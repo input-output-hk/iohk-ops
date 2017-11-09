@@ -1,6 +1,4 @@
 {-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE ExplicitForAll    #-}
-{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Github where

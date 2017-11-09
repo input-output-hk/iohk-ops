@@ -56,3 +56,4 @@ executable iohk-ops
                      , filepath
                      , git
                      , directory
+                     , ansi-terminal
