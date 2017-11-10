@@ -305,7 +305,7 @@ runNew o@Options{..} New{..} args = do
     if (tGenerateKeys /= GenerateKeys)
     then echo "Skipping key generation, due to user request"
     else do
-      generateDevKeys o (clusterConfigurationKey config) "keys"
+      generateStakeKeys o (clusterConfigurationKey config) "keys"
       sh $ do
         k <- Turtle.find ((prefix "keys/keys-testnet/rich/key") <> (suffix ".sk"))
           "keys/keys-testnet/rich"
@@ -315,8 +315,8 @@ runNew o@Options{..} New{..} args = do
 runNew _ _ _ = error "impossible"
 
 -- | Use 'cardano-keygen' to create keys for a develoment cluster.
-generateDevKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
-generateDevKeys o configurationKey outdir = do
+generateStakeKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
+generateStakeKeys o configurationKey outdir = do
   -- XXX: compute cardano source path globally
   configuration <- (<> "/configuration.yaml") . T.strip <$> incmd o "nix-instantiate"
     [ "--eval"
