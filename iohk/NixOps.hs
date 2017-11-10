@@ -534,8 +534,8 @@ iohkNixopsPath =
   let defaultNix = "default.nix"
       storePath  = Sys.unsafePerformIO $ inprocs "nix-build" ["-A", "nixops", format fp defaultNix] $
                    (trace (T.unpack $ format ("INFO: using "%fp%" expression for its definition of 'nixops'") defaultNix) empty)
-      opsPath    = Path.fromText $ T.strip storePath <> "/bin/nixops"
-  in trace (T.unpack $ format ("INFO: nixops is "%fp) opsPath) opsPath
+      path       = Path.fromText $ T.strip storePath <> "/bin/nixops"
+  in trace (T.unpack $ format ("INFO: nixops is "%fp) path) path
 
 nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO b
 nixops'' executor o@Options{..} c@NixopsConfig{..} com args =
