@@ -1212,15 +1212,19 @@ s3Upload daedalus_rev c = do
 
   --lgr <- newLogger Trace Sys.stdout
   env <- newEnv Discover -- <&> set envLogger lgr -- . set envRegion NorthVirginia
-  with (realFindInstallers daedalus_rev) $ \res -> do
+  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
     liftIO $ runResourceT . runAWST env $ do
       say $ "uploading things to " <> (coerce $ cUpdateBucket c)
       mapM_ hashAndUpload res
 
-findInstallers :: T.Text -> IO ()
-findInstallers daedalus_rev = do
-  with (realFindInstallers daedalus_rev) $ \res -> do
+configurationKeys :: Environment -> (T.Text, T.Text)
+configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")
+configurationKeys Staging = ("mainnet_dryrun_wallet_win64", "mainnet_dryrun_wallet_macos64")
+
+findInstallers :: T.Text -> NixopsConfig -> IO ()
+findInstallers daedalus_rev c = do
+  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
     TIO.putStrLn $ githubWikiRecord daedalus_rev res
 

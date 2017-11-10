@@ -93,8 +93,8 @@ readFileFromGit rev path url = do
       return $ Just content
     _ -> return Nothing
 
-realFindInstallers :: HasCallStack => T.Text -> Managed [CiResult]
-realFindInstallers daedalus_rev = do
+realFindInstallers :: HasCallStack => T.Text -> (T.Text, T.Text) -> Managed [CiResult]
+realFindInstallers daedalus_rev keys = do
   daedalus_version <- liftIO $ do
     contentMaybe <- readFileFromGit daedalus_rev ".travis.yml" "https://github.com/input-output-hk/daedalus"
     case contentMaybe of
@@ -107,7 +107,7 @@ realFindInstallers daedalus_rev = do
   -- https://api.travis-ci.org/repos/input-output-hk/daedalus/builds/285552368
   -- this url returns json, containing the short build#
   tempdir <- mktempdir "/tmp" "iohk-ops"
-  results <- liftIO $ mapM (findInstaller daedalus_version $ T.pack $ FP.encodeString tempdir) (statuses obj)
+  results <- liftIO $ mapM (findInstaller daedalus_version (T.pack $ FP.encodeString tempdir) keys) (statuses obj)
   _ <- proc "ls" [ "-ltrha", T.pack $ FP.encodeString tempdir ] mempty
   return $ catMaybes results
 
@@ -138,8 +138,8 @@ fetchRepo localpath url = do
         ExitFailure _ -> error "cant fetch repo"
   with fetcher $ \res -> pure res
 
-processDarwinBuild :: T.Text -> T.Text -> BuildId -> T.Text -> IO CiResult
-processDarwinBuild daedalus_version tempdir buildId ciUrl = do
+processDarwinBuild :: T.Text -> T.Text -> BuildId -> (T.Text, T.Text) -> T.Text -> IO CiResult
+processDarwinBuild daedalus_version tempdir buildId (winKey, macosKey) ciUrl = do
   obj <- fetchTravis buildId
   let
     filename = "Daedalus-installer-" <> daedalus_version <> "." <> (number obj) <> ".pkg"
@@ -173,12 +173,6 @@ processDarwinBuild daedalus_version tempdir buildId ciUrl = do
       fallback _ = readPath2
     contentMaybe <- catch readPath1 fallback
     let
-      -- TODO
-      winKey :: T.Text
-      winKey = "mainnet_wallet_win64"
-      macosKey :: T.Text
-      macosKey = "mainnet_wallet_macos64"
-    let
       content = fromMaybe undefined contentMaybe
       fullConfiguration :: ConfigurationYaml
       fullConfiguration = fromMaybe undefined (Y.decode $ LBS.toStrict content)
@@ -198,8 +192,8 @@ processDarwinBuild daedalus_version tempdir buildId ciUrl = do
 
   pure $ TravisResult outFile appVersion (ti2commit cardanoInfo) (number obj) ciUrl
 
-findInstaller :: HasCallStack => T.Text -> T.Text -> Status -> IO (Maybe CiResult)
-findInstaller daedalus_version tempdir status = do
+findInstaller :: HasCallStack => T.Text -> T.Text -> (T.Text, T.Text) -> Status -> IO (Maybe CiResult)
+findInstaller daedalus_version tempdir keys status = do
   let
   -- TODO check for 404's
   -- TODO check file contents with libmagic
@@ -210,7 +204,7 @@ findInstaller daedalus_version tempdir status = do
         [part1] = drop 6 (T.splitOn "/" (target_url status))
         buildId = head  $ T.splitOn "?" part1
       --print $ "its travis buildId: " <> buildId
-      result <- processDarwinBuild daedalus_version tempdir buildId (target_url status)
+      result <- processDarwinBuild daedalus_version tempdir buildId keys (target_url status)
       return $ Just result
     "continuous-integration/appveyor/branch" -> do
       let
