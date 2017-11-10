@@ -4,6 +4,7 @@
 *prof
 keys/*.key
 /test-*.yaml
+config.yaml
 
 .stack-work
 /cardano-sl/
