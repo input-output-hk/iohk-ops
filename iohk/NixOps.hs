@@ -1195,15 +1195,7 @@ s3Upload daedalus_rev c = do
         newMetaData :: HMS.HashMap Text Text
         newMetaData = HMS.fromList [ ("daedalus-revision", daedalus_rev)]
       void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata newMetaData $ putObject bucketName remoteKey bdy
-    hashInstaller :: Sys.FilePath -> IO Text
-    hashInstaller path = do
-      (exitStatus, res) <- procStrict "/nix/store/myla1pqh1hzif9b1k5pv8kj25fqyhjff-cardano-sl-auxx-1.0.2/bin/cardano-hash-installer" [ (T.pack path) ] empty
-      case exitStatus of
-        ExitSuccess -> do
-          let cleanHash = fromMaybe res (T.stripSuffix "\n" res)
-          return cleanHash
-        ExitFailure _ -> error "error running cardano-hash-installer"
-    uploadHashedInstaller :: BucketName -> Sys.FilePath -> AWST (ResourceT IO) Text
+    uploadHashedInstaller :: BucketName -> Sys.FilePath -> AWST (ResourceT IO) T.Text
     uploadHashedInstaller bucketName localPath = do
       hash <- (liftIO . hashInstaller) localPath
       uploadOneFile bucketName localPath (ObjectKey hash)
@@ -1211,10 +1203,10 @@ s3Upload daedalus_rev c = do
     hashAndUpload :: CiResult -> AWST (ResourceT IO) ()
     hashAndUpload ciResult = do
       case ciResult of
-        TravisResult localPath -> do
+        TravisResult localPath _ _ _ _ -> do
           hash <- uploadHashedInstaller (cUpdateBucket c) (T.unpack localPath)
           say $ "darwin installer " <> localPath <> " hash " <> hash
-        AppveyorResult localPath -> do
+        AppveyorResult localPath _ _ -> do
           hash <- uploadHashedInstaller (cUpdateBucket c) (T.unpack localPath)
           say $ "windows installer " <> localPath <> " hash " <> hash
 
@@ -1230,6 +1222,7 @@ findInstallers :: T.Text -> IO ()
 findInstallers daedalus_rev = do
   with (realFindInstallers daedalus_rev) $ \res -> do
     print res
+    TIO.putStrLn $ githubWikiRecord daedalus_rev res
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do

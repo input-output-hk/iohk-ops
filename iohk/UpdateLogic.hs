@@ -2,12 +2,12 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module UpdateLogic (realFindInstallers, CiResult(..)) where
+module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiRecord) where
 
 import           Appveyor                  (AppveyorArtifact (AppveyorArtifact),
                                             build, fetchAppveyorArtifacts,
                                             fetchAppveyorBuild, getArtifactUrl,
-                                            jobId, jobs, parseCiUrl)
+                                            jobId, jobs, parseCiUrl, Version, versionToText)
 import           Cardano                   (ConfigurationYaml,
                                             applicationVersion, update)
 import           Control.Exception         (Exception, catch, throwIO)
@@ -25,7 +25,7 @@ import           Data.Git.Repository       ()
 import           Data.Git.Storage          (Git, getObject, isRepo, openRepo)
 import           Data.Git.Storage.Object   (Object (ObjBlob))
 import qualified Data.HashMap.Strict       as HashMap
-import           Data.Maybe                (fromMaybe, listToMaybe)
+import           Data.Maybe                (fromMaybe, listToMaybe, catMaybes)
 import           Data.Monoid               ((<>))
 import qualified Data.Text                 as T
 import qualified Data.Text.IO              as T
@@ -45,10 +45,12 @@ import           Travis                    (BuildId, BuildNumber,
                                             TravisJobInfo (tjiId), TravisYaml,
                                             env, fetchTravis, fetchTravis2,
                                             global, lookup', parseTravisYaml)
-import           Turtle.Prelude            (mktempdir, proc, pushd)
+import           Turtle.Prelude            (mktempdir, proc, pushd, procStrict)
+import           Turtle                    (empty)
 import           Utils                     (fetchCachedUrl, fetchUrl)
+import qualified System.IO                 as Sys
 
-data CiResult = TravisResult T.Text | AppveyorResult T.Text | Other deriving (Show)
+data CiResult = TravisResult T.Text Integer T.Text T.Text T.Text | AppveyorResult T.Text Version T.Text deriving (Show)
 type TextPath = T.Text
 type RepoUrl = T.Text
 
@@ -107,7 +109,7 @@ realFindInstallers daedalus_rev = do
   tempdir <- mktempdir "/tmp" "iohk-ops"
   results <- liftIO $ mapM (findInstaller daedalus_version $ T.pack $ FP.encodeString tempdir) (statuses obj)
   _ <- proc "ls" [ "-ltrha", T.pack $ FP.encodeString tempdir ] mempty
-  return $ results
+  return $ catMaybes results
 
 fetchOrClone :: TextPath -> RepoUrl -> IO (Git SHA1)
 fetchOrClone localpath url = do
@@ -136,8 +138,8 @@ fetchRepo localpath url = do
         ExitFailure _ -> error "cant fetch repo"
   with fetcher $ \res -> pure res
 
-processDarwinBuild :: T.Text -> T.Text -> BuildId -> IO CiResult
-processDarwinBuild daedalus_version tempdir buildId = do
+processDarwinBuild :: T.Text -> T.Text -> BuildId -> T.Text -> IO CiResult
+processDarwinBuild daedalus_version tempdir buildId ciUrl = do
   obj <- fetchTravis buildId
   let
     filename = "Daedalus-installer-" <> daedalus_version <> "." <> (number obj) <> ".pkg"
@@ -162,7 +164,7 @@ processDarwinBuild daedalus_version tempdir buildId = do
   putStrLn $ T.unpack url
   setSGR [ Reset ]
 
-  liftIO $ do
+  appVersion <- liftIO $ do
     let
       readPath name = readFileFromGit (ti2commit cardanoInfo) name "https://github.com/input-output-hk/cardano-sl"
       readPath1 = readPath "lib/configuration.yaml"
@@ -185,16 +187,18 @@ processDarwinBuild daedalus_version tempdir buildId = do
     -- relies on only parsing out the subset that should match
     if winVersion == macosVersion then
       case winVersion of
-        Just val -> T.putStrLn ("applicationVersion is " <> (T.pack $ show $ applicationVersion $ update val))
+        Just val -> do
+          T.putStrLn ("applicationVersion is " <> (T.pack $ show $ applicationVersion $ update val))
+          return $ applicationVersion $ update val
         Nothing -> error $ "configuration-key missing"
     else
       error $ "applicationVersions dont match"
 
   fetchCachedUrl url filename outFile
 
-  pure $ TravisResult outFile
+  pure $ TravisResult outFile appVersion (ti2commit cardanoInfo) (number obj) ciUrl
 
-findInstaller :: HasCallStack => T.Text -> T.Text -> Status -> IO CiResult
+findInstaller :: HasCallStack => T.Text -> T.Text -> Status -> IO (Maybe CiResult)
 findInstaller daedalus_version tempdir status = do
   let
   -- TODO check for 404's
@@ -206,7 +210,8 @@ findInstaller daedalus_version tempdir status = do
         [part1] = drop 6 (T.splitOn "/" (target_url status))
         buildId = head  $ T.splitOn "?" part1
       --print $ "its travis buildId: " <> buildId
-      processDarwinBuild daedalus_version tempdir buildId
+      result <- processDarwinBuild daedalus_version tempdir buildId (target_url status)
+      return $ Just result
     "continuous-integration/appveyor/branch" -> do
       let
         (user, project, version) = parseCiUrl $ target_url status
@@ -225,10 +230,10 @@ findInstaller daedalus_version tempdir status = do
           putStrLn $ T.unpack artifactUrl
           setSGR [ Reset ]
           fetchCachedUrl artifactUrl basename outFile
-          pure $ AppveyorResult outFile
+          pure $ Just $ AppveyorResult outFile version (target_url status)
     other -> do
       print $ "other CI status found: " <> other
-      pure Other
+      pure Nothing
 
 extractBuildId :: LBS.ByteString -> BuildNumber
 extractBuildId fullLog = do
@@ -243,3 +248,28 @@ extractBuildId fullLog = do
 
 sampleInput :: LBS.ByteString
 sampleInput = "junk\nbuild id is 13711'\r\r\njunk"
+
+hashInstaller :: Sys.FilePath -> IO T.Text
+hashInstaller path = do
+  (exitStatus, res) <- procStrict "/nix/store/myla1pqh1hzif9b1k5pv8kj25fqyhjff-cardano-sl-auxx-1.0.2/bin/cardano-hash-installer" [ (T.pack path) ] empty
+  case exitStatus of
+    ExitSuccess -> do
+      let cleanHash = fromMaybe res (T.stripSuffix "\n" res)
+      return cleanHash
+    ExitFailure _ -> error "error running cardano-hash-installer"
+
+githubWikiRecord :: T.Text -> [CiResult] -> T.Text
+githubWikiRecord daedalus_rev results = do
+  let
+    findTravis :: [CiResult] -> (Integer, T.Text, T.Text, T.Text)
+    findTravis (TravisResult _ ver cardano_rev' buildNumber ciUrl : _) = (ver, cardano_rev', buildNumber, ciUrl)
+    findTravis (_ : rest) = findTravis rest
+    findTravis [] = error "TravisResult missing"
+    findAppveyor :: [CiResult] -> (Version, T.Text)
+    findAppveyor (AppveyorResult _ number' url' : _) = (number', url')
+    findAppveyor (_ : rest) = findAppveyor rest
+    findAppveyor [] = error "AppveyorResult missing"
+    (appVersion, cardano_rev, travisNumber, travisUrl) = findTravis results
+    (appveyVersion, appveyUrl) = findAppveyor results
+    githubLink rev project = "[" <> (T.take 6 rev) <> "](https://github.com/input-output-hk/" <> project <> "/commit/" <> rev <> ")"
+  (T.pack $ show appVersion) <> " | " <> (githubLink daedalus_rev "daedalus") <> " | " <> (githubLink cardano_rev "cardano-sl") <> " | [" <> travisNumber <> "](" <> travisUrl <> ") | [" <> (versionToText appveyVersion) <> "](" <> appveyUrl <> ") | DATE"
