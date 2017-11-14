@@ -48,9 +48,20 @@ import           Travis                    (BuildId, BuildNumber,
 import           Turtle.Prelude            (mktempdir, proc, pushd, procStrict)
 import           Turtle                    (empty)
 import           Utils                     (fetchCachedUrl, fetchUrl)
-import qualified System.IO                 as Sys
 
-data CiResult = TravisResult T.Text Integer T.Text T.Text T.Text | AppveyorResult T.Text Version T.Text deriving (Show)
+data CiResult = TravisResult {
+      localPath :: T.Text
+    , travisApplicationVersion :: Integer
+    , cardanoCommit :: T.Text
+    , travisJobNumber :: T.Text
+    , travisUrl :: T.Text
+  }
+  | AppveyorResult {
+      avLocalPath :: T.Text
+    , avVersion :: Version
+    , avUrl :: T.Text
+  }
+  deriving (Show)
 type TextPath = T.Text
 type RepoUrl = T.Text
 
@@ -68,16 +79,16 @@ data GitNotFound = GitFileNotFound T.Text | GitDirNotFound deriving Show
 
 instance Exception GitNotFound
 
-readFileFromGit :: HasCallStack => T.Text -> T.Text -> RepoUrl -> IO (Maybe LBS.ByteString)
-readFileFromGit rev path url = do
-  repo <- fetchOrClone "/tmp/gitcache" url
+readFileFromGit :: HasCallStack => T.Text -> T.Text -> T.Text -> RepoUrl -> IO (Maybe LBS.ByteString)
+readFileFromGit rev path name url = do
+  repo <- fetchOrClone ("/tmp/gitcache-" <> name) url
   let
     pathParts = T.splitOn "/" path
     lookupTree :: T.Text -> Ref SHA1 -> IO (Maybe (Ref SHA1))
-    lookupTree name dirRef = do
+    lookupTree name' dirRef = do
       dir <- getTree repo dirRef
       let
-        resultList = filter (travisFiler $ BSC.pack $ T.unpack name) (treeGetEnts dir)
+        resultList = filter (travisFiler $ BSC.pack $ T.unpack name') (treeGetEnts dir)
       return $ fmap (\(_, _, x) -> x) $ listToMaybe resultList
     go :: HasCallStack => [T.Text] -> Ref SHA1 -> IO (Ref SHA1)
     go [] _ = error "empty path??"
@@ -96,7 +107,7 @@ readFileFromGit rev path url = do
 realFindInstallers :: HasCallStack => T.Text -> (T.Text, T.Text) -> Managed [CiResult]
 realFindInstallers daedalus_rev keys = do
   daedalus_version <- liftIO $ do
-    contentMaybe <- readFileFromGit daedalus_rev ".travis.yml" "https://github.com/input-output-hk/daedalus"
+    contentMaybe <- readFileFromGit daedalus_rev ".travis.yml" "daedalus" "https://github.com/input-output-hk/daedalus"
     case contentMaybe of
       Just content -> do
         case extractVersionFromTravis content of
@@ -166,7 +177,7 @@ processDarwinBuild daedalus_version tempdir buildId (winKey, macosKey) ciUrl = d
 
   appVersion <- liftIO $ do
     let
-      readPath name = readFileFromGit (ti2commit cardanoInfo) name "https://github.com/input-output-hk/cardano-sl"
+      readPath name = readFileFromGit (ti2commit cardanoInfo) name "cardano" "https://github.com/input-output-hk/cardano-sl"
       readPath1 = readPath "lib/configuration.yaml"
       readPath2 = readPath "node/configuration.yaml"
       fallback :: GitNotFound -> IO (Maybe LBS.ByteString)
@@ -243,9 +254,14 @@ extractBuildId fullLog = do
 sampleInput :: LBS.ByteString
 sampleInput = "junk\nbuild id is 13711'\r\r\njunk"
 
-hashInstaller :: Sys.FilePath -> IO T.Text
+hashInstaller :: T.Text -> IO T.Text
 hashInstaller path = do
-  (exitStatus, res) <- procStrict "/nix/store/myla1pqh1hzif9b1k5pv8kj25fqyhjff-cardano-sl-auxx-1.0.2/bin/cardano-hash-installer" [ (T.pack path) ] empty
+  let
+    -- TODO DEVOPS-502
+    -- once cardano in `cardano-sl-src.json` has been bumped enough, switch this to building on the fly
+    -- with `nix-build -A cardano-sl-auxx`
+    exepath = "/nix/store/hjvv6dxy197c9mjc2gh635am0c0shx5l-cardano-sl-auxx-1.0.3/bin/cardano-hash-installer"
+  (exitStatus, res) <- procStrict exepath [ path ] empty
   case exitStatus of
     ExitSuccess -> do
       let cleanHash = fromMaybe res (T.stripSuffix "\n" res)

@@ -172,6 +172,7 @@ import           Network.AWS.Auth
 import           Network.AWS               hiding (Seconds, Debug, Region)
 import           Control.Monad.Trans.AWS          (runAWST, AWST)
 import           Network.AWS.S3.PutObject
+import           Network.AWS.S3.CopyObject
 import           Network.AWS.S3.Types      hiding (All, URL, Region)
 import           Control.Monad.Trans.Resource
 import           Data.Coerce
@@ -681,7 +682,7 @@ data NixopsConfig = NixopsConfig
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
-  , cUpdateBucket     :: BucketName
+  , cUpdateBucket     :: Text
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
   , cDeplArgs         :: DeplArgs
@@ -1188,35 +1189,52 @@ s3Upload :: T.Text -> NixopsConfig -> IO ()
 s3Upload daedalus_rev c = do
   let
     say = liftIO . TIO.putStrLn
-    uploadOneFile :: BucketName -> Sys.FilePath -> ObjectKey -> AWST (ResourceT IO) ()
-    uploadOneFile bucketName localPath remoteKey = do
-      bdy <- chunkedFile defaultChunkSize localPath
+    uploadOneFile :: BucketName -> T.Text -> ObjectKey -> Integer -> T.Text -> AWST (ResourceT IO) ()
+    uploadOneFile bucketName localPath remoteKey appver cardanoCommit = do
+      bdy <- chunkedFile defaultChunkSize (T.unpack localPath)
       let
         newMetaData :: HMS.HashMap Text Text
-        newMetaData = HMS.fromList [ ("daedalus-revision", daedalus_rev)]
+        newMetaData = HMS.fromList [
+              ("daedalus-revision", daedalus_rev)
+            , ("cardano-revision", cardanoCommit)
+            , ("application-version", (T.pack. show) appver)
+          ]
       void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata newMetaData $ putObject bucketName remoteKey bdy
-    uploadHashedInstaller :: BucketName -> Sys.FilePath -> AWST (ResourceT IO) T.Text
-    uploadHashedInstaller bucketName localPath = do
+    copyObject' :: BucketName -> T.Text -> ObjectKey -> AWST (ResourceT IO) ()
+    copyObject' bucketName source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName source dest
+    uploadHashedInstaller :: T.Text -> T.Text -> Integer -> T.Text -> AWST (ResourceT IO) T.Text
+    uploadHashedInstaller bucketName localPath appver cardanoCommit = do
       hash <- (liftIO . hashInstaller) localPath
-      uploadOneFile bucketName localPath (ObjectKey hash)
+      let
+        basename' = last $ T.splitOn "/" $ localPath
+      liftIO $ print localPath
+      liftIO $ print basename'
+      uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
+      copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
       return hash
-    hashAndUpload :: CiResult -> AWST (ResourceT IO) ()
-    hashAndUpload ciResult = do
+    hashAndUpload :: Integer -> T.Text -> CiResult -> AWST (ResourceT IO) ()
+    hashAndUpload appver cardanoCommit ciResult = do
       case ciResult of
         TravisResult localPath _ _ _ _ -> do
-          hash <- uploadHashedInstaller (cUpdateBucket c) (T.unpack localPath)
+          hash <- uploadHashedInstaller (cUpdateBucket c) localPath appver cardanoCommit
           say $ "darwin installer " <> localPath <> " hash " <> hash
         AppveyorResult localPath _ _ -> do
-          hash <- uploadHashedInstaller (cUpdateBucket c) (T.unpack localPath)
+          hash <- uploadHashedInstaller (cUpdateBucket c) localPath appver cardanoCommit
           say $ "windows installer " <> localPath <> " hash " <> hash
 
   --lgr <- newLogger Trace Sys.stdout
   env <- newEnv Discover -- <&> set envLogger lgr -- . set envRegion NorthVirginia
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
+    let
+      findTravis :: [ CiResult ] -> (Integer, T.Text)
+      findTravis (TravisResult _ appver' c' _ _ : _) = (appver', c')
+      findTravis (_ : rest) = findTravis rest
+      findTravis [] = error "travis result missing"
+      (appver, cardanoCommit') = findTravis res
     liftIO $ runResourceT . runAWST env $ do
       say $ "uploading things to " <> (coerce $ cUpdateBucket c)
-      mapM_ hashAndUpload res
+      mapM_ (hashAndUpload appver cardanoCommit') res
 
 configurationKeys :: Environment -> (T.Text, T.Text)
 configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")
