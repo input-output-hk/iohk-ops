@@ -24,6 +24,7 @@ in rec {
 
   hydra-build-slave-1 = hydra;
   hydra-build-slave-2 = hydra;
+  kite                = hydra;
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
