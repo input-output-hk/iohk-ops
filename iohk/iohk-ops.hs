@@ -16,6 +16,7 @@ import           Turtle                    hiding (env, err, fold, inproc, procs
 import           Time.Types
 import           Time.System
 
+import           Constants
 import           NixOps
 import qualified NixOps                        as Ops
 import           Types
@@ -77,7 +78,9 @@ parserConfirmation question =
 data Command where
 
   -- * setup
-  Clone                 :: { cBranch      :: Branch } -> Command
+  Clone                 :: { cName        :: NixopsDepl
+                           , cBranch      :: Branch
+                           } -> Command
   New                   :: { tFile        :: Maybe Turtle.FilePath
                            , tTopology    :: Maybe Turtle.FilePath
                            , tConfigurationKey :: Maybe ConfigurationKey
@@ -124,7 +127,9 @@ centralCommandParser =
   (    subcommandGroup "General:"
     [ ("clone",                 "Clone an 'iohk-ops' repository branch",
                                 Clone
-                                <$> parserBranch "'iohk-ops' branch to checkout")
+                                <$> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
+                                <*> (fromMaybe defaultIOPSBranch
+                                     <$> (optional (parserBranch "'iohk-ops' branch to checkout.  Defaults to 'develop'"))))
     , ("new",                   "Produce (or update) a checkout of BRANCH with a cluster config YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
                                 New
                                 <$> optional (optPath "config"        'c' "Override the default, environment-dependent config filename")
@@ -210,7 +215,7 @@ main = do
 runTop :: Options -> [Arg] -> Command -> IO ()
 runTop o@Options{..} args topcmd = do
   case topcmd of
-    Clone{..}                   -> runClone           o cBranch
+    Clone{..}                   -> runClone           o cName cBranch
     New{..}                     -> runNew             o topcmd  args
     SetRev proj comId comm      -> Ops.runSetRev      o proj comId $
                                    if comm == DontCommit then Nothing
@@ -262,14 +267,14 @@ runTop o@Options{..} args topcmd = do
             SetRev   _ _ _           -> error "impossible"
 
 
-runClone :: Options -> Branch -> IO ()
-runClone o@Options{..} branch = do
+runClone :: Options -> NixopsDepl -> Branch -> IO ()
+runClone o@Options{..} depl branch = do
   let bname     = fromBranch branch
-      branchDir = fromText bname
+      branchDir = fromText $ fromNixopsDepl depl
   exists <- testpath branchDir
   if exists
   then  echo $ "Using existing git clone ..."
-  else cmd o "git" ["clone", Ops.fromURL $ Ops.projectURL IOHKOps, "-b", bname, bname]
+  else cmd o "git" ["clone", Ops.fromURL $ Ops.projectURL IOHKOps, "-b", bname, fromNixopsDepl depl]
 
   cd branchDir
   cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])

@@ -22,6 +22,8 @@ defaultNode          = NodeName "c-a-1"
 defaultNodePort      = PortNo 3000
 defaultNixpkgs       = Nothing
 
+defaultIOPSBranch    = Branch "develop"
+
 defaultHold          = 1200 :: Seconds -- 20 minutes
 
 explorerNode         = NodeName "explorer"
