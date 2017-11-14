@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiRecord) where
+module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiRecord, InstallersResults(..), GlobalResults(..)) where
 
 import           Appveyor                  (AppveyorArtifact (AppveyorArtifact),
                                             build, fetchAppveyorArtifacts,
@@ -25,7 +25,7 @@ import           Data.Git.Repository       ()
 import           Data.Git.Storage          (Git, getObject, isRepo, openRepo)
 import           Data.Git.Storage.Object   (Object (ObjBlob))
 import qualified Data.HashMap.Strict       as HashMap
-import           Data.Maybe                (fromMaybe, listToMaybe, catMaybes)
+import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Monoid               ((<>))
 import qualified Data.Text                 as T
 import qualified Data.Text.IO              as T
@@ -33,7 +33,7 @@ import qualified Data.Yaml                 as Y
 import qualified Filesystem.Path.CurrentOS as FP
 import           GHC.Stack                 (HasCallStack)
 import           Github                    (Status, context, fetchGithubStatus,
-                                            statuses, target_url)
+                                            statuses, targetUrl)
 import           System.Console.ANSI       (Color (Green, Red),
                                             ColorIntensity (Dull),
                                             ConsoleLayer (Background, Foreground),
@@ -62,6 +62,16 @@ data CiResult = TravisResult {
     , avUrl :: T.Text
   }
   deriving (Show)
+data GlobalResults = GlobalResults {
+      grCardanoCommit :: T.Text
+    , grDaedalusCommit :: T.Text
+    , grApplicationVersion :: Integer
+  } deriving Show
+data InstallersResults = InstallersResults {
+      travisResult :: CiResult
+    , appveyorResult :: CiResult
+    , globalResult :: GlobalResults
+  } deriving Show
 type TextPath = T.Text
 type RepoUrl = T.Text
 
@@ -104,7 +114,7 @@ readFileFromGit rev path name url = do
       return $ Just content
     _ -> return Nothing
 
-realFindInstallers :: HasCallStack => T.Text -> (T.Text, T.Text) -> Managed [CiResult]
+realFindInstallers :: HasCallStack => T.Text -> (T.Text, T.Text) -> Managed InstallersResults
 realFindInstallers daedalus_rev keys = do
   daedalus_version <- liftIO $ do
     contentMaybe <- readFileFromGit daedalus_rev ".travis.yml" "daedalus" "https://github.com/input-output-hk/daedalus"
@@ -118,9 +128,19 @@ realFindInstallers daedalus_rev keys = do
   -- https://api.travis-ci.org/repos/input-output-hk/daedalus/builds/285552368
   -- this url returns json, containing the short build#
   tempdir <- mktempdir "/tmp" "iohk-ops"
-  results <- liftIO $ mapM (findInstaller daedalus_version (T.pack $ FP.encodeString tempdir) keys) (statuses obj)
+  results <- liftIO $ mapM (findInstaller daedalus_rev daedalus_version (T.pack $ FP.encodeString tempdir) keys) (statuses obj)
+  let
+    findTravis :: [ (Maybe GlobalResults, Maybe CiResult) ] -> CiResult
+    findTravis ((_, Just tr@TravisResult {}) : _) = tr
+    findTravis (_ : rest) = findTravis rest
+    findAppveyor :: [ (Maybe GlobalResults, Maybe CiResult) ] -> CiResult
+    findAppveyor ((_, Just av@AppveyorResult {}) : _) = av
+    findAppveyor (_ : rest) = findAppveyor rest
+    findGlobal :: [ (Maybe GlobalResults, Maybe CiResult) ] -> GlobalResults
+    findGlobal ((Just gr@GlobalResults {}, _) : _) = gr
+    findGlobal (_ : rest) = findGlobal rest
   _ <- proc "ls" [ "-ltrha", T.pack $ FP.encodeString tempdir ] mempty
-  return $ catMaybes results
+  return $ InstallersResults (findTravis results) (findAppveyor results) (findGlobal results)
 
 fetchOrClone :: TextPath -> RepoUrl -> IO (Git SHA1)
 fetchOrClone localpath url = do
@@ -149,8 +169,8 @@ fetchRepo localpath url = do
         ExitFailure _ -> error "cant fetch repo"
   with fetcher $ \res -> pure res
 
-processDarwinBuild :: T.Text -> T.Text -> BuildId -> (T.Text, T.Text) -> T.Text -> IO CiResult
-processDarwinBuild daedalus_version tempdir buildId (winKey, macosKey) ciUrl = do
+processDarwinBuild :: T.Text -> T.Text -> T.Text -> BuildId -> (T.Text, T.Text) -> T.Text -> IO (GlobalResults, CiResult)
+processDarwinBuild daedalus_rev daedalus_version tempdir buildId (winKey, macosKey) ciUrl = do
   obj <- fetchTravis buildId
   let
     filename = "Daedalus-installer-" <> daedalus_version <> "." <> (number obj) <> ".pkg"
@@ -201,10 +221,10 @@ processDarwinBuild daedalus_version tempdir buildId (winKey, macosKey) ciUrl = d
 
   fetchCachedUrl url filename outFile
 
-  pure $ TravisResult outFile appVersion (ti2commit cardanoInfo) (number obj) ciUrl
+  pure (GlobalResults (ti2commit cardanoInfo) daedalus_rev appVersion, TravisResult outFile appVersion (ti2commit cardanoInfo) (number obj) ciUrl)
 
-findInstaller :: HasCallStack => T.Text -> T.Text -> (T.Text, T.Text) -> Status -> IO (Maybe CiResult)
-findInstaller daedalus_version tempdir keys status = do
+findInstaller :: HasCallStack => T.Text -> T.Text -> T.Text -> (T.Text, T.Text) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
+findInstaller daedalus_rev daedalus_version tempdir keys status = do
   let
   -- TODO check for 404's
   -- TODO check file contents with libmagic
@@ -212,14 +232,14 @@ findInstaller daedalus_version tempdir keys status = do
     "continuous-integration/travis-ci/push" -> do
       let
         -- TODO, break this out into a parse function like Appveyor.parseCiUrl
-        [part1] = drop 6 (T.splitOn "/" (target_url status))
+        [part1] = drop 6 (T.splitOn "/" (targetUrl status))
         buildId = head  $ T.splitOn "?" part1
       --print $ "its travis buildId: " <> buildId
-      result <- processDarwinBuild daedalus_version tempdir buildId keys (target_url status)
-      return $ Just result
+      (globalResults, travisResult') <- processDarwinBuild daedalus_rev daedalus_version tempdir buildId keys (targetUrl status)
+      return (Just globalResults, Just travisResult')
     "continuous-integration/appveyor/branch" -> do
       let
-        (user, project, version) = parseCiUrl $ target_url status
+        (user, project, version) = parseCiUrl $ targetUrl status
       appveyorBuild <- fetchAppveyorBuild user project version
       let jobid = appveyorBuild ^. build . jobs . to head . jobId
       --print $ "job id is " <> jobId
@@ -235,21 +255,20 @@ findInstaller daedalus_version tempdir keys status = do
           putStrLn $ T.unpack artifactUrl
           setSGR [ Reset ]
           fetchCachedUrl artifactUrl basename outFile
-          pure $ Just $ AppveyorResult outFile version (target_url status)
+          pure (Nothing, Just $ AppveyorResult outFile version (targetUrl status))
     other -> do
       print $ "other CI status found: " <> other
-      pure Nothing
+      pure (Nothing, Nothing)
 
 extractBuildId :: LBS.ByteString -> BuildNumber
-extractBuildId fullLog = do
-  let
+extractBuildId fullLog = read $ BSC.unpack f5
+  where
     f1 = LBS.toStrict fullLog
     (_, f2) = BS.breakSubstring "build id is" f1
     f3 = BSC.takeWhile (\c -> c /= '\n') f2
     isNumber c = (c >= '0') && (c <= '9')
     f4 = BSC.dropWhile (\c -> (isNumber c) == False) f3
     f5 = BSC.takeWhile isNumber f4
-  read $ BSC.unpack f5
 
 sampleInput :: LBS.ByteString
 sampleInput = "junk\nbuild id is 13711'\r\r\njunk"
@@ -260,6 +279,7 @@ hashInstaller path = do
     -- TODO DEVOPS-502
     -- once cardano in `cardano-sl-src.json` has been bumped enough, switch this to building on the fly
     -- with `nix-build -A cardano-sl-auxx`
+    exepath :: T.Text
     exepath = "/nix/store/hjvv6dxy197c9mjc2gh635am0c0shx5l-cardano-sl-auxx-1.0.3/bin/cardano-hash-installer"
   (exitStatus, res) <- procStrict exepath [ path ] empty
   case exitStatus of
@@ -268,18 +288,22 @@ hashInstaller path = do
       return cleanHash
     ExitFailure _ -> error "error running cardano-hash-installer"
 
-githubWikiRecord :: T.Text -> [CiResult] -> T.Text
-githubWikiRecord daedalus_rev results = do
+githubWikiRecord :: InstallersResults -> T.Text
+githubWikiRecord results = do
   let
-    findTravis :: [CiResult] -> (Integer, T.Text, T.Text, T.Text)
-    findTravis (TravisResult _ ver cardano_rev' buildNumber ciUrl : _) = (ver, cardano_rev', buildNumber, ciUrl)
-    findTravis (_ : rest) = findTravis rest
-    findTravis [] = error "TravisResult missing"
-    findAppveyor :: [CiResult] -> (Version, T.Text)
-    findAppveyor (AppveyorResult _ number' url' : _) = (number', url')
-    findAppveyor (_ : rest) = findAppveyor rest
-    findAppveyor [] = error "AppveyorResult missing"
-    (appVersion, cardano_rev, travisNumber, travisUrl) = findTravis results
-    (appveyVersion, appveyUrl) = findAppveyor results
+    travisDetails = travisResult results
+    appveyorDetails = appveyorResult results
+    globalDetails = globalResult results
+  let
+    appVersion = grApplicationVersion globalDetails
+    cardano_rev = grCardanoCommit globalDetails
+    daedalus_rev = grDaedalusCommit globalDetails
+  let
+    travisNumber = travisJobNumber travisDetails
+    travisUrl' = travisUrl travisDetails
+  let
+    appveyVersion = avVersion appveyorDetails
+    appveyUrl = avUrl appveyorDetails
+  let
     githubLink rev project = "[" <> (T.take 6 rev) <> "](https://github.com/input-output-hk/" <> project <> "/commit/" <> rev <> ")"
-  (T.pack $ show appVersion) <> " | " <> (githubLink daedalus_rev "daedalus") <> " | " <> (githubLink cardano_rev "cardano-sl") <> " | [" <> travisNumber <> "](" <> travisUrl <> ") | [" <> (versionToText appveyVersion) <> "](" <> appveyUrl <> ") | DATE"
+  (T.pack $ show appVersion) <> " | " <> (githubLink daedalus_rev "daedalus") <> " | " <> (githubLink cardano_rev "cardano-sl") <> " | [" <> travisNumber <> "](" <> travisUrl' <> ") | [" <> (versionToText appveyVersion) <> "](" <> appveyUrl <> ") | DATE"

@@ -4,7 +4,7 @@
 
 module Github where
 
-import           Data.Aeson           (FromJSON)
+import           Data.Aeson           (FromJSON, parseJSON, withObject, (.:))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text            as T
 import           GHC.Generics         (Generic)
@@ -25,10 +25,15 @@ instance FromJSON CommitStatus
 
 data Status = Status {
     description  :: T.Text
-    , target_url :: T.Text
+    , targetUrl :: T.Text
     , context    :: T.Text
     } deriving (Show, Generic)
-instance FromJSON Status
+
+instance FromJSON Status where
+  parseJSON = withObject "Status" $ \v -> Status
+    <$> v .: "description"
+    <*> v .: "target_url"
+    <*> v .: "context"
 
 fetchGithubJson :: HasCallStack => FromJSON a => T.Text -> IO a
 fetchGithubJson url = do
@@ -38,7 +43,7 @@ fetchGithubJson url = do
   exists <- doesFileExist fn
   headers <- if exists then do
     githubToken <- LBS.readFile fn
-    return $ [ ("Authorization", LBS.toStrict githubToken) ]
+    return [ ("Authorization", LBS.toStrict githubToken) ]
   else pure []
   fetchJson' headers url
 

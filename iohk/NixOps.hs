@@ -1231,10 +1231,12 @@ s3Upload daedalus_rev c = do
       findTravis (TravisResult _ appver' c' _ _ : _) = (appver', c')
       findTravis (_ : rest) = findTravis rest
       findTravis [] = error "travis result missing"
-      (appver, cardanoCommit') = findTravis res
+      appver = grApplicationVersion $ globalResult res
+      cardanoCommit' = grCardanoCommit $ globalResult res
     liftIO $ runResourceT . runAWST env $ do
       say $ "uploading things to " <> (coerce $ cUpdateBucket c)
-      mapM_ (hashAndUpload appver cardanoCommit') res
+      hashAndUpload appver cardanoCommit' (travisResult res)
+      hashAndUpload appver cardanoCommit' (appveyorResult res)
 
 configurationKeys :: Environment -> (T.Text, T.Text)
 configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")
@@ -1244,7 +1246,7 @@ findInstallers :: T.Text -> NixopsConfig -> IO ()
 findInstallers daedalus_rev c = do
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
-    TIO.putStrLn $ githubWikiRecord daedalus_rev res
+    TIO.putStrLn $ githubWikiRecord res
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do

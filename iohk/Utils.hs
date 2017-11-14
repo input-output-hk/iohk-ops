@@ -36,7 +36,7 @@ fetchJson' extraHeaders url = do
     maybeObj = decode reply
   case maybeObj of
     Just v  -> return v
-    Nothing -> error $ "unable to parse json: " <> (LT.unpack $ LT.decodeUtf8 reply) <> " from: " <> T.unpack url
+    Nothing -> error $ "unable to parse json: " <> LT.unpack (LT.decodeUtf8 reply) <> " from: " <> T.unpack url
 
 fetchUrl :: RequestHeaders -> T.Text -> IO LBS.ByteString
 fetchUrl extraHeaders url = do

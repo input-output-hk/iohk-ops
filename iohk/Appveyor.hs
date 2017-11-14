@@ -64,7 +64,7 @@ getArtifactUrl (JobId jobid) filename = "https://ci.appveyor.com/api/buildjobs/"
 
 -- input: "https://ci.appveyor.com/api/projects/jagajaga/daedalus/build/0.6.3356"
 fetchAppveyorBuild :: Username -> Project -> Version -> IO AppveyorBuild
-fetchAppveyorBuild user project version' = fetchJson $ "https://ci.appveyor.com/api/projects/" <> (T.intercalate "/" [ usernameToText user, projectToText project, "build", versionToText version' ])
+fetchAppveyorBuild user project version' = fetchJson $ "https://ci.appveyor.com/api/projects/" <> T.intercalate "/" [ usernameToText user, projectToText project, "build", versionToText version' ]
 
 fetchAppveyorArtifacts :: JobId -> IO [AppveyorArtifact]
 fetchAppveyorArtifacts (JobId jobid) = fetchJson $ "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts"
