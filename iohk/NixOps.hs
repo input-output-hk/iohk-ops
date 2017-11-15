@@ -41,6 +41,7 @@ module NixOps (
   , NixOps.date
   , s3Upload
   , findInstallers
+  , setVersionJson
 
   , awsPublicIPURL
   , defaultEnvironment
@@ -1227,14 +1228,10 @@ s3Upload daedalus_rev c = do
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
     let
-      findTravis :: [ CiResult ] -> (Integer, T.Text)
-      findTravis (TravisResult _ appver' c' _ _ : _) = (appver', c')
-      findTravis (_ : rest) = findTravis rest
-      findTravis [] = error "travis result missing"
       appver = grApplicationVersion $ globalResult res
       cardanoCommit' = grCardanoCommit $ globalResult res
     liftIO $ runResourceT . runAWST env $ do
-      say $ "uploading things to " <> (coerce $ cUpdateBucket c)
+      say $ "uploading things to " <> coerce (cUpdateBucket c)
       hashAndUpload appver cardanoCommit' (travisResult res)
       hashAndUpload appver cardanoCommit' (appveyorResult res)
 
@@ -1247,6 +1244,12 @@ findInstallers daedalus_rev c = do
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
     TIO.putStrLn $ githubWikiRecord res
+
+setVersionJson :: T.Text -> NixopsConfig -> IO ()
+setVersionJson daedalus_rev c = do
+  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
+    print res
+    updateVersionJson res (cUpdateBucket c)
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do

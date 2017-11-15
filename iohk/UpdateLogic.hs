@@ -1,13 +1,14 @@
 {-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric              #-}
 
-module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiRecord, InstallersResults(..), GlobalResults(..)) where
+module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiRecord, InstallersResults(..), GlobalResults(..), updateVersionJson) where
 
 import           Appveyor                  (AppveyorArtifact (AppveyorArtifact),
                                             build, fetchAppveyorArtifacts,
                                             fetchAppveyorBuild, getArtifactUrl,
-                                            jobId, jobs, parseCiUrl, Version, versionToText)
+                                            jobId, jobs, parseCiUrl, Version(..), Version, versionToText)
 import           Cardano                   (ConfigurationYaml,
                                             applicationVersion, update)
 import           Control.Exception         (Exception, catch, throwIO)
@@ -46,12 +47,21 @@ import           Travis                    (BuildId, BuildNumber,
                                             env, fetchTravis, fetchTravis2,
                                             global, lookup', parseTravisYaml)
 import           Turtle.Prelude            (mktempdir, proc, pushd, procStrict)
-import           Turtle                    (empty)
+import           Turtle                    (empty, void)
 import           Utils                     (fetchCachedUrl, fetchUrl)
+import           Data.Aeson                (encode, ToJSON)
+import           GHC.Generics              (Generic)
+import           Network.AWS.S3.Types      hiding (All, URL, Region)
+import           Control.Monad.Trans.AWS          (runAWST, AWST)
+import           Control.Monad.Trans.Resource
+import qualified Control.Lens                  as Lens
+import           Network.AWS               hiding (Seconds, Debug, Region)
+import           Network.AWS.Auth
+import           Network.AWS.S3.PutObject
 
 data CiResult = TravisResult {
       localPath :: T.Text
-    , travisApplicationVersion :: Integer
+    , travisVersion :: Version
     , cardanoCommit :: T.Text
     , travisJobNumber :: T.Text
     , travisUrl :: T.Text
@@ -74,6 +84,14 @@ data InstallersResults = InstallersResults {
   } deriving Show
 type TextPath = T.Text
 type RepoUrl = T.Text
+
+data VersionJson = VersionJson {
+      linux :: T.Text
+    , macos :: T.Text
+    , win64 :: T.Text
+  } deriving (Show, Generic)
+
+instance ToJSON VersionJson
 
 extractVersionFromTravis :: LBS.ByteString -> Maybe T.Text
 extractVersionFromTravis yaml = do
@@ -174,6 +192,7 @@ processDarwinBuild daedalus_rev daedalus_version tempdir buildId (winKey, macosK
   obj <- fetchTravis buildId
   let
     filename = "Daedalus-installer-" <> daedalus_version <> "." <> (number obj) <> ".pkg"
+    version = Version $ daedalus_version <> "." <> (number obj)
     url = "http://s3.eu-central-1.amazonaws.com/daedalus-travis/" <> filename
     outFile = tempdir <> "/" <> filename
   buildLog <- fetchUrl mempty $ "https://api.travis-ci.org/jobs/" <> (T.pack $ show $ tjiId $ head $ drop 1 $ matrix obj) <> "/log"
@@ -221,7 +240,7 @@ processDarwinBuild daedalus_rev daedalus_version tempdir buildId (winKey, macosK
 
   fetchCachedUrl url filename outFile
 
-  pure (GlobalResults (ti2commit cardanoInfo) daedalus_rev appVersion, TravisResult outFile appVersion (ti2commit cardanoInfo) (number obj) ciUrl)
+  pure (GlobalResults (ti2commit cardanoInfo) daedalus_rev appVersion, TravisResult outFile version (ti2commit cardanoInfo) (number obj) ciUrl)
 
 findInstaller :: HasCallStack => T.Text -> T.Text -> T.Text -> (T.Text, T.Text) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
 findInstaller daedalus_rev daedalus_version tempdir keys status = do
@@ -307,3 +326,21 @@ githubWikiRecord results = do
   let
     githubLink rev project = "[" <> (T.take 6 rev) <> "](https://github.com/input-output-hk/" <> project <> "/commit/" <> rev <> ")"
   (T.pack $ show appVersion) <> " | " <> (githubLink daedalus_rev "daedalus") <> " | " <> (githubLink cardano_rev "cardano-sl") <> " | [" <> travisNumber <> "](" <> travisUrl' <> ") | [" <> (versionToText appveyVersion) <> "](" <> appveyUrl <> ") | DATE"
+
+updateVersionJson :: InstallersResults -> T.Text -> IO ()
+updateVersionJson info bucket = do
+  let
+    obj = VersionJson ""
+        (versionToText $ travisVersion $ travisResult info)
+        (versionToText $ avVersion $ appveyorResult info)
+    json = encode obj
+    uploadOneFile :: BucketName -> LBS.ByteString -> ObjectKey -> AWST (ResourceT IO) ()
+    uploadOneFile bucketName body remoteKey = do
+      --bdy <- chunkedFile defaultChunkSize body
+      let
+        bdy = toBody body
+      void . send $ Lens.set poACL (Just OPublicRead) $ putObject bucketName remoteKey bdy
+  LBS.putStrLn json
+  env <- newEnv Discover
+  liftIO $ runResourceT . runAWST env $ do
+    uploadOneFile (BucketName bucket) json "daedalus-latest-version.json"
