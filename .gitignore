@@ -20,6 +20,7 @@ logs-analyze/
 static/*.secret
 static/github_token
 static/id_buildfarm
+github_token
 
 image
 result
