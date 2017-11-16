@@ -175,6 +175,7 @@ import           Nix
 import           Topology
 import           Types
 import           Utils
+import           GHC.Stack                 (HasCallStack)
 
 
 -- * Some orphan instances..
@@ -1030,22 +1031,3 @@ toNodesInfo vector =
 getNodePublicIP :: Text -> V.Vector DeploymentInfo -> Maybe Text
 getNodePublicIP name vector =
     headMay $ V.toList $ fmap (getIP . diPublicIP) $ V.filter (\di -> fromNodeName (diName di) == name) vector
-
-
--- * Utils
-showT :: Show a => a -> Text
-showT = T.pack . show
-
-readT :: Read a => Text -> a
-readT = read . T.unpack
-
-lowerShowT :: Show a => a -> Text
-lowerShowT = T.toLower . T.pack . show
-
-errorT :: HasCallStack => Text -> a
-errorT = error . T.unpack
-
--- Currently unused, but that's mere episode of the used/unused/used/unused event train.
--- Let's keep it, because it's too painful to reinvent every time we need it.
-jsonLowerStrip :: (Generic a, AE.GToJSON AE.Zero (Rep a)) => Int -> a -> AE.Value
-jsonLowerStrip n = AE.genericToJSON $ AE.defaultOptions { AE.fieldLabelModifier = map toLower . drop n }

@@ -1,8 +1,7 @@
+{-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 {-# LANGUAGE ExplicitForAll    #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
-{-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 
 module Utils where
 
@@ -22,7 +21,6 @@ import           Turtle.Prelude            (proc)
 import qualified Data.Aeson                    as AE
 import qualified Data.Aeson.Types              as AE
 import qualified Data.Char                     as C
-import qualified Data.Text                     as T
 import           Data.Text                        (Text)
 import           GHC.Generics              hiding (from, to)
 import           Turtle

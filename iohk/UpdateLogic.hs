@@ -8,7 +8,7 @@ module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiR
 import           Appveyor                  (AppveyorArtifact (AppveyorArtifact),
                                             build, fetchAppveyorArtifacts,
                                             fetchAppveyorBuild, getArtifactUrl,
-                                            jobId, jobs, parseCiUrl, Version(..), Version, versionToText)
+                                            jobId, jobs, parseCiUrl, Version(Version), Version, versionToText)
 import           Cardano                   (ConfigurationYaml,
                                             applicationVersion, update)
 import           Control.Exception         (Exception, catch, throwIO)
@@ -51,13 +51,12 @@ import           Turtle                    (empty, void)
 import           Utils                     (fetchCachedUrl, fetchUrl)
 import           Data.Aeson                (encode, ToJSON)
 import           GHC.Generics              (Generic)
-import           Network.AWS.S3.Types      hiding (All, URL, Region)
+import           Network.AWS.S3.Types             (BucketName(BucketName), ObjectKey, ObjectCannedACL(OPublicRead))
 import           Control.Monad.Trans.AWS          (runAWST, AWST)
-import           Control.Monad.Trans.Resource
+import           Control.Monad.Trans.Resource     (ResourceT)
 import qualified Control.Lens                  as Lens
 import           Network.AWS               hiding (Seconds, Debug, Region)
-import           Network.AWS.Auth
-import           Network.AWS.S3.PutObject
+import           Network.AWS.S3.PutObject         (putObject, poACL)
 
 data CiResult = TravisResult {
       localPath :: T.Text
@@ -340,7 +339,6 @@ updateVersionJson info bucket = do
       let
         bdy = toBody body
       void . send $ Lens.set poACL (Just OPublicRead) $ putObject bucketName remoteKey bdy
-  LBS.putStrLn json
-  env <- newEnv Discover
-  liftIO $ runResourceT . runAWST env $ do
+  env' <- newEnv Discover
+  liftIO $ runResourceT . runAWST env' $ do
     uploadOneFile (BucketName bucket) json "daedalus-latest-version.json"
