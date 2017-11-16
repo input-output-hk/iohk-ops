@@ -1,11 +1,8 @@
 {-# OPTIONS_GHC -Wall -Wextra -Wno-orphans -Wno-missing-signatures -Wno-unticked-promoted-constructors -Wno-type-defaults #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -23,7 +20,6 @@ module NixOps (
 
   , build
   , buildAMI
-  , runFakeKeys
   , stop
   , start
   , fromscratch
@@ -49,7 +45,6 @@ module NixOps (
   , defaultNode
   , defaultNodePort
   , defaultTarget
-  , nixpkgsNixosURL
 
   , cmd, cmd', incmd
   , errorT
@@ -57,7 +52,6 @@ module NixOps (
   , jsonLowerStrip
   , lowerShowT
   , parallelIO
-  , showT
 
   -- * Types
   , Arg(..)
@@ -73,6 +67,7 @@ module NixOps (
   , Exec(..)
   , NixopsCmd(..)
   , NixopsConfig(..)
+  , clusterConfigurationKey
   , NixopsDepl(..)
   , NixSource(..)
   , githubSource, gitSource, readSource
@@ -88,7 +83,7 @@ module NixOps (
   , URL(..)
   , Username(..)
   , Zone(..)
-  
+
   -- * Flags
   , BuildOnly(..)
   , DoCommit(..)
@@ -101,7 +96,7 @@ module NixOps (
   , flag
   , toBool
 
-  -- 
+  --
   , parserBranch
   , parserCommit
   , parserNodeLimit
@@ -129,16 +124,12 @@ import qualified Control.Lens                  as Lens
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
-import qualified Data.Aeson.Types              as AE
 import           Data.Aeson.Encode.Pretty         (encodePretty)
-import qualified Data.ByteString.Lazy          as BL
-import           Data.ByteString.Lazy.Char8       (ByteString)
 import qualified Data.ByteString.UTF8          as BU
 import qualified Data.ByteString.Lazy.UTF8     as LBU
-import           Data.Char                        (ord, toLower)
+import           Data.Char                        (ord)
 import           Data.Csv                         (decodeWith, FromRecord(..), FromField(..), HasHeader(..), defaultDecodeOptions, decDelimiter)
 import           Data.Either
-import           Data.Foldable                    (asum)
 import           Data.Hourglass                   (timeAdd, timeFromElapsed, timePrint, Duration(..), ISO8601_DateAndTime(..))
 import           Data.List                        (nub, sort)
 import           Data.Maybe
@@ -156,7 +147,6 @@ import           Data.Yaml                        (FromJSON(..), ToJSON(..))
 import           Debug.Trace                      (trace)
 import qualified Filesystem.Path.CurrentOS     as Path
 import           GHC.Generics              hiding (from, to)
-import           GHC.Stack
 import           Prelude                   hiding (FilePath)
 import           Safe                             (headMay)
 import qualified System.IO                     as Sys
@@ -178,318 +168,21 @@ import           Network.AWS.S3.Types      hiding (All, URL, Region)
 import           Control.Monad.Trans.Resource
 import           Data.Coerce
 import qualified Data.HashMap.Strict as HMS
-import UpdateLogic
+import           UpdateLogic
 
-
+import           Constants
+import           Nix
 import           Topology
-
-
--- * Constants
---
-awsPublicIPURL :: URL
-awsPublicIPURL = "http://169.254.169.254/latest/meta-data/public-ipv4"
-
-defaultEnvironment   = Development
-defaultTarget        = AWS
-defaultNode          = NodeName "c-a-1"
-defaultNodePort      = PortNo 3000
-defaultNixpkgs       = Nothing
-
-defaultHold          = 1200 :: Seconds -- 20 minutes
-
-explorerNode         = NodeName "explorer"
-
-orgs :: [NodeOrg]
-orgs                 = enumFromTo minBound maxBound
-defaultOrg           = IOHK
-accessKeyChain       = [ AccessKeyId $ showT org <> "accessKeyId"
-                       | org <- orgs ]
-
-simpleTopoFile       :: FilePath
-simpleTopoFile       = "topology.nix"
-
-
--- * Flags & enumerables
---
-every :: (Bounded a, Enum a) => [a]
-every = enumFromTo minBound maxBound
-
-class (Bounded a, Eq a) => Flag a where
-  toBool :: a -> Bool
-  toBool = (== enabled)
-  fromBool :: Bool -> a
-  fromBool x = if x then minBound else maxBound
-  enabled, disabled :: a
-  enabled  = minBound
-  disabled = maxBound
-  opposite :: a -> a
-  opposite = fromBool . not . toBool
-
-
--- * Projects
---
-data Project
-  = CardanoSL
-  | IOHKOps
-  | Nixpkgs
-  | Stack2nix
-  | Nixops
-  deriving (Bounded, Enum, Eq, Read, Show)
-
-projectURL     :: Project -> URL
-projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl"
-projectURL     IOHKOps         = "https://github.com/input-output-hk/iohk-nixops"
-projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs"
-projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix"
-projectURL     Nixops          = "https://github.com/input-output-hk/nixops"
-
-projectSrcFile :: Project -> FilePath
-projectSrcFile CardanoSL       = "cardano-sl-src.json"
-projectSrcFile Nixpkgs         = "nixpkgs-src.json"
-projectSrcFile Stack2nix       = "stack2nix-src.json"
-projectSrcFile IOHKOps         = error "Feeling self-referential?"
-projectSrcFile Nixops          = error "No corresponding -src.json spec for 'nixops' yet."
-
-
--- * Primitive types
---
-newtype AccessKeyId  = AccessKeyId  { fromAccessKeyId  :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype Arg          = Arg          { fromArg          :: Text   } deriving (IsString, Show)
-newtype Branch       = Branch       { fromBranch       :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype ConfigurationKey = ConfigurationKey { fromConfigurationKey :: Text } deriving (IsString, Show)
-newtype Commit       = Commit       { fromCommit       :: Text   } deriving (Eq, FromJSON, Generic, Show, IsString, ToJSON)
-newtype Exec         = Exec         { fromExec         :: Text   } deriving (IsString, Show)
-newtype EnvVar       = EnvVar       { fromEnvVar       :: Text   } deriving (IsString, Show)
-newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
-newtype NixHash      = NixHash      { fromNixHash      :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype NixAttr      = NixAttr      { fromAttr         :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype NixopsCmd    = NixopsCmd    { fromCmd          :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype NixopsDepl   = NixopsDepl   { fromNixopsDepl   :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype Org          = Org          { fromOrg          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype Region       = Region       { fromRegion       :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype Zone         = Zone         { fromZone         :: Text   } deriving (FromJSON, Generic, Show, IsString)
-newtype URL          = URL          { fromURL          :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
-newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
-newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-
-data BuildNixops      = BuildNixops      | DontBuildNixops    deriving (Bounded, Eq, Ord, Show); instance Flag BuildNixops
-data Confirmed        = Confirmed        | Unconfirmed        deriving (Bounded, Eq, Ord, Show); instance Flag Confirmed
-data Debug            = Debug            | NoDebug            deriving (Bounded, Eq, Ord, Show); instance Flag Debug
-data Serialize        = Serialize        | DontSerialize      deriving (Bounded, Eq, Ord, Show); instance Flag Serialize
-data Verbose          = Verbose          | NotVerbose         deriving (Bounded, Eq, Ord, Show); instance Flag Verbose
-data ComponentCheck   = ComponentCheck   | NoComponentCheck   deriving (Bounded, Eq, Ord, Show); instance Flag ComponentCheck
-data DoCommit         = DoCommit         | DontCommit         deriving (Bounded, Eq, Ord, Show); instance Flag DoCommit
-data RebuildExplorer  = RebuildExplorer  | NoExplorerRebuild  deriving (Bounded, Eq, Ord, Show); instance Flag RebuildExplorer
-data BuildOnly        = BuildOnly        | NoBuildOnly        deriving (Bounded, Eq, Ord, Show); instance Flag BuildOnly
-data DryRun           = DryRun           | NoDryRun           deriving (Bounded, Eq, Ord, Show); instance Flag DryRun
-data Validate         = Validate         | SkipValidation     deriving (Bounded, Eq, Ord, Show); instance Flag Validate
-data PassCheck        = PassCheck        | DontPassCheck      deriving (Bounded, Eq, Ord, Show); instance Flag PassCheck
-data WipeJournals     = WipeJournals     | KeepJournals       deriving (Bounded, Eq, Ord, Show); instance Flag WipeJournals
-data WipeNodeDBs      = WipeNodeDBs      | KeepNodeDBs        deriving (Bounded, Eq, Ord, Show); instance Flag WipeNodeDBs
-data ResumeFailed     = ResumeFailed     | DontResume         deriving (Bounded, Eq, Ord, Show); instance Flag ResumeFailed
-
-deriving instance Eq NodeType
-deriving instance Read NodeName
-deriving instance AE.ToJSONKey NodeName
-
-fromNodeName :: NodeName -> Text
-fromNodeName (NodeName x) = x
-
--- | Sum to track assurance
-data Confirmation = Confirm | Ask Text
-  deriving (Eq, Read, Show)
-
-confirmOrTerminate :: Confirmation -> IO ()
-confirmOrTerminate  Confirm       = pure ()
-confirmOrTerminate (Ask question) = do
-  echo $ unsafeTextToLine question <> "  Enter 'yes' to proceed:"
-  reply <- readline
-  unless (reply == Just "yes") $ do
-    echo "User declined to proceed, exiting."
-    exit $ ExitFailure 1
+import           Types
+import           Utils
 
 
 -- * Some orphan instances..
 --
-instance FromJSON FilePath where parseJSON = AE.withText "filepath" $ \v -> pure $ fromText v
-instance ToJSON   FilePath where toJSON    = AE.String . format fp
 deriving instance Generic Seconds; instance FromJSON Seconds; instance ToJSON Seconds
 deriving instance Generic Elapsed; instance FromJSON Elapsed; instance ToJSON Elapsed
 
 
--- * A bit of Nix types
---
-data SourceKind = Git | Github
-
-data NixSource (a :: SourceKind) where
-  -- | The output of 'nix-prefetch-git'
-  GitSource ::
-    { gUrl             :: URL
-    , gRev             :: Commit
-    , gSha256          :: NixHash
-    , gFetchSubmodules :: Bool
-    } -> NixSource Git
-  GithubSource ::
-    { ghOwner           :: Text
-    , ghRepo            :: Text
-    , ghRev             :: Commit
-    , ghSha256          :: NixHash
-    } -> NixSource Github
-deriving instance Show (NixSource a)
-instance ToJSON (NixSource Git) where
-  toJSON GitSource{..} = AE.object
-   [ "url"             .= fromURL gUrl
-   , "rev"             .= fromCommit gRev
-   , "sha256"          .= fromNixHash gSha256
-   , "fetchSubmodules" .= lowerShowT gFetchSubmodules ]
-instance FromJSON (NixSource Git) where
-  parseJSON = AE.withObject "GitSource" $ \v -> GitSource
-      <$> v .: "url"
-      <*> v .: "rev"
-      <*> v .: "sha256"
-      <*> asum [ (v .: "fetchSubmodules")
-               , readT . T.toTitle <$> (v .: "fetchSubmodules")]
-instance FromJSON (NixSource Github) where
-  parseJSON = AE.withObject "GithubSource" $ \v -> GithubSource
-      <$> v .: "owner"
-      <*> v .: "repo"
-      <*> v .: "rev"
-      <*> v .: "sha256"
-
-githubSource :: ByteString -> Maybe (NixSource Github)
-githubSource = AE.decode
-gitSource    :: ByteString -> Maybe (NixSource Git)
-gitSource    = AE.decode
-
-readSource :: (ByteString -> Maybe (NixSource a)) -> Project -> IO (NixSource a)
-readSource parser (projectSrcFile -> path) =
-  (fromMaybe (errorT $ format ("File doesn't parse as NixSource: "%fp) path) . parser)
-  <$> BL.readFile (T.unpack $ format fp path)
-
-nixpkgsNixosURL :: Commit -> URL
-nixpkgsNixosURL (Commit rev) = URL $
-  "https://github.com/NixOS/nixpkgs/archive/" <> rev <> ".tar.gz"
-
--- | The set of first-class types present in Nix
-data NixValue
-  = NixBool Bool
-  | NixInt  Integer
-  | NixStr  Text
-  | NixAttrSet (Map.Map Text NixValue)
-  | NixImport NixValue NixValue
-  | NixFile FilePath
-  | NixNull
-  deriving (Generic, Show)
-instance FromJSON NixValue
-instance ToJSON NixValue
-
-nixValueStr :: NixValue -> Text
-nixValueStr (NixBool bool)      = T.toLower $ showT bool
-nixValueStr (NixAttrSet attrs)  = ("{ " <>) . (<> " }") . T.concat
-                                  $ [ k <> " = " <> nixValueStr v <> "; "
-                                    | (k, v) <- Map.toList attrs ]
-nixValueStr (NixImport f as)    = "import " <> nixValueStr f <> " " <>  nixValueStr as
-nixValueStr (NixInt  int)       = showT int
-nixValueStr (NixNull)           = "null"
-nixValueStr (NixStr  str)       = "\"" <> str <>"\""          -- XXX: this is naive, as it doesn't do escaping
-nixValueStr (NixFile f)         = let txt = format fp f
-                                  in if T.isPrefixOf "/" txt
-                                     then txt else ("./" <> txt)
-
-nixArgCmdline :: NixParam -> NixValue -> [Text]
-nixArgCmdline (NixParam name) x@(NixStr _) = ["--argstr", name, T.drop 1 $ nixValueStr x & T.dropEnd 1]
-nixArgCmdline (NixParam name) x            = ["--arg",    name, nixValueStr x]
-
-
--- * Domain
---
-data Deployment
-  = Every
-  | Explorer
-  | Infra
-  | Nodes
-  | ReportServer
-  deriving (Bounded, Eq, Enum, Generic, Read, Show)
-instance FromJSON Deployment
-
-data Environment
-  = Any               -- ^ Wildcard or unspecified, depending on context.
-  | Production
-  | Staging
-  | Development
-  deriving (Bounded, Eq, Enum, Generic, Read, Show)
-instance FromJSON Environment
-
-data Target
-  = All               -- ^ Wildcard or unspecified, depending on context.
-  | AWS
-  deriving (Bounded, Eq, Enum, Generic, Read, Show)
-instance FromJSON Target
-
-
--- * Environment-specificity
---
-data EnvSettings =
-  EnvSettings
-  { envDeployerUser      :: Username
-  , envDefaultConfigurationKey :: ConfigurationKey
-  , envDefaultConfig     :: FilePath
-  , envDefaultTopology   :: FilePath
-  , envDeploymentFiles   :: [FileSpec]
-  }
-
-type FileSpec = (Deployment, Target, Text)
-
-envSettings :: HasCallStack => Environment -> EnvSettings
-envSettings env =
-  let deplAgnosticFiles      = [ (Every,          All, "deployments/keypairs.nix")
-                               , (Explorer,       All, "deployments/cardano-explorer.nix")
-                               , (ReportServer,   All, "deployments/report-server.nix")
-                               , (Nodes,          All, "deployments/cardano-nodes.nix")
-                               , (Infra,          All, "deployments/infrastructure.nix")
-                               , (Infra,          AWS, "deployments/infrastructure-target-aws.nix") ]
-  in case env of
-    Staging      -> EnvSettings
-      { envDeployerUser      = "staging"
-      , envDefaultConfigurationKey = "testnet_staging_full"
-      , envDefaultConfig     = "staging-testnet.yaml"
-      , envDefaultTopology   = "topology-staging.yaml"
-      , envDeploymentFiles   = [ (Every,          All, "deployments/security-groups.nix")
-                               , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
-                               , (Explorer,       All, "deployments/cardano-explorer-env-staging.nix")
-                               , (ReportServer,   All, "deployments/report-server-env-staging.nix")
-                               ] <> deplAgnosticFiles}
-    Production  -> EnvSettings
-      { envDeployerUser      = "live-production"
-      , envDefaultConfigurationKey = "testnet_public_full"
-      , envDefaultConfig     = "production-testnet.yaml"
-      , envDefaultTopology   = "topology-production.yaml"
-      , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
-                               , (Explorer,       All, "deployments/security-groups.nix")
-                               , (ReportServer,   All, "deployments/security-groups.nix")
-                               , (Nodes,          All, "deployments/cardano-nodes-env-production.nix")
-                               , (Explorer,       All, "deployments/cardano-explorer-env-production.nix")
-                               , (ReportServer,   All, "deployments/report-server-env-production.nix")
-                               , (Infra,          All, "deployments/infrastructure-env-production.nix")
-                               ] <> deplAgnosticFiles}
-    Development -> EnvSettings
-      { envDeployerUser      = "staging"
-      , envDefaultConfigurationKey = "devnet_shortep_full"
-      , envDefaultConfig     = "config.yaml"
-      , envDefaultTopology   = "topology-development.yaml"
-      , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
-                               , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
-                               , (ReportServer,   All, "deployments/report-server-env-development.nix")
-                               ] <> deplAgnosticFiles}
-    Any -> error "envSettings called with 'Any'"
-
-selectDeployer :: Environment -> [Deployment] -> NodeName
-selectDeployer Staging   delts | elem Nodes delts = "iohk"
-                               | otherwise        = "cardano-deployer"
-selectDeployer _ _                                = "cardano-deployer"
-
 establishDeployerIP :: Options -> Maybe IP -> IO IP
 establishDeployerIP o Nothing   = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
 establishDeployerIP _ (Just ip) = pure ip
@@ -515,6 +208,11 @@ elementDeploymentFiles env tgt depl = filespecFile <$> (filter (\x -> filespecNe
 
 
 -- * Topology
+--
+-- Design:
+--  1. we have the full Topology, and its SimpleTopo subset, which is converted to JSON for Nix's consumption.
+--  2. the SimpleTopo is only really needed when we have Nodes to deploy
+--  3. 'getSimpleTopo' is what executes the decision in #2
 --
 readTopology :: FilePath -> IO Topology
 readTopology file = do
@@ -566,6 +264,9 @@ topoNodes (SimpleTopo cmap) = Map.keys cmap
 topoCores :: SimpleTopo -> [NodeName]
 topoCores = (fst <$>) . filter ((== NodeCore) . snType . snd) . Map.toList . fromSimpleTopo
 
+stubTopology :: SimpleTopo
+stubTopology = SimpleTopo Map.empty
+
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
   SimpleTopo $ Map.mapWithKey simplifier nodeMap
@@ -587,6 +288,15 @@ summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
                                    defaultOrg)
                         mbOrg
 summariseTopology x = errorT $ format ("Unsupported topology type: "%w) x
+
+getSimpleTopo :: [Deployment] -> FilePath -> IO SimpleTopo
+getSimpleTopo cElements cTopology =
+  if not $ elem Nodes cElements then pure stubTopology
+  else do
+    topoExists <- testpath cTopology
+    unless topoExists $
+      die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
+    summariseTopology <$> readTopology cTopology
 
 -- | Dump intermediate core/relay info, as parametrised by the simplified topology file.
 dumpTopologyNix :: NixopsConfig -> IO ()
@@ -623,7 +333,6 @@ data Options = Options
   , oConfigFile       :: Maybe FilePath
   , oOnlyOn           :: Maybe NodeName
   , oDeployerIP       :: Maybe IP
-  , oBuildNixops      :: BuildNixops
   , oConfirm          :: Confirmed
   , oDebug            :: Debug
   , oSerial           :: Serialize
@@ -654,7 +363,6 @@ parserOptions = Options
                      <$>     (optText "on"        'o' "Limit operation to the specified node"))
                 <*> (optional $ IP
                      <$>     (optText "deployer"  'd' "Directly specify IP address of the deployer: do not detect"))
-                <*> flag BuildNixops      "build-nixops"       'b' "Use 'nixops' binary defined by 'default.nix', not config YAML."
                 <*> flag Confirmed        "confirm"            'y' "Pass --confirm to nixops"
                 <*> flag Debug            "debug"              'd' "Pass --debug to nixops"
                 <*> flag Serialize        "serial"             's' "Disable parallelisation"
@@ -679,7 +387,6 @@ data NixopsConfig = NixopsConfig
   { cName             :: NixopsDepl
   , cGenCmdline       :: Text
   , cNixpkgs          :: Maybe Commit
-  , cNixops           :: FilePath
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
@@ -697,7 +404,6 @@ instance FromJSON NixopsConfig where
         <$> v .: "name"
         <*> v .:? "gen-cmdline"   .!= "--unknown--"
         <*> v .:? "nixpkgs"
-        <*> v .:? "nixops"        .!= "nixops"
         <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
@@ -715,7 +421,6 @@ instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
    [ "name"         .= fromNixopsDepl cName
    , "gen-cmdline"  .= cGenCmdline
-   , "nixops"       .= cNixops
    , "topology"     .= cTopology
    , "environment"  .= showT cEnvironment
    , "target"       .= showT cTarget
@@ -750,16 +455,15 @@ setDeplArg :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 setDeplArg p v c@NixopsConfig{..} = c { cDeplArgs = Map.insert p v cDeplArgs }
 
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName            mNixops    mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
-  let EnvSettings{..} = envSettings                                            cEnvironment
-      cNixops         = fromMaybe "nixops" mNixops
-      cFiles          = deploymentFiles                                  cEnvironment cTarget cElements
-      cTopology       = flip fromMaybe                         mTopology envDefaultTopology
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
+  let EnvSettings{..} = envSettings                             cEnvironment
+      cFiles          = deploymentFiles                         cEnvironment cTarget cElements
+      cTopology       = flip fromMaybe                mTopology envDefaultTopology
       cNixpkgs        = defaultNixpkgs
       cUpdateBucket   = "default-bucket"
   cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
-  topology <- liftIO $ summariseTopology <$> readTopology cTopology
+  topology <- getSimpleTopo cElements cTopology
   pure NixopsConfig{..}
 
 -- | Write the config file
@@ -787,8 +491,13 @@ readConfig Options{..} cf = do
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.
-  topo <- liftIO $ summariseTopology <$> readTopology cTopology
+  topo <- liftIO $ getSimpleTopo cElements cTopology
   pure c { topology = topo }
+
+clusterConfigurationKey :: NixopsConfig -> ConfigurationKey
+clusterConfigurationKey c =
+  ConfigurationKey . fromNixStr $ deplArg c (NixParam "configurationKey") $ errorT $
+                                  format "'configurationKey' network argument missing from cluster config"
 
 
 parallelIO' :: Options -> NixopsConfig -> ([NodeName] -> [a]) -> (a -> IO ()) -> IO ()
@@ -827,6 +536,7 @@ inprocs bin args inp = do
 
 cmd   :: Options -> Text -> [Text] -> IO ()
 cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
+cmd'' :: Options -> Text           -> IO (ExitCode, Text, Text)
 incmd :: Options -> Text -> [Text] -> IO Text
 
 cmd   Options{..} bin args = do
@@ -835,6 +545,9 @@ cmd   Options{..} bin args = do
 cmd'  Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
   Turtle.procStrict bin args empty
+cmd'' Options{..} command  = do
+  when (toBool oVerbose) $ logCmd command []
+  Turtle.shellStrictWithErr command empty
 incmd Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
   inprocs bin args empty
@@ -842,24 +555,23 @@ incmd Options{..} bin args = do
 
 -- * Invoking nixops
 --
-iohkNixopsPath :: FilePath -> FilePath
-iohkNixopsPath defaultNix =
-  let storePath  = Sys.unsafePerformIO $ inprocs "nix-build" ["-A", "nixops", format fp defaultNix] $
+iohkNixopsPath :: FilePath
+iohkNixopsPath =
+  let defaultNix = "default.nix"
+      storePath  = Sys.unsafePerformIO $ inprocs "nix-build" ["-A", "nixops", format fp defaultNix] $
                    (trace (T.unpack $ format ("INFO: using "%fp%" expression for its definition of 'nixops'") defaultNix) empty)
-      nixopsPath = Path.fromText $ T.strip storePath <> "/bin/nixops"
-  in trace (T.unpack $ format ("INFO: nixops is "%fp) nixopsPath) nixopsPath
+      path       = Path.fromText $ T.strip storePath <> "/bin/nixops"
+  in trace (T.unpack $ format ("INFO: nixops is "%fp) path) path
 
 nixops'' :: (Options -> Text -> [Text] -> IO b) -> Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO b
 nixops'' executor o@Options{..} c@NixopsConfig{..} com args =
-  executor o (format fp $ case oBuildNixops of
-                            BuildNixops     -> iohkNixopsPath "default.nix"
-                            DontBuildNixops -> cNixops)
-  (fromCmd com : nixopsCmdOptions o c <> fmap fromArg args)
+  executor o (format fp iohkNixopsPath)
+    (fromCmd com : nixopsCmdOptions o c <> fmap fromArg args)
 
-nixops' :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO (ExitCode, Text)
-nixops  :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO ()
-nixops' = nixops'' cmd'
-nixops  = nixops'' cmd
+nixops'  :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO (ExitCode, Text)
+nixops   :: Options -> NixopsConfig -> NixopsCmd -> [Arg] -> IO ()
+nixops'  = nixops'' cmd'
+nixops   = nixops'' cmd
 
 nixopsMaybeLimitNodes :: Options -> [Arg]
 nixopsMaybeLimitNodes (oOnlyOn -> maybeNode) = ((("--include":) . (:[]) . Arg . fromNodeName) <$> maybeNode & fromMaybe [])
@@ -868,8 +580,9 @@ nixopsMaybeLimitNodes (oOnlyOn -> maybeNode) = ((("--include":) . (:[]) . Arg . 
 -- * Deployment lifecycle
 --
 exists :: Options -> NixopsConfig -> IO Bool
-exists o c@NixopsConfig{..} = do
-  (code, _) <- nixops' o c "info" []
+exists o NixopsConfig{..} = do
+  let ops = format fp iohkNixopsPath
+  (code, _, _) <- cmd'' o (ops <> " info -d " <> (fromNixopsDepl cName))
   pure $ code == ExitSuccess
 
 create :: Options -> NixopsConfig -> IO ()
@@ -877,7 +590,7 @@ create o c@NixopsConfig{..} = do
   deplExists <- exists o c
   if deplExists
   then do
-    printf ("Deployment already exists?: '"%s%"'") $ fromNixopsDepl cName
+    printf ("Deployment already exists?: '"%s%"'\n") $ fromNixopsDepl cName
   else do
     printf ("Creating deployment "%s%"\n") $ fromNixopsDepl cName
     nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
@@ -907,11 +620,7 @@ modify o@Options{..} c@NixopsConfig{..} = do
     -> printf ("  "%s%": "%s%"\n") (fromNixParam name) (nixValueStr val)
   nixops o c "set-args" $ Arg <$> (concat $ uncurry nixArgCmdline <$> deplArgs)
 
-  printf ("Generating '"%fp%"' from '"%fp%"'..\n") simpleTopoFile cTopology
-  preExisting <- testpath cTopology
-  unless preExisting $
-    die $ format ("Topology config '"%fp%"' doesn't exist.") cTopology
-  simpleTopo <- summariseTopology <$> readTopology cTopology
+  simpleTopo <- getSimpleTopo cElements cTopology
   liftIO . writeTextFile simpleTopoFile . T.pack . LBU.toString $ encodePretty (fromSimpleTopo simpleTopo)
   when (toBool oDebug) $ dumpTopologyNix c
 
@@ -928,8 +637,7 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
-  _ <- pure $ deplArg c (NixParam "configurationKey") $ errorT $
-       format "'configurationKey' network argument missing from cluster config"
+  _ <- pure $ clusterConfigurationKey c
   when (dryrun /= DryRun && elem Explorer cElements && reExplorer /= NoExplorerRebuild) $ do
     cmd o "scripts/generate-explorer-frontend.sh" []
   when (dryrun /= DryRun && buonly /= BuildOnly) $ do
@@ -1065,15 +773,6 @@ runSetRev o proj rev mCommitChanges = do
     Just msg -> do
       cmd o "git" (["add", revspecFile])
       cmd o "git" ["commit", "-m", msg]
-
-runFakeKeys :: IO ()
-runFakeKeys = do
-  echo "Faking keys/key*.sk"
-  testdir "keys"
-    >>= flip unless (mkdir "keys")
-  forM_ ([0..41]) $
-    (\x-> do touch $ Turtle.fromText $ format ("keys/key"%d%".sk") x)
-  echo "Minimum viable keyset complete."
 
 deploymentBuildTarget :: Deployment -> NixAttr
 deploymentBuildTarget Nodes = "cardano-sl-static"

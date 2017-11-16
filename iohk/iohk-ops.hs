@@ -14,14 +14,16 @@ import           Data.Optional                    (Optional)
 import qualified Data.Text                     as T
 import qualified Filesystem.Path.CurrentOS     as Path
 import qualified System.Environment            as Sys
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, shells, e, f, o, x)
+import           Turtle                    hiding (env, err, fold, inproc, procs, shells, e, f, o, x)
 import           Time.Types
 import           Time.System
 import           Options.Applicative.Builder (strOption, long, short, metavar)
 
-
+import           Constants
 import           NixOps
 import qualified NixOps                        as Ops
+import           Types
+import           Utils
 
 
 -- * Elementary parsers
@@ -79,18 +81,19 @@ parserConfirmation question =
 data Command where
 
   -- * setup
-  Clone                 :: { cBranch      :: Branch } -> Command
-  Template              :: { tFile        :: Maybe Turtle.FilePath
-                           , tNixops      :: Maybe Turtle.FilePath
+  Clone                 :: { cName        :: NixopsDepl
+                           , cBranch      :: Branch
+                           } -> Command
+  New                   :: { tFile        :: Maybe Turtle.FilePath
                            , tTopology    :: Maybe Turtle.FilePath
                            , tConfigurationKey :: Maybe ConfigurationKey
+                           , tGenerateKeys :: GenerateKeys
                            , tEnvironment :: Environment
                            , tTarget      :: Target
                            , tName        :: NixopsDepl
                            , tDeployments :: [Deployment]
                            } -> Command
   SetRev                :: Project -> Commit -> DoCommit -> Command
-  FakeKeys              :: Command
 
   -- * building
   Build                 :: Deployment -> Command
@@ -130,13 +133,15 @@ centralCommandParser =
   (    subcommandGroup "General:"
     [ ("clone",                 "Clone an 'iohk-ops' repository branch",
                                 Clone
-                                <$> parserBranch "'iohk-ops' branch to checkout")
-    , ("template",              "Produce (or update) a checkout of BRANCH with a cluster config YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
-                                Template
+                                <$> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
+                                <*> (fromMaybe defaultIOPSBranch
+                                     <$> (optional (parserBranch "'iohk-ops' branch to checkout.  Defaults to 'develop'"))))
+    , ("new",                   "Produce (or update) a checkout of BRANCH with a cluster config YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
+                                New
                                 <$> optional (optPath "config"        'c' "Override the default, environment-dependent config filename")
-                                <*> optional (optPath "nixops"        'n' "Use a specific Nixops binary for this cluster")
                                 <*> optional (optPath "topology"      't' "Cluster configuration.  Defaults to 'topology.yaml'")
                                 <*> optional parserConfigurationKey
+                                <*> flag DontGenerateKeys "dont-generate-keys" 'd' "Don't generate development keys"
                                 <*> parserEnvironment
                                 <*> parserTarget
                                 <*> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
@@ -146,7 +151,6 @@ centralCommandParser =
                                 <$> parserProject
                                 <*> parserCommit "Commit to set PROJECT's version to"
                                 <*> flag DontCommit "dont-commit" 'n' "Don't commit the *-src.json")
-    , ("fake-keys",             "Fake minimum set of keys necessary for a minimum complete deployment (explorer + report-server + nodes)",  pure FakeKeys)
     ]
 
    <|> subcommandGroup "Build-related:"
@@ -221,8 +225,8 @@ main = do
 runTop :: Options -> [Arg] -> Command -> IO ()
 runTop o@Options{..} args topcmd = do
   case topcmd of
-    Clone{..}                   -> runClone           o cBranch
-    Template{..}                -> runTemplate        o topcmd  args
+    Clone{..}                   -> runClone           o cName cBranch
+    New{..}                     -> runNew             o topcmd  args
     SetRev proj comId comm      -> Ops.runSetRev      o proj comId $
                                    if comm == DontCommit then Nothing
                                    else Just $ format ("Bump "%s%" revision to "%s) (lowerShowT proj) (fromCommit comId)
@@ -240,8 +244,6 @@ runTop o@Options{..} args topcmd = do
         doCommand :: Options -> Ops.NixopsConfig -> Command -> IO ()
         doCommand o@Options{..} c@Ops.NixopsConfig{..} cmd = do
           case cmd of
-            -- * setup
-            FakeKeys                 -> Ops.runFakeKeys
             -- * building
             Build depl               -> Ops.build                     o c depl
             AMI                      -> Ops.buildAMI              o c
@@ -274,35 +276,75 @@ runTop o@Options{..} args topcmd = do
             FindInstallers         d -> Ops.findInstallers            (T.pack d) c
             SetVersionJson         d -> Ops.setVersionJson            (T.pack d) c
             Clone{..}                -> error "impossible"
-            Template{..}             -> error "impossible"
+            New{..}                  -> error "impossible"
             SetRev   _ _ _           -> error "impossible"
 
 
-runClone :: Options -> Branch -> IO ()
-runClone o@Options{..} branch = do
+runClone :: Options -> NixopsDepl -> Branch -> IO ()
+runClone o@Options{..} depl branch = do
   let bname     = fromBranch branch
-      branchDir = fromText bname
+      branchDir = fromText $ fromNixopsDepl depl
   exists <- testpath branchDir
   if exists
   then  echo $ "Using existing git clone ..."
-  else cmd o "git" ["clone", Ops.fromURL $ Ops.projectURL IOHKOps, "-b", bname, bname]
+  else cmd o "git" ["clone", Ops.fromURL $ Ops.projectURL IOHKOps, "-b", bname, fromNixopsDepl depl]
 
   cd branchDir
   cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
 
-runTemplate :: Options -> Command -> [Arg] -> IO ()
-runTemplate o@Options{..} Template{..} args = do
+runNew :: Options -> Command -> [Arg] -> IO ()
+runNew o@Options{..} New{..} args = do
   when (elem (fromNixopsDepl tName) $ let names = showT <$> (every :: [Deployment])
                                       in names <> (T.toLower <$> names)) $
     die $ format ("the deployment name "%w%" ambiguously refers to a deployment _type_.  Cannot have that!") (fromNixopsDepl tName)
 
+  -- generate config:
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
-  nixops <- (<> "/bin/nixops") . T.strip <$> incmd o "nix-build" ["-A", "nixops"]
-  config <- Ops.mkNewConfig o cmdline tName (tNixops <|> (Path.fromText <$> Just nixops)) tTopology tEnvironment tTarget tDeployments systemStart tConfigurationKey
+  config <- Ops.mkNewConfig o cmdline tName tTopology tEnvironment tTarget tDeployments systemStart tConfigurationKey
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""
   echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
   cmd o "cat" [configFilename]
-runTemplate _ _ _ = error "impossible"
+
+  -- nixops create:
+  Ops.create o config
+
+  -- generate dev-keys & ensure secrets exist:
+  when (tEnvironment == Development) $ do
+    let secrets = [ "static/github_token"
+                  , "static/id_buildfarm"
+                  , "static/datadog-api.secret"
+                  , "static/datadog-application.secret" ]
+    forM_ secrets touch
+    echo "Ensured secrets exist"
+
+    if (tGenerateKeys /= GenerateKeys)
+    then echo "Skipping key generation, due to user request"
+    else do
+      generateStakeKeys o (clusterConfigurationKey config) "keys"
+      sh $ do
+        k <- Turtle.find ((prefix "keys/keys-testnet/rich/key") <> (suffix ".sk"))
+          "keys/keys-testnet/rich"
+        cp k $ "keys" </> Path.filename k
+  echo "Cluster deployment has been prepared."
+
+runNew _ _ _ = error "impossible"
+
+-- | Use 'cardano-keygen' to create keys for a develoment cluster.
+generateStakeKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
+generateStakeKeys o configurationKey outdir = do
+  -- XXX: compute cardano source path globally
+  configuration <- (<> "/configuration.yaml") . T.strip <$> incmd o "nix-instantiate"
+    [ "--eval"
+    , "-A", "cardano-sl.src"
+    , "default.nix"
+    ]
+  cmd o "cardano-keygen"
+    [ "--system-start", "0"
+    , "--configuration-file", configuration
+    , "--configuration-key", fromConfigurationKey configurationKey
+    , "generate-keys-by-spec"
+    , "--genesis-out-dir", T.pack $ Path.encodeString outdir
+    ]
