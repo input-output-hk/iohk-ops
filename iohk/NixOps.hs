@@ -866,13 +866,15 @@ wipeJournals o c@NixopsConfig{..} = do
     ["-c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
   echo "Done."
 
-getJournals :: Options -> NixopsConfig -> IO ()
-getJournals o c@NixopsConfig{..} = do
+getJournals :: Options -> NixopsConfig -> JournaldTimeSpec -> Maybe JournaldTimeSpec -> IO ()
+getJournals o c@NixopsConfig{..} timesince mtimeuntil = do
   let nodes = nodeNames o c
 
   echo "Dumping journald logs on cluster.."
   parallelSSH o c "bash"
-    ["-c", "'rm -f log && journalctl -u cardano-node > log'"]
+    ["-c", Arg $ "'rm -f log && journalctl -u cardano-node --since \"" <> fromJournaldTimeSpec timesince <> "\""
+      <> fromMaybe "" ((\timeuntil-> " --until \"" <> fromJournaldTimeSpec timeuntil <> "\"") <$> mtimeuntil)
+      <> " > log'"]
 
   echo "Obtaining dumped journals.."
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
