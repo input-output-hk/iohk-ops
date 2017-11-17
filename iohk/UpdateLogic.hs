@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DataKinds                  #-}
 
 module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiRecord, InstallersResults(..), GlobalResults(..), updateVersionJson) where
 
@@ -57,19 +58,19 @@ import           Control.Monad.Trans.Resource     (ResourceT, runResourceT)
 import qualified Control.Lens                  as Lens
 import           Network.AWS                      (toBody, send, newEnv, Credentials(Discover))
 import           Network.AWS.S3.PutObject         (putObject, poACL)
-import           Types                            (ApplicationVersionKey(ApplicationVersionKey), Win64, Mac64, ApplicationVersion(ApplicationVersion), Linux64)
+import           Types                            (ApplicationVersionKey(ApplicationVersionKey), ApplicationVersion(ApplicationVersion), Arch(Linux64, Mac64, Win64))
 import           Data.Coerce                      (coerce)
 
 data CiResult = TravisResult {
       localPath :: T.Text
-    , travisVersion :: ApplicationVersion Mac64
+    , travisVersion :: ApplicationVersion 'Mac64
     , cardanoCommit :: T.Text
     , travisJobNumber :: T.Text
     , travisUrl :: T.Text
   }
   | AppveyorResult {
       avLocalPath :: T.Text
-    , avVersion :: ApplicationVersion Win64
+    , avVersion :: ApplicationVersion 'Win64
     , avUrl :: T.Text
   }
   deriving (Show)
@@ -87,9 +88,9 @@ type TextPath = T.Text
 type RepoUrl = T.Text
 
 data VersionJson = VersionJson {
-      linux :: ApplicationVersion Linux64
-    , macos :: ApplicationVersion Mac64
-    , win64 :: ApplicationVersion Win64
+      linux :: ApplicationVersion 'Linux64
+    , macos :: ApplicationVersion 'Mac64
+    , win64 :: ApplicationVersion 'Win64
   } deriving (Show, Generic)
 
 instance ToJSON VersionJson
@@ -133,7 +134,7 @@ readFileFromGit rev path name url = do
       return $ Just content
     _ -> return Nothing
 
-realFindInstallers :: HasCallStack => T.Text -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64) -> Managed InstallersResults
+realFindInstallers :: HasCallStack => T.Text -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> Managed InstallersResults
 realFindInstallers daedalus_rev keys = do
   daedalus_version <- liftIO $ do
     contentMaybe <- readFileFromGit daedalus_rev ".travis.yml" "daedalus" "https://github.com/input-output-hk/daedalus"
@@ -188,12 +189,12 @@ fetchRepo localpath url = do
         ExitFailure _ -> error "cant fetch repo"
   with fetcher $ \res -> pure res
 
-processDarwinBuild :: T.Text -> T.Text -> T.Text -> BuildId -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64) -> T.Text -> IO (GlobalResults, CiResult)
+processDarwinBuild :: T.Text -> T.Text -> T.Text -> BuildId -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> T.Text -> IO (GlobalResults, CiResult)
 processDarwinBuild daedalus_rev daedalus_version tempdir buildId (winKey, macosKey) ciUrl = do
   obj <- fetchTravis buildId
   let
     filename = "Daedalus-installer-" <> daedalus_version <> "." <> (number obj) <> ".pkg"
-    version :: ApplicationVersion Mac64
+    version :: ApplicationVersion 'Mac64
     version = ApplicationVersion $ daedalus_version <> "." <> (number obj)
     url = "http://s3.eu-central-1.amazonaws.com/daedalus-travis/" <> filename
     outFile = tempdir <> "/" <> filename
@@ -244,7 +245,7 @@ processDarwinBuild daedalus_rev daedalus_version tempdir buildId (winKey, macosK
 
   pure (GlobalResults (ti2commit cardanoInfo) daedalus_rev appVersion, TravisResult outFile version (ti2commit cardanoInfo) (number obj) ciUrl)
 
-findInstaller :: HasCallStack => T.Text -> T.Text -> T.Text -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
+findInstaller :: HasCallStack => T.Text -> T.Text -> T.Text -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
 findInstaller daedalus_rev daedalus_version tempdir keys status = do
   let
   -- TODO check for 404's

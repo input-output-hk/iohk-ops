@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DataKinds                  #-}
 
 module Appveyor where
 
@@ -15,7 +16,7 @@ import           Data.String     (IsString)
 import qualified Data.Text       as T
 import           GHC.Generics    (Generic)
 import           Utils           (fetchJson)
-import           Types           (ApplicationVersion(ApplicationVersion), Win64)
+import           Types           (ApplicationVersion(ApplicationVersion), Arch(Win64))
 import           Data.Coerce                      (coerce)
 
 newtype JobId = JobId T.Text deriving (Show, Monoid)
