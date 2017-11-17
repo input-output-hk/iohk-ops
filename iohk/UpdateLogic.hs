@@ -1,88 +1,99 @@
 {-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DataKinds                  #-}
 
 module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiRecord, InstallersResults(..), GlobalResults(..), updateVersionJson) where
 
-import           Appveyor                  (AppveyorArtifact (AppveyorArtifact),
-                                            build, fetchAppveyorArtifacts,
-                                            fetchAppveyorBuild, getArtifactUrl,
-                                            jobId, jobs, parseCiUrl)
-import           Cardano                   (ConfigurationYaml,
-                                            applicationVersion, update)
-import           Control.Exception         (Exception, catch, throwIO)
-import           Control.Lens              (to, (^.))
-import           Control.Monad.Managed     (Managed, liftIO, with)
-import qualified Data.ByteString           as BS
-import qualified Data.ByteString.Char8     as BSC
-import qualified Data.ByteString.Lazy      as LBS
-import           Data.Git                  (Blob (Blob), Commit (commitTreeish),
-                                            EntName, ModePerm, Ref,
-                                            Tree (treeGetEnts), blobGetContent,
-                                            entName, getCommit, getTree)
-import           Data.Git.Ref              (SHA1, fromHexString)
-import           Data.Git.Repository       ()
-import           Data.Git.Storage          (Git, getObject, isRepo, openRepo)
-import           Data.Git.Storage.Object   (Object (ObjBlob))
-import qualified Data.HashMap.Strict       as HashMap
-import           Data.Maybe                (fromMaybe, listToMaybe)
-import           Data.Monoid               ((<>))
-import qualified Data.Text                 as T
-import qualified Data.Text.IO              as T
-import qualified Data.Yaml                 as Y
-import qualified Filesystem.Path.CurrentOS as FP
-import           GHC.Stack                 (HasCallStack)
-import           Github                    (Status, context, fetchGithubStatus,
-                                            statuses, targetUrl)
-import           System.Console.ANSI       (Color (Green, Red),
-                                            ColorIntensity (Dull),
-                                            ConsoleLayer (Background, Foreground),
-                                            SGR (Reset, SetColor), setSGR)
-import           System.Exit               (ExitCode (ExitFailure, ExitSuccess))
-import           Travis                    (BuildId, BuildNumber,
-                                            TravisBuild (matrix, number),
-                                            TravisInfo2 (ti2commit),
-                                            TravisJobInfo (tjiId), TravisYaml,
-                                            env, fetchTravis, fetchTravis2,
-                                            global, lookup', parseTravisYaml)
-import           Turtle.Prelude            (mktempdir, proc, pushd, procStrict)
-import           Turtle                    (empty, void)
-import           Utils                     (fetchCachedUrl, fetchUrl)
-import           Data.Aeson                (encode, ToJSON)
-import           GHC.Generics              (Generic)
-import           Network.AWS.S3.Types             (BucketName(BucketName), ObjectKey, ObjectCannedACL(OPublicRead))
-import           Control.Monad.Trans.AWS          (runAWST, AWST)
-import           Control.Monad.Trans.Resource     (ResourceT, runResourceT)
-import qualified Control.Lens                  as Lens
-import           Network.AWS                      (toBody, send, newEnv, Credentials(Discover))
-import           Network.AWS.S3.PutObject         (putObject, poACL)
-import           Types                            (ApplicationVersionKey(ApplicationVersionKey), ApplicationVersion(ApplicationVersion), Arch(Linux64, Mac64, Win64))
-import           Data.Coerce                      (coerce)
+import           Appveyor                     (AppveyorArtifact (AppveyorArtifact),
+                                               build, fetchAppveyorArtifacts,
+                                               fetchAppveyorBuild,
+                                               getArtifactUrl, jobId, jobs,
+                                               parseCiUrl)
+import           Cardano                      (ConfigurationYaml,
+                                               applicationVersion, update)
+import           Control.Exception            (Exception, catch, throwIO)
+import           Control.Lens                 (to, (^.))
+import qualified Control.Lens                 as Lens
+import           Control.Monad.Managed        (Managed, liftIO, with)
+import           Control.Monad.Trans.AWS      (AWST, runAWST)
+import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
+import           Data.Aeson                   (ToJSON, encode)
+import qualified Data.ByteString              as BS
+import qualified Data.ByteString.Char8        as BSC
+import qualified Data.ByteString.Lazy         as LBS
+import           Data.Coerce                  (coerce)
+import           Data.Git                     (Blob (Blob),
+                                               Commit (commitTreeish), EntName,
+                                               ModePerm, Ref,
+                                               Tree (treeGetEnts),
+                                               blobGetContent, entName,
+                                               getCommit, getTree)
+import           Data.Git.Ref                 (SHA1, fromHexString)
+import           Data.Git.Repository          ()
+import           Data.Git.Storage             (Git, getObject, isRepo, openRepo)
+import           Data.Git.Storage.Object      (Object (ObjBlob))
+import qualified Data.HashMap.Strict          as HashMap
+import           Data.Maybe                   (fromMaybe, listToMaybe)
+import           Data.Monoid                  ((<>))
+import qualified Data.Text                    as T
+import qualified Data.Text.IO                 as T
+import qualified Data.Yaml                    as Y
+import qualified Filesystem.Path.CurrentOS    as FP
+import           GHC.Generics                 (Generic)
+import           GHC.Stack                    (HasCallStack)
+import           Github                       (Status, context,
+                                               fetchGithubStatus, statuses,
+                                               targetUrl)
+import           Network.AWS                  (Credentials (Discover), newEnv,
+                                               send, toBody)
+import           Network.AWS.S3.PutObject     (poACL, putObject)
+import           Network.AWS.S3.Types         (BucketName (BucketName),
+                                               ObjectCannedACL (OPublicRead),
+                                               ObjectKey)
+import           System.Console.ANSI          (Color (Green, Red),
+                                               ColorIntensity (Dull),
+                                               ConsoleLayer (Background, Foreground),
+                                               SGR (Reset, SetColor), setSGR)
+import           System.Exit                  (ExitCode (ExitFailure, ExitSuccess))
+import           Travis                       (BuildId, BuildNumber,
+                                               TravisBuild (matrix, number),
+                                               TravisInfo2 (ti2commit),
+                                               TravisJobInfo (tjiId),
+                                               TravisYaml, env, fetchTravis,
+                                               fetchTravis2, global, lookup',
+                                               parseTravisYaml)
+import           Turtle                       (empty, void)
+import           Turtle.Prelude               (mktempdir, proc, procStrict,
+                                               pushd)
+import           Types                        (ApplicationVersion (ApplicationVersion),
+                                               ApplicationVersionKey (ApplicationVersionKey),
+                                               Arch (Linux64, Mac64, Win64))
+import           Utils                        (fetchCachedUrl, fetchUrl)
 
 data CiResult = TravisResult {
-      localPath :: T.Text
-    , travisVersion :: ApplicationVersion 'Mac64
-    , cardanoCommit :: T.Text
+      localPath       :: T.Text
+    , travisVersion   :: ApplicationVersion 'Mac64
+    , cardanoCommit   :: T.Text
     , travisJobNumber :: T.Text
-    , travisUrl :: T.Text
+    , travisUrl       :: T.Text
   }
   | AppveyorResult {
       avLocalPath :: T.Text
-    , avVersion :: ApplicationVersion 'Win64
-    , avUrl :: T.Text
+    , avVersion   :: ApplicationVersion 'Win64
+    , avUrl       :: T.Text
   }
   deriving (Show)
 data GlobalResults = GlobalResults {
-      grCardanoCommit :: T.Text
-    , grDaedalusCommit :: T.Text
+      grCardanoCommit      :: T.Text
+    , grDaedalusCommit     :: T.Text
     , grApplicationVersion :: Integer
   } deriving Show
 data InstallersResults = InstallersResults {
-      travisResult :: CiResult
+      travisResult   :: CiResult
     , appveyorResult :: CiResult
-    , globalResult :: GlobalResults
+    , globalResult   :: GlobalResults
   } deriving Show
 type TextPath = T.Text
 type RepoUrl = T.Text
@@ -152,13 +163,13 @@ realFindInstallers daedalus_rev keys = do
   let
     findTravis :: [ (Maybe GlobalResults, Maybe CiResult) ] -> CiResult
     findTravis ((_, Just tr@TravisResult {}) : _) = tr
-    findTravis (_ : rest) = findTravis rest
+    findTravis (_ : rest)                         = findTravis rest
     findAppveyor :: [ (Maybe GlobalResults, Maybe CiResult) ] -> CiResult
     findAppveyor ((_, Just av@AppveyorResult {}) : _) = av
-    findAppveyor (_ : rest) = findAppveyor rest
+    findAppveyor (_ : rest)                           = findAppveyor rest
     findGlobal :: [ (Maybe GlobalResults, Maybe CiResult) ] -> GlobalResults
     findGlobal ((Just gr@GlobalResults {}, _) : _) = gr
-    findGlobal (_ : rest) = findGlobal rest
+    findGlobal (_ : rest)                          = findGlobal rest
   _ <- proc "ls" [ "-ltrha", T.pack $ FP.encodeString tempdir ] mempty
   return $ InstallersResults (findTravis results) (findAppveyor results) (findGlobal results)
 
@@ -247,7 +258,6 @@ processDarwinBuild daedalus_rev daedalus_version tempdir buildId (winKey, macosK
 
 findInstaller :: HasCallStack => T.Text -> T.Text -> T.Text -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
 findInstaller daedalus_rev daedalus_version tempdir keys status = do
-  let
   -- TODO check for 404's
   -- TODO check file contents with libmagic
   case (context status) of
