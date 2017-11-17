@@ -15,9 +15,10 @@ import           Data.String     (IsString)
 import qualified Data.Text       as T
 import           GHC.Generics    (Generic)
 import           Utils           (fetchJson)
+import           Types           (ApplicationVersion(ApplicationVersion), Win64)
+import           Data.Coerce                      (coerce)
 
 newtype JobId = JobId T.Text deriving (Show, Monoid)
-newtype Version = Version { versionToText :: T.Text } deriving (Show, Monoid, IsString)
 newtype BuildNumber = BuildNumber Integer deriving (Show)
 newtype Username = Username { usernameToText :: T.Text } deriving (Show, Monoid, IsString)
 newtype Project = Project { projectToText :: T.Text } deriving (Show, Monoid, IsString)
@@ -29,7 +30,7 @@ data AppveyorBuild = AppveyorBuild {
 data AppveyorBuild2 = AppveyorBuild2 {
     _appveyorBuild2Jobs         :: [AppveyorBuild3]
     ,_appveyorBuild2BuildNumber :: BuildNumber
-    ,_appveyorBuild2Version     :: Version
+    ,_appveyorBuild2Version     :: ApplicationVersion Win64
     } deriving (Show, Generic)
 
 data AppveyorBuild3 = AppveyorBuild3 {
@@ -53,7 +54,7 @@ instance FromJSON AppveyorBuild2 where
   parseJSON = withObject "AppveyorBuild2" $ \v -> AppveyorBuild2
     <$> v .: "jobs"
     <*> (BuildNumber <$> v .: "buildNumber")
-    <*> (Version <$> v .: "version")
+    <*> (ApplicationVersion <$> v .: "version")
 instance FromJSON AppveyorBuild3 where
   parseJSON = withObject "AppveyorBuild3" $ \v -> AppveyorBuild3
     . JobId <$> v .: "jobId"
@@ -63,15 +64,15 @@ getArtifactUrl :: JobId -> T.Text -> T.Text
 getArtifactUrl (JobId jobid) filename = "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts/" <> filename
 
 -- input: "https://ci.appveyor.com/api/projects/jagajaga/daedalus/build/0.6.3356"
-fetchAppveyorBuild :: Username -> Project -> Version -> IO AppveyorBuild
-fetchAppveyorBuild user project version' = fetchJson $ "https://ci.appveyor.com/api/projects/" <> T.intercalate "/" [ usernameToText user, projectToText project, "build", versionToText version' ]
+fetchAppveyorBuild :: Username -> Project -> ApplicationVersion Win64 -> IO AppveyorBuild
+fetchAppveyorBuild user project version' = fetchJson $ "https://ci.appveyor.com/api/projects/" <> T.intercalate "/" [ usernameToText user, projectToText project, "build", coerce version' ]
 
 fetchAppveyorArtifacts :: JobId -> IO [AppveyorArtifact]
 fetchAppveyorArtifacts (JobId jobid) = fetchJson $ "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts"
 
 -- input: https://ci.appveyor.com/project/jagajaga/daedalus/build/0.6.3356
 -- output:
-parseCiUrl :: T.Text -> (Username, Project, Version)
+parseCiUrl :: T.Text -> (Username, Project, ApplicationVersion Win64)
 parseCiUrl input = case T.splitOn "/" input of
-  ["https:", "", "ci.appveyor.com", "project", username, project, "build", version'] -> (Username username, Project project, Version version')
+  ["https:", "", "ci.appveyor.com", "project", username, project, "build", version'] -> (Username username, Project project, ApplicationVersion version')
   other -> error $ show other

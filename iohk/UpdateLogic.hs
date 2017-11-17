@@ -8,7 +8,7 @@ module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiR
 import           Appveyor                  (AppveyorArtifact (AppveyorArtifact),
                                             build, fetchAppveyorArtifacts,
                                             fetchAppveyorBuild, getArtifactUrl,
-                                            jobId, jobs, parseCiUrl, Version(Version), Version, versionToText)
+                                            jobId, jobs, parseCiUrl)
 import           Cardano                   (ConfigurationYaml,
                                             applicationVersion, update)
 import           Control.Exception         (Exception, catch, throwIO)
@@ -53,21 +53,23 @@ import           Data.Aeson                (encode, ToJSON)
 import           GHC.Generics              (Generic)
 import           Network.AWS.S3.Types             (BucketName(BucketName), ObjectKey, ObjectCannedACL(OPublicRead))
 import           Control.Monad.Trans.AWS          (runAWST, AWST)
-import           Control.Monad.Trans.Resource     (ResourceT)
+import           Control.Monad.Trans.Resource     (ResourceT, runResourceT)
 import qualified Control.Lens                  as Lens
-import           Network.AWS               hiding (Seconds, Debug, Region)
+import           Network.AWS                      (toBody, send, newEnv, Credentials(Discover))
 import           Network.AWS.S3.PutObject         (putObject, poACL)
+import           Types                            (ApplicationVersionKey(ApplicationVersionKey), Win64, Mac64, ApplicationVersion(ApplicationVersion), Linux64)
+import           Data.Coerce                      (coerce)
 
 data CiResult = TravisResult {
       localPath :: T.Text
-    , travisVersion :: Version
+    , travisVersion :: ApplicationVersion Mac64
     , cardanoCommit :: T.Text
     , travisJobNumber :: T.Text
     , travisUrl :: T.Text
   }
   | AppveyorResult {
       avLocalPath :: T.Text
-    , avVersion :: Version
+    , avVersion :: ApplicationVersion Win64
     , avUrl :: T.Text
   }
   deriving (Show)
@@ -85,9 +87,9 @@ type TextPath = T.Text
 type RepoUrl = T.Text
 
 data VersionJson = VersionJson {
-      linux :: T.Text
-    , macos :: T.Text
-    , win64 :: T.Text
+      linux :: ApplicationVersion Linux64
+    , macos :: ApplicationVersion Mac64
+    , win64 :: ApplicationVersion Win64
   } deriving (Show, Generic)
 
 instance ToJSON VersionJson
@@ -131,7 +133,7 @@ readFileFromGit rev path name url = do
       return $ Just content
     _ -> return Nothing
 
-realFindInstallers :: HasCallStack => T.Text -> (T.Text, T.Text) -> Managed InstallersResults
+realFindInstallers :: HasCallStack => T.Text -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64) -> Managed InstallersResults
 realFindInstallers daedalus_rev keys = do
   daedalus_version <- liftIO $ do
     contentMaybe <- readFileFromGit daedalus_rev ".travis.yml" "daedalus" "https://github.com/input-output-hk/daedalus"
@@ -186,12 +188,13 @@ fetchRepo localpath url = do
         ExitFailure _ -> error "cant fetch repo"
   with fetcher $ \res -> pure res
 
-processDarwinBuild :: T.Text -> T.Text -> T.Text -> BuildId -> (T.Text, T.Text) -> T.Text -> IO (GlobalResults, CiResult)
+processDarwinBuild :: T.Text -> T.Text -> T.Text -> BuildId -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64) -> T.Text -> IO (GlobalResults, CiResult)
 processDarwinBuild daedalus_rev daedalus_version tempdir buildId (winKey, macosKey) ciUrl = do
   obj <- fetchTravis buildId
   let
     filename = "Daedalus-installer-" <> daedalus_version <> "." <> (number obj) <> ".pkg"
-    version = Version $ daedalus_version <> "." <> (number obj)
+    version :: ApplicationVersion Mac64
+    version = ApplicationVersion $ daedalus_version <> "." <> (number obj)
     url = "http://s3.eu-central-1.amazonaws.com/daedalus-travis/" <> filename
     outFile = tempdir <> "/" <> filename
   buildLog <- fetchUrl mempty $ "https://api.travis-ci.org/jobs/" <> (T.pack $ show $ tjiId $ head $ drop 1 $ matrix obj) <> "/log"
@@ -225,8 +228,8 @@ processDarwinBuild daedalus_rev daedalus_version tempdir buildId (winKey, macosK
       content = fromMaybe undefined contentMaybe
       fullConfiguration :: ConfigurationYaml
       fullConfiguration = fromMaybe undefined (Y.decode $ LBS.toStrict content)
-      winVersion = HashMap.lookup winKey fullConfiguration
-      macosVersion = HashMap.lookup macosKey fullConfiguration
+      winVersion = HashMap.lookup (coerce winKey) fullConfiguration
+      macosVersion = HashMap.lookup (coerce macosKey) fullConfiguration
     -- relies on only parsing out the subset that should match
     if winVersion == macosVersion then
       case winVersion of
@@ -241,7 +244,7 @@ processDarwinBuild daedalus_rev daedalus_version tempdir buildId (winKey, macosK
 
   pure (GlobalResults (ti2commit cardanoInfo) daedalus_rev appVersion, TravisResult outFile version (ti2commit cardanoInfo) (number obj) ciUrl)
 
-findInstaller :: HasCallStack => T.Text -> T.Text -> T.Text -> (T.Text, T.Text) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
+findInstaller :: HasCallStack => T.Text -> T.Text -> T.Text -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
 findInstaller daedalus_rev daedalus_version tempdir keys status = do
   let
   -- TODO check for 404's
@@ -324,14 +327,14 @@ githubWikiRecord results = do
     appveyUrl = avUrl appveyorDetails
   let
     githubLink rev project = "[" <> (T.take 6 rev) <> "](https://github.com/input-output-hk/" <> project <> "/commit/" <> rev <> ")"
-  (T.pack $ show appVersion) <> " | " <> (githubLink daedalus_rev "daedalus") <> " | " <> (githubLink cardano_rev "cardano-sl") <> " | [" <> travisNumber <> "](" <> travisUrl' <> ") | [" <> (versionToText appveyVersion) <> "](" <> appveyUrl <> ") | DATE"
+  (T.pack $ show appVersion) <> " | " <> (githubLink daedalus_rev "daedalus") <> " | " <> (githubLink cardano_rev "cardano-sl") <> " | [" <> travisNumber <> "](" <> travisUrl' <> ") | [" <> (coerce appveyVersion) <> "](" <> appveyUrl <> ") | DATE"
 
 updateVersionJson :: InstallersResults -> T.Text -> IO ()
 updateVersionJson info bucket = do
   let
     obj = VersionJson ""
-        (versionToText $ travisVersion $ travisResult info)
-        (versionToText $ avVersion $ appveyorResult info)
+        (travisVersion $ travisResult info)
+        (avVersion $ appveyorResult info)
     json = encode obj
     uploadOneFile :: BucketName -> LBS.ByteString -> ObjectKey -> AWST (ResourceT IO) ()
     uploadOneFile bucketName body remoteKey = do

@@ -935,7 +935,7 @@ s3Upload daedalus_rev c = do
       hashAndUpload appver cardanoCommit' (travisResult res)
       hashAndUpload appver cardanoCommit' (appveyorResult res)
 
-configurationKeys :: Environment -> (T.Text, T.Text)
+configurationKeys :: Environment -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64)
 configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")
 configurationKeys Staging = ("mainnet_dryrun_wallet_win64", "mainnet_dryrun_wallet_macos64")
 

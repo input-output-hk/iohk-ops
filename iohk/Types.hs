@@ -35,6 +35,11 @@ newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (Fro
 newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
 newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
 newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+data Linux64 = Linux64 deriving Show
+data Mac64 = Mac64 deriving Show
+data Win64 = Win64 deriving Show
+newtype ApplicationVersionKey a = ApplicationVersionKey Text deriving IsString
+newtype ApplicationVersion a = ApplicationVersion Text deriving (IsString, Show, Generic, ToJSON)
 
 
 -- * Flags
