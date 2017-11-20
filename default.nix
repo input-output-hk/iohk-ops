@@ -22,7 +22,9 @@ let
         rev = "000366a468867ccb2ebf031a6decde9436a234fd";
         sha256 = "16ff1zn5s7i0rczbzjxkaahibwf714m4qgg72j1glda82d41clgb";
       };
-    in (import "${nixopsUnstable}/release.nix" {}).build.${system};
+    in (import "${nixopsUnstable}/release.nix" {
+         nixpkgs = localLib.fetchNixPkgs;
+        }).build.${system};
   iohk-ops-extra-runtime-deps = [
     pkgs.gitFull pkgs.nix-prefetch-scripts compiler.yaml
     pkgs.wget pkgs.awscli # for scripts/aws.hs
