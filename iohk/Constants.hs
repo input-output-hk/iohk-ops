@@ -26,6 +26,8 @@ defaultIOPSBranch    = Branch "develop"
 
 defaultHold          = 1200 :: Seconds -- 20 minutes
 
+defaultJournaldTimeSpec = JournaldTimeSpec "6 hours ago"
+
 explorerNode         = NodeName "explorer"
 
 orgs                 :: [NodeOrg]
