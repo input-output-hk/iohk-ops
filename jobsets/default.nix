@@ -1,4 +1,8 @@
-{ nixopsPrsJSON ? ./simple-pr-dummy.json, cardanoPrsJSON ? ./simple-pr-dummy.json, nixpkgs ? <nixpkgs>, declInput ? {} }:
+{ nixopsPrsJSON ? ./simple-pr-dummy.json
+, cardanoPrsJSON ? ./simple-pr-dummy.json
+, nixpkgs ? <nixpkgs>
+, declInput ? {}
+}:
 
 # Followed by https://github.com/NixOS/hydra/pull/418/files
 
@@ -75,10 +79,6 @@ let
     cardano-sl = mkCardano "master" nixpkgs-src.rev;
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
     iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
-    deployments = {
-      nixexprpath = "jobsets/deployments.nix";
-      description = "Builds for deployments";
-    };
   });
   jobsetsAttrs =  nixopsPrJobsets // cardanoPrJobsets // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);
