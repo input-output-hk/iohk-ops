@@ -156,10 +156,7 @@ import           Time.Types
 import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText)
 import qualified Turtle                        as Turtle
 
---import           Network.HTTP.Client.TLS
 import           Network.AWS.Auth
---import qualified Network.AWS.Data.Log          as AWS
---import           Data.ByteString.Builder
 import           Network.AWS               hiding (Seconds, Debug, Region)
 import           Control.Monad.Trans.AWS          (runAWST, AWST)
 import           Network.AWS.S3.PutObject
@@ -475,7 +472,7 @@ writeConfig mFp c@NixopsConfig{..} = do
   pure configFilename
 
 -- | Read back config, doing validation
-readConfig :: HasCallStack => MonadIO m => Options -> FilePath -> m NixopsConfig
+readConfig :: (HasCallStack, MonadIO m) => Options -> FilePath -> m NixopsConfig
 readConfig Options{..} cf = do
   cfParse <- liftIO $ YAML.decodeFileEither $ Path.encodeString $ cf
   let c@NixopsConfig{..}
@@ -907,9 +904,8 @@ s3Upload daedalus_rev c = do
     uploadHashedInstaller bucketName localPath appver cardanoCommit = do
       hash <- (liftIO . hashInstaller) localPath
       let
+        -- splitOn always returns at least 1 item in the list
         basename' = last $ T.splitOn "/" $ localPath
-      liftIO $ print localPath
-      liftIO $ print basename'
       uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
       copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
       return hash
@@ -923,8 +919,7 @@ s3Upload daedalus_rev c = do
           hash <- uploadHashedInstaller (cUpdateBucket c) localPath appver cardanoCommit
           say $ "windows installer " <> localPath <> " hash " <> hash
 
-  --lgr <- newLogger Trace Sys.stdout
-  env <- newEnv Discover -- <&> set envLogger lgr -- . set envRegion NorthVirginia
+  env <- newEnv Discover
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
     let

@@ -4,7 +4,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiRecord, InstallersResults(..), GlobalResults(..), updateVersionJson) where
+module UpdateLogic (realFindInstallers, CiResult(..), hashInstaller, githubWikiRecord, InstallersResults(..), GlobalResults(..), updateVersionJson, extractBuildId) where
 
 import           Appveyor                     (AppveyorArtifact (AppveyorArtifact),
                                                build, fetchAppveyorArtifacts,
@@ -301,9 +301,6 @@ extractBuildId fullLog = read $ BSC.unpack f5
     isNumber c = (c >= '0') && (c <= '9')
     f4 = BSC.dropWhile (\c -> (isNumber c) == False) f3
     f5 = BSC.takeWhile isNumber f4
-
-sampleInput :: LBS.ByteString
-sampleInput = "junk\nbuild id is 13711'\r\r\njunk"
 
 hashInstaller :: T.Text -> IO T.Text
 hashInstaller path = do

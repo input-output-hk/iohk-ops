@@ -35,14 +35,14 @@ instance FromJSON Status where
     <*> v .: "target_url"
     <*> v .: "context"
 
-fetchGithubJson :: HasCallStack => FromJSON a => T.Text -> IO a
+fetchGithubJson :: (HasCallStack, FromJSON a) => T.Text -> IO a
 fetchGithubJson url = do
   let
-    fn :: String
-    fn = "github_token"
-  exists <- doesFileExist fn
+    filename :: String
+    filename = "github_token"
+  exists <- doesFileExist filename
   headers <- if exists then do
-    githubToken <- LBS.readFile fn
+    githubToken <- LBS.readFile filename
     return [ ("Authorization", LBS.toStrict githubToken) ]
   else pure []
   fetchJson' headers url
