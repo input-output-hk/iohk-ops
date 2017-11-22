@@ -328,7 +328,7 @@ runNew _ _ _ = error "impossible"
 generateStakeKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
 generateStakeKeys o configurationKey outdir = do
   -- XXX: compute cardano source path globally
-  configuration <- (<> "/configuration.yaml") . T.strip <$> incmd o "nix-instantiate"
+  configuration <- (<> "/configuration.yaml") <$> incmdStrip o "nix-instantiate"
     [ "--eval"
     , "-A", "cardano-sl.src"
     , "default.nix"

@@ -42,7 +42,7 @@ module NixOps (
   , defaultNodePort
   , defaultTarget
 
-  , cmd, cmd', incmd
+  , cmd, cmd', incmd, incmdStrip
   , errorT
   , every
   , jsonLowerStrip
@@ -165,7 +165,7 @@ deriving instance Generic Elapsed; instance FromJSON Elapsed; instance ToJSON El
 
 
 establishDeployerIP :: Options -> Maybe IP -> IO IP
-establishDeployerIP o Nothing   = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+establishDeployerIP o Nothing   = IP <$> incmdStrip o "curl" ["--silent", fromURL awsPublicIPURL]
 establishDeployerIP _ (Just ip) = pure ip
 
 
@@ -441,7 +441,7 @@ mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTa
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
   cDeplArgs <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology  <- getSimpleTopo cElements cTopology
-  nixpkgs   <- Path.fromText <$> incmd o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"]
+  nixpkgs   <- Path.fromText <$> incmdStrip o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"]
   pure NixopsConfig{..}
 
 -- | Write the config file
@@ -470,7 +470,7 @@ readConfig o@Options{..} cf = do
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.
   topo <- liftIO $ getSimpleTopo cElements cTopology
-  nixpkgs' <- Path.fromText <$> (liftIO $ incmd o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"])
+  nixpkgs' <- Path.fromText <$> (liftIO $ incmdStrip o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"])
   pure c { topology = topo, nixpkgs = nixpkgs' }
 
 clusterConfigurationKey :: NixopsConfig -> ConfigurationKey
@@ -516,7 +516,7 @@ inprocs bin args inp = do
 cmd   :: Options -> Text -> [Text] -> IO ()
 cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
 cmd'' :: Options -> Text           -> IO (ExitCode, Text, Text)
-incmd :: Options -> Text -> [Text] -> IO Text
+incmd, incmdStrip :: Options -> Text -> [Text] -> IO Text
 
 cmd   Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
@@ -530,6 +530,9 @@ cmd'' Options{..} command  = do
 incmd Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
   inprocs bin args empty
+incmdStrip Options{..} bin args = do
+  when (toBool oVerbose) $ logCmd bin args
+  T.strip <$> inprocs bin args empty
 
 
 -- * Invoking nixops
@@ -732,9 +735,8 @@ dumpLogs o c withProf = do
 prefetchURL :: Options -> Project -> Commit -> IO (NixHash, FilePath)
 prefetchURL o proj rev = do
   let url = projectURL proj
-  hashPath <- incmd o "nix-prefetch-url" ["--unpack", "--print-path", (fromURL $ url) <> "/archive/" <> fromCommit rev <> ".tar.gz"]
-  let hashPath' = T.lines hashPath
-  pure (NixHash (hashPath' !! 0), Path.fromText $ hashPath' !! 1)
+  hashPath <- T.lines <$> incmd o "nix-prefetch-url" ["--unpack", "--print-path", (fromURL $ url) <> "/archive/" <> fromCommit rev <> ".tar.gz"]
+  pure (NixHash (hashPath !! 0), Path.fromText $ hashPath !! 1)
 
 runSetRev :: Options -> Project -> Commit -> Maybe Text -> IO ()
 runSetRev o proj rev mCommitChanges = do
@@ -810,8 +812,8 @@ deployedCommit o c m = do
     \r-> do
       case cut space r of
         (_:path:_) -> do
-          drv <- incmd o "nix-store" ["--query", "--deriver", T.strip path]
-          pathExists <- testpath $ fromText $ T.strip drv
+          drv <- incmdStrip o "nix-store" ["--query", "--deriver", T.strip path]
+          pathExists <- testpath $ fromText drv
           unless pathExists $
             errorT $ "The derivation used to build the package is not present on the system: " <> T.strip drv
           sh $ do
