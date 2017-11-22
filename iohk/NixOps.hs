@@ -38,7 +38,6 @@ module NixOps (
 
   , awsPublicIPURL
   , defaultEnvironment
-  , defaultNixpkgs
   , defaultNode
   , defaultNodePort
   , defaultTarget
@@ -326,7 +325,6 @@ data Options = Options
   , oSerial           :: Serialize
   , oVerbose          :: Verbose
   , oNoComponentCheck :: ComponentCheck
-  , oNixpkgs          :: Maybe FilePath
   } deriving Show
 
 parserBranch :: Optional HelpMessage -> Parser Branch
@@ -356,7 +354,6 @@ parserOptions = Options
                 <*> flag Serialize        "serial"             's' "Disable parallelisation"
                 <*> flag Verbose          "verbose"            'v' "Print all commands that are being run"
                 <*> flag NoComponentCheck "no-component-check" 'p' "Disable deployment/*.nix component check"
-                <*> (optional $ optPath "nixpkgs" 'i' "Set 'nixpkgs' revision")
 
 nixopsCmdOptions :: Options -> NixopsConfig -> [Text]
 nixopsCmdOptions Options{..} NixopsConfig{..} =
@@ -364,7 +361,7 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--confirm" | oConfirm == Confirmed] <>
   ["--show-trace"
   ,"--deployment", fromNixopsDepl cName
-  ] <> fromMaybe [] ((["-I"] <>) . (:[]) . ("nixpkgs=" <>) . format fp <$> oNixpkgs)
+  ] <> (["-I", format ("nixpkgs="%fp) nixpkgs])
 
 
 -- | Before adding a field here, consider, whether the value in question
@@ -374,7 +371,6 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
 data NixopsConfig = NixopsConfig
   { cName             :: NixopsDepl
   , cGenCmdline       :: Text
-  , cNixpkgs          :: Maybe Commit
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
@@ -383,19 +379,21 @@ data NixopsConfig = NixopsConfig
   , cDeplArgs         :: DeplArgs
   -- this isn't stored in the config file, but is, instead filled in during initialisation
   , topology          :: SimpleTopo
+  , nixpkgs           :: FilePath
   } deriving (Generic, Show)
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
         <*> v .:? "gen-cmdline"   .!= "--unknown--"
-        <*> v .:? "nixpkgs"
         <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
-        <*> pure undefined -- this is filled in in readConfig
+        -- Filled in in readConfig:
+        <*> pure undefined
+        <*> pure undefined
 instance ToJSON Environment
 instance ToJSON Target
 instance ToJSON Deployment
@@ -441,9 +439,9 @@ mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTa
   let EnvSettings{..} = envSettings                             cEnvironment
       cFiles          = deploymentFiles                         cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
-      cNixpkgs        = defaultNixpkgs
-  cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
-  topology <- getSimpleTopo cElements cTopology
+  cDeplArgs <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
+  topology  <- getSimpleTopo cElements cTopology
+  nixpkgs   <- Path.fromText <$> incmd o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"]
   pure NixopsConfig{..}
 
 -- | Write the config file
@@ -455,7 +453,7 @@ writeConfig mFp c@NixopsConfig{..} = do
 
 -- | Read back config, doing validation
 readConfig :: MonadIO m => Options -> FilePath -> m NixopsConfig
-readConfig Options{..} cf = do
+readConfig o@Options{..} cf = do
   cfParse <- liftIO $ YAML.decodeFileEither $ Path.encodeString $ cf
   let c@NixopsConfig{..}
         = case cfParse of
@@ -472,7 +470,8 @@ readConfig Options{..} cf = do
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.
   topo <- liftIO $ getSimpleTopo cElements cTopology
-  pure c { topology = topo }
+  nixpkgs' <- Path.fromText <$> (liftIO $ incmd o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"])
+  pure c { topology = topo, nixpkgs = nixpkgs' }
 
 clusterConfigurationKey :: NixopsConfig -> ConfigurationKey
 clusterConfigurationKey c =
