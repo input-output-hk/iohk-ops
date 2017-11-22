@@ -19,10 +19,12 @@ let
       nixopsUnstable = pkgs.fetchFromGitHub {
         owner = "NixOS";
         repo = "nixops";
-        rev = "379b1f933b930aafc8d386d8bfec97ce0e775628";
-        sha256 = "0f21p1rlb3cmj6g43v185rh5abx23nj1zx5fizfpsqmswd3yl9k8";
+        rev = "92034401b5291070a93ede030e718bb82b5e6da4";
+        sha256 = "139mmf8ag392w5mn419k7ajp3pgcz6q349n7vm7gsp3g4sck2jjn";
       };
-    in (import "${nixopsUnstable}/release.nix" {}).build.${system};
+    in (import "${nixopsUnstable}/release.nix" {
+         nixpkgs = localLib.fetchNixPkgs;
+        }).build.${system};
   iohk-ops-extra-runtime-deps = [
     pkgs.gitFull pkgs.nix-prefetch-scripts compiler.yaml
     pkgs.wget pkgs.awscli # for scripts/aws.hs

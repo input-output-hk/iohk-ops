@@ -20,7 +20,6 @@ defaultEnvironment   = Development
 defaultTarget        = AWS
 defaultNode          = NodeName "c-a-1"
 defaultNodePort      = PortNo 3000
-defaultNixpkgs       = Nothing
 
 defaultIOPSBranch    = Branch "develop"
 
