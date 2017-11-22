@@ -41,7 +41,7 @@ data BuildJob = BuildJob {
 data AppveyorArtifact = AppveyorArtifact {
       _appveyorArtifactFileName :: T.Text
     , _appveyorArtifactName   :: T.Text
-  } deriving (Show, Generic)
+  } deriving (Show, Generic, Eq)
 
 makeFields ''ProjectBuildResults
 makeFields ''Build
@@ -59,7 +59,10 @@ instance FromJSON Build where
 instance FromJSON BuildJob where
   parseJSON = withObject "AppveyorBuild3" $ \v -> BuildJob
     . JobId <$> v .: "jobId"
-instance FromJSON AppveyorArtifact
+instance FromJSON AppveyorArtifact where
+  parseJSON = withObject "AppveyorArtifact" $ \v -> AppveyorArtifact
+    <$> v .: "fileName"
+    <*> v .: "name"
 
 getArtifactUrl :: JobId -> T.Text -> T.Text
 getArtifactUrl (JobId jobid) filename = "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts/" <> filename
