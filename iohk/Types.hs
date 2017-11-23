@@ -26,6 +26,7 @@ newtype ConfigurationKey = ConfigurationKey { fromConfigurationKey :: Text } der
 newtype Commit       = Commit       { fromCommit       :: Text   } deriving (Eq, FromJSON, Generic, Show, IsString, ToJSON)
 newtype Exec         = Exec         { fromExec         :: Text   } deriving (IsString, Show)
 newtype EnvVar       = EnvVar       { fromEnvVar       :: Text   } deriving (IsString, Show)
+newtype JournaldTimeSpec = JournaldTimeSpec { fromJournaldTimeSpec :: Text   } deriving (Show, IsString)
 newtype NixParam     = NixParam     { fromNixParam     :: Text   } deriving (FromJSON, Generic, Show, IsString, Eq, Ord, AE.ToJSONKey, AE.FromJSONKey)
 newtype NixHash      = NixHash      { fromNixHash      :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 newtype NixAttr      = NixAttr      { fromAttr         :: Text   } deriving (FromJSON, Generic, Show, IsString)

@@ -20,11 +20,12 @@ defaultEnvironment   = Development
 defaultTarget        = AWS
 defaultNode          = NodeName "c-a-1"
 defaultNodePort      = PortNo 3000
-defaultNixpkgs       = Nothing
 
 defaultIOPSBranch    = Branch "develop"
 
 defaultHold          = 1200 :: Seconds -- 20 minutes
+
+defaultJournaldTimeSpec = JournaldTimeSpec "6 hours ago"
 
 explorerNode         = NodeName "explorer"
 

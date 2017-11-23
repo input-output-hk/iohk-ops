@@ -41,12 +41,11 @@ module NixOps (
 
   , awsPublicIPURL
   , defaultEnvironment
-  , defaultNixpkgs
   , defaultNode
   , defaultNodePort
   , defaultTarget
 
-  , cmd, cmd', incmd
+  , cmd, cmd', incmd, incmdStrip
   , errorT
   , every
   , jsonLowerStrip
@@ -182,7 +181,7 @@ deriving instance Generic Elapsed; instance FromJSON Elapsed; instance ToJSON El
 
 
 establishDeployerIP :: Options -> Maybe IP -> IO IP
-establishDeployerIP o Nothing   = IP <$> incmd o "curl" ["--silent", fromURL awsPublicIPURL]
+establishDeployerIP o Nothing   = IP <$> incmdStrip o "curl" ["--silent", fromURL awsPublicIPURL]
 establishDeployerIP _ (Just ip) = pure ip
 
 
@@ -323,6 +322,12 @@ nodeNames (oOnlyOn -> nodeLimit)  NixopsConfig{..}
   = if Map.member node nodeMap || node == explorerNode then [node]
     else errorT $ format ("Node '"%s%"' doesn't exist in cluster '"%fp%"'.") (showT $ fromNodeName node) cTopology
 
+scopeNameDesc :: Options -> NixopsConfig -> (Text, Text)
+scopeNameDesc (oOnlyOn -> nodeLimit)  NixopsConfig{..}
+  | Nothing   <- nodeLimit = (format ("entire '"%s%"' cluster") (fromNixopsDepl cName)
+                             ,"cluster-" <> fromNixopsDepl cName)
+  | Just node <- nodeLimit = (format ("node '"%s%"'") (fromNodeName node)
+                             ,"node-" <> fromNodeName node)
 
 
 
@@ -336,7 +341,6 @@ data Options = Options
   , oSerial           :: Serialize
   , oVerbose          :: Verbose
   , oNoComponentCheck :: ComponentCheck
-  , oNixpkgs          :: Maybe FilePath
   } deriving Show
 
 parserBranch :: Optional HelpMessage -> Parser Branch
@@ -366,7 +370,6 @@ parserOptions = Options
                 <*> flag Serialize        "serial"             's' "Disable parallelisation"
                 <*> flag Verbose          "verbose"            'v' "Print all commands that are being run"
                 <*> flag NoComponentCheck "no-component-check" 'p' "Disable deployment/*.nix component check"
-                <*> (optional $ optPath "nixpkgs" 'i' "Set 'nixpkgs' revision")
 
 nixopsCmdOptions :: Options -> NixopsConfig -> [Text]
 nixopsCmdOptions Options{..} NixopsConfig{..} =
@@ -374,7 +377,7 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
   ["--confirm" | oConfirm == Confirmed] <>
   ["--show-trace"
   ,"--deployment", fromNixopsDepl cName
-  ] <> fromMaybe [] ((["-I"] <>) . (:[]) . ("nixpkgs=" <>) . format fp <$> oNixpkgs)
+  ] <> (["-I", format ("nixpkgs="%fp) nixpkgs])
 
 
 -- | Before adding a field here, consider, whether the value in question
@@ -384,7 +387,6 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
 data NixopsConfig = NixopsConfig
   { cName             :: NixopsDepl
   , cGenCmdline       :: Text
-  , cNixpkgs          :: Maybe Commit
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
@@ -394,6 +396,7 @@ data NixopsConfig = NixopsConfig
   , cDeplArgs         :: DeplArgs
   -- this isn't stored in the config file, but is, instead filled in during initialisation
   , topology          :: SimpleTopo
+  , nixpkgs           :: FilePath
   } deriving (Generic, Show)
 
 instance ToJSON BucketName
@@ -401,7 +404,6 @@ instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
         <*> v .:? "gen-cmdline"   .!= "--unknown--"
-        <*> v .:? "nixpkgs"
         <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
@@ -409,7 +411,9 @@ instance FromJSON NixopsConfig where
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
-        <*> pure undefined -- this is filled in in readConfig
+        -- Filled in in readConfig:
+        <*> pure undefined
+        <*> pure undefined
 
 instance FromJSON BucketName
 instance ToJSON Environment
@@ -458,10 +462,10 @@ mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTa
   let EnvSettings{..} = envSettings                             cEnvironment
       cFiles          = deploymentFiles                         cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
-      cNixpkgs        = defaultNixpkgs
       cUpdateBucket   = "default-bucket"
-  cDeplArgs    <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
-  topology <- getSimpleTopo cElements cTopology
+  cDeplArgs <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
+  topology  <- getSimpleTopo cElements cTopology
+  nixpkgs   <- Path.fromText <$> incmdStrip o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"]
   pure NixopsConfig{..}
 
 -- | Write the config file
@@ -473,7 +477,7 @@ writeConfig mFp c@NixopsConfig{..} = do
 
 -- | Read back config, doing validation
 readConfig :: (HasCallStack, MonadIO m) => Options -> FilePath -> m NixopsConfig
-readConfig Options{..} cf = do
+readConfig o@Options{..} cf = do
   cfParse <- liftIO $ YAML.decodeFileEither $ Path.encodeString $ cf
   let c@NixopsConfig{..}
         = case cfParse of
@@ -490,7 +494,8 @@ readConfig Options{..} cf = do
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.
   topo <- liftIO $ getSimpleTopo cElements cTopology
-  pure c { topology = topo }
+  nixpkgs' <- Path.fromText <$> (liftIO $ incmdStrip o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"])
+  pure c { topology = topo, nixpkgs = nixpkgs' }
 
 clusterConfigurationKey :: NixopsConfig -> ConfigurationKey
 clusterConfigurationKey c =
@@ -535,7 +540,7 @@ inprocs bin args inp = do
 cmd   :: Options -> Text -> [Text] -> IO ()
 cmd'  :: Options -> Text -> [Text] -> IO (ExitCode, Text)
 cmd'' :: Options -> Text           -> IO (ExitCode, Text, Text)
-incmd :: Options -> Text -> [Text] -> IO Text
+incmd, incmdStrip :: Options -> Text -> [Text] -> IO Text
 
 cmd   Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
@@ -549,6 +554,9 @@ cmd'' Options{..} command  = do
 incmd Options{..} bin args = do
   when (toBool oVerbose) $ logCmd bin args
   inprocs bin args empty
+incmdStrip Options{..} bin args = do
+  when (toBool oVerbose) $ logCmd bin args
+  T.strip <$> inprocs bin args empty
 
 
 -- * Invoking nixops
@@ -658,8 +666,9 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
     printf ("Setting --system-start to "%s%" ("%d%" minutes into future)\n")
            timePretty (div holdSecs 60)
     cFp <- writeConfig oConfigFile c'
-    cmd o "git" (["add", format fp cFp])
-    cmd o "git" ["commit", "-m", format ("Bump systemStart to "%s) timePretty]
+    unless (cEnvironment == Development) $ do
+      cmd o "git" (["add", format fp cFp])
+      cmd o "git" ["commit", "-m", format ("Bump systemStart to "%s) timePretty]
 
   modify o c'
 
@@ -750,9 +759,8 @@ dumpLogs o c withProf = do
 prefetchURL :: Options -> Project -> Commit -> IO (NixHash, FilePath)
 prefetchURL o proj rev = do
   let url = projectURL proj
-  hashPath <- incmd o "nix-prefetch-url" ["--unpack", "--print-path", (fromURL $ url) <> "/archive/" <> fromCommit rev <> ".tar.gz"]
-  let hashPath' = T.lines hashPath
-  pure (NixHash (hashPath' !! 0), Path.fromText $ hashPath' !! 1)
+  hashPath <- T.lines <$> incmd o "nix-prefetch-url" ["--unpack", "--print-path", (fromURL $ url) <> "/archive/" <> fromCommit rev <> ".tar.gz"]
+  pure (NixHash (hashPath !! 0), Path.fromText $ hashPath !! 1)
 
 runSetRev :: Options -> Project -> Commit -> Maybe Text -> IO ()
 runSetRev o proj rev mCommitChanges = do
@@ -828,8 +836,8 @@ deployedCommit o c m = do
     \r-> do
       case cut space r of
         (_:path:_) -> do
-          drv <- incmd o "nix-store" ["--query", "--deriver", T.strip path]
-          pathExists <- testpath $ fromText $ T.strip drv
+          drv <- incmdStrip o "nix-store" ["--query", "--deriver", T.strip path]
+          pathExists <- testpath $ fromText drv
           unless pathExists $
             errorT $ "The derivation used to build the package is not present on the system: " <> T.strip drv
           sh $ do
@@ -851,7 +859,7 @@ startForeground o c node =
     ssh o c "bash" ["-c", Arg $ "'sudo -u cardano-node " <> unitStartCmd <> "'"] node
 
 stop :: Options -> NixopsConfig -> IO ()
-stop o c = echo "Stopping nodes..."
+stop o c = echo (unsafeTextToLine $ "Stopping " <> (fst $ scopeNameDesc o c))
   >> parallelSSH o c "systemctl" ["stop", "cardano-node"]
 
 defLogs, profLogs :: [(Text, Text -> Text)]
@@ -948,18 +956,21 @@ setVersionJson daedalus_rev c = do
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
-  echo "Wiping journals on cluster.."
+  echo $ unsafeTextToLine $ "Wiping journals on " <> (fst $ scopeNameDesc o c)
   parallelSSH o c "bash"
     ["-c", "'systemctl --quiet stop systemd-journald && rm -f /var/log/journal/*/* && systemctl start systemd-journald && sleep 1 && systemctl restart nix-daemon'"]
   echo "Done."
 
-getJournals :: Options -> NixopsConfig -> IO ()
-getJournals o c@NixopsConfig{..} = do
+getJournals :: Options -> NixopsConfig -> JournaldTimeSpec -> Maybe JournaldTimeSpec -> IO ()
+getJournals o c@NixopsConfig{..} timesince mtimeuntil = do
   let nodes = nodeNames o c
+      (scName, scDesc) = scopeNameDesc o c
 
-  echo "Dumping journald logs on cluster.."
+  echo $ unsafeTextToLine $ "Dumping journald logs on " <> scName
   parallelSSH o c "bash"
-    ["-c", "'rm -f log && journalctl -u cardano-node > log'"]
+    ["-c", Arg $ "'rm -f log && journalctl -u cardano-node --since \"" <> fromJournaldTimeSpec timesince <> "\""
+      <> fromMaybe "" ((\timeuntil-> " --until \"" <> fromJournaldTimeSpec timeuntil <> "\"") <$> mtimeuntil)
+      <> " > log'"]
 
   echo "Obtaining dumped journals.."
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
@@ -967,7 +978,7 @@ getJournals o c@NixopsConfig{..} = do
     \(node, outfile) -> scpFromNode o c node "log" outfile
   timeStr <- T.replace ":" "_" . T.pack . timePrint ISO8601_DateAndTime <$> dateCurrent
 
-  let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) (fromNixopsDepl cName) timeStr
+  let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) scDesc timeStr
   printf ("Packing journals into "%s%"\n") archive
   cmd o "tar" (["czf", archive] <> outfiles)
   cmd o "rm" $ "-f" : outfiles
@@ -975,6 +986,7 @@ getJournals o c@NixopsConfig{..} = do
 
 wipeNodeDBs :: Options -> NixopsConfig -> Confirmation -> IO ()
 wipeNodeDBs o c@NixopsConfig{..} confirmation = do
+  echo $ unsafeTextToLine $ "About to wipe node databases on " <> (fst $ scopeNameDesc o c)
   confirmOrTerminate confirmation
   echo "Wiping node databases.."
   parallelSSH o c "rm" ["-rf", "/var/lib/cardano-node"]

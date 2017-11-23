@@ -120,7 +120,7 @@ data Command where
   Stop                  :: Command
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
   CWipeJournals         :: Command
-  GetJournals           :: Command
+  GetJournals           :: JournaldTimeSpec -> Maybe JournaldTimeSpec -> Command
   CWipeNodeDBs          :: Confirmation -> Command
   PrintDate             :: Command
   S3Upload              :: String -> Command
@@ -197,7 +197,12 @@ centralCommandParser =
                                 <$> parserDeployment
                                 <*> switch "prof"         'p' "Dump profiling data as well (requires service stop)")
    , ("wipe-journals",          "Wipe *all* journald logs on cluster",                              pure CWipeJournals)
-   , ("get-journals",           "Obtain cardano-node journald logs from cluster",                   pure GetJournals)
+   , ("get-journals",           "Obtain cardano-node journald logs from cluster",
+                                GetJournals
+                                <$> ((fromMaybe Constants.defaultJournaldTimeSpec . (Types.JournaldTimeSpec <$>))
+                                      <$> optional (optText "since" 's' "Get logs since this journald time spec.  Defaults to '6 hours ago'"))
+                                <*> ((Types.JournaldTimeSpec <$>) <$>
+                                     optional (optText "until" 'u' "Get logs until this journald time spec.  Defaults to 'now'")))
    , ("wipe-node-dbs",          "Wipe *all* node databases on cluster (--on limits the scope, though)",
                                 CWipeNodeDBs
                                 <$> parserConfirmation "Wipe node DBs on the entire cluster?")
@@ -269,7 +274,7 @@ runTop o@Options{..} args topcmd = do
               | Nodes        <- depl -> Ops.dumpLogs              o c withProf >> pure ()
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
             CWipeJournals            -> Ops.wipeJournals              o c
-            GetJournals              -> Ops.getJournals               o c
+            GetJournals since until  -> Ops.getJournals               o c since until
             CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
             S3Upload               d -> Ops.s3Upload                  (T.pack d) c
@@ -336,7 +341,7 @@ runNew _ _ _ = error "impossible"
 generateStakeKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
 generateStakeKeys o configurationKey outdir = do
   -- XXX: compute cardano source path globally
-  configuration <- (<> "/configuration.yaml") . T.strip <$> incmd o "nix-instantiate"
+  configuration <- (<> "/configuration.yaml") <$> incmdStrip o "nix-instantiate"
     [ "--eval"
     , "-A", "cardano-sl.src"
     , "default.nix"
