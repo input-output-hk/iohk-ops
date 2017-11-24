@@ -34,9 +34,9 @@ in {
     services.io-buildkite-agent = {
       enable = true;
       name   = name;
-      openssh.privateKey = "/run/keys/buildkite-ssh-private";
-      openssh.publicKey  = "/run/keys/buildkite-ssh-public";
-      token              = "/run/keys/buildkite-token";
+      openssh.privateKeyPath = "/run/keys/buildkite-ssh-private";
+      openssh.publicKeyPath  = "/run/keys/buildkite-ssh-public";
+      tokenPath              = "/run/keys/buildkite-token";
     };
     deployment.keys = {
       buildkite-ssh-private = {
