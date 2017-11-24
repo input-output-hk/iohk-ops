@@ -7,13 +7,13 @@ let
   isPath = x: !(isAttrs x || isList x || isFunction x || isString x || isInt x || isBool x || isNull x)
                || (isString x && builtins.substring 0 1 x == "/");
 
-  cfg = config.services.buildkite-agent;
+  cfg = config.services.io-buildkite-agent;
 in
 
 {
   options = {
-    services.buildkite-agent = {
-      enable = mkEnableOption "buildkite-agent";
+    services.io-buildkite-agent = {
+      enable = mkEnableOption "io-buildkite-agent";
 
       tokenPath = mkOption {
         type = types.path;
@@ -60,7 +60,7 @@ in
     };
   };
 
-  config = mkIf config.services.buildkite-agent.enable {
+  config = mkIf config.services.io-buildkite-agent.enable {
     users.extraUsers.buildkite-agent =
       { name = "buildkite-agent";
         home = "/var/lib/buildkite-agent";
@@ -71,7 +71,7 @@ in
 
     environment.systemPackages = [ pkgs.buildkite-agent ];
 
-    systemd.services.buildkite-agent =
+    systemd.services.io-buildkite-agent =
       let copy = x: target: perms:
                  "cp -f ${x} ${target}; ${pkgs.coreutils}/bin/chmod ${toString perms} ${target}; ";
       in
