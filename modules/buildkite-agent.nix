@@ -7,20 +7,20 @@ let
   isPath = x: !(isAttrs x || isList x || isFunction x || isString x || isInt x || isBool x || isNull x)
                || (isString x && builtins.substring 0 1 x == "/");
 
-  cfg = config.services.io-buildkite-agent;
+  cfg = config.services.buildkite-agent;
 in
 
 {
   options = {
-    services.io-buildkite-agent = {
+    services.buildkite-agent = {
       enable = mkEnableOption "buildkite-agent";
 
-      token = mkOption {
-        type = types.either types.str types.path;
+      tokenPath = mkOption {
+        type = types.path;
         description = ''
           The token from your Buildkite "Agents" page.
 
-          Either a literal string value, or a path to the token file.
+          A path to the token file.
         '';
       };
 
@@ -40,28 +40,28 @@ in
       };
 
       openssh =
-        { privateKey = mkOption {
-            type = types.either types.str types.path;
+        { privateKeyPath = mkOption {
+            type = types.path;
             description = ''
               Private agent key.
 
-              Either a literal string value, or a path to the token file.
+              A path to the token file.
             '';
           };
-          publicKey = mkOption {
-            type = types.either types.str types.path;
+          publicKeyPath = mkOption {
+            type = types.path;
             description = ''
               Public agent key.
 
-              Either a literal string value, or a path to the token file.
+              A path to the token file.
             '';
           };
         };
     };
   };
 
-  config = mkIf config.services.io-buildkite-agent.enable {
-    users.extraUsers.io-buildkite-agent =
+  config = mkIf config.services.buildkite-agent.enable {
+    users.extraUsers.buildkite-agent =
       { name = "buildkite-agent";
         home = "/var/lib/buildkite-agent";
         createHome = true;
@@ -71,16 +71,9 @@ in
 
     environment.systemPackages = [ pkgs.buildkite-agent ];
 
-    systemd.services.io-buildkite-agent =
-      let copyOrEcho       = x: target: perms:
-                             (if isPath x
-                              then "cp -f ${x} ${target}; "
-                              else "echo '${x}' > ${target}; ")
-                             + "${pkgs.coreutils}/bin/chmod ${toString perms} ${target}; ";
-          catOrLiteral     = x:
-                             (if isPath x
-                              then "$(cat ${toString x})"
-                              else "${x}");
+    systemd.services.buildkite-agent =
+      let copy = x: target: perms:
+                 "cp -f ${x} ${target}; ${pkgs.coreutils}/bin/chmod ${toString perms} ${target}; ";
       in
       { description = "Buildkite Agent";
         wantedBy = [ "multi-user.target" ];
@@ -88,11 +81,11 @@ in
         environment.HOME = "/var/lib/buildkite-agent";
         preStart = ''
             ${pkgs.coreutils}/bin/mkdir -m 0700 -p /var/lib/buildkite-agent/.ssh
-            ${copyOrEcho cfg.openssh.privateKey "/var/lib/buildkite-agent/.ssh/id_rsa"     600}
-            ${copyOrEcho cfg.openssh.publicKey  "/var/lib/buildkite-agent/.ssh/id_rsa.pub" 600}
+            ${copy cfg.openssh.privateKeyPath "/var/lib/buildkite-agent/.ssh/id_rsa"     600}
+            ${copy cfg.openssh.publicKeyPath  "/var/lib/buildkite-agent/.ssh/id_rsa.pub" 600}
 
             cat > "/var/lib/buildkite-agent/buildkite-agent.cfg" <<EOF
-            token="${catOrLiteral cfg.token}"
+            token="$(cat ${toString cfg.tokenPath})"
             name="${cfg.name}"
             meta-data="${cfg.meta-data}"
             hooks-path="${pkgs.buildkite-agent}/share/hooks"
