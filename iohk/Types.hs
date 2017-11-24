@@ -1,18 +1,22 @@
-{-# LANGUAGE DeriveGeneric, GeneralizedNewtypeDeriving, StandaloneDeriving #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 
 module Types where
 
-import qualified Data.Aeson                    as AE
-import qualified Data.ByteString.Char8         as BS.C8
-import           Data.Csv                         (FromField(..))
+import qualified Data.Aeson            as AE
+import qualified Data.ByteString.Char8 as BS.C8
+import           Data.Csv              (FromField (..))
 import           Data.String
 import           Data.Text
-import           Data.Word                        (Word16)
-import           Data.Yaml                        (FromJSON(..), ToJSON(..))
-import           GHC.Generics              hiding (from, to)
+import           Data.Word             (Word16)
+import           Data.Yaml             (FromJSON (..), ToJSON (..))
+import           GHC.Generics          hiding (from, to)
 
-
+
 -- * Elementary types
 --
 newtype AccessKeyId  = AccessKeyId  { fromAccessKeyId  :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
@@ -36,8 +40,11 @@ newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (Fro
 newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
 newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
 newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+data Arch = Linux64 | Mac64 | Win64 deriving Show
+newtype ApplicationVersionKey (a :: Arch) = ApplicationVersionKey Text deriving IsString
+newtype ApplicationVersion (a :: Arch) = ApplicationVersion Text deriving (IsString, Show, Generic, ToJSON)
 
-
+
 -- * Flags
 --
 data BuildNixops      = BuildNixops      | DontBuildNixops    deriving (Bounded, Eq, Ord, Show); instance Flag BuildNixops
@@ -75,7 +82,7 @@ class (Bounded a, Eq a) => Flag a where
   opposite :: a -> a
   opposite = fromBool . not . toBool
 
-
+
 -- * Topology.hs
 --
 data NodeAddr a =
@@ -105,7 +112,7 @@ instance FromJSON NodeType where
         "relay"    -> return NodeRelay
         _otherwise -> fail $ "Invalid NodeType " ++ show typ
 
-
+
 -- * Domain
 --
 data Deployment

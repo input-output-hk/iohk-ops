@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveGeneric, GADTs, LambdaCase, OverloadedStrings, RecordWildCards, StandaloneDeriving, TupleSections, ViewPatterns #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 
+module Main where
+
 import           Control.Monad                    (forM_)
 import           Data.Char                        (toLower)
 import           Data.List
@@ -15,6 +17,7 @@ import qualified System.Environment            as Sys
 import           Turtle                    hiding (env, err, fold, inproc, procs, shells, e, f, o, x)
 import           Time.Types
 import           Time.System
+import           Options.Applicative.Builder (strOption, long, short, metavar)
 
 import           Constants
 import           NixOps
@@ -120,6 +123,9 @@ data Command where
   GetJournals           :: JournaldTimeSpec -> Maybe JournaldTimeSpec -> Command
   CWipeNodeDBs          :: Confirmation -> Command
   PrintDate             :: Command
+  S3Upload              :: String -> Command
+  FindInstallers        :: String -> Command
+  SetVersionJson       :: String -> Command
 deriving instance Show Command
 
 centralCommandParser :: Parser Command
@@ -200,7 +206,11 @@ centralCommandParser =
    , ("wipe-node-dbs",          "Wipe *all* node databases on cluster (--on limits the scope, though)",
                                 CWipeNodeDBs
                                 <$> parserConfirmation "Wipe node DBs on the entire cluster?")
-   , ("date",                   "Print date/time",                                                  pure PrintDate)]
+   , ("date",                   "Print date/time",                                                  pure PrintDate)
+   , ("s3upload",               "test S3 upload",                                                   S3Upload <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV"))  )
+   , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
+   , ("set-version-json",       "set daedalus-latest-version.json to a given rev",                  SetVersionJson <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
+   ]
 
    <|> subcommandGroup "Other:"
     [ ])
@@ -267,6 +277,9 @@ runTop o@Options{..} args topcmd = do
             GetJournals since until  -> Ops.getJournals               o c since until
             CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
+            S3Upload               d -> Ops.s3Upload                  (T.pack d) c
+            FindInstallers         d -> Ops.findInstallers            (T.pack d) c
+            SetVersionJson         d -> Ops.setVersionJson            (T.pack d) c
             Clone{..}                -> error "impossible"
             New{..}                  -> error "impossible"
             SetRev   _ _ _           -> error "impossible"

@@ -32,7 +32,7 @@ done
 
 
 # 0. Check all scripts compile
-nix-shell --run "./scripts/aws.hs --help"
+nix-shell --run "echo in nix-shell"
 ${IOHK_OPS} --help
 
 # 1. check all packages build

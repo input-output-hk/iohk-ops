@@ -27,7 +27,7 @@ let
         }).build.${system};
   iohk-ops-extra-runtime-deps = [
     pkgs.gitFull pkgs.nix-prefetch-scripts compiler.yaml
-    pkgs.wget pkgs.awscli # for scripts/aws.hs
+    pkgs.wget
     pkgs.file
     cardano-sl-pkgs.cardano-sl-auxx
     cardano-sl-pkgs.cardano-sl-tools

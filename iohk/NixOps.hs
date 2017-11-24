@@ -35,6 +35,9 @@ module NixOps (
   , checkstatus
   , parallelSSH
   , NixOps.date
+  , s3Upload
+  , findInstallers
+  , setVersionJson
 
   , awsPublicIPURL
   , defaultEnvironment
@@ -116,6 +119,7 @@ where
 import           Control.Arrow                   ((***))
 import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
+import qualified Control.Lens                  as Lens
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
@@ -148,14 +152,26 @@ import qualified System.IO                     as Sys
 import qualified System.IO.Unsafe              as Sys
 import           Time.System
 import           Time.Types
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x)
+import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText)
 import qualified Turtle                        as Turtle
+
+import           Network.AWS.Auth
+import           Network.AWS               hiding (Seconds, Debug, Region)
+import           Control.Monad.Trans.AWS          (runAWST, AWST)
+import           Network.AWS.S3.PutObject
+import           Network.AWS.S3.CopyObject
+import           Network.AWS.S3.Types      hiding (All, URL, Region)
+import           Control.Monad.Trans.Resource
+import           Data.Coerce
+import qualified Data.HashMap.Strict as HMS
+import           UpdateLogic
 
 import           Constants
 import           Nix
 import           Topology
 import           Types
 import           Utils
+import           GHC.Stack                 (HasCallStack)
 
 
 -- * Some orphan instances..
@@ -374,6 +390,7 @@ data NixopsConfig = NixopsConfig
   , cTopology         :: FilePath
   , cEnvironment      :: Environment
   , cTarget           :: Target
+  , cUpdateBucket     :: Text
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
   , cDeplArgs         :: DeplArgs
@@ -381,6 +398,8 @@ data NixopsConfig = NixopsConfig
   , topology          :: SimpleTopo
   , nixpkgs           :: FilePath
   } deriving (Generic, Show)
+
+instance ToJSON BucketName
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
         <$> v .: "name"
@@ -388,12 +407,15 @@ instance FromJSON NixopsConfig where
         <*> v .:? "topology"      .!= "topology-development.yaml"
         <*> v .: "environment"
         <*> v .: "target"
+        <*> v .: "installer-bucket"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
         -- Filled in in readConfig:
         <*> pure undefined
         <*> pure undefined
+
+instance FromJSON BucketName
 instance ToJSON Environment
 instance ToJSON Target
 instance ToJSON Deployment
@@ -404,6 +426,7 @@ instance ToJSON NixopsConfig where
    , "topology"     .= cTopology
    , "environment"  .= showT cEnvironment
    , "target"       .= showT cTarget
+   , "installer-bucket" .= cUpdateBucket
    , "elements"     .= cElements
    , "files"        .= cFiles
    , "args"         .= cDeplArgs ]
@@ -439,6 +462,7 @@ mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTa
   let EnvSettings{..} = envSettings                             cEnvironment
       cFiles          = deploymentFiles                         cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
+      cUpdateBucket   = "default-bucket"
   cDeplArgs <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology  <- getSimpleTopo cElements cTopology
   nixpkgs   <- Path.fromText <$> incmdStrip o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"]
@@ -452,7 +476,7 @@ writeConfig mFp c@NixopsConfig{..} = do
   pure configFilename
 
 -- | Read back config, doing validation
-readConfig :: MonadIO m => Options -> FilePath -> m NixopsConfig
+readConfig :: (HasCallStack, MonadIO m) => Options -> FilePath -> m NixopsConfig
 readConfig o@Options{..} cf = do
   cfParse <- liftIO $ YAML.decodeFileEither $ Path.encodeString $ cf
   let c@NixopsConfig{..}
@@ -865,6 +889,70 @@ date :: Options -> NixopsConfig -> IO ()
 date o c = parallelIO o c $
   \n -> ssh' o c "date" [] n
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
+
+
+s3Upload :: T.Text -> NixopsConfig -> IO ()
+s3Upload daedalus_rev c = do
+  let
+    say = liftIO . TIO.putStrLn
+    uploadOneFile :: BucketName -> T.Text -> ObjectKey -> Integer -> T.Text -> AWST (ResourceT IO) ()
+    uploadOneFile bucketName localPath remoteKey appver cardanoCommit = do
+      bdy <- chunkedFile defaultChunkSize (T.unpack localPath)
+      let
+        newMetaData :: HMS.HashMap Text Text
+        newMetaData = HMS.fromList [
+              ("daedalus-revision", daedalus_rev)
+            , ("cardano-revision", cardanoCommit)
+            , ("application-version", (T.pack. show) appver)
+          ]
+      void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata newMetaData $ putObject bucketName remoteKey bdy
+    copyObject' :: BucketName -> T.Text -> ObjectKey -> AWST (ResourceT IO) ()
+    copyObject' bucketName source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName source dest
+    uploadHashedInstaller :: T.Text -> T.Text -> Integer -> T.Text -> AWST (ResourceT IO) T.Text
+    uploadHashedInstaller bucketName localPath appver cardanoCommit = do
+      hash <- (liftIO . hashInstaller) localPath
+      let
+        -- splitOn always returns at least 1 item in the list
+        basename' = last $ T.splitOn "/" $ localPath
+      uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
+      copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
+      return hash
+    hashAndUpload :: Integer -> T.Text -> CiResult -> AWST (ResourceT IO) ()
+    hashAndUpload appver cardanoCommit ciResult = do
+      case ciResult of
+        TravisResult localPath _ _ _ _ -> do
+          hash <- uploadHashedInstaller (cUpdateBucket c) localPath appver cardanoCommit
+          say $ "darwin installer " <> localPath <> " hash " <> hash
+        AppveyorResult localPath _ _ -> do
+          hash <- uploadHashedInstaller (cUpdateBucket c) localPath appver cardanoCommit
+          say $ "windows installer " <> localPath <> " hash " <> hash
+
+  env <- newEnv Discover
+  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
+    print res
+    let
+      appver = grApplicationVersion $ globalResult res
+      cardanoCommit' = grCardanoCommit $ globalResult res
+    liftIO $ runResourceT . runAWST env $ do
+      say $ "uploading things to " <> coerce (cUpdateBucket c)
+      hashAndUpload appver cardanoCommit' (travisResult res)
+      hashAndUpload appver cardanoCommit' (appveyorResult res)
+
+configurationKeys :: Environment -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64)
+configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")
+configurationKeys Staging = ("mainnet_dryrun_wallet_win64", "mainnet_dryrun_wallet_macos64")
+
+findInstallers :: T.Text -> NixopsConfig -> IO ()
+findInstallers daedalus_rev c = do
+  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
+    print res
+    TIO.putStrLn $ githubWikiRecord res
+
+setVersionJson :: T.Text -> NixopsConfig -> IO ()
+setVersionJson daedalus_rev c = do
+  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
+    print res
+    updateVersionJson res (cUpdateBucket c)
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
