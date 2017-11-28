@@ -1,6 +1,5 @@
 steps:
   - label: 'iohk-ops'
-    command: 'scripts/ci.sh'
+    command: 'export NIX_PATH="nixpkgs=$(/run/current-system/sw/bin/nix-build "$(dirname -- $(readlink -f -- ${BASH_SOURCE[0]}))/fetch-nixpkgs.nix" -o nixpkgs)"; export NIX_BUILD_SHELL=/run/current-system/sw/bin/bash; export NIX_REMOTE=daemon; /run/current-system/sw/bin/nix-shell -p nix -p bash -p coreutils --run scripts/ci.sh'
     env:
       NIX_REMOTE: daemon
-      PATH: bin:/run/current-system/sw/bin
