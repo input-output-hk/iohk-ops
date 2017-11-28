@@ -9,32 +9,11 @@ let
       ./../modules/hydra-slave.nix
     ];
   };
-  mkBuildkiteAgent = { config, name, pkgs, ... }: {
+  mkBuildkiteAgent = { ... }: {
     imports = [
       ./../modules/common.nix
-      ./../modules/hydra-slave.nix
+      ./../modules/buildkite-agent.nix
     ];
-    services.buildkite-agent = {
-      enable = true;
-      name   = name;
-      openssh.privateKey = "/run/keys/buildkite-ssh-private";
-      openssh.publicKey  = "/run/keys/buildkite-ssh-public";
-      token              = "/run/keys/buildkite-token";
-    };
-    deployment.keys = {
-      buildkite-ssh-private = {
-        keyFile = ./. + "/../static/buildkite-ssh";
-        user    = "buildkite-agent";
-      };
-      buildkite-ssh-public = {
-        keyFile = ./. + "/../static/buildkite-ssh.pub";
-        user    = "buildkite-agent";
-      };
-      buildkite-token = {
-        keyFile = ./. + "/../static/buildkite-token";
-        user    = "buildkite-agent";
-      };
-    };
   };
 in {
   hydra = { config, pkgs, ... }: {
