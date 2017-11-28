@@ -8,6 +8,12 @@ let
       ./../modules/common.nix
       ./../modules/hydra-slave.nix
     ];
+  };
+  mkBuildkiteAgent = { config, name, pkgs, ... }: {
+    imports = [
+      ./../modules/common.nix
+      ./../modules/hydra-slave.nix
+    ];
     services.buildkite-agent = {
       enable = true;
       name   = name;
@@ -46,6 +52,9 @@ in {
 
   hydra-build-slave-1 = mkHydraBuildSlave;
   hydra-build-slave-2 = mkHydraBuildSlave;
+
+  buildkite-agent-1   = mkBuildkiteAgent;
+  buildkite-agent-2   = mkBuildkiteAgent;
 
   cardano-deployer = { config, pkgs, ... }: {
     imports = [
