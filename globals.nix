@@ -23,6 +23,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                                    region   = centralRegion;
                                    zone     = centralZone;
                                    type     = "other";
+                                   public   = false;
                                    kademlia = false;
                                    peers    = [];
                                    address  = "explorer.cardano";
@@ -32,6 +33,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                          value = { org      = defaultOrg;
                                    region   = centralRegion;
                                    zone     = centralZone;
+                                   public   = false;
                                    type     = "other";
                                    kademlia = false;
                                    peers    = [];
@@ -51,7 +53,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     indexed        = imap (n: x:
             { name = x.name;
              value = rec {
-                  inherit (x.value) org region zone kademlia peers address port;
+                  inherit (x.value) org region zone kademlia peers address port public;
                                 i = n - 1;
                              name = x.name;       # This is an important identity, let's not break it.
                          nodeType = x.value.type;
