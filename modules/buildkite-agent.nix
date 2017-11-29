@@ -2,7 +2,7 @@
 
 {
   imports = [
-    ./../modules/hydra-build-slave.nix
+    ./../modules/hydra-slave.nix
   ];
 
   services.buildkite-agent = {
