@@ -11,6 +11,7 @@
     openssh.privateKey = "/run/keys/buildkite-ssh-private";
     openssh.publicKey  = "/run/keys/buildkite-ssh-public";
     token              = "/run/keys/buildkite-token";
+    meta-data          = "system=x86_64-linux";
   };
 
   deployment.keys = {
