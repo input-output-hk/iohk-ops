@@ -14,11 +14,13 @@
     meta-data          = "system=x86_64-linux";
     hooks-path         = "/var/lib/buildkite-agent/hooks";
   };
+  users.users.buildkite-agent.extraGroups = [ "keys" ];
 
   deployment.keys = {
     pre-command = {
       keyFile = ./. + "/../static/buildkite-hook";
       destDir = "/var/lib/buildkite-agent/hooks";
+      user    = "buildkite-agent";
     };
     buildkite-ssh-private = {
       keyFile = ./. + "/../static/buildkite-ssh";
