@@ -33,6 +33,9 @@ in
 
       # load S3 credentials for artifact upload
       source /var/lib/buildkite-agent/hooks/aws-creds
+
+      # load extra credentials for user services
+      source /var/lib/buildkite-agent/hooks/buildkite-extra-creds
     '';
     hooks.pre-command = ''
       # Clean out the state that gets messed up and makes builds fail.
@@ -53,6 +56,12 @@ in
   deployment.keys = {
     aws-creds = {
       keyFile = ./. + "/../static/buildkite-hook";
+      destDir = "/var/lib/buildkite-agent/hooks";
+      user    = "buildkite-agent";
+      permissions = "0770";
+    };
+    buildkite-extra-creds = {
+      keyFile = ./. + "/../static/buildkite-hook-extra-creds.sh";
       destDir = "/var/lib/buildkite-agent/hooks";
       user    = "buildkite-agent";
       permissions = "0770";
