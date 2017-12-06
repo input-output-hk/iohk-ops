@@ -12,9 +12,14 @@
     openssh.publicKey  = "/run/keys/buildkite-ssh-public";
     token              = "/run/keys/buildkite-token";
     meta-data          = "system=x86_64-linux";
+    hooks-path         = "/var/lib/buildkite-agent/hooks";
   };
 
   deployment.keys = {
+    pre-command = {
+      keyFile = ./. + "/../static/buildkite-hook";
+      destDir = "/var/lib/buildkite-agent/hooks";
+    };
     buildkite-ssh-private = {
       keyFile = ./. + "/../static/buildkite-ssh";
       user    = "buildkite-agent";
