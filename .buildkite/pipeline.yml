@@ -5,3 +5,5 @@ steps:
       - "system=x86_64-linux"
     env:
       NIX_REMOTE: daemon
+    agents:
+      system: x86_64-linux
