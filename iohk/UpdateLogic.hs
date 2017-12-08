@@ -351,5 +351,6 @@ updateVersionJson info bucket = do
         bdy = toBody body
       void . send $ Lens.set poACL (Just OPublicRead) $ putObject bucketName remoteKey bdy
   env' <- newEnv Discover
+  -- XXX: change the hard-coded 'Tokyo' region to the AWS query of the bucket's region.
   liftIO $ runResourceT . runAWST env' $ within Tokyo $ do
     uploadOneFile (BucketName bucket) json "daedalus-latest-version.json"
