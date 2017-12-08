@@ -47,7 +47,7 @@ import           Github                       (Status, context,
                                                fetchGithubStatus, statuses,
                                                targetUrl)
 import           Network.AWS                  (Credentials (Discover), newEnv,
-                                               send, toBody)
+                                               send, toBody, within, Region(Tokyo))
 import           Network.AWS.S3.PutObject     (poACL, putObject)
 import           Network.AWS.S3.Types         (BucketName (BucketName),
                                                ObjectCannedACL (OPublicRead),
@@ -351,5 +351,5 @@ updateVersionJson info bucket = do
         bdy = toBody body
       void . send $ Lens.set poACL (Just OPublicRead) $ putObject bucketName remoteKey bdy
   env' <- newEnv Discover
-  liftIO $ runResourceT . runAWST env' $ do
+  liftIO $ runResourceT . runAWST env' $ within Tokyo $ do
     uploadOneFile (BucketName bucket) json "daedalus-latest-version.json"
