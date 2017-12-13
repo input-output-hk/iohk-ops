@@ -16,6 +16,7 @@ let
     ];
   };
 in {
+  require = [ ./ugly-fix.nix ];
   hydra = { config, pkgs, ... }: {
     # On first setup:
 
