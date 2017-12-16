@@ -1,6 +1,6 @@
 {
     "url": "https://github.com/input-output-hk/cardano-sl",
     "fetchSubmodules": "true",
-    "sha256": "0gsck831yf5cbwis5p2sr19ilpa5065f6iylrcrx6g8p5kzzx8xb",
-    "rev": "54da985d10005963fd66a3ed814b1c8192aff797"
+    "sha256": "1z2yjkm0qwhf588qnxcbz2d5mxvhqdxawwl8dczfnl47rb48jm52",
+    "rev": "0c1fab91a7358fcb4c151a3a028ed650f7a36cbd"
 }
