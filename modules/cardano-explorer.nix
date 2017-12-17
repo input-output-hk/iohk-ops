@@ -31,8 +31,8 @@ in
             # Serve static files or fallback to browser history api
             tryFiles = "$uri /index.html";
           };
-          "/api/".proxyPass = "http://localhost:8100";
-          "/socket.io/".proxyPass = "http://localhost:8110";
+          "/api/".proxyPass = "http://127.0.0.1:8100";
+          "/socket.io/".proxyPass = "http://127.0.0.1:8110";
         };
         # Otherwise nginx serves files with timestamps unixtime+1 from /nix/store
         extraConfig = ''
