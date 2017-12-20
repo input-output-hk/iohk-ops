@@ -4,6 +4,6 @@
 
 source config
 
-./auxx/bin/cardano-auxx $COMMONOPTS $AUXXOPTS cmd --commands "propose-update ${VOTER_INDEX} vote-all ${lastKnownBlockVersion} 65536 70000 csl-daedalus:${applicationVersion} win64 ${WIN64_INSTALLER} none macos64 ${DARWIN_INSTALLER} none"
+./auxx/bin/cardano-auxx $COMMONOPTS $AUXXOPTS cmd --commands "propose-update ${VOTER_INDEX} vote-all:true ${lastKnownBlockVersion} ~software~csl-daedalus:${applicationVersion} (upd-bin \"win64\" ${WIN64_INSTALLER}) (upd-bin \"macos64\" ${DARWIN_INSTALLER})"
 
 echo you must now update the config file to contain the proposal ID
