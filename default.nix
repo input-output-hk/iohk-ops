@@ -13,7 +13,7 @@ with pkgs.lib;
 with pkgs.haskell.lib;
 
 let
-  nixops = 
+  nixops =
     let
       # nixopsUnstable = /path/to/local/src
       nixopsUnstable = pkgs.fetchFromGitHub {
@@ -32,6 +32,7 @@ let
     cardano-sl-pkgs.cardano-sl-auxx
     cardano-sl-pkgs.cardano-sl-tools
     nixops
+    pkgs.terraform
   ];
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
