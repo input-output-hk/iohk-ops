@@ -37,4 +37,4 @@ environment:
       secure: BSNfEghh/xxx=
     AWS_SECRET_ACCESS_KEY
       secure: BSNfEghh/xxx=
-    BUCKET: XXX
+    S3_BUCKET: XXX

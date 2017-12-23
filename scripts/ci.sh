@@ -92,4 +92,8 @@ ${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-infra.yaml'  create deploy --dry-r
 banner 'Infra evaluated'
 fi
 
+echo "Validating terraform"
+
+nix-shell --run "terraform validate -check-variables=false terraform/appveyor-s3-cache"
+
 ./scripts/find-all-revisions.sh
