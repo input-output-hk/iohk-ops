@@ -12,7 +12,7 @@
     openssh.publicKey  = "/run/keys/buildkite-ssh-public";
     token              = "/run/keys/buildkite-token";
     meta-data          = "system=x86_64-linux";
-    hooks-path         = "/var/lib/buildkite-agent/hooks";
+    hooksPath          = "/var/lib/buildkite-agent/hooks";
   };
   users.users.buildkite-agent.extraGroups = [ "keys" ];
 
