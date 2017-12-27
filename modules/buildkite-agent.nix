@@ -21,6 +21,7 @@
       keyFile = ./. + "/../static/buildkite-hook";
       destDir = "/var/lib/buildkite-agent/hooks";
       user    = "buildkite-agent";
+      permissions = "0770";
     };
     buildkite-ssh-private = {
       keyFile = ./. + "/../static/buildkite-ssh";
