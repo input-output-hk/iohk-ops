@@ -1,6 +1,6 @@
 {
-    "owner":  "deepfire",
+    "owner":  "NixOS",
     "repo":   "nixpkgs",
-    "rev": "89d9ff6a39bfac162ad81e301f404a3fe6aa7fcc",
-    "sha256": "1rdv7sjnrbzfnpkd14k9i6252jkvs81sac7y8vrxsvvbhv297lbi"
+    "rev": "3aec59c99ff6692468a069fa8a8d6a05000fca81",
+    "sha256": "0z0scsbxiscj43j9zms3jkc3f7jj4vnijsjpv5z6smc4s34ddfxs"
 }
