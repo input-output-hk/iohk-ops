@@ -31,3 +31,5 @@ pkgs/stack2nix
 /topology.nix
 txgen.log
 txgen.json
+
+.terraform
