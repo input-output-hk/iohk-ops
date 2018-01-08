@@ -58,10 +58,10 @@ rec {
   cpu_monitor = {
     name = "High CPU usage";
     type = "metric alert";
-    query = config: "avg(last_5m):avg:system.load.norm.1{depl:${config.deployment.name},!host:iohk-infra.ec2.cardano-deployer,!host:iohk-infra.ec2.hydra} by {host} > 0.9";
+    query = config: "avg(last_5m):avg:system.load.norm.1{depl:${config.deployment.name},!host:iohk-infra.ec2.cardano-deployer,!host:iohk-infra.ec2.hydra} by {host} > 1.1";
     monitorOptions.thresholds = {
-      warning = "0.75";
-      critical = "0.9";
+      warning = "1";
+      critical = "1.1";
     };
   };
 
