@@ -48,7 +48,11 @@ in {
       connect-timeout = 10
     '';
 
+    # use all cores
     buildCores = 0;
+
+    # allow 4 substituters in parallel
+    maxJobs = 4;
 
     nixPath = [ "nixpkgs=/run/current-system/nixpkgs" ];
 
