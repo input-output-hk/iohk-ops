@@ -49,7 +49,7 @@ cleanup() {
         for depl in ${CLEANUP_DEPLS}
         do
                 test -z "${CLEANUP_DEPLOYS}" ||
-                        ${IOHK_OPS} --config ${depl}'.yaml' destroy delete >/dev/null 2>&1
+                        ${IOHK_OPS} --config ${depl}'.yaml' destroy delete
                 test -z "${CLEANUP_CONFIGS}" ||
                         rm -f                ${depl}'.yaml'
         done
