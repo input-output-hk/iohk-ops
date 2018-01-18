@@ -6,7 +6,7 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node";
-  cardano = (import ./../default.nix { enableProfiling = cfg.enableProfiling; }).cardano-sl-static;
+  cardano = (import ./../default.nix { enableProfiling = cfg.enableProfiling; }).cardano-sl-node-static;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
@@ -43,7 +43,7 @@ let
     "--logs-prefix /var/lib/cardano-node"
     "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
-    "--configuration-file ${cardano.src}/configuration.yaml"
+    "--configuration-file ${cardano.src + "/../lib/"}/configuration.yaml"
     "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
@@ -209,6 +209,7 @@ in {
         KillSignal = "SIGINT";
         WorkingDirectory = stateDir;
         PrivateTmp = true;
+        Type = "notify";
       };
     };
   };
