@@ -17,6 +17,8 @@ WITH_EXPLORER=${7:-true}
 WITH_REPORT_SERVER=${8:-true}
 WITH_INFRA=${9:-true}
 
+homestate="$(mktemp -d -t iohk-ops.XXXXXXXXXXXX)"
+export HOME="${homestate}"
 
 # PREPARE
 mkdir -p cardano-sl/explorer/frontend/dist
@@ -48,11 +50,10 @@ cleanup() {
         set +xe
         for depl in ${CLEANUP_DEPLS}
         do
-                test -z "${CLEANUP_DEPLOYS}" ||
-                        ${IOHK_OPS} --config ${depl}'.yaml' destroy delete
                 test -z "${CLEANUP_CONFIGS}" ||
                         rm -f                ${depl}'.yaml'
         done
+        rm -rf ${homestate}
 }
 trap cleanup EXIT
 
