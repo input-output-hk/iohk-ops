@@ -19,6 +19,7 @@ logs-analyze/
 
 static/*.secret
 static/github_token
+static/buildkite_token
 static/id_buildfarm
 github_token
 
