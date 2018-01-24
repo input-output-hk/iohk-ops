@@ -2,6 +2,7 @@
 {-# LANGUAGE ExplicitForAll    #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Utils where
 
@@ -26,11 +27,20 @@ import           GHC.Generics              hiding (from, to)
 import           Turtle
 
 fetchCachedUrl :: HasCallStack => T.Text -> T.Text -> T.Text-> IO ()
-fetchCachedUrl url name outPath = do
-  exitStatus <- proc "nix-build" [ "-E", "with import <nixpkgs> {}; let file = builtins.fetchurl \"" <> url <> "\"; in runCommand \"" <> name <> "\" {} \"ln -sv ${file} $out\"", "-o", outPath ] mempty
-  case exitStatus of
-    ExitSuccess   -> return ()
-    ExitFailure _ -> error "error downloading file"
+fetchCachedUrl url name outPath = fetchCachedUrl' url name outPath Nothing
+
+fetchCachedUrlWithSHA1 :: HasCallStack => T.Text -> T.Text -> T.Text -> T.Text -> IO ()
+fetchCachedUrlWithSHA1 url name outPath sha1 = fetchCachedUrl' url name outPath (Just sha1)
+
+fetchCachedUrl' :: HasCallStack => T.Text -> T.Text -> T.Text -> Maybe T.Text -> IO ()
+fetchCachedUrl' url name outPath sha1 = proc "nix-build" args mempty >>= handleExit
+  where
+    args = [ "-E", "with import <nixpkgs> {}; let file = " <> fetchExpr <> "; in runCommand \"" <> name <> "\" {} \"ln -sv ${file} $out\"", "-o", outPath ]
+    fetchExpr = case sha1 of
+      Just hash -> "pkgs.fetchurl { url = \"" <> url <> "\"; sha1 = \"" <> hash <> "\"; }"
+      Nothing   -> "builtins.fetchurl \"" <> url <> "\""
+    handleExit ExitSuccess     = return ()
+    handleExit (ExitFailure _) = error "error downloading file"
 
 fetchJson :: HasCallStack => FromJSON a => T.Text -> IO a
 fetchJson = fetchJson' mempty
