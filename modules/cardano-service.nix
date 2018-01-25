@@ -13,8 +13,10 @@ let
 
   command = toString [
     cfg.executable
-    (optionalString (cfg.publicIP != null) "--address ${cfg.publicIP}:${toString cfg.port}")
-    "--listen ${cfg.privateIP}:${toString cfg.port}"
+    (optionalString (cfg.publicIP != null && params.name != "explorer")
+     "--address ${cfg.publicIP}:${toString cfg.port}")
+    (optionalString (params.name != "explorer")
+     "--listen ${cfg.privateIP}:${toString cfg.port}")
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
