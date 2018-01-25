@@ -11,7 +11,7 @@ with pkgs.lib;
 with pkgs.haskell.lib;
 
 let
-  prodMode = addConfigureFlags [ "-f-asserts" "-fdev-mode" "-fdev-custom-config" "--ghc-options=-DCONFIG=benchmark"];
+  prodMode = addConfigureFlags [ "-f-asserts" "-fdev-mode" "--ghc-options=-DCONFIG=bench"];
   addConfigureFlags = flags: drv: overrideCabal drv (drv: {
     configureFlags = flags;
   });
@@ -34,16 +34,15 @@ let
       configureFlags = [
         "-f-asserts"
         "-fdev-mode"
-        "-fdev-custom-config"
-        "-fwith-explorer"
+        "-f-with-explorer"
         # https://github.com/NixOS/nixpkgs/pull/24692#issuecomment-306509337
         "--ghc-option=-optl-lm"
-        "--ghc-options=-DCONFIG=benchmark"
+        "--ghc-options=-DCONFIG=bench"
       ];
     });
     cardano-sl-static = justStaticExecutables self.cardano-sl;
     cardano-report-server-static = justStaticExecutables self.cardano-report-server;
-    cardano-sl-lwallet-static = justStaticExecutables self.cardano-sl-lwallet;
+    cardano-sl-lwallet-static = justStaticExecutables self.cardano-sl-auxx;
     cardano-sl-tools-static = justStaticExecutables self.cardano-sl-tools;
 
     # TODO: https://github.com/input-output-hk/stack2nix/issues/7

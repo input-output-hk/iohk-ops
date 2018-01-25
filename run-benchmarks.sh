@@ -5,12 +5,13 @@ set -o xtrace # print commands
 
 CLUSTERNAME=edgenodes-scaling
 SENDMODE='send-random'
-TIME=2500     # Number of transactions sent in each thread TODO: rename
-CONC=4        # number of threads in the generator
-DELAY=500     # number of ms each thread waits between transactions
+# TIME=2500     # Number of transactions sent in each thread TODO: rename
+TIME=1250     # Number of transactions sent in each thread TODO: rename
+CONC=5        # number of threads in the generator
+DELAY=0     # number of ms each thread waits between transactions
 COOLDOWN=10   # number of slots for cooldown, i.e., not sending
 	      # transactions, and allowing the mempools to empty
-NGENERATORS=4 # Additional generator to spawn
+NGENERATORS=7 # Additional generator to spawn
 
 for n in $(seq 1 $NGENERATORS); do
     OFFSET[$n]="$((${n} * ${TIME} * ${CONC}))" # offset for second transaction generator
@@ -47,18 +48,24 @@ for n in $(seq 1 $NGENERATORS); do
     ./lwallet/bin/cardano-auxx \
 	--db-path wdb$n \
 	--log-config static/csl-logging.yaml --logs-prefix experiments/wallet/wallet$n  \
-	--rich-poor-distr "($CORENODES,50000,6000000000,0.99)"  \
-	${RELAYS} \
+	${RELAYS}  \
+	--configuration-file configuration.yaml \
+	--configuration-key bench \
 	--system-start $SYSTEMSTART cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE tps-sent-$n.csv" +RTS -s -N1 -RTS >/dev/null 2>&1 &
+	# --rich-poor-distr "($CORENODES,50000,6000000000,0.99)"  \
 
 done
+
+export AUXX_START_AT=0
 
 ./lwallet/bin/cardano-auxx \
     --db-path wdb \
     --log-config static/csl-logging.yaml --logs-prefix experiments/wallet  \
-    --rich-poor-distr "($CORENODES,50000,6000000000,0.99)"  \
-    ${RELAYS} \
-    --system-start $SYSTEMSTART cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE tps-sent.csv" +RTS -s -N1 -RTS >/dev/null 2>&1
+    ${RELAYS}  \
+    --configuration-file configuration.yaml \
+    --configuration-key bench \
+    --system-start $SYSTEMSTART cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE tps-sent.csv" +RTS -s -N1 -RTS >generator.log 2>&1
+    # --rich-poor-distr "($CORENODES,50000,6000000000,0.99)"  \
 
 
 sleep 10m # for cooldown

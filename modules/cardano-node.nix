@@ -10,6 +10,7 @@ let
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
+  configurationFile = "${../configuration.yaml}";
 
   command = toString [
     cfg.executable
@@ -26,12 +27,12 @@ let
     (optionalString (!cfg.productionMode) "--rebuild-db")
     (optionalString (!cfg.productionMode) "--spending-genesis ${toString cfg.nodeIndex}")
     (optionalString (!cfg.productionMode) "--vss-genesis ${toString cfg.nodeIndex}")
-    (optionalString (cfg.distribution && !cfg.productionMode && cfg.richPoorDistr) (
-       "--rich-poor-distr \"${rnpDistributionParam}\""))
-    (optionalString (cfg.distribution && !cfg.productionMode && !cfg.richPoorDistr) (
-       if cfg.bitcoinOverFlat
-       then "--bitcoin-distr \"${distributionParam}\""
-       else "--flat-distr \"${distributionParam}\""))
+    # (optionalString (cfg.distribution && !cfg.productionMode && cfg.richPoorDistr) (
+    #    "--rich-poor-distr \"${rnpDistributionParam}\""))
+    # (optionalString (cfg.distribution && !cfg.productionMode && !cfg.richPoorDistr) (
+    #    if cfg.bitcoinOverFlat
+    #    then "--bitcoin-distr \"${distributionParam}\""
+    #    else "--flat-distr \"${distributionParam}\""))
     (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
     (optionalString (cfg.serveEkg)             "--ekg-server ${cfg.privateIP}:8080")
@@ -45,8 +46,10 @@ let
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
     # (optionalString (cfg.type == "relay") "--kademlia /run/keys/kademlia.yaml")
     (optionalString (cfg.topologyFile != null) "--topology ${cfg.topologyFile}")
+    "--configuration-file ${configurationFile}"
+    "--configuration-key bench"
     "--node-id ${cfg.nodeName}"
-    "--policies ${../. + "/policy_${cfg.type}.yaml"}"
+    # "--policies ${../. + "/policy_${cfg.type}.yaml"}"
     # "--node-type ${cfg.type}"
     cfg.extraArgs
   ];
