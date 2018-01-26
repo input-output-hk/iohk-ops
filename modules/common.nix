@@ -17,6 +17,9 @@ in {
 
   services.openssh.passwordAuthentication = false;
   services.openssh.enable = true;
+  # Non-root users are not allowed to install authorized keys.
+  services.openssh.authorizedKeysFiles = pkgs.lib.mkForce
+    [ "/etc/ssh/authorized_keys.d/%u" ];
 
   services.ntp.enable = true;
 

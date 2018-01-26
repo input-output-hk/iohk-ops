@@ -20,4 +20,4 @@ Collection of tooling and automation to deploy IOHK infrastructure.
 
 ### Getting SSH access
 
-Append https://github.com/input-output-hk/pos-prototype-deployment/blob/master/lib.nix#L46 and submit a PR.
+Append https://github.com/input-output-hk/iohk-ops/blob/master/lib.nix#L83 and submit a PR.
