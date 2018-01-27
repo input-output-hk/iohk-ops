@@ -1,10 +1,11 @@
 { mkDerivation, aeson, aeson-pretty, amazonka, amazonka-s3
-, ansi-terminal, base, bytestring, cassava, containers, directory
-, dns, filepath, git, hourglass, hspec, http-client
-, http-client-tls, http-types, lens, lens-aeson, managed, mtl
-, optional-args, optparse-applicative, resourcet, safe, stdenv
-, system-filepath, text, turtle, universum, unix
-, unordered-containers, utf8-string, vector, yaml
+, ansi-terminal, base, bytestring, cassava, containers, cryptonite
+, directory, dns, errors, git, hourglass, hspec, http-client
+, http-client-tls, http-conduit, http-types, lens, lens-aeson
+, managed, memory, mtl, network-uri, optional-args
+, optparse-applicative, resourcet, safe, stdenv, system-filepath
+, text, turtle, universum, unix, unordered-containers, utf8-string
+, vector, yaml
 }:
 mkDerivation {
   pname = "iohk-ops";
@@ -14,11 +15,18 @@ mkDerivation {
   isExecutable = true;
   executableHaskellDepends = [
     aeson aeson-pretty amazonka amazonka-s3 ansi-terminal base
-    bytestring cassava containers directory dns filepath git hourglass
-    http-client http-client-tls http-types lens lens-aeson managed mtl
-    optional-args optparse-applicative resourcet safe system-filepath
-    text turtle unix unordered-containers utf8-string vector yaml
+    bytestring cassava containers cryptonite directory dns errors git
+    hourglass http-client http-client-tls http-conduit http-types lens
+    lens-aeson managed memory mtl network-uri optional-args
+    optparse-applicative resourcet safe system-filepath text turtle
+    unix unordered-containers utf8-string vector yaml
   ];
-  testHaskellDepends = [ base hspec universum ];
+  testHaskellDepends = [
+    aeson amazonka amazonka-s3 ansi-terminal base bytestring cassava
+    cryptonite directory errors git hspec http-client http-client-tls
+    http-conduit http-types lens managed memory network-uri resourcet
+    safe system-filepath text turtle universum unordered-containers
+    yaml
+  ];
   license = stdenv.lib.licenses.bsd3;
 }

@@ -919,13 +919,9 @@ s3Upload daedalus_rev c = do
       return hash
     hashAndUpload :: Integer -> T.Text -> CiResult -> AWST (ResourceT IO) ()
     hashAndUpload appver cardanoCommit ciResult = do
-      case ciResult of
-        TravisResult localPath _ _ _ _ -> do
-          hash <- uploadHashedInstaller (cUpdateBucket c) localPath appver cardanoCommit
-          say $ "darwin installer " <> localPath <> " hash " <> hash
-        AppveyorResult localPath _ _ -> do
-          hash <- uploadHashedInstaller (cUpdateBucket c) localPath appver cardanoCommit
-          say $ "windows installer " <> localPath <> " hash " <> hash
+      let path = resultLocalPath ciResult
+      hash <- uploadHashedInstaller (cUpdateBucket c) path appver cardanoCommit
+      say $ (resultDesc ciResult) <> " " <> path <> " hash " <> hash
 
   env <- newEnv Discover
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
@@ -935,8 +931,10 @@ s3Upload daedalus_rev c = do
       cardanoCommit' = grCardanoCommit $ globalResult res
     liftIO $ runResourceT . runAWST env $ do
       say $ "uploading things to " <> coerce (cUpdateBucket c)
-      hashAndUpload appver cardanoCommit' (travisResult res)
-      hashAndUpload appver cardanoCommit' (appveyorResult res)
+      let maybeHashAndUpload = maybe (pure ()) (hashAndUpload appver cardanoCommit')
+      maybeHashAndUpload $ buildkiteResult res
+      maybeHashAndUpload $ travisResult res
+      maybeHashAndUpload $ appveyorResult res
 
 configurationKeys :: Environment -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64)
 configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")

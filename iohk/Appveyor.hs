@@ -19,10 +19,10 @@ import           Utils           (fetchJson)
 import           Types           (ApplicationVersion(ApplicationVersion), Arch(Win64))
 import           Data.Coerce                      (coerce)
 
-newtype JobId = JobId T.Text deriving (Show, Monoid)
-newtype BuildNumber = BuildNumber Integer deriving (Show)
-newtype Username = Username { usernameToText :: T.Text } deriving (Show, Monoid, IsString)
-newtype Project = Project { projectToText :: T.Text } deriving (Show, Monoid, IsString)
+newtype JobId = JobId T.Text deriving (Show, Eq, Monoid)
+newtype BuildNumber = BuildNumber Integer deriving (Show, Eq)
+newtype Username = Username { usernameToText :: T.Text } deriving (Show, Eq, Monoid, IsString)
+newtype Project = Project { projectToText :: T.Text } deriving (Show, Eq, Monoid, IsString)
 
 data ProjectBuildResults = ProjectBuildResults {
     _projectBuildResultsBuild :: Build
