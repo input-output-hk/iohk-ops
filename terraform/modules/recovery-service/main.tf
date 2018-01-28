@@ -13,7 +13,7 @@ resource "aws_instance" "recovery_service_web" {
     user = "ubuntu"
   }
 
-  instance_type = "t2.micro"
+  instance_type = "t2.small"
 
   # Lookup the correct AMI based on the region
   # we specified
