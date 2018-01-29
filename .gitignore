@@ -34,3 +34,4 @@ txgen.log
 txgen.json
 
 .terraform
+**/terraform.tfvars
