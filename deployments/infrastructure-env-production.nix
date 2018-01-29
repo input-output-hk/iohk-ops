@@ -15,6 +15,9 @@ in {
 
     services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
 
+    security.acme.certs = mkForce {};
+    services.nginx.enable = mkForce false;
+
     deployment.ec2.elasticIPv4 = resources.elasticIPs.hydra-ip;
 
     deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
