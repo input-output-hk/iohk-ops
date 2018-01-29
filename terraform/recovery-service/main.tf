@@ -1,9 +1,3 @@
-provider "aws" {
-  access_key = "${var.access_key}"
-  secret_key = "${var.secret_key}"
-  region = "${var.aws_region}"
-}
-
 resource "aws_instance" "recovery_service_web" {
   tags = {
     Name = "Recovery Service Web"
@@ -15,8 +9,7 @@ resource "aws_instance" "recovery_service_web" {
 
   instance_type = "t2.small"
 
-  # Lookup the correct AMI based on the region
-  # we specified
+  # Lookup the correct AMI based on the region we specified
   ami = "${lookup(var.aws_amis, var.aws_region)}"
 
   key_name = "${aws_key_pair.auth.id}"
@@ -68,12 +61,10 @@ resource "aws_key_pair" "auth" {
 }
 
 ### fixme: we have run out of elastic IPs for the time being
-# resource "aws_eip" "recovery_service_web_eip" {
-#   instance = "${aws_instance.recovery_service_web.id}"
-#   vpc      = false
-# }
-
-
+resource "aws_eip" "recovery_service_web_eip" {
+  instance = "${aws_instance.recovery_service_web.id}"
+  vpc      = false
+}
 
 # data "aws_route53_zone" "selected" {
 #   name         = "test.com."
