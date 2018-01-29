@@ -44,6 +44,21 @@
      terraform init
    #+END_SRC
 
+** Set the workspace
+
+   Workspaces provide namespacing for the remote state file. Set
+   workspace name to either =staging= or =production=.
+
+   #+BEGIN_SRC sh
+     terraform workspace new staging
+     aws s3 ls --recursive s3://iohk-ops-tfstate
+     terraform workspace list
+     terraform workspace select staging
+   #+END_SRC
+
+   The name of the selected workspace can be accessed with the
+   =${terraform.workspace}= variable.
+
 ** Set up credentials
 
    Create a =terraform.tfvars= file in this directory and replace =foo=
