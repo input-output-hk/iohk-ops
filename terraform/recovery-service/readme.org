@@ -1,35 +1,4 @@
 * Recovery Service Web Server Deployment
-
-** Prerequisites
-
-*** AWS credentials
-
-   If you don't already have an access key and secret key, create a
-   =terraform= IAM group with the =AmazonEC2FullAccess= permission, and
-   a new user in that group with =Programmatic access=. After the user
-   is created you'll have one chance to see the secret key. The access
-   key is always accessible from the AWS console.
-
-   Side note: terraform will pick credentials from
-   =~/.aws/credentials=. Add a profile to this file according to the
-   [[https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html][AWS CLI Named Profile]] documentation.
-
-   You can switch profiles by doing:
-
-   #+BEGIN_SRC Sh
-     export AWS_PROFILE=iohk
-   #+END_SRC
-
-*** S3 bucket for state file
-
-   Create a bucket to store terraform state (if it doesn't already exist):
-
-   - Name: iohk-ops-tfstate
-   - Region: US West (N. California)
-   - Turn on versioning
-   - Permissions: the previously created IAM user should have
-     =List Objects= and =Write Objects=.
-
 ** Fetch deployment scripts
 
    To begin provisioning an EC2 instance for the Recovery Service
@@ -56,28 +25,21 @@
      terraform init
    #+END_SRC
 
-** Set the workspace
-
-   Workspaces provide namespacing for the remote state file. Set
-   workspace name to either =staging= or =production=.
-
-   #+BEGIN_SRC sh
-     terraform workspace new staging
-     aws s3 ls --recursive s3://iohk-ops-tfstate
-     terraform workspace list
-     terraform workspace select staging
-   #+END_SRC
-
-   The name of the selected workspace can be accessed with the
-   =${terraform.workspace}= variable.
-
 ** Set up credentials
+
+   If you don't already have an access key and secret key, create a
+   =terraform= IAM group with the =AmazonEC2FullAccess= permission,
+   and a new user in that group with =Programmatic access=. After the
+   user is created you'll have one chance to see the secret key. The
+   access key is always accessible from the AWS console.
 
    Create a =terraform.tfvars= file in this directory and replace =foo=
    and =bar= with your actual AWS keys:
 
    #+BEGIN_SRC sh
      cat <<EOF > terraform.tfvars
+     access_key = "foo"
+     secret_key = "bar"
      key_name = "recovery-service"
      public_key_path = "ssh-key.pub"
      EOF
