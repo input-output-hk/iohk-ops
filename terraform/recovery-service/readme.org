@@ -1,5 +1,21 @@
 * Recovery Service Web Server Deployment
 
+** Prerequisites
+
+   To start with, create a bucket to store terraform state (if it
+   doesn't already exist):
+
+   - name: iohk-ops-tfstate
+   - region: US West (N. California)
+   - turn on versioning
+
+   Side note: terraform will pick credentials from
+   =~/.aws/credentials= and you can switch profiles by doing:
+
+   #+BEGIN_SRC Sh
+     export AWS_PROFILE=iohk
+   #+END_SRC
+
 ** Fetch deployment scripts
 
    Provision EC2 instance for Recovery Service using Terraform
@@ -37,7 +53,7 @@
      cat <<EOF > terraform.tfvars
      access_key = "foo"
      secret_key = "bar"
-     key_name = "ssh-key"
+     key_name = "recovery-service"
      public_key_path = "ssh-key.pub"
      EOF
    #+END_SRC
@@ -51,7 +67,7 @@
    Generate an SSH key that will be used to access the machine:
 
    #+BEGIN_SRC sh
-     ssh-keygen -f ssh-key -N ""
+     ssh-keygen -f ssh-key -N "" -C recovery_service_terraform
    #+END_SRC
 
    Start =ssh-agent=:

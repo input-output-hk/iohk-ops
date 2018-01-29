@@ -15,12 +15,6 @@ resource "aws_instance" "recovery_service_web" {
   key_name = "${aws_key_pair.auth.id}"
 
   security_groups = ["${aws_security_group.recovery_firewall.name}"]
-
-  provisioner "remote-exec" {
-    inline = [
-      "sudo apt-get -y update"
-    ]
-  }
 }
 
 resource "aws_security_group" "recovery_firewall" {
