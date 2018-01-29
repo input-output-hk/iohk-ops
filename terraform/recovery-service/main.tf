@@ -54,20 +54,22 @@ resource "aws_key_pair" "auth" {
   public_key = "${file(var.public_key_path)}"
 }
 
-### fixme: we have run out of elastic IPs for the time being
 resource "aws_eip" "recovery_service_web_eip" {
   instance = "${aws_instance.recovery_service_web.id}"
-  vpc      = false
+}
+
+output "ip" {
+  value = "${aws_eip.recovery_service_web_eip.public_ip}"
 }
 
 # data "aws_route53_zone" "selected" {
-#   name         = "test.com."
+#   name         = "${var.route53_zone}"
 #   private_zone = false
 # }
 
 # resource "aws_route53_record" "recovery_service_web_dns" {
 #   zone_id = "${data.aws_route53_zone.selected.zone_id}"
-#   name    = "www.${data.aws_route53_zone.selected.name}"
+#   name    = "${var.route53_record_name}${data.aws_route53_zone.selected.name}"
 #   type    = "A"
 #   ttl     = "300"
 #   records = ["${aws_eip.recovery_service_web_eip.public_ip"]
