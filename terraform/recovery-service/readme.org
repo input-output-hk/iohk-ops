@@ -2,31 +2,43 @@
 
 ** Prerequisites
 
-   To start with, create a bucket to store terraform state (if it
-   doesn't already exist):
+*** AWS credentials
 
-   - name: iohk-ops-tfstate
-   - region: US West (N. California)
-   - turn on versioning
+   If you don't already have an access key and secret key, create a
+   =terraform= IAM group with the =AmazonEC2FullAccess= permission, and
+   a new user in that group with =Programmatic access=. After the user
+   is created you'll have one chance to see the secret key. The access
+   key is always accessible from the AWS console.
 
    Side note: terraform will pick credentials from
-   =~/.aws/credentials= and you can switch profiles by doing:
+   =~/.aws/credentials=. Add a profile to this file according to the
+   [[https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html][AWS CLI Named Profile]] documentation.
+
+   You can switch profiles by doing:
 
    #+BEGIN_SRC Sh
      export AWS_PROFILE=iohk
    #+END_SRC
 
+*** S3 bucket for state file
+
+   Create a bucket to store terraform state (if it doesn't already exist):
+
+   - Name: iohk-ops-tfstate
+   - Region: US West (N. California)
+   - Turn on versioning
+   - Permissions: the previously created IAM user should have
+     =List Objects= and =Write Objects=.
+
 ** Fetch deployment scripts
 
-   Provision EC2 instance for Recovery Service using Terraform
-   Fetch the necessary Terraform scripts.
+   To begin provisioning an EC2 instance for the Recovery Service
+   using Terraform, first fetch the necessary Terraform scripts.
 
    #+BEGIN_SRC sh
      export RECOVERY_SERVICE_DIR="$HOME/recovery-service"
      git clone https://github.com/input-output-hk/iohk-ops.git "$RECOVERY_SERVICE_DIR"
-     cd "$RECOVERY_SERVICE_DIR"
-     git checkout devops-639-recovery-service
-     cd ./terraform/recovery-service
+     cd "$RECOVERY_SERVICE_DIR/terraform/recovery-service"
    #+END_SRC
 
 ** Install and configure terraform
@@ -66,18 +78,10 @@
 
    #+BEGIN_SRC sh
      cat <<EOF > terraform.tfvars
-     access_key = "foo"
-     secret_key = "bar"
      key_name = "recovery-service"
      public_key_path = "ssh-key.pub"
      EOF
    #+END_SRC
-
-   If you don't already have an access key and secret key, create a
-   =terraform= IAM group with the =AmazonEC2FullAccess= permission, and
-   a new user in that group with =Programmatic access=. After the user
-   is created you'll have one chance to see the secret key. The access
-   key is always accessible from the AWS console.
 
    Generate an SSH key that will be used to access the machine:
 

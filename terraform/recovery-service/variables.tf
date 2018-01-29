@@ -12,14 +12,6 @@ variable "key_name" {
   description = "Desired name of AWS key pair"
 }
 
-variable "access_key" {
-  description = "AWS access key"
-}
-
-variable "secret_key" {
-  description = "AWS secret key"
-}
-
 variable "aws_region" {
   description = "AWS region to launch servers."
   default     = "ap-northeast-1"
