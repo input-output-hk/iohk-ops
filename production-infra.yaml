@@ -12,6 +12,7 @@ topology: topology-mainnet-infra.yaml
 environment: Production
 nixpkgs: 31a956f18c9251064997085fd7732562b1854726
 name: iohk-infra
+installer-bucket: stub
 files:
 - deployments/keypairs.nix
 - deployments/infrastructure.nix
