@@ -1,4 +1,0 @@
-loggerTree:
-  severity: Debug+
-  files:
-    - node.log
