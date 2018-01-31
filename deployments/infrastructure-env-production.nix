@@ -10,7 +10,7 @@ in {
 
     imports = [
       ./../modules/papertrail.nix
-      ./../modules/datadog.nix
+      # ./../modules/datadog.nix
     ];
 
     services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
@@ -22,7 +22,7 @@ in {
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ./../modules/datadog.nix
+      # ./../modules/datadog.nix
       ./../modules/papertrail.nix
     ];
 
