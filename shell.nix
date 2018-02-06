@@ -5,12 +5,14 @@
 let
   iohkpkgs = import ./default.nix {};
   iohk-ops = iohkpkgs.iohk-ops;
-  justIo = pkgs.runCommand "shell" {
+  justIo = pkgs.mkShell {
+    name = "io";
     buildInputs = with pkgs; [ iohk-ops terraform_0_11 iohkpkgs.nixops cabal-install ];
     passthru = {
       inherit ioSelfBuild withAuxx;
     };
-  } "echo use nix-shell";
+    shellHook = ioShellHook;
+  };
   ioSelfBuild = pkgs.lib.overrideDerivation iohk-ops.env (drv: {
     shellHook = ''
       function io {
@@ -21,11 +23,22 @@ let
       }
     '';
   });
-  withAuxx = pkgs.runCommand "shell" {
+  withAuxx = pkgs.mkShell {
+    name = "io-with-auxx";
     buildInputs = [
       iohk-ops
       iohkpkgs.cardano-sl-auxx
       iohkpkgs.cardano-sl-tools
     ];
-  } "echo use nix-shell";
+    shellHook = ''
+      ${ioShellHook}
+      for prog in cardano-keygen cardano-x509-certificates cardano-auxx; do
+        source <($prog --bash-completion-script `type -p $prog`)
+      done
+    '';
+  };
+  ioShellHook = ''
+    source <(iohk-ops --bash-completion-script `type -p iohk-ops`)
+    complete -o filenames -F _iohk-ops io
+  '';
 in justIo
