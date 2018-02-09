@@ -930,7 +930,6 @@ s3Upload daedalus_rev c = do
       say $ "uploading things to " <> coerce (cUpdateBucket c)
       let maybeHashAndUpload = maybe (pure ()) (hashAndUpload appver cardanoCommit')
       maybeHashAndUpload $ buildkiteResult res
-      maybeHashAndUpload $ travisResult res
       maybeHashAndUpload $ appveyorResult res
 
 configurationKeys :: Environment -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64)
