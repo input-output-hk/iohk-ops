@@ -8,7 +8,7 @@ enqueue:
     - all:
         nodeType: 'relay'
         maxAhead: 0
-        precedence: 'high'
+        precedence: 'highest'
 
   requestBlockHeaders:
     - all:
@@ -53,10 +53,10 @@ enqueue:
 dequeue:
 
   core:
-    maxInFlight: 7
+    maxInFlight: 3
 
   relay:
-    maxInFlight: 6
+    maxInFlight: 2
 
   # Core never dequeues to edge.
   # Safe to use 0 for both of these? At most 0 per second and at most 0 in

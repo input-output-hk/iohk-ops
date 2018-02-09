@@ -8,7 +8,7 @@ enqueue:
     - all:
         nodeType: 'relay'
         maxAhead: 0
-        precedence: 'high'
+        precedence: 'highest'
     - all:
         nodeType: 'edge'
         maxAhead: 0
@@ -38,35 +38,35 @@ enqueue:
     send:
       - all:
           nodeType: 'core'
-          maxAhead: 20
+          maxAhead: 200
           precedence: 'low'
       - all:
           nodeType: 'relay'
-          maxAhead: 20
+          maxAhead: 200
           precedence: 'low'
     forward:
       - all:
           nodeType: 'core'
-          maxAhead: 20
+          maxAhead: 200
           precedence: 'low'
       - all:
           nodeType: 'relay'
-          maxAhead: 20
+          maxAhead: 200
           precedence: 'low'
 
 dequeue:
 
   core:
-    rateLimit: 6 
-    maxInFlight: 7
+    rateLimit: 3
+    maxInFlight: 2
 
   relay:
-    rateLimit: 6
-    maxInFlight: 7
+    rateLimit: 3
+    maxInFlight: 2
 
   edge:
-    rateLimit: 6
-    maxInFlight: 7
+    rateLimit: 1
+    maxInFlight: 2
 
 failure:
 

@@ -49,7 +49,8 @@ let
     "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
-    ("--policies ${./../policy_relay.yaml})       # " + (if ("c" == builtins.substring 0 1 ${params.name}) then  ${./../policy_core.yaml} else ${./../policy_relay.yaml}))  
+    # ("--policies ${./../policy_relay.yaml}")
+    ("--policies " + (if ("c" == builtins.substring 0 1 "${params.name}") then "${./../policy_core.yaml}" else "${./../policy_relay.yaml}")) 
     (optionalString cfg.enableProfiling "+RTS -p -RTS")
   ];
 in {
