@@ -30,7 +30,7 @@ import           Appveyor                     (AppveyorArtifact (AppveyorArtifac
 import qualified Appveyor
 import           Buildkite.API                (APIToken(APIToken), Artifact(..)
                                               , listArtifactsForBuild,
-                                               getBuild, getLatestBuildForPipeline)
+                                               getBuild, getJobLog)
 import qualified Buildkite.API                as BK
 import qualified Buildkite.Pipeline           as BK
 import           Cardano                      (ConfigurationYaml,
@@ -47,6 +47,7 @@ import           Data.Aeson                   (ToJSON, encode)
 import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Char8        as BSC
 import qualified Data.ByteString.Lazy         as LBS
+import qualified Data.ByteString.Lazy.Char8   as L8
 import           Data.Coerce                  (coerce)
 import           Data.Git                     (Blob (Blob),
                                                Commit (commitTreeish), EntName,
@@ -85,6 +86,7 @@ import           System.Console.ANSI          (Color (Green, Red),
                                                SGR (Reset, SetColor), setSGR)
 import           System.IO.Error              (ioeGetErrorString)
 import           System.Exit                  (ExitCode (ExitFailure, ExitSuccess), die)
+import           Text.Regex.PCRE              ((=~))
 import           Travis                       (BuildId, BuildNumber,
                                                TravisBuild (matrix, number),
                                                TravisInfo2 (ti2commit),
@@ -285,24 +287,39 @@ fetchRepo localpath url = do
         ExitFailure _ -> error "cant fetch repo"
   with fetcher $ \res -> pure res
 
+buildkiteOrg     = "input-output-hk" :: T.Text
+pipelineDaedalus = "daedalus"        :: T.Text
+pipelineCardano  = "cardano-sl"      :: T.Text
+
+findCardanoBuildFromDaedalus :: APIToken
+                             -> Int -- ^ Daedalus Buildkite build number
+                             -> IO (Maybe BK.Build) -- ^ Cardano build
+findCardanoBuildFromDaedalus apiToken buildNum = do
+  putStrLn $ "Looking for logs in " <> T.unpack pipelineDaedalus <> " build #" <> show buildNum
+  daedalusBuild <- getBuild apiToken buildkiteOrg pipelineDaedalus buildNum
+  let jobs = BK.buildJobs daedalusBuild
+  putStrLn $ "  This build has " <> show (length jobs) <> " jobs."
+  logs <- mapM (getJobLog apiToken) jobs
+  let cardanoBuildNum = headMay . catMaybes . map extractBuildId $ logs
+  case cardanoBuildNum of
+    Just num -> Just <$> getBuild apiToken buildkiteOrg pipelineCardano num
+    Nothing -> pure Nothing
+
+artifactIsInstaller :: Artifact -> Bool
+artifactIsInstaller = T.isSuffixOf ".pkg" . artifactFilename
+
 processDarwinBuildKite :: APIToken -> T.Text -> T.Text -> T.Text -> Int -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> T.Text -> IO (GlobalResults, CiResult)
 processDarwinBuildKite apiToken daedalus_rev daedalus_version tempdir buildNum versionKey ciUrl = do
-  let org = "input-output-hk" :: T.Text
-      targetPipeline = "daedalus" :: T.Text
-      cardanoPipeline = "cardano-sl" :: T.Text
-      filenameP = T.isSuffixOf ".pkg"
+  cardanoBuild <- findCardanoBuildFromDaedalus apiToken buildNum
+  arts <- listArtifactsForBuild apiToken buildkiteOrg pipelineDaedalus buildNum
 
-  targetBuild <- getBuild apiToken org targetPipeline buildNum
-  cardanoBuild <- getLatestBuildForPipeline apiToken org cardanoPipeline
-  arts <- listArtifactsForBuild apiToken org targetPipeline buildNum
-
-  case (find (filenameP . artifactFilename) arts, cardanoBuild) of
+  case (find artifactIsInstaller arts, cardanoBuild) of
     (Just art, Just cardanoInfo) -> do
       let cardanoRev = BK.buildCommit cardanoInfo
           outFile = tempdir <> "/" <> artifactFilename art
 
       -- ask Buildkite what the download URL is
-      url <- BK.getArtifactURL apiToken org targetPipeline buildNum art
+      url <- BK.getArtifactURL apiToken buildkiteOrg pipelineDaedalus buildNum art
 
       printDarwinBuildInfo "buildkite" (fromIntegral $ BK.buildNumber cardanoInfo) cardanoRev url
 
@@ -343,7 +360,7 @@ processDarwinBuildTravis daedalus_rev daedalus_version tempdir buildId versionKe
     outFile = tempdir <> "/" <> filename
   buildLog <- fetchUrl mempty $ "https://api.travis-ci.org/jobs/" <> (T.pack $ show $ tjiId $ head $ drop 1 $ matrix obj) <> "/log"
   let
-    cardanoBuildNumber = extractBuildId buildLog
+    Just cardanoBuildNumber = fromIntegral <$> extractBuildId buildLog
   cardanoInfo <- fetchTravis2 "input-output-hk/cardano-sl" cardanoBuildNumber
 
   printDarwinBuildInfo "travis" cardanoBuildNumber (ti2commit cardanoInfo) url
@@ -454,15 +471,17 @@ findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status =
       putStrLn $ "unrecognized CI status: " <> T.unpack (context status)
       pure (Nothing, Nothing)
 
-extractBuildId :: LBS.ByteString -> BuildNumber
-extractBuildId fullLog = read $ BSC.unpack f5
+-- | The Daedalus installer build process outputs the cardano build
+-- number. Unfortunately it's not possible to know whether this is a
+-- Travis build number or Buildkite build number.
+-- This greps the build number from the log, if it exists.
+extractBuildId :: LBS.ByteString -> Maybe Int
+extractBuildId = headMay . catMaybes . map (buildNum . L8.unpack) . L8.lines
   where
-    f1 = LBS.toStrict fullLog
-    (_, f2) = BS.breakSubstring "build id is" f1
-    f3 = BSC.takeWhile (\c -> c /= '\n') f2
-    isNumber c = (c >= '0') && (c <= '9')
-    f4 = BSC.dropWhile (\c -> (isNumber c) == False) f3
-    f5 = BSC.takeWhile isNumber f4
+    regexp = "build id is (\\d+)" :: String
+    buildNum line = case line =~ regexp of
+      [[_, num]] -> readMay num
+      _ -> Nothing
 
 hashInstaller :: T.Text -> IO T.Text
 hashInstaller path = do
