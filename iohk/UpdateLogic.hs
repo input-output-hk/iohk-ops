@@ -101,7 +101,8 @@ import           Turtle.Prelude               (mktempdir, proc, procStrict,
                                                pushd)
 import           Types                        (ApplicationVersion (ApplicationVersion),
                                                ApplicationVersionKey (ApplicationVersionKey),
-                                               Arch (Linux64, Mac64, Win64))
+                                               Arch (Linux64, Mac64, Win64),
+                                               getApplicationVersion)
 import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1, fetchUrl)
 
 data CiResult = TravisResult {
@@ -520,7 +521,7 @@ githubWikiRecord results = join [ T.pack $ show appVersion
     daedalus_rev = grDaedalusCommit globalDetails
 
     travis = liftA2 (,) (travisJobNumber <$> travisDetails) (travisUrl <$> travisDetails)
-    appvey = liftA2 (,) (T.pack . show . avVersion <$> appveyorDetails) (avUrl <$> appveyorDetails)
+    appvey = liftA2 (,) (getApplicationVersion . avVersion <$> appveyorDetails) (avUrl <$> appveyorDetails)
     buildkite = liftA2 (,) (T.pack . show . bkBuildNumber <$> buildkiteDetails) (bkUrl <$> buildkiteDetails)
 
     githubLink rev project = "[" <> (T.take 6 rev) <> "](https://github.com/input-output-hk/" <> project <> "/commit/" <> rev <> ")"
@@ -529,7 +530,7 @@ githubWikiRecord results = join [ T.pack $ show appVersion
     ciLink (Just (num, url)) = "[" <> num <> "](" <> url <> ")"
     ciLink Nothing = "*missing*"
 
-    join cols = T.concat ["| ", T.intercalate " | " cols, " |"]
+    join = T.intercalate " | "
 
 updateVersionJson :: InstallersResults -> T.Text -> IO ()
 updateVersionJson info bucket = do
