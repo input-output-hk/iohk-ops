@@ -73,9 +73,11 @@ import           Github                       (Status, context,
                                                fetchGithubStatus, statuses,
                                                targetUrl)
 import           Network.AWS                  (Credentials (Discover), newEnv,
-                                               send, toBody, within, Region(Tokyo))
+                                               send, toBody, within)
 import           Network.AWS.S3.PutObject     (poACL, putObject)
-import           Network.AWS.S3.Types         (BucketName (BucketName),
+import           Network.AWS.S3.GetBucketLocation (getBucketLocation, gblbrsLocationConstraint)
+
+import           Network.AWS.S3.Types         (BucketName (BucketName), constraintRegion,
                                                ObjectCannedACL (OPublicRead),
                                                ObjectKey)
 import           Network.URI                  (URI, uriPath, uriFragment, parseURI)
@@ -542,6 +544,8 @@ updateVersionJson info bucket = do
         bdy = toBody body
       void . send $ Lens.set poACL (Just OPublicRead) $ putObject bucketName remoteKey bdy
   env' <- newEnv Discover
-  -- XXX: change the hard-coded 'Tokyo' region to the AWS query of the bucket's region.
-  liftIO $ runResourceT . runAWST env' $ within Tokyo $ do
-    uploadOneFile (BucketName bucket) json "daedalus-latest-version.json"
+  let bucketName = BucketName bucket
+  liftIO . runResourceT . runAWST env' $ do
+    lc <- send $ getBucketLocation bucketName
+    let region = constraintRegion (lc ^. gblbrsLocationConstraint)
+    within region $ uploadOneFile bucketName json "daedalus-latest-version.json"
