@@ -3,8 +3,8 @@
 set -e        # exit on error
 set -o xtrace # print commands
 
-CLUSTERNAME=benchmarks110
-CORENODES=6 # the number of core nodes.
+CLUSTERNAME=benchmarks110policies
+CORENODES=7 # the number of core nodes.
 # When changing the number of core nodes, you need to:
 # - adjust the topology file
 # - adjust lib/configuration.yaml in cardano-sl
@@ -12,17 +12,17 @@ CORENODES=6 # the number of core nodes.
 #   commit the change, and push
 #   use io set-rev cardanosl <COMMIT>, to use the new commit
 #   re-generate the keys, by running
-#     io -v new -t topology-staging.yaml -k bench benchmarks110 nodes
+#     io -v new -t topology-staging.yaml -k bench benchmarks110policies nodes
 #     This step will take some time
 START_WAIT_TIME=10 # how many minutes to wait for the cluster to start
                    # before starting the transaction generator
 
-TIME=400       # number of transactions that each thread should send
+TIME=4000       # number of transactions that each thread should send
 CONC=6          # number of threads
 DELAY=50        # number of milliseconds to wait between each send
 SENDMODE='send-random'
-COOLDOWN=10      # number of minutes to wait for cooldown
-ADDGENERATORS=1 # using more than one generator might help increase the
+COOLDOWN=10     # number of minutes to wait for cooldown
+ADDGENERATORS=7 # using more than one generator might help increase the
                 # load for stress-tests
 
 export NIXOPS_DEPLOYMENT=${CLUSTERNAME}
@@ -37,7 +37,7 @@ nix-build -A cardano-sl-auxx -o auxx         # transaction generator
 nix-build -A cardano-sl-tools -o post-mortem # for cardano-post-mortem
 
 # # re-start the cluster
-$IO stop
+$IO stop wipe-node-dbs --confirm wipe-journals
 $IO deploy -t ${START_WAIT_TIME}
 SYSTEMSTART=`grep -A 2 systemStart config.yaml | grep contents | awk '{print $2}'`
 
@@ -158,3 +158,6 @@ echo "--- Benchmarks finished. Find the results at"
 echo "    ${PWD}/${LOGDIR}/${TPSFILE}"
 echo "    ${PWD}/${LOGDIR}/report_${LAST}.txt"
 echo "    ${LOGDIR}"
+
+# $IO destroy --confirm delete 
+
