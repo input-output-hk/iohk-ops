@@ -19,7 +19,7 @@ spec :: Spec
 spec = do
   describe "travis log output" $ do
     it "tests travis log output parsing" $ do
-      extractBuildId sampleInput `shouldBe` 13711
+      extractBuildId sampleInput `shouldBe` Just 13711
 
   describe "GitHub commit status parsing" $ do
     it "recognizes a buildkite status entry" $

@@ -37,6 +37,7 @@ executable iohk-ops
                      , mtl >=2.2
                      , network-uri
                      , optional-args
+                     , regex-pcre >= 0.94
                      , safe >=0.3
                      , system-filepath >=0.4
                      , text >=1.2
@@ -94,4 +95,5 @@ test-suite iohk-ops-test
                   , cryptonite
                   , errors
                   , memory
+                  , regex-pcre
   hs-source-dirs:   test .
