@@ -20,6 +20,7 @@ module UpdateLogic
   , StatusContext(..)
   , resultLocalPath
   , resultDesc
+  , bucketRegion
   ) where
 
 import           Appveyor                     (AppveyorArtifact (AppveyorArtifact),
@@ -73,7 +74,7 @@ import           Github                       (Status, context,
                                                fetchGithubStatus, statuses,
                                                targetUrl)
 import           Network.AWS                  (Credentials (Discover), newEnv,
-                                               send, toBody, within)
+                                               send, toBody, within, Region)
 import           Network.AWS.S3.PutObject     (poACL, putObject)
 import           Network.AWS.S3.GetBucketLocation (getBucketLocation, gblbrsLocationConstraint)
 
@@ -547,6 +548,9 @@ updateVersionJson info bucket = do
   env' <- newEnv Discover
   let bucketName = BucketName bucket
   liftIO . runResourceT . runAWST env' $ do
-    lc <- send $ getBucketLocation bucketName
-    let region = constraintRegion (lc ^. gblbrsLocationConstraint)
+    region <- bucketRegion bucketName
     within region $ uploadOneFile bucketName json "daedalus-latest-version.json"
+
+bucketRegion :: BucketName -> AWST (ResourceT IO) Region
+bucketRegion = fmap getRegion . send . getBucketLocation
+  where getRegion lc = constraintRegion (lc ^. gblbrsLocationConstraint)
