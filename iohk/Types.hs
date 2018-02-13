@@ -44,6 +44,8 @@ data Arch = Linux64 | Mac64 | Win64 deriving Show
 newtype ApplicationVersionKey (a :: Arch) = ApplicationVersionKey Text deriving IsString
 newtype ApplicationVersion (a :: Arch) = ApplicationVersion Text deriving (IsString, Show, Eq, Generic, ToJSON)
 
+getApplicationVersion :: ApplicationVersion a -> Text
+getApplicationVersion (ApplicationVersion v) = v
 
 -- * Flags
 --

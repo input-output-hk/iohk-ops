@@ -20,6 +20,7 @@ module UpdateLogic
   , StatusContext(..)
   , resultLocalPath
   , resultDesc
+  , bucketRegion
   ) where
 
 import           Appveyor                     (AppveyorArtifact (AppveyorArtifact),
@@ -73,9 +74,11 @@ import           Github                       (Status, context,
                                                fetchGithubStatus, statuses,
                                                targetUrl)
 import           Network.AWS                  (Credentials (Discover), newEnv,
-                                               send, toBody, within, Region(Tokyo))
+                                               send, toBody, within, Region)
 import           Network.AWS.S3.PutObject     (poACL, putObject)
-import           Network.AWS.S3.Types         (BucketName (BucketName),
+import           Network.AWS.S3.GetBucketLocation (getBucketLocation, gblbrsLocationConstraint)
+
+import           Network.AWS.S3.Types         (BucketName (BucketName), constraintRegion,
                                                ObjectCannedACL (OPublicRead),
                                                ObjectKey)
 import           Network.URI                  (URI, uriPath, uriFragment, parseURI)
@@ -99,7 +102,8 @@ import           Turtle.Prelude               (mktempdir, proc, procStrict,
                                                pushd)
 import           Types                        (ApplicationVersion (ApplicationVersion),
                                                ApplicationVersionKey (ApplicationVersionKey),
-                                               Arch (Linux64, Mac64, Win64))
+                                               Arch (Linux64, Mac64, Win64),
+                                               getApplicationVersion)
 import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1, fetchUrl)
 
 data CiResult = TravisResult {
@@ -321,7 +325,7 @@ processDarwinBuildKite apiToken daedalus_rev daedalus_version tempdir buildNum v
       -- ask Buildkite what the download URL is
       url <- BK.getArtifactURL apiToken buildkiteOrg pipelineDaedalus buildNum art
 
-      printDarwinBuildInfo "buildkite" (fromIntegral $ BK.buildNumber cardanoInfo) cardanoRev url
+      printDarwinBuildInfo "buildkite" (BK.buildNumber cardanoInfo) cardanoRev url
 
       -- download artifact into nix store
       fetchCachedUrlWithSHA1 url (artifactFilename art) outFile (artifactSha1sum art)
@@ -349,8 +353,8 @@ makeDaedalusVersion ver = makeDaedalusVersion' ver . T.pack . show
 makeDaedalusVersion' :: T.Text -> T.Text -> ApplicationVersion a
 makeDaedalusVersion' ver num = ApplicationVersion $ ver <> "." <> num
 
-processDarwinBuildTravis :: T.Text -> T.Text -> T.Text -> BuildId -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> T.Text -> IO (GlobalResults, CiResult)
-processDarwinBuildTravis daedalus_rev daedalus_version tempdir buildId versionKey ciUrl = do
+processDarwinBuildTravis :: BK.APIToken -> T.Text -> T.Text -> T.Text -> BuildId -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> T.Text -> IO (GlobalResults, CiResult)
+processDarwinBuildTravis buildkiteToken daedalus_rev daedalus_version tempdir buildId versionKey ciUrl = do
   obj <- fetchTravis buildId
   let
     filename = "Daedalus-installer-" <> daedalus_version <> "." <> (number obj) <> ".pkg"
@@ -359,18 +363,18 @@ processDarwinBuildTravis daedalus_rev daedalus_version tempdir buildId versionKe
     url = "http://s3.eu-central-1.amazonaws.com/daedalus-travis/" <> filename
     outFile = tempdir <> "/" <> filename
   buildLog <- fetchUrl mempty $ "https://api.travis-ci.org/jobs/" <> (T.pack $ show $ tjiId $ head $ drop 1 $ matrix obj) <> "/log"
-  let
-    Just cardanoBuildNumber = fromIntegral <$> extractBuildId buildLog
-  cardanoInfo <- fetchTravis2 "input-output-hk/cardano-sl" cardanoBuildNumber
 
-  printDarwinBuildInfo "travis" cardanoBuildNumber (ti2commit cardanoInfo) url
+  let Just cardanoBuildNumber = extractBuildId buildLog
+  cardanoRev <- BK.buildCommit <$> getBuild buildkiteToken buildkiteOrg pipelineCardano cardanoBuildNumber
 
-  appVersion <- liftIO $ grabAppVersion (ti2commit cardanoInfo) versionKey
+  printDarwinBuildInfo "travis" cardanoBuildNumber cardanoRev url
+
+  appVersion <- liftIO $ grabAppVersion cardanoRev versionKey
   fetchCachedUrl url filename outFile
 
-  pure (GlobalResults (ti2commit cardanoInfo) daedalus_rev appVersion, TravisResult outFile version (ti2commit cardanoInfo) (number obj) ciUrl)
+  pure (GlobalResults cardanoRev daedalus_rev appVersion, TravisResult outFile version cardanoRev (number obj) ciUrl)
 
-printDarwinBuildInfo :: String -> Integer -> T.Text -> T.Text -> IO ()
+printDarwinBuildInfo :: String -> Int -> T.Text -> T.Text -> IO ()
 printDarwinBuildInfo ci cardanoBuildNumber cardanoRev url = do
   setSGR [ SetColor Background Dull Red ]
   putStr "cardano build number: "
@@ -439,7 +443,7 @@ parseStatusContext status = parseBuildKite <|> parseTravis <|> parseAppveyor
     isTravis = context status == "continuous-integration/travis-ci/push"
     isAppveyor = context status == "continuous-integration/appveyor/branch"
 
-findInstaller :: HasCallStack => APIToken -> T.Text -> T.Text -> T.Text -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
+findInstaller :: HasCallStack => BK.APIToken -> T.Text -> T.Text -> T.Text -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
 findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status = do
   -- TODO check for 404's
   -- TODO check file contents with libmagic
@@ -448,7 +452,7 @@ findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status =
       (globalResults, travisResult') <- processDarwinBuildKite buildkiteToken daedalus_rev daedalus_version tempdir buildNum keys (targetUrl status)
       return (Just globalResults, Just travisResult')
     Just (StatusContextTravis buildId) -> do
-      (globalResults, travisResult') <- processDarwinBuildTravis daedalus_rev daedalus_version tempdir buildId keys (targetUrl status)
+      (globalResults, travisResult') <- processDarwinBuildTravis buildkiteToken daedalus_rev daedalus_version tempdir buildId keys (targetUrl status)
       return (Just globalResults, Just travisResult')
     Just (StatusContextAppveyor user project version) -> do
       appveyorBuild <- fetchAppveyorBuild user project version
@@ -518,7 +522,7 @@ githubWikiRecord results = join [ T.pack $ show appVersion
     daedalus_rev = grDaedalusCommit globalDetails
 
     travis = liftA2 (,) (travisJobNumber <$> travisDetails) (travisUrl <$> travisDetails)
-    appvey = liftA2 (,) (T.pack . show . avVersion <$> appveyorDetails) (avUrl <$> appveyorDetails)
+    appvey = liftA2 (,) (getApplicationVersion . avVersion <$> appveyorDetails) (avUrl <$> appveyorDetails)
     buildkite = liftA2 (,) (T.pack . show . bkBuildNumber <$> buildkiteDetails) (bkUrl <$> buildkiteDetails)
 
     githubLink rev project = "[" <> (T.take 6 rev) <> "](https://github.com/input-output-hk/" <> project <> "/commit/" <> rev <> ")"
@@ -527,7 +531,7 @@ githubWikiRecord results = join [ T.pack $ show appVersion
     ciLink (Just (num, url)) = "[" <> num <> "](" <> url <> ")"
     ciLink Nothing = "*missing*"
 
-    join cols = T.concat ["| ", T.intercalate " | " cols, " |"]
+    join = T.intercalate " | "
 
 updateVersionJson :: InstallersResults -> T.Text -> IO ()
 updateVersionJson info bucket = do
@@ -542,6 +546,11 @@ updateVersionJson info bucket = do
         bdy = toBody body
       void . send $ Lens.set poACL (Just OPublicRead) $ putObject bucketName remoteKey bdy
   env' <- newEnv Discover
-  -- XXX: change the hard-coded 'Tokyo' region to the AWS query of the bucket's region.
-  liftIO $ runResourceT . runAWST env' $ within Tokyo $ do
-    uploadOneFile (BucketName bucket) json "daedalus-latest-version.json"
+  let bucketName = BucketName bucket
+  liftIO . runResourceT . runAWST env' $ do
+    region <- bucketRegion bucketName
+    within region $ uploadOneFile bucketName json "daedalus-latest-version.json"
+
+bucketRegion :: BucketName -> AWST (ResourceT IO) Region
+bucketRegion = fmap getRegion . send . getBucketLocation
+  where getRegion lc = constraintRegion (lc ^. gblbrsLocationConstraint)
