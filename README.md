@@ -11,14 +11,40 @@ Collection of tooling and automation to deploy IOHK infrastructure.
 - `default.nix` - is a collection of Haskell packages
 - `static` includes files using in deployments
 - `jobsets` is used by Hydra CI
-
-
-### Usage
-
-   $(nix-build -A iohk-ops)/bin/iohk-ops --help
-
+- `terraform` - other AWS infrastructure
 
 ### Getting SSH access
 
 1. Append https://github.com/input-output-hk/iohk-ops/blob/master/lib.nix#L83 and submit a PR.
 2. Wait until the DevOps team deploys the infrastructure cluster.
+
+## The `io` command
+
+Sources for the `iohk-ops` tool are in the [`iohk`](./iohk) directory.
+
+### Usage
+
+After cloning this repo, start a `nix-shell`.
+
+    % nix-shell
+    [nix-shell:~/iohk/iohk-ops]$ io --help
+
+### Development
+
+To hack on the `iohk-ops` tool, use
+
+    % nix-shell --arg io-dev-mode true
+    [nix-shell:~/iohk/iohk-ops]$ type io
+    io is a function
+    io ()
+    {
+        runhaskell -iiohk iohk/iohk-ops.hs "$@"
+    }
+    [nix-shell:~/iohk/iohk-ops]$ io --help
+
+This will provide a Haskell environment where you can use `io` to run
+the script or `ghci` for development.
+
+### Run from anywhere
+
+    $(nix-build --no-out-link https://github.com/input-output-hk/iohk-ops/archive/develop.tar.gz -A iohk-ops)/bin/iohk-ops --help
