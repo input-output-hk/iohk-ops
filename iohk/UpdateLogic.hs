@@ -60,7 +60,7 @@ import           Data.Git.Storage             (Git, getObject, isRepo, openRepo)
 import           Data.Git.Storage.Object      (Object (ObjBlob))
 import qualified Data.HashMap.Strict          as HashMap
 import           Data.List                    (find)
-import           Data.Maybe                   (fromMaybe, listToMaybe, catMaybes)
+import           Data.Maybe                   (fromJust, fromMaybe, listToMaybe, catMaybes)
 import           Data.Monoid                  ((<>))
 import qualified Data.Text                    as T
 import qualified Data.Text.IO                 as T
@@ -77,8 +77,8 @@ import           Network.AWS.S3.PutObject     (poACL, putObject)
 import           Network.AWS.S3.Types         (BucketName (BucketName),
                                                ObjectCannedACL (OPublicRead),
                                                ObjectKey)
-import           Network.URI                  (URI, uriPath, uriFragment, parseURI)
-import           Safe                         (headMay, tailMay, lastMay, readMay)
+import           Network.URI                  (uriPath, parseURI)
+import           Safe                         (headMay, lastMay, readMay)
 import           System.Console.ANSI          (Color (Green, Red),
                                                ColorIntensity (Dull),
                                                ConsoleLayer (Background, Foreground),
@@ -90,8 +90,7 @@ import           Travis                       (BuildId, BuildNumber,
                                                TravisInfo2 (ti2commit),
                                                TravisJobInfo (tjiId),
                                                TravisYaml, env, fetchTravis,
-                                               fetchTravis2, global, lookup',
-                                               parseTravisYaml)
+                                               fetchTravis2, global, lookup')
 import           Turtle                       (empty, void)
 import           Turtle.Prelude               (mktempdir, proc, procStrict,
                                                pushd)
@@ -135,9 +134,9 @@ type TextPath = T.Text
 type RepoUrl = T.Text
 
 data VersionJson = VersionJson {
-      linux :: ApplicationVersion 'Linux64
-    , macos :: ApplicationVersion 'Mac64
-    , win64 :: ApplicationVersion 'Win64
+      _linux :: ApplicationVersion 'Linux64
+    , _macos :: ApplicationVersion 'Mac64
+    , _win64 :: ApplicationVersion 'Win64
   } deriving (Show, Generic)
 
 instance ToJSON VersionJson
@@ -292,7 +291,7 @@ processDarwinBuildKite apiToken daedalus_rev daedalus_version tempdir buildNum v
       cardanoPipeline = "cardano-sl" :: T.Text
       filenameP = T.isSuffixOf ".pkg"
 
-  targetBuild <- getBuild apiToken org targetPipeline buildNum
+  _targetBuild <- getBuild apiToken org targetPipeline buildNum
   cardanoBuild <- getLatestBuildForPipeline apiToken org cardanoPipeline
   arts <- listArtifactsForBuild apiToken org targetPipeline buildNum
 
@@ -382,7 +381,8 @@ grabAppVersion rev (winKey, macosKey) = do
       fallback _ = readPath2
     Just content <- catch readPath1 fallback
     let
-      Just fullConfiguration = Y.decode $ LBS.toStrict content :: Maybe ConfigurationYaml
+      fullConfiguration :: ConfigurationYaml
+      fullConfiguration = fromJust . Y.decode . LBS.toStrict $ content
       winVersion = HashMap.lookup (coerce winKey) fullConfiguration
       macosVersion = HashMap.lookup (coerce macosKey) fullConfiguration
     -- relies on only parsing out the subset that should match
@@ -427,7 +427,7 @@ findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status =
   -- TODO check for 404's
   -- TODO check file contents with libmagic
   case parseStatusContext status of
-    Just (StatusContextBuildkite repo buildNum) -> do
+    Just (StatusContextBuildkite _repo buildNum) -> do
       (globalResults, travisResult') <- processDarwinBuildKite buildkiteToken daedalus_rev daedalus_version tempdir buildNum keys (targetUrl status)
       return (Just globalResults, Just travisResult')
     Just (StatusContextTravis buildId) -> do
