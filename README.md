@@ -12,6 +12,7 @@ Collection of tooling and automation to deploy IOHK infrastructure.
 - `static` includes files using in deployments
 - `jobsets` is used by Hydra CI
 - `terraform` - other AWS infrastructure
+- `nix-darwin` - deployment script and configurations for MacOS X machines
 
 ### Getting SSH access
 
