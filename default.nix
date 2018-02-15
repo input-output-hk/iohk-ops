@@ -32,8 +32,9 @@ let
     cardano-sl-pkgs.cardano-sl-auxx
     cardano-sl-pkgs.cardano-sl-tools
     nixops
-    pkgs.terraform_0_11
+    terraform
   ];
+  terraform = pkgs.terraform_0_11.withPlugins (ps: [ ps.aws ]);
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
   cardano-sl-pkgs = import (pkgs.fetchgit cardano-sl-src) {
