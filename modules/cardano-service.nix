@@ -216,5 +216,19 @@ in {
         Type = "notify";
       };
     };
+
+    systemd.services.cardano-node-recorder = {
+      description   = "recording metrics on cardano node service";
+      after         = [ "systemd.services.cardano-node" ];
+      wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
+      #path = [ pkgs.procps ];  # no dependency on the package procps anymore
+      script = ''
+        ${./../record-stats.sh} ${stateDir} ${cfg.executable} >> "${stateDir}/time-slave.log"
+      '';
+      serviceConfig = {
+        User = "cardano-node";
+        Group = "cardano-node";
+      };
+    };
   };
 }
