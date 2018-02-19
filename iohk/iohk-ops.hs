@@ -321,7 +321,8 @@ runNew o@Options{..} New{..} args = do
     let secrets = [ "static/github_token"
                   , "static/id_buildfarm"
                   , "static/datadog-api.secret"
-                  , "static/datadog-application.secret" ]
+                  , "static/datadog-application.secret"
+                  , "static/zendesk-token.secret" ]
     forM_ secrets touch
     echo "Ensured secrets exist"
 
