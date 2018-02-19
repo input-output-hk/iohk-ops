@@ -1,6 +1,6 @@
 with (import ./../lib.nix);
 
-params: environment:
+params:
 { pkgs, config, resources, options, ...}:
 
 let
@@ -29,12 +29,7 @@ in {
       zendesk = {
         email = mkOption {
           type = types.str;
-          # default = "";
-          default = if environment == "Staging"
-            then "report-server-zendesk+staging@iohk.io"
-            else (if environment == "Production"
-                  then "report-server-zendesk+prod@iohk.io"
-                  else "");
+          default = "";
           example = "agent@email.com";
           description = ''
             The e-mail associated with the Zendesk account.
@@ -42,10 +37,7 @@ in {
         };
         tokenFile = mkOption {
           type = types.nullOr types.path;
-          # default = null;
-          default = if environment == "Staging" || environment == "Production"
-            then "/run/keys/zendesk-token"
-            else null;
+          default = null;
           example = "/run/keys/zendesk-token";
           description = ''
             An access token for Zendesk.
