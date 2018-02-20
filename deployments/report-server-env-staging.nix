@@ -9,6 +9,11 @@ let nodeMap = { inherit (globals.fullMap) report-server; }; in
       ./../modules/datadog.nix
       ./../modules/papertrail.nix
     ];
+
+    config.services.report-server.zendesk = {
+      email = "daedalus-bug-reports@iohk.io";
+      tokenFile = "/run/keys/zendesk-token";
+    };
   };
 
   resources.elasticIPs = nodesElasticIPs nodeMap;
