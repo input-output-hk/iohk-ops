@@ -43,6 +43,14 @@ in {
             An access token for Zendesk.
           '';
         };
+        accountName = mkOption {
+          type = types.str;
+          default = "";
+          example = "iohk";
+          description = ''
+            Zendesk account name. This is the first part of NAME.zendesk.com.
+          '';
+        };
       };
     };
   };
@@ -99,7 +107,7 @@ in {
         zdEmail = if cfg.zendesk.email != "" then "--zd-email \"${cfg.zendesk.email}\"" else "";
         # fixme: report-server should not accept token as command-line argument
         zdToken = if cfg.zendesk.tokenFile != null then "--zd-token `head -1 ${cfg.zendesk.tokenFile}`" else "";
-        zdAccount = if cfg.zendesk.tokenFile != null then "--zd-account iohk" else "";
+        zdAccount = if cfg.zendesk.accountName != "" then "--zd-account \"${cfg.zendesk.accountName}\"" else "";
       in ''
         exec ${cfg.executable}/bin/cardano-report-server \
             -p ${toString cfg.port} \
@@ -110,11 +118,12 @@ in {
 
     assertions = [
       { assertion =
-          (cfg.zendesk.email != "" && cfg.zendesk.tokenFile != null) ||
-          (cfg.zendesk.email == "" && cfg.zendesk.tokenFile == null);
+          (cfg.zendesk.email != "" && cfg.zendesk.tokenFile != null && cfg.zendesk.accountName != "") ||
+          (cfg.zendesk.email == "" && cfg.zendesk.tokenFile == null && cfg.zendesk.accountName == "");
         message = ''
-          Both `services.report-server.zendesk.email'
-          and `services.report-server.zendesk.tokenFile' must be defined.
+          Either all or none of `services.report-server.zendesk.email',
+          `services.report-server.zendesk.tokenFile',
+          `services.report-server.zendesk.accountName' must be defined.
         '';
       }
     ];
