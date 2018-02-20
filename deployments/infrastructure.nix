@@ -46,10 +46,4 @@ in {
       { from = 24962; to = 25062; }
     ];
   };
-  resources = {
-    datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
-      disk = mkMonitor disk_monitor;
-      ntp = mkMonitor ntp_monitor;
-    });
-  };
 }
