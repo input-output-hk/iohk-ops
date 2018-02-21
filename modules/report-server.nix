@@ -51,6 +51,13 @@ in {
             Zendesk account name. This is the first part of NAME.zendesk.com.
           '';
         };
+        sendLogs = mkOption {
+          type = types.bool;
+          default = true;
+          description = ''
+            Send logs from custom reports to Zendesk.
+          '';
+        };
       };
     };
   };
@@ -108,10 +115,11 @@ in {
         # fixme: report-server should not accept token as command-line argument
         zdToken = if cfg.zendesk.tokenFile != null then "--zd-token `head -1 ${cfg.zendesk.tokenFile}`" else "";
         zdAccount = if cfg.zendesk.accountName != "" then "--zd-account \"${cfg.zendesk.accountName}\"" else "";
+        zdSendLogs = if cfg.zendesk.sendLogs then "--zd-send-logs" else "";
       in ''
         exec ${cfg.executable}/bin/cardano-report-server \
             -p ${toString cfg.port} \
-            ${zdEmail} ${zdToken} ${zdAccount} \
+            ${zdEmail} ${zdToken} ${zdAccount} ${zdSendLogs} \
             --logsdir ${cfg.logsdir}
       '';
     };
