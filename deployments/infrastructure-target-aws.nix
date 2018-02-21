@@ -27,6 +27,8 @@ in rec {
 
   buildkite-agent-1   = hydra;
   buildkite-agent-2   = hydra;
+  buildkite-agent-3   = hydra;
+  buildkite-agent-4   = hydra;
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
