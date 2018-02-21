@@ -87,7 +87,6 @@ module NixOps (
   , DoCommit(..)
   , DryRun(..)
   , PassCheck(..)
-  , RebuildExplorer(..)
   , enabled
   , disabled
   , opposite
@@ -646,16 +645,14 @@ setenv o@Options{..} (EnvVar k) v = do
   when (oVerbose == Verbose) $
     cmd o "/bin/sh" ["-c", format ("echo 'export "%s%"='$"%s) k k]
 
-deploy :: Options -> NixopsConfig -> DryRun -> BuildOnly -> PassCheck -> RebuildExplorer -> Maybe Seconds -> IO ()
-deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSystemStartHeldBy = do
+deploy :: Options -> NixopsConfig -> DryRun -> BuildOnly -> PassCheck -> Maybe Seconds -> IO ()
+deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check bumpSystemStartHeldBy = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
   _ <- pure $ clusterConfigurationKey c
-  when (dryrun /= DryRun && elem Explorer cElements && reExplorer /= NoExplorerRebuild) $ do
-    cmd o "scripts/generate-explorer-frontend.sh" []
   when (dryrun /= DryRun && buonly /= BuildOnly) $ do
     deployerIP <- establishDeployerIP o oDeployerIP
     setenv o "SMART_GEN_IP" $ getIP deployerIP
@@ -718,7 +715,7 @@ nodeDestroyElasticIP o c name =
 --
 defaultDeploy :: Options -> NixopsConfig -> IO ()
 defaultDeploy o c =
-  deploy o c NoDryRun NoBuildOnly DontPassCheck RebuildExplorer (Just defaultHold)
+  deploy o c NoDryRun NoBuildOnly DontPassCheck (Just defaultHold)
 
 fromscratch :: Options -> NixopsConfig -> IO ()
 fromscratch o c = do

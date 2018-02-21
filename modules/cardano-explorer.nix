@@ -4,7 +4,8 @@ globals: params:
 { config, pkgs, lib, ... }:
 
 let
-  explorer-drv = (import ./../default.nix {}).cardano-sl-explorer-static;
+  cardanoPackages = import ./../default.nix {};
+  explorer-drv = cardanoPackages.cardano-sl-explorer-static;
 in
 {
   global.dnsHostname   = mkForce   "cardano-explorer";
@@ -25,9 +26,7 @@ in
         # TLS provided by cloudfront
         locations = {
           "/" = {
-            # TODO: one day we'll build purescript with Nix!
-            # but today, this is built by ./scripts/generate-explorer-frontend.sh
-            root = ./../cardano-sl/explorer/frontend/dist;
+            root = cardanoPackages.cardano-sl-explorer-frontend;
             # Serve static files or fallback to browser history api
             tryFiles = "$uri /index.html";
           };
