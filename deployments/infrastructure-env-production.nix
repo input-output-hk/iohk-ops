@@ -43,6 +43,14 @@ in {
         openssh.authorizedKeys.keys = devOpsKeys;
       };
       groups.live-production = {};
+      users.staging = {
+        description     = "cardano staging";
+        group           = "staging";
+        createHome      = true;
+        isNormalUser = true;
+        openssh.authorizedKeys.keys = devKeys;
+      };
+      groups.staging = {};
     };
 
     services.tarsnap = {
