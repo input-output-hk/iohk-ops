@@ -19,7 +19,7 @@ let nodeMap = globals.nodeMap; in
         };
       });
 
-      disk = mkMonitor (disk_monitor // {
+      disk = mkMonitor (disk_monitor "!host:rc-staging.ec2.report-server" "0.8" "0.9" // {
         message = pagerDutyPolicy.nonCritical;
       });
       ram = mkMonitor (ram_monitor // {

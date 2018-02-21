@@ -81,7 +81,8 @@ in rec {
       cardanod-ip = { inherit region accessKeyId; };
     };
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
-      disk = mkMonitor disk_monitor;
+      disk       = mkMonitor (disk_monitor "!host:iohk-infra.ec2.hydra*" "0.8"  "0.9");
+      disk_hydra = mkMonitor (disk_monitor "host:iohk-infra.ec2.hydra*"  "0.95" "0.95");
       ntp  = mkMonitor ntp_monitor;
     });
   };
