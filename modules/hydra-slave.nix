@@ -4,6 +4,10 @@ let
   iohk-pkgs = import ../default.nix {};
 in
 {
+  services = {
+    dd-agent.tags              = [" group:hydra-and-slaves"];
+  };
+
   nix.gc = {
     automatic = true;
     dates = "*:15:00";
