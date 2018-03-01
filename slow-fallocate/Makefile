@@ -1,2 +1,2 @@
 libslow-fallocate.so: slow-fallocate.c
-	gcc -shared -fPIC -o $@ $^ -ldl
+	${CC} -shared -fPIC -o $@ $^ -ldl
