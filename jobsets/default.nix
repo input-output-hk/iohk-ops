@@ -102,6 +102,7 @@ let
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
     cardano-sl = mkCardano "master" nixpkgs-src.rev;
     cardano-sl-1-0 = mkCardano "cardano-sl-1.0" nixpkgs-src.rev;
+    cardano-sl-1-1 = mkCardano "release/1.1.0" nixpkgs-src.rev;
     daedalus = mkDaedalus "develop";
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
     iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
