@@ -6,15 +6,17 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node";
-  cardano = (import ./../default.nix { enableProfiling = cfg.enableProfiling; }).cardano-sl-static;
+  cardano = (import ./../default.nix { enableProfiling = cfg.enableProfiling; }).cardano-sl-node-static;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
 
   command = toString [
     cfg.executable
-    (optionalString (cfg.publicIP != null) "--address ${cfg.publicIP}:${toString cfg.port}")
-    "--listen ${cfg.privateIP}:${toString cfg.port}"
+    (optionalString (cfg.publicIP != null && params.name != "explorer")
+     "--address ${cfg.publicIP}:${toString cfg.port}")
+    (optionalString (params.name != "explorer")
+     "--listen ${cfg.privateIP}:${toString cfg.port}")
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
@@ -39,11 +41,11 @@ let
       "--keyfile ${stateDir}/key${toString cfg.nodeIndex}.sk")
     (optionalString (cfg.productionMode && globals.systemStart != 0) "--system-start ${toString globals.systemStart}")
     (optionalString cfg.supporter "--supporter")
-    "--log-config ${./../static/csl-logging.yaml}"
+    "--log-config ${cardano.src + "/../log-configs/cluster.yaml"}"
     "--logs-prefix /var/lib/cardano-node"
     "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
-    "--configuration-file ${cardano.src}/configuration.yaml"
+    "--configuration-file ${cardano.src + "/../lib/"}/configuration.yaml"
     "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
@@ -209,6 +211,7 @@ in {
         KillSignal = "SIGINT";
         WorkingDirectory = stateDir;
         PrivateTmp = true;
+        Type = "notify";
       };
     };
   };

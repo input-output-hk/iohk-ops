@@ -151,11 +151,12 @@ import qualified System.IO                     as Sys
 import qualified System.IO.Unsafe              as Sys
 import           Time.System
 import           Time.Types
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText)
+import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText, within)
 import qualified Turtle                        as Turtle
 
 import           Network.AWS.Auth
 import           Network.AWS               hiding (Seconds, Debug, Region)
+import           Network.AWS.Data                 (toText)
 import           Control.Monad.Trans.AWS          (runAWST, AWST)
 import           Network.AWS.S3.PutObject
 import           Network.AWS.S3.CopyObject
@@ -902,24 +903,22 @@ s3Upload daedalus_rev c = do
       void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata newMetaData $ putObject bucketName remoteKey bdy
     copyObject' :: BucketName -> T.Text -> ObjectKey -> AWST (ResourceT IO) ()
     copyObject' bucketName source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName source dest
-    uploadHashedInstaller :: T.Text -> T.Text -> Integer -> T.Text -> AWST (ResourceT IO) T.Text
+    uploadHashedInstaller :: T.Text -> T.Text -> Integer -> T.Text -> AWST (ResourceT IO) (T.Text, T.Text)
     uploadHashedInstaller bucketName localPath appver cardanoCommit = do
       hash <- (liftIO . hashInstaller) localPath
       let
         -- splitOn always returns at least 1 item in the list
         basename' = last $ T.splitOn "/" $ localPath
-      uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
-      copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
-      return hash
+      region <- bucketRegion (BucketName bucketName)
+      within region $ do
+        uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
+        copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
+      return (hash, s3Link (toText region) bucketName basename')
     hashAndUpload :: Integer -> T.Text -> CiResult -> AWST (ResourceT IO) ()
     hashAndUpload appver cardanoCommit ciResult = do
-      case ciResult of
-        TravisResult localPath _ _ _ _ -> do
-          hash <- uploadHashedInstaller (cUpdateBucket c) localPath appver cardanoCommit
-          say $ "darwin installer " <> localPath <> " hash " <> hash
-        AppveyorResult localPath _ _ -> do
-          hash <- uploadHashedInstaller (cUpdateBucket c) localPath appver cardanoCommit
-          say $ "windows installer " <> localPath <> " hash " <> hash
+      let path = resultLocalPath ciResult
+      (hash, url) <- uploadHashedInstaller (cUpdateBucket c) path appver cardanoCommit
+      say $ hash <> " " <> url <> " - " <> resultDesc ciResult
 
   env <- newEnv Discover
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
@@ -929,8 +928,10 @@ s3Upload daedalus_rev c = do
       cardanoCommit' = grCardanoCommit $ globalResult res
     liftIO $ runResourceT . runAWST env $ do
       say $ "uploading things to " <> coerce (cUpdateBucket c)
-      hashAndUpload appver cardanoCommit' (travisResult res)
-      hashAndUpload appver cardanoCommit' (appveyorResult res)
+      let maybeHashAndUpload = maybe (pure ()) (hashAndUpload appver cardanoCommit')
+      maybeHashAndUpload $ buildkiteResult res
+      maybeHashAndUpload $ travisResult res
+      maybeHashAndUpload $ appveyorResult res
 
 configurationKeys :: Environment -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64)
 configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")

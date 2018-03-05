@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 with (import ./../lib.nix);
 
@@ -17,6 +17,13 @@ in {
 
   services.openssh.passwordAuthentication = false;
   services.openssh.enable = true;
+  # Non-root users are not allowed to install authorized keys.
+  services.openssh.authorizedKeysFiles = pkgs.lib.mkForce
+    [ "/etc/ssh/authorized_keys.d/%u" ];
+  services.openssh.extraConfig = lib.mkOrder 999 ''
+    Match User root
+        AuthorizedKeysFile .ssh/authorized_keys .ssh/authorized_keys2 /etc/ssh/authorized_keys.d/%u
+  '';
 
   services.ntp.enable = true;
 
@@ -48,7 +55,11 @@ in {
       connect-timeout = 10
     '';
 
+    # use all cores
     buildCores = 0;
+
+    # allow 4 substituters in parallel
+    maxJobs = 4;
 
     nixPath = [ "nixpkgs=/run/current-system/nixpkgs" ];
 

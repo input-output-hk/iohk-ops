@@ -19,6 +19,8 @@ WITH_INFRA_PRODUCTION=${9:-true}
 shift || true
 WITH_INFRA_STAGING=${9:-true}
 
+homestate="$(mktemp -d -t iohk-ops.XXXXXXXXXXXX)"
+export HOME="${homestate}"
 
 # PREPARE
 mkdir -p cardano-sl/explorer/frontend/dist
@@ -50,11 +52,10 @@ cleanup() {
         set +xe
         for depl in ${CLEANUP_DEPLS}
         do
-                test -z "${CLEANUP_DEPLOYS}" ||
-                        ${IOHK_OPS} --config ${depl}'.yaml' destroy delete >/dev/null 2>&1
                 test -z "${CLEANUP_CONFIGS}" ||
                         rm -f                ${depl}'.yaml'
         done
+        rm -rf ${homestate}
 }
 trap cleanup EXIT
 

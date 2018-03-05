@@ -42,8 +42,10 @@ newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (Fro
 newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
 data Arch = Linux64 | Mac64 | Win64 deriving Show
 newtype ApplicationVersionKey (a :: Arch) = ApplicationVersionKey Text deriving IsString
-newtype ApplicationVersion (a :: Arch) = ApplicationVersion Text deriving (IsString, Show, Generic, ToJSON)
+newtype ApplicationVersion (a :: Arch) = ApplicationVersion Text deriving (IsString, Show, Eq, Generic, ToJSON)
 
+getApplicationVersion :: ApplicationVersion a -> Text
+getApplicationVersion (ApplicationVersion v) = v
 
 -- * Flags
 --
