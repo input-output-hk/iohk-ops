@@ -65,13 +65,13 @@ rec {
     };
   };
 
-  disk_monitor = {
+  disk_monitor = scope_restriction: warning: critical: {
     name = "High disk usage";
     type = "metric alert";
-    query = config: "max(last_5m):avg:system.disk.in_use{depl:${config.deployment.name},!host:mainnet.ec2.report-server} by {host,device} > 0.9";
+    query = config: "max(last_5m):avg:system.disk.in_use{depl:${config.deployment.name},${scope_restriction}} by {host,device} > ${critical}";
     monitorOptions.thresholds = {
-      warning = "0.8";
-      critical = "0.9";
+      warning = "${warning}";
+      critical = "${critical}";
     };
   };
 

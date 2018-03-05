@@ -15,7 +15,9 @@ WITH_PRODUCTION=${5:-true}
 WITH_DEVELOPMENT=${6:-true}
 WITH_EXPLORER=${7:-true}
 WITH_REPORT_SERVER=${8:-true}
-WITH_INFRA=${9:-true}
+WITH_INFRA_PRODUCTION=${9:-true}
+shift || true
+WITH_INFRA_STAGING=${9:-true}
 
 homestate="$(mktemp -d -t iohk-ops.XXXXXXXXXXXX)"
 export HOME="${homestate}"
@@ -86,11 +88,18 @@ ${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-devo.yaml'   create deploy --dry-r
 banner 'Development env evaluated'
 fi
 
-if test -n "${WITH_INFRA}"; then
+if test -n "${WITH_INFRA_PRODUCTION}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
 ${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment production ${COMMON_OPTIONS} 'test-infra'   Infra
 ${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-infra.yaml'  create deploy --dry-run
-banner 'Infra evaluated'
+banner 'Production infra evaluated'
+fi
+
+if test -n "${WITH_INFRA_STAGING}"; then
+CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
+${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment staging   ${COMMON_OPTIONS} 'test-infra'   Infra
+${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-infra.yaml'  create deploy --dry-run
+banner 'Staging infra evaluated'
 fi
 
 echo "Validating terraform"
