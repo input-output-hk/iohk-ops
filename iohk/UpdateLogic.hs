@@ -452,8 +452,8 @@ findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status =
       (globalResults, travisResult') <- processDarwinBuildKite buildkiteToken daedalus_rev daedalus_version tempdir buildNum keys (targetUrl status)
       return (Just globalResults, Just travisResult')
     Just (StatusContextTravis buildId) -> do
-      (globalResults, travisResult') <- processDarwinBuildTravis buildkiteToken daedalus_rev daedalus_version tempdir buildId keys (targetUrl status)
-      return (Just globalResults, Just travisResult')
+      putStrLn "Ignoring build status from travis"
+      return (Nothing, Nothing)
     Just (StatusContextAppveyor user project version) -> do
       appveyorBuild <- fetchAppveyorBuild user project version
       let jobid = appveyorBuild ^. build . jobs . to head . jobId
