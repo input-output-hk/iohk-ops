@@ -223,7 +223,7 @@ in {
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       #path = [ pkgs.procps ];  # no dependency on the package procps anymore
       script = ''
-        ${./../record-stats.sh} ${stateDir} ${cfg.executable} >> "${stateDir}/time-slave.log"
+        ${./../record-stats.sh} -exec ${cfg.executable} >> "${stateDir}/time-slave.log"
       '';
       serviceConfig = {
         User = "cardano-node";

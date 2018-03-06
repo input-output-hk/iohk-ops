@@ -57,7 +57,7 @@ enqueue:
 dequeue:
 
   core:
-    rateLimit: 3
+    rateLimit: 1
     maxInFlight: 2
 
   relay:
