@@ -65,6 +65,10 @@ GENERAL_OPTIONS="--verbose --deployer 0.0.0.0"
 COMMON_OPTIONS="--topology topology-min.yaml"
 CARDANO_COMPONENTS="Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer}"
 
+nix-build default.nix -A cardano-sl-tools -o cardano-sl-tools
+
+export PATH=$PATH:./cardano-sl-tools/bin/
+
 if test -n "${WITH_STAGING}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-stag"
 ${IOHK_OPS}               new  --config 'test-stag.yaml'   --environment staging    ${COMMON_OPTIONS} 'test-stag'    ${CARDANO_COMPONENTS}
