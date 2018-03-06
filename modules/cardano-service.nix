@@ -221,7 +221,7 @@ in {
       description   = "recording metrics on cardano node service";
       after         = [ "systemd.services.cardano-node" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
-      #path = [ pkgs.procps ];  # no dependency on the package procps anymore
+      path = [ pkgs.glibc pkgs.procps ];  # dependencies
       script = ''
         ${./../record-stats.sh} -exec ${cfg.executable} >> "${stateDir}/time-slave.log"
       '';
