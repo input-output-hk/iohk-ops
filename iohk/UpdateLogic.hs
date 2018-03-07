@@ -450,6 +450,7 @@ hashInstaller path = do
 
 githubWikiRecord :: InstallersResults -> T.Text
 githubWikiRecord results = join [ T.pack $ show appVersion
+                                , ""
                                 , githubLink daedalus_rev "daedalus"
                                 , githubLink cardano_rev "cardano-sl"
                                 , ciLink buildkite
