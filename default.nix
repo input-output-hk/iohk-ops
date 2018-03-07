@@ -25,14 +25,12 @@ let
     in (import "${nixopsUnstable}/release.nix" {
          nixpkgs = localLib.fetchNixPkgs;
         }).build.${system};
-  iohk-ops-extra-runtime-deps = [
-    pkgs.gitFull pkgs.nix-prefetch-scripts compiler.yaml
-    pkgs.wget
-    pkgs.file
-    cardano-sl-pkgs.cardano-sl-auxx
-    cardano-sl-pkgs.cardano-sl-tools
+  iohk-ops-extra-runtime-deps = with pkgs; [
+    gitFull nix-prefetch-scripts compiler.yaml
+    wget
+    file
     nixops
-    pkgs.terraform_0_11
+    terraform_0_11
   ];
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
@@ -49,6 +47,7 @@ in {
                 executableToolDepends = [ pkgs.makeWrapper ];
                 libraryHaskellDepends = iohk-ops-extra-runtime-deps;
                 postInstall = ''
+                  cp -vs $out/bin/iohk-ops $out/bin/io
                   wrapProgram $out/bin/iohk-ops \
                   --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                 '';
