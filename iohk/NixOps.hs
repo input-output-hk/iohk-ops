@@ -12,7 +12,6 @@
 
 module NixOps (
     nixops
-  , create
   , modify
   , deploy
   , destroy
@@ -152,11 +151,12 @@ import qualified System.IO                     as Sys
 import qualified System.IO.Unsafe              as Sys
 import           Time.System
 import           Time.Types
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText)
+import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText, within)
 import qualified Turtle                        as Turtle
 
 import           Network.AWS.Auth
 import           Network.AWS               hiding (Seconds, Debug, Region)
+import           Network.AWS.Data                 (toText)
 import           Control.Monad.Trans.AWS          (runAWST, AWST)
 import           Network.AWS.S3.PutObject
 import           Network.AWS.S3.CopyObject
@@ -591,16 +591,6 @@ exists o NixopsConfig{..} = do
   (code, _, _) <- cmd'' o (ops <> " info -d " <> (fromNixopsDepl cName))
   pure $ code == ExitSuccess
 
-create :: Options -> NixopsConfig -> IO ()
-create o c@NixopsConfig{..} = do
-  deplExists <- exists o c
-  if deplExists
-  then do
-    printf ("Deployment already exists?: '"%s%"'\n") $ fromNixopsDepl cName
-  else do
-    printf ("Creating deployment "%s%"\n") $ fromNixopsDepl cName
-    nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
-
 buildGlobalsImportNixExpr :: [(NixParam, NixValue)] -> NixValue
 buildGlobalsImportNixExpr deplArgs =
   NixImport (NixFile "globals.nix")
@@ -617,8 +607,14 @@ computeFinalDeploymentArgs o@Options{..} NixopsConfig{..} = do
 
 modify :: Options -> NixopsConfig -> IO ()
 modify o@Options{..} c@NixopsConfig{..} = do
-  printf ("Syncing Nix->state for deployment "%s%"\n") $ fromNixopsDepl cName
-  nixops o c "modify" $ Arg <$> cFiles
+  deplExists <- exists o c
+  if deplExists
+  then do
+    printf ("Modifying pre-existing deployment "%s%"\n") $ fromNixopsDepl cName
+    nixops o c "modify" $ Arg <$> cFiles
+  else do
+    printf ("Creating deployment "%s%"\n") $ fromNixopsDepl cName
+    nixops o c "create" $ Arg <$> deploymentFiles cEnvironment cTarget cElements
 
   printf ("Setting deployment arguments:\n")
   deplArgs <- computeFinalDeploymentArgs o c
@@ -712,7 +708,6 @@ fromscratch :: Options -> NixopsConfig -> IO ()
 fromscratch o c = do
   destroy o c
   delete o c
-  create o c
   defaultDeploy o c
 
 -- | Destroy elastic IPs corresponding to the nodes listed and reprovision cluster.
@@ -908,20 +903,22 @@ s3Upload daedalus_rev c = do
       void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata newMetaData $ putObject bucketName remoteKey bdy
     copyObject' :: BucketName -> T.Text -> ObjectKey -> AWST (ResourceT IO) ()
     copyObject' bucketName source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName source dest
-    uploadHashedInstaller :: T.Text -> T.Text -> Integer -> T.Text -> AWST (ResourceT IO) T.Text
+    uploadHashedInstaller :: T.Text -> T.Text -> Integer -> T.Text -> AWST (ResourceT IO) (T.Text, T.Text)
     uploadHashedInstaller bucketName localPath appver cardanoCommit = do
       hash <- (liftIO . hashInstaller) localPath
       let
         -- splitOn always returns at least 1 item in the list
         basename' = last $ T.splitOn "/" $ localPath
-      uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
-      copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
-      return hash
+      region <- bucketRegion (BucketName bucketName)
+      within region $ do
+        uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
+        copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
+      return (hash, s3Link (toText region) bucketName basename')
     hashAndUpload :: Integer -> T.Text -> CiResult -> AWST (ResourceT IO) ()
     hashAndUpload appver cardanoCommit ciResult = do
       let path = resultLocalPath ciResult
-      hash <- uploadHashedInstaller (cUpdateBucket c) path appver cardanoCommit
-      say $ (resultDesc ciResult) <> " " <> path <> " hash " <> hash
+      (hash, url) <- uploadHashedInstaller (cUpdateBucket c) path appver cardanoCommit
+      say $ hash <> " " <> url <> " - " <> resultDesc ciResult
 
   env <- newEnv Discover
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do

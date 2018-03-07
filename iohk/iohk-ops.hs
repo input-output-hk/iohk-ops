@@ -101,7 +101,6 @@ data Command where
 
   -- * cluster lifecycle
   Nixops'               :: NixopsCmd -> [Arg] -> Command
-  Create                :: Command
   Modify                :: Command
   Deploy                :: RebuildExplorer -> BuildOnly -> DryRun -> PassCheck -> Maybe Seconds -> Command
   Destroy               :: Command
@@ -165,8 +164,8 @@ centralCommandParser =
      --                           (Nixops
      --                            <$> (NixopsCmd <$> argText "CMD" "Nixops command to invoke")
      --                            <*> ???)) -- should we switch to optparse-applicative?
-     ("create",                 "Create the whole cluster",                                         pure Create)
-   , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
+     ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
+   , ("create",                 "Same as modify",                                                   pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
                                 <$> flag NoExplorerRebuild "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
@@ -254,7 +253,6 @@ runTop o@Options{..} args topcmd = do
             AMI                      -> Ops.buildAMI              o c
             -- * deployment lifecycle
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
-            Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
             Deploy ner bu dry ch buh -> Ops.deploy                    o c dry bu ch ner buh
             Destroy                  -> Ops.destroy                   o c
@@ -313,15 +311,13 @@ runNew o@Options{..} New{..} args = do
   echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
   cmd o "cat" [configFilename]
 
-  -- nixops create:
-  Ops.create o config
-
   -- generate dev-keys & ensure secrets exist:
   when (tEnvironment == Development) $ do
     let secrets = [ "static/github_token"
                   , "static/id_buildfarm"
                   , "static/datadog-api.secret"
-                  , "static/datadog-application.secret" ]
+                  , "static/datadog-application.secret"
+                  , "static/zendesk-token.secret" ]
     forM_ secrets touch
     echo "Ensured secrets exist"
 

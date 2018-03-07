@@ -9,6 +9,12 @@ let nodeMap = { inherit (globals.fullMap) report-server; }; in
       ./../modules/datadog.nix
       ./../modules/papertrail.nix
     ];
+
+    config.services.report-server.zendesk = {
+      accountName = "iohksupport";  # NB. expires on 2018-02-26
+      email = "staging-report-server@iohk.io";
+      tokenFile = "/run/keys/zendesk-token";
+    };
   };
 
   resources.elasticIPs = nodesElasticIPs nodeMap;
