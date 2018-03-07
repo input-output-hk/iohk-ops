@@ -4,7 +4,7 @@ with (import ./../lib.nix);
 let region = "eu-central-1";
     accessKeyId = IOHKaccessKeyId;
 in {
-  network.description = "IOHK infrastructure production";
+  network.description = "IOHK infrastructure staging";
 
   hydra = { config, pkgs, resources, ... }: {
 
@@ -13,12 +13,16 @@ in {
       ./../modules/datadog.nix
     ];
 
-    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
+    ## 
+    security.acme.certs = mkForce {};
+    services.nginx.enable = mkForce false;
+
+    services.dd-agent.tags = ["env:staging" "depl:${config.deployment.name}"];
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.hydra-ip;
 
     deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
-    deployment.route53.hostName = "hydra.aws.iohkdev.io";
+    deployment.route53.hostName = "hydra.awstest2.iohkdev.io";
   };
 
   cardano-deployer = { config, pkgs, resources, ... }: {
@@ -27,7 +31,7 @@ in {
       ./../modules/papertrail.nix
     ];
 
-    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
+    services.dd-agent.tags = ["env:staging" "depl:${config.deployment.name}"];
 
     deployment.keys.tarsnap = {
       keyFile = ./../static/tarsnap-cardano-deployer.secret;
@@ -35,14 +39,6 @@ in {
     };
 
     users = {
-      users.live-production = {
-        description     = "cardano live-production";
-        group           = "live-production";
-        createHome      = true;
-        isNormalUser = true;
-        openssh.authorizedKeys.keys = devOpsKeys;
-      };
-      groups.live-production = {};
       users.staging = {
         description     = "cardano staging";
         group           = "staging";
@@ -58,9 +54,9 @@ in {
       keyfile = "/var/lib/keys/tarsnap";
       archives.cardano-deployer = {
         directories = [
-          "/home/live-production/.ec2-keys"
-          "/home/live-production/.aws"
-          "/home/live-production/.nixops"
+          "/home/staging/.ec2-keys"
+          "/home/staging/.aws"
+          "/home/staging/.nixops"
           "/etc/"
         ];
       };

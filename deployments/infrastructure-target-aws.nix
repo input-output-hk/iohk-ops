@@ -76,5 +76,14 @@ in rec {
         }];
       };
     };
+    elasticIPs = {
+      hydra-ip    = { inherit region accessKeyId; };
+      cardanod-ip = { inherit region accessKeyId; };
+    };
+    datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
+      disk       = mkMonitor (disk_monitor "!group:hydra-and-slaves" "0.8"  "0.9");
+      disk_hydra = mkMonitor (disk_monitor  "group:hydra-and-slaves" "0.95" "0.951");
+      ntp  = mkMonitor ntp_monitor;
+    });
   };
 }

@@ -26,6 +26,39 @@ in {
         type = types.package;
         default = (import ./../default.nix {}).cardano-report-server-static;
       };
+      zendesk = {
+        email = mkOption {
+          type = types.str;
+          default = "";
+          example = "agent@email.com";
+          description = ''
+            The e-mail associated with the Zendesk account.
+          '';
+        };
+        tokenFile = mkOption {
+          type = types.nullOr types.path;
+          default = null;
+          example = "/run/keys/zendesk-token";
+          description = ''
+            An access token for Zendesk.
+          '';
+        };
+        accountName = mkOption {
+          type = types.str;
+          default = "";
+          example = "iohk";
+          description = ''
+            Zendesk account name. This is the first part of NAME.zendesk.com.
+          '';
+        };
+        sendLogs = mkOption {
+          type = types.bool;
+          default = true;
+          description = ''
+            Send logs from custom reports to Zendesk.
+          '';
+        };
+      };
     };
   };
 
@@ -49,6 +82,11 @@ in {
 
     deployment.ec2.ebsInitialRootDiskSize = 200;
 
+    deployment.keys.zendesk-token = {
+      keyFile = ./. + "/../static/zendesk-token.secret";
+      user = "report-server";
+    };
+
     networking.firewall.allowedTCPPorts = [
       cfg.port
     ];
@@ -58,6 +96,7 @@ in {
         group = "report-server";
         home = config.services.report-server.logsdir;
         createHome = true;
+        extraGroups = [ "keys" ];
       };
       groups.report-server = {};
     };
@@ -70,10 +109,31 @@ in {
       serviceConfig = {
         User = "report-server";
         Group = "report-server";
-        ExecStart = ''
-          ${cfg.executable}/bin/cardano-report-server -p ${toString cfg.port} --logsdir ${cfg.logsdir}
-        '';
       };
+      script = let
+        zdEmail = if cfg.zendesk.email != "" then "--zd-email \"${cfg.zendesk.email}\"" else "";
+        # fixme: report-server should not accept token as command-line argument
+        zdToken = if cfg.zendesk.tokenFile != null then "--zd-token `head -1 ${cfg.zendesk.tokenFile}`" else "";
+        zdAccount = if cfg.zendesk.accountName != "" then "--zd-account \"${cfg.zendesk.accountName}\"" else "";
+        zdSendLogs = if cfg.zendesk.sendLogs then "--zd-send-logs" else "";
+      in ''
+        exec ${cfg.executable}/bin/cardano-report-server \
+            -p ${toString cfg.port} \
+            ${zdEmail} ${zdToken} ${zdAccount} ${zdSendLogs} \
+            --logsdir ${cfg.logsdir}
+      '';
     };
+
+    assertions = [
+      { assertion =
+          (cfg.zendesk.email != "" && cfg.zendesk.tokenFile != null && cfg.zendesk.accountName != "") ||
+          (cfg.zendesk.email == "" && cfg.zendesk.tokenFile == null && cfg.zendesk.accountName == "");
+        message = ''
+          Either all or none of `services.report-server.zendesk.email',
+          `services.report-server.zendesk.tokenFile',
+          `services.report-server.zendesk.accountName' must be defined.
+        '';
+      }
+    ];
   };
 }

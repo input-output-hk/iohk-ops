@@ -20,6 +20,7 @@ module UpdateLogic
   , StatusContext(..)
   , resultLocalPath
   , resultDesc
+  , bucketRegion
   ) where
 
 import           Appveyor                     (AppveyorArtifact (AppveyorArtifact),
@@ -30,7 +31,7 @@ import           Appveyor                     (AppveyorArtifact (AppveyorArtifac
 import qualified Appveyor
 import           Buildkite.API                (APIToken(APIToken), Artifact(..)
                                               , listArtifactsForBuild,
-                                               getBuild, getLatestBuildForPipeline)
+                                               getBuild, getJobLog)
 import qualified Buildkite.API                as BK
 import qualified Buildkite.Pipeline           as BK
 import           Cardano                      (ConfigurationYaml,
@@ -47,6 +48,7 @@ import           Data.Aeson                   (ToJSON, encode)
 import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Char8        as BSC
 import qualified Data.ByteString.Lazy         as LBS
+import qualified Data.ByteString.Lazy.Char8   as L8
 import           Data.Coerce                  (coerce)
 import           Data.Git                     (Blob (Blob),
                                                Commit (commitTreeish), EntName,
@@ -72,9 +74,11 @@ import           Github                       (Status, context,
                                                fetchGithubStatus, statuses,
                                                targetUrl)
 import           Network.AWS                  (Credentials (Discover), newEnv,
-                                               send, toBody, within, Region(Tokyo))
+                                               send, toBody, within, Region)
 import           Network.AWS.S3.PutObject     (poACL, putObject)
-import           Network.AWS.S3.Types         (BucketName (BucketName),
+import           Network.AWS.S3.GetBucketLocation (getBucketLocation, gblbrsLocationConstraint)
+
+import           Network.AWS.S3.Types         (BucketName (BucketName), constraintRegion,
                                                ObjectCannedACL (OPublicRead),
                                                ObjectKey)
 import           Network.URI                  (uriPath, parseURI)
@@ -85,6 +89,7 @@ import           System.Console.ANSI          (Color (Green, Red),
                                                SGR (Reset, SetColor), setSGR)
 import           System.IO.Error              (ioeGetErrorString)
 import           System.Exit                  (ExitCode (ExitFailure, ExitSuccess), die)
+import           Text.Regex.PCRE              ((=~))
 import           Travis                       (BuildId, BuildNumber,
                                                TravisBuild (matrix, number),
                                                TravisInfo2 (ti2commit),
@@ -96,7 +101,8 @@ import           Turtle.Prelude               (mktempdir, proc, procStrict,
                                                pushd)
 import           Types                        (ApplicationVersion (ApplicationVersion),
                                                ApplicationVersionKey (ApplicationVersionKey),
-                                               Arch (Linux64, Mac64, Win64))
+                                               Arch (Linux64, Mac64, Win64),
+                                               getApplicationVersion)
 import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1, fetchUrl)
 
 data CiResult = TravisResult {
@@ -284,26 +290,41 @@ fetchRepo localpath url = do
         ExitFailure _ -> error "cant fetch repo"
   with fetcher $ \res -> pure res
 
+buildkiteOrg     = "input-output-hk" :: T.Text
+pipelineDaedalus = "daedalus"        :: T.Text
+pipelineCardano  = "cardano-sl"      :: T.Text
+
+findCardanoBuildFromDaedalus :: APIToken
+                             -> Int -- ^ Daedalus Buildkite build number
+                             -> IO (Maybe BK.Build) -- ^ Cardano build
+findCardanoBuildFromDaedalus apiToken buildNum = do
+  putStrLn $ "Looking for logs in " <> T.unpack pipelineDaedalus <> " build #" <> show buildNum
+  daedalusBuild <- getBuild apiToken buildkiteOrg pipelineDaedalus buildNum
+  let jobs = BK.buildJobs daedalusBuild
+  putStrLn $ "  This build has " <> show (length jobs) <> " jobs."
+  logs <- mapM (getJobLog apiToken) jobs
+  let cardanoBuildNum = headMay . catMaybes . map extractBuildId $ logs
+  case cardanoBuildNum of
+    Just num -> Just <$> getBuild apiToken buildkiteOrg pipelineCardano num
+    Nothing -> pure Nothing
+
+artifactIsInstaller :: Artifact -> Bool
+artifactIsInstaller = T.isSuffixOf ".pkg" . artifactFilename
+
 processDarwinBuildKite :: APIToken -> T.Text -> T.Text -> T.Text -> Int -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> T.Text -> IO (GlobalResults, CiResult)
 processDarwinBuildKite apiToken daedalus_rev daedalus_version tempdir buildNum versionKey ciUrl = do
-  let org = "input-output-hk" :: T.Text
-      targetPipeline = "daedalus" :: T.Text
-      cardanoPipeline = "cardano-sl" :: T.Text
-      filenameP = T.isSuffixOf ".pkg"
+  cardanoBuild <- findCardanoBuildFromDaedalus apiToken buildNum
+  arts <- listArtifactsForBuild apiToken buildkiteOrg pipelineDaedalus buildNum
 
-  _targetBuild <- getBuild apiToken org targetPipeline buildNum
-  cardanoBuild <- getLatestBuildForPipeline apiToken org cardanoPipeline
-  arts <- listArtifactsForBuild apiToken org targetPipeline buildNum
-
-  case (find (filenameP . artifactFilename) arts, cardanoBuild) of
+  case (find artifactIsInstaller arts, cardanoBuild) of
     (Just art, Just cardanoInfo) -> do
       let cardanoRev = BK.buildCommit cardanoInfo
           outFile = tempdir <> "/" <> artifactFilename art
 
       -- ask Buildkite what the download URL is
-      url <- BK.getArtifactURL apiToken org targetPipeline buildNum art
+      url <- BK.getArtifactURL apiToken buildkiteOrg pipelineDaedalus buildNum art
 
-      printDarwinBuildInfo "buildkite" (fromIntegral $ BK.buildNumber cardanoInfo) cardanoRev url
+      printDarwinBuildInfo "buildkite" (BK.buildNumber cardanoInfo) cardanoRev url
 
       -- download artifact into nix store
       fetchCachedUrlWithSHA1 url (artifactFilename art) outFile (artifactSha1sum art)
@@ -331,8 +352,8 @@ makeDaedalusVersion ver = makeDaedalusVersion' ver . T.pack . show
 makeDaedalusVersion' :: T.Text -> T.Text -> ApplicationVersion a
 makeDaedalusVersion' ver num = ApplicationVersion $ ver <> "." <> num
 
-processDarwinBuildTravis :: T.Text -> T.Text -> T.Text -> BuildId -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> T.Text -> IO (GlobalResults, CiResult)
-processDarwinBuildTravis daedalus_rev daedalus_version tempdir buildId versionKey ciUrl = do
+processDarwinBuildTravis :: BK.APIToken -> T.Text -> T.Text -> T.Text -> BuildId -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> T.Text -> IO (GlobalResults, CiResult)
+processDarwinBuildTravis buildkiteToken daedalus_rev daedalus_version tempdir buildId versionKey ciUrl = do
   obj <- fetchTravis buildId
   let
     filename = "Daedalus-installer-" <> daedalus_version <> "." <> (number obj) <> ".pkg"
@@ -341,18 +362,18 @@ processDarwinBuildTravis daedalus_rev daedalus_version tempdir buildId versionKe
     url = "http://s3.eu-central-1.amazonaws.com/daedalus-travis/" <> filename
     outFile = tempdir <> "/" <> filename
   buildLog <- fetchUrl mempty $ "https://api.travis-ci.org/jobs/" <> (T.pack $ show $ tjiId $ head $ drop 1 $ matrix obj) <> "/log"
-  let
-    cardanoBuildNumber = extractBuildId buildLog
-  cardanoInfo <- fetchTravis2 "input-output-hk/cardano-sl" cardanoBuildNumber
 
-  printDarwinBuildInfo "travis" cardanoBuildNumber (ti2commit cardanoInfo) url
+  let Just cardanoBuildNumber = extractBuildId buildLog
+  cardanoRev <- BK.buildCommit <$> getBuild buildkiteToken buildkiteOrg pipelineCardano cardanoBuildNumber
 
-  appVersion <- liftIO $ grabAppVersion (ti2commit cardanoInfo) versionKey
+  printDarwinBuildInfo "travis" cardanoBuildNumber cardanoRev url
+
+  appVersion <- liftIO $ grabAppVersion cardanoRev versionKey
   fetchCachedUrl url filename outFile
 
-  pure (GlobalResults (ti2commit cardanoInfo) daedalus_rev appVersion, TravisResult outFile version (ti2commit cardanoInfo) (number obj) ciUrl)
+  pure (GlobalResults cardanoRev daedalus_rev appVersion, TravisResult outFile version cardanoRev (number obj) ciUrl)
 
-printDarwinBuildInfo :: String -> Integer -> T.Text -> T.Text -> IO ()
+printDarwinBuildInfo :: String -> Int -> T.Text -> T.Text -> IO ()
 printDarwinBuildInfo ci cardanoBuildNumber cardanoRev url = do
   setSGR [ SetColor Background Dull Red ]
   putStr "cardano build number: "
@@ -422,7 +443,7 @@ parseStatusContext status = parseBuildKite <|> parseTravis <|> parseAppveyor
     isTravis = context status == "continuous-integration/travis-ci/push"
     isAppveyor = context status == "continuous-integration/appveyor/branch"
 
-findInstaller :: HasCallStack => APIToken -> T.Text -> T.Text -> T.Text -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
+findInstaller :: HasCallStack => BK.APIToken -> T.Text -> T.Text -> T.Text -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -> Status -> IO (Maybe GlobalResults, Maybe CiResult)
 findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status = do
   -- TODO check for 404's
   -- TODO check file contents with libmagic
@@ -431,8 +452,8 @@ findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status =
       (globalResults, travisResult') <- processDarwinBuildKite buildkiteToken daedalus_rev daedalus_version tempdir buildNum keys (targetUrl status)
       return (Just globalResults, Just travisResult')
     Just (StatusContextTravis buildId) -> do
-      (globalResults, travisResult') <- processDarwinBuildTravis daedalus_rev daedalus_version tempdir buildId keys (targetUrl status)
-      return (Just globalResults, Just travisResult')
+      putStrLn "Ignoring build status from travis"
+      return (Nothing, Nothing)
     Just (StatusContextAppveyor user project version) -> do
       appveyorBuild <- fetchAppveyorBuild user project version
       let jobid = appveyorBuild ^. build . jobs . to head . jobId
@@ -454,15 +475,17 @@ findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status =
       putStrLn $ "unrecognized CI status: " <> T.unpack (context status)
       pure (Nothing, Nothing)
 
-extractBuildId :: LBS.ByteString -> BuildNumber
-extractBuildId fullLog = read $ BSC.unpack f5
+-- | The Daedalus installer build process outputs the cardano build
+-- number. Unfortunately it's not possible to know whether this is a
+-- Travis build number or Buildkite build number.
+-- This greps the build number from the log, if it exists.
+extractBuildId :: LBS.ByteString -> Maybe Int
+extractBuildId = headMay . catMaybes . map (buildNum . L8.unpack) . L8.lines
   where
-    f1 = LBS.toStrict fullLog
-    (_, f2) = BS.breakSubstring "build id is" f1
-    f3 = BSC.takeWhile (\c -> c /= '\n') f2
-    isNumber c = (c >= '0') && (c <= '9')
-    f4 = BSC.dropWhile (\c -> (isNumber c) == False) f3
-    f5 = BSC.takeWhile isNumber f4
+    regexp = "build id is (\\d+)" :: String
+    buildNum line = case line =~ regexp of
+      [[_, num]] -> readMay num
+      _ -> Nothing
 
 hashInstaller :: T.Text -> IO T.Text
 hashInstaller path = do
@@ -499,7 +522,7 @@ githubWikiRecord results = join [ T.pack $ show appVersion
     daedalus_rev = grDaedalusCommit globalDetails
 
     travis = liftA2 (,) (travisJobNumber <$> travisDetails) (travisUrl <$> travisDetails)
-    appvey = liftA2 (,) (T.pack . show . avVersion <$> appveyorDetails) (avUrl <$> appveyorDetails)
+    appvey = liftA2 (,) (getApplicationVersion . avVersion <$> appveyorDetails) (avUrl <$> appveyorDetails)
     buildkite = liftA2 (,) (T.pack . show . bkBuildNumber <$> buildkiteDetails) (bkUrl <$> buildkiteDetails)
 
     githubLink rev project = "[" <> (T.take 6 rev) <> "](https://github.com/input-output-hk/" <> project <> "/commit/" <> rev <> ")"
@@ -508,7 +531,7 @@ githubWikiRecord results = join [ T.pack $ show appVersion
     ciLink (Just (num, url)) = "[" <> num <> "](" <> url <> ")"
     ciLink Nothing = "*missing*"
 
-    join cols = T.concat ["| ", T.intercalate " | " cols, " |"]
+    join = T.intercalate " | "
 
 updateVersionJson :: InstallersResults -> T.Text -> IO ()
 updateVersionJson info bucket = do
@@ -523,6 +546,11 @@ updateVersionJson info bucket = do
         bdy = toBody body
       void . send $ Lens.set poACL (Just OPublicRead) $ putObject bucketName remoteKey bdy
   env' <- newEnv Discover
-  -- XXX: change the hard-coded 'Tokyo' region to the AWS query of the bucket's region.
-  liftIO $ runResourceT . runAWST env' $ within Tokyo $ do
-    uploadOneFile (BucketName bucket) json "daedalus-latest-version.json"
+  let bucketName = BucketName bucket
+  liftIO . runResourceT . runAWST env' $ do
+    region <- bucketRegion bucketName
+    within region $ uploadOneFile bucketName json "daedalus-latest-version.json"
+
+bucketRegion :: BucketName -> AWST (ResourceT IO) Region
+bucketRegion = fmap getRegion . send . getBucketLocation
+  where getRegion lc = constraintRegion (lc ^. gblbrsLocationConstraint)
