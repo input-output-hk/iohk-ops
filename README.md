@@ -34,7 +34,7 @@ After cloning this repo, start a `nix-shell`.
 
 To hack on the `iohk-ops` tool, use
 
-    % nix-shell --arg io-dev-mode true
+    % nix-shell -A ioSelfBuild
     [nix-shell:~/iohk/iohk-ops]$ type io
     io is a function
     io ()
