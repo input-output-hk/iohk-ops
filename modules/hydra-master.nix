@@ -36,10 +36,6 @@ in {
   nix = {
     distributedBuilds = true;
     buildMachines = [
-      (commonBuildMachineOpt // {
-        hostName = "localhost";
-        maxJobs = 2;
-      })
       # TODO: DEVOPS-166: reference linux slaves by DNS
       (mkLinux "52.59.25.105")
       (mkLinux "18.195.34.30")
