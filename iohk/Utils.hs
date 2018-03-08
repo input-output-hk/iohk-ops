@@ -100,3 +100,13 @@ errorT = error . T.unpack
 -- Let's keep it, because it's too painful to reinvent every time we need it.
 jsonLowerStrip :: (Generic a, AE.GToJSON AE.Zero (Rep a)) => Int -> a -> AE.Value
 jsonLowerStrip n = AE.genericToJSON $ AE.defaultOptions { AE.fieldLabelModifier = map C.toLower . drop n }
+
+-- | Returns the public download URL for an object in S3, according to
+-- the AWS path-style convention.
+-- https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAPI.html
+s3Link :: Text -- ^ Region
+       -> Text -- ^ Bucket name
+       -> Text -- ^ Object key
+       -> Text -- ^ URL to download
+s3Link region bucket key = mconcat [ "https://s3-", region, ".amazonaws.com/"
+                                   , bucket, "/", key ]

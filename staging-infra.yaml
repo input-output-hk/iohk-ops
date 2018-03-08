@@ -1,0 +1,22 @@
+args:
+  IOHKaccessKeyId:
+    tag: NixStr
+    contents: cardano-deployer
+  CFaccessKeyId:
+    tag: NixStr
+    contents: cardano-deployer
+  EmurgoaccessKeyId:
+    tag: NixStr
+    contents: cardano-deployer
+topology: topology-staging.yaml
+environment: Staging
+installer-bucket: stub
+name: staging-infra
+files:
+- deployments/keypairs.nix
+- deployments/infrastructure.nix
+- deployments/infrastructure-env-staging.nix
+- deployments/infrastructure-target-aws.nix
+elements:
+- Infra
+target: AWS

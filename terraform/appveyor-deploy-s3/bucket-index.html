@@ -1,0 +1,19 @@
+<div id="listing"></div>
+
+<!-- add jQuery - if you already have it just ignore this line -->
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+
+<!-- the JS variables for the listing -->
+<script type="text/javascript">
+   var S3BL_IGNORE_PATH = true;
+   var BUCKET_NAME = 'appveyor-ci-deploy';
+   // var BUCKET_URL = 'https://appveyor-ci-deploy.s3-ap-northeast-1.amazonaws.com';
+   var S3B_ROOT_DIR = 'installers/';
+   // var S3B_SORT = 'DEFAULT';
+   var EXCLUDE_FILE = 'index.html';
+   // var AUTO_TITLE = true;
+   // var S3_REGION = 'ap-northeast-1';
+</script>
+
+<!-- the JS to the do the listing -->
+<script type="text/javascript" src="https://rawgit.com/rufuspollock/s3-bucket-listing/gh-pages/list.js"></script>
