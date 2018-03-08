@@ -178,13 +178,14 @@ in {
       nodeMinute = mod (cfg.nodeIndex * 4) 60;
     in {
       script = ''
-        /run/current-system/sw/bin/systemctl restart cardano-node
+        echo /run/current-system/sw/bin/systemctl restart cardano-node
       '';
       # Reboot cardano-node every 36h (except Mon->Tue gap which is 24h)
-      startAt = [
-        "Tue,Fri,Mon 13:${toString nodeMinute}"
-        "Thu,Sun     01:${toString nodeMinute}"
-      ];
+      #startAt = [
+      #  "Tue,Fri,Mon 13:${toString nodeMinute}"
+      #  "Thu,Sun     01:${toString nodeMinute}"
+      #];
+      startAt = lib.mkForce [];
     };
 
     systemd.services.cardano-node = {
