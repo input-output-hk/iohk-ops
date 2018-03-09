@@ -342,6 +342,7 @@ data Options = Options
   , oSerial           :: Serialize
   , oVerbose          :: Verbose
   , oNoComponentCheck :: ComponentCheck
+  , oInitialHeapSize  :: Maybe Int
   } deriving Show
 
 parserBranch :: Optional HelpMessage -> Parser Branch
@@ -371,6 +372,18 @@ parserOptions = Options
                 <*> flag Serialize        "serial"             's' "Disable parallelisation"
                 <*> flag Verbose          "verbose"            'v' "Print all commands that are being run"
                 <*> flag NoComponentCheck "no-component-check" 'p' "Disable deployment/*.nix component check"
+                <*> initialHeapSizeFlag
+
+-- Nix initial heap size -- default 12GiB, specify 0 to disable.
+-- For 100 nodes it eats 12GB of ram *and* needs a bigger heap.
+initialHeapSizeFlag :: Parser (Maybe Int)
+initialHeapSizeFlag = interpret <$> optional o
+  where
+    o = optInt "initial-heap-size" 'G' "Initial heap size for Nix (GiB), default 12"
+    interpret (Just n) | n > 0 = Just (gb n)
+                       | otherwise = Nothing
+    interpret Nothing = Just (gb 12)
+    gb n = n * 1024 * 1024 * 1024
 
 nixopsCmdOptions :: Options -> NixopsConfig -> [Text]
 nixopsCmdOptions Options{..} NixopsConfig{..} =
@@ -646,8 +659,10 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSyste
   when (dryrun /= DryRun && buonly /= BuildOnly) $ do
     deployerIP <- establishDeployerIP o oDeployerIP
     setenv o "SMART_GEN_IP" $ getIP deployerIP
-  when (elem Nodes cElements) $
-    setenv o "GC_INITIAL_HEAP_SIZE" (showT $ 12 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
+  -- Pre-allocate nix heap to improve performance
+  when (elem Nodes cElements) $ case oInitialHeapSize of
+    Just size -> setenv o "GC_INITIAL_HEAP_SIZE" (showT size)
+    Nothing -> pure ()
 
   now <- timeCurrent
   let startParam             = NixParam "systemStart"
