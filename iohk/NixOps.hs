@@ -181,7 +181,8 @@ deriving instance Generic Elapsed; instance FromJSON Elapsed; instance ToJSON El
 
 
 establishDeployerIP :: Options -> Maybe IP -> IO IP
-establishDeployerIP o Nothing   = IP <$> incmdStrip o "curl" ["--silent", fromURL awsPublicIPURL]
+establishDeployerIP o Nothing   = IP <$> incmdStrip o "curl" opts
+  where opts = ["--connect-timeout", "2", "--silent", fromURL awsPublicIPURL]
 establishDeployerIP _ (Just ip) = pure ip
 
 
