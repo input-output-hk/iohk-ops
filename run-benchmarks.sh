@@ -23,12 +23,12 @@ CORENODES=7 # the number of core nodes.
 START_WAIT_TIME=10  # how many minutes to wait for the cluster to start
                    # before starting the transaction generator
 
-TIME=12500      # number of transactions that each thread should send
-CONC=1          # number of threads
+TIME=250      # number of transactions that each thread should send
+CONC=2          # number of threads
 DELAY=500       # number of milliseconds to wait between each send
 SENDMODE='send-random'
 COOLDOWN=10     # number of minutes to wait for cooldown
-ADDGENERATORS=1 # using more than one generator might help increase the
+ADDGENERATORS=0 # using more than one generator might help increase the
                 # load for stress-tests
 
 export NIXOPS_DEPLOYMENT=${CLUSTERNAME}
@@ -204,7 +204,10 @@ mv times.csv ${LOGDIR}/times.csv
 mv times.svg ${LOGDIR}/times.svg
 mv auxx-*.log ${LOGDIR}
 
+tar cJf run-${LAST}.tar.xz -C experiments/ ${LAST}
+
 echo "--- Benchmarks finished. Find the results at"
+echo "    ${PWD}/run-${LAST}.tar.xz"
 echo "    ${PWD}/${LOGDIR}/${TPSFILE}"
 echo "    ${PWD}/${LOGDIR}/report_${LAST}.txt"
 echo "    ${LOGDIR}"
