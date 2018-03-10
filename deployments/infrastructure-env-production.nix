@@ -1,8 +1,9 @@
-{ IOHKaccessKeyId, ... }:
+{ IOHKaccessKeyId, IOHKroute53accessKeyId, ... }:
 
 with (import ./../lib.nix);
 let region = "eu-central-1";
     accessKeyId = IOHKaccessKeyId;
+    route53accessKeyId = IOHKroute53accessKeyId;
 in {
   network.description = "IOHK infrastructure production";
 
@@ -17,7 +18,7 @@ in {
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.hydra-ip;
 
-    deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
+    deployment.route53.accessKeyId = route53accessKeyId;
     deployment.route53.hostName = "hydra.aws.iohkdev.io";
   };
 

@@ -37,8 +37,8 @@ in {
     distributedBuilds = true;
     buildMachines = [
       # TODO: DEVOPS-166: reference linux slaves by DNS
-      (mkLinux "52.59.25.105")
-      (mkLinux "18.195.34.30")
+      (mkLinux "52.59.117.254")
+      (mkLinux "18.197.104.148")
       (mkMac "de302.macincloud.com")
       (mkMac "du516.macincloud.com")
       (mkMac "de528.macincloud.com")
