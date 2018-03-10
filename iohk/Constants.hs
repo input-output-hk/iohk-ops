@@ -32,8 +32,8 @@ explorerNode         = NodeName "explorer"
 orgs                 :: [NodeOrg]
 orgs                 = enumFromTo minBound maxBound
 defaultOrg           = IOHK
-accessKeyChain       = [ AccessKeyId $ showT org <> "accessKeyId"
-                       | org <- orgs ]
+accessKeyChain       = "IOHKroute53accessKeyId" : [ AccessKeyId $ showT org <> "accessKeyId"
+                                                  | org <- orgs ]
 
 simpleTopoFile       :: FilePath
 simpleTopoFile       = "topology.nix"
