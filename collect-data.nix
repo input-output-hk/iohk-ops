@@ -127,7 +127,7 @@ writeScriptBin "collect-data.sh" ''
 
   $(nix-build create-plots.nix --argstr last $LAST)/bin/create-plots.sh
 
-  tar cJf run-$LAST.tar.xz -C experiments/$LAST
+  tar cJf run-$LAST.tar.xz -C experiments/$LAST .
 
   echo "--- Benchmarks finished. Find the results at"
   echo "    $PWD/run-$LAST.tar.xz"
