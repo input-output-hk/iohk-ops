@@ -125,7 +125,7 @@ writeScriptBin "collect-data.sh" ''
   mv times.svg $LOGDIR/times.svg
   mv auxx-*.log $LOGDIR
 
-  $(nix-build create-plots.nix --argstr last $LAST)/create-plots.sh
+  $(nix-build create-plots.nix --argstr last $LAST)/bin/create-plots.sh
 
   tar cJf run-$LAST.tar.xz -C experiments/$LAST
 

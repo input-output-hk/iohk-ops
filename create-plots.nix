@@ -10,10 +10,11 @@ writeScriptBin "create-plots.sh" ''
   set -e        # exit on error
   set -o xtrace # print commands
 
+  src=`nix-instantiate -E '(import ./. {}).cardano-sl.src + "/../benchmarks/plots.r"' --eval`
+
   cd ./experiments/${last}
   mkdir -p plots
 
-  src = `nix-instantiate -E '(import ./. {}).cardano-sl.src + "/../benchmarks/plots.r"' --eval`
   Rscript $src ${last}
 
   mv *.png ./plots/
