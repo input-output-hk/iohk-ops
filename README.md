@@ -16,8 +16,10 @@ Collection of tooling and automation to deploy IOHK infrastructure.
 
 ### Getting SSH access
 
-1. Append https://github.com/input-output-hk/iohk-ops/blob/master/lib.nix#L83 and submit a PR.
-2. Wait until the DevOps team deploys the infrastructure cluster.
+1. Create a hotfix branch based off of master branch
+2. Append https://github.com/input-output-hk/iohk-ops/blob/master/lib.nix#L83 and submit a PR to master.
+3. After PR is merged, merge hotfix branch into develop branch.
+4. Wait until the DevOps team deploys the infrastructure cluster.
 
 ## The `io` command
 
