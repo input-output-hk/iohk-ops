@@ -83,6 +83,9 @@ The `deploy.hs` script is meant to be idempotent. It will overwrite
 `~/.nixpkgs/darwin-configuration.nix` and rebuild the system. Re-run
 the deploy command to refresh the configuration.
 
+To speed up re-deploys, pass the `--update` option to the script. This
+will skip the nix-darwin install step.
+
 ### Debugging
 
 To make changes to the system (e.g. changing the build queue), you can

@@ -10,7 +10,7 @@ import qualified Data.Text.IO as T
 import System.IO (hFlush)
 import System.Environment (getExecutablePath)
 import Filesystem.Path.CurrentOS (decodeString)
-import Control.Monad (forM_)
+import Control.Monad (forM_, unless)
 
 -- nix-darwin master branch on 22/04/2018
 darwinSource :: Text
@@ -27,24 +27,32 @@ iohkOpsSource = "https://github.com/input-output-hk/iohk-ops/archive/master.tar.
 
 data Deployment = DeployBuildkite | DeployHydra deriving (Show, Eq)
 
-parser :: Parser Deployment
-parser = subcommand "buildkite" "Deploy as Buildkite agent" (pure DeployBuildkite)
-         <|> subcommand "hydra" "Deploy as Hydra build slave" (pure DeployHydra)
+parser :: Parser (Bool, Deployment)
+parser = (,) <$> update <*> deployment
+  where
+    update = switch "update" 'u' "Don't install, only update configuration"
+    deployment = subcommand "buildkite" "Deploy as Buildkite agent" (pure DeployBuildkite)
+                 <|> subcommand "hydra" "Deploy as Hydra build slave" (pure DeployHydra)
 
 main :: IO ()
 main = do
-  deployment <- options "Set up nix-darwin with a configuration." parser
-  sh $ doSetup deployment
+  (updateOnly, deployment) <- options "Set up nix-darwin with a configuration." parser
+  sh $ do
+    nixPath <- setupNixPath
+    unless updateOnly doInstall
+    doSetup nixPath deployment
 
-doSetup :: Deployment -> Shell ()
-doSetup d = do
-  -- install nix-darwin
+-- | Install nix-darwin
+doInstall :: Shell ()
+doInstall = do
   checkNix
   setupSSLCert
   setupNixChannel nixChannel
-  nixPath <- setupNixPath
   installNixDarwin darwinSource
 
+-- | Update configuration and rebuild nix-darwin
+doSetup :: NixPath -> Deployment -> Shell ()
+doSetup nixPath d = do
   -- update nix-darwin configuration
   dataPath <- liftIO getDataPath
   setupConfiguration (Just d) dataPath nixPath
