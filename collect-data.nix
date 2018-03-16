@@ -7,7 +7,8 @@
 , sendMode
 , cooldown           # number of minutes to wait for cooldown
 , addGenerators      # using more than one generator increases the load for stress-tests
-, walletsDeployment  # edge nodes' deployment
+, edgeNodes          # the number of edge nodes (wallets)
+                     # must be a multiple of 10
 }:
 
 with import <nixpkgs> {};
@@ -21,7 +22,7 @@ writeScriptBin "collect-data.sh" ''
 
   export TZ=UTC
 
-  CORENODES=${coreNodes} # the number of core nodes.
+  CORENODES=${coreNodes} # the number of core nodes
   # When changing the number of core nodes, you need to:
   # - adjust the topology file
   # - adjust lib/configuration.yaml in cardano-sl
@@ -37,8 +38,8 @@ writeScriptBin "collect-data.sh" ''
   COOLDOWN=${cooldown}             # number of minutes to wait for cooldown
   ADDGENERATORS=${addGenerators}   # using more than one generator might help increase the
                                    # load for stress-tests
-  WALLETS_DEPLOYMENT=${walletsDeployment} 
                                    # edge nodes can be added for further investigation
+  EDGENODES=${edgeNodes}           # the number of edge nodes
 
   IO=$(nix-build -A iohk-ops)/bin/iohk-ops
 
@@ -61,7 +62,7 @@ writeScriptBin "collect-data.sh" ''
   TOPOLOGY=`grep topology: config.yaml | awk '{print $2}'`
 
   # archive settings and topology file
-  echo "commit=$COMMIT, sendmode=$SENDMODE, time=$TIME, conc=$CONC, delay=$DELAY, generators=$((ADDGENERATORS + 1)), systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
+  echo "commit=$COMMIT, sendmode=$SENDMODE, time=$TIME, conc=$CONC, delay=$DELAY, generators=$((ADDGENERATORS + 1)), edgenodes=$EDGENODES, systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
   cp $TOPOLOGY $LOGDIR/
 
   # parse slot duration and start time from tx generator output
@@ -127,7 +128,7 @@ writeScriptBin "collect-data.sh" ''
 
   $(nix-build create-plots.nix --argstr last $LAST)/bin/create-plots.sh
 
-  tar cJf run-$LAST.tar.xz -C experiments/$LAST .
+  tar cJf run-$LAST.tar.xz -C experiments/ $LAST
 
   echo "--- Benchmarks finished. Find the results at"
   echo "    $PWD/run-$LAST.tar.xz"

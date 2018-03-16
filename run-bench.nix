@@ -7,7 +7,9 @@
 , sendMode      ? "send-random"
 , cooldown      ? "10"    # number of minutes to wait for cooldown
 , addGenerators ? "6"     # using more than one generator increases the load for stress-tests
-, walletsDeployment ? ""  # edge nodes' deployment
+, edgeNodes     ? "0"     # the number of edge nodes (wallets)
+                          # must be a multiple of 10
+, walletsDeployment ? "edgenodes-cluster"  # edge nodes' deployment
 }:
 
 with import <nixpkgs> {};
@@ -37,6 +39,8 @@ writeScriptBin "run-bench.sh" ''
   COOLDOWN=${cooldown}             # number of minutes to wait for cooldown
   ADDGENERATORS=${addGenerators}   # using more than one generator might help increase the
                                    # load for stress-tests
+  WALLETS_NODES=$((${edgeNodes} / 10)) 
+                                   # each deployment node runs 10 wallets
   WALLETS_DEPLOYMENT=${walletsDeployment} 
                                    # edge nodes can be added for further investigation
 
@@ -51,7 +55,7 @@ writeScriptBin "run-bench.sh" ''
   # build needed tools
   nix-build -A cardano-sl-auxx -o auxx         # transaction generator
 
-  # boot some edge nodes
+  # clear history of edge nodes
   if [ -n "$WALLETS_DEPLOYMENT" ]; then
     export NIXOPS_DEPLOYMENT=''${WALLETS_DEPLOYMENT}
     nixops ssh-for-each 'for x in cardano-node-{1..10}; do systemctl stop $x ;done'
@@ -65,9 +69,11 @@ writeScriptBin "run-bench.sh" ''
   SYSTEMSTART=`grep -A 2 systemStart config.yaml | grep contents | awk '{print $2}'`
 
   # new wallets
-  if [ -n "$WALLETS_DEPLOYMENT" ]; then
+  if [ ''${WALLETS_NODES} -gt "0" ]; then
+    WALLETS2RELAYS=`nixops info --no-eval --plain | grep 'r-a-1' | awk 'NF>=2 {print $(NF-1)}'`
+    sed -i 's/addr: \([0-9.]*\)/addr: '"''${WALLETS2RELAYS}"'/' ./topology-edgenode.yaml
     export NIXOPS_DEPLOYMENT=''${WALLETS_DEPLOYMENT}
-    nixops set-args --arg systemStart ''${SYSTEMSTART}
+    nixops set-args --arg systemStart ''${SYSTEMSTART}  --arg nodes ''${WALLETS_NODES}
     nixops deploy
     export NIXOPS_DEPLOYMENT=''${CLUSTERNAME}
   fi
@@ -138,6 +144,14 @@ writeScriptBin "run-bench.sh" ''
   #  kill $P
   #done
 
+  # stop edge nodes
+  if [ ''${WALLETS_NODES} -gt "0" ]; then
+    export NIXOPS_DEPLOYMENT=''${WALLETS_DEPLOYMENT}
+    nixops ssh-for-each 'for x in cardano-node-{1..10}; do systemctl stop $x ;done'
+    # nixops ssh-for-each 'rm -rf /home/cardano-node-*/state-wallet-override'
+    # export NIXOPS_DEPLOYMENT=''${CLUSTERNAME}
+  fi
+
   $(nix-build collect-data.nix                        \
   --argstr coreNodes         ${coreNodes}             \
   --argstr startWaitTime     ${startWaitTime}         \
@@ -147,6 +161,6 @@ writeScriptBin "run-bench.sh" ''
   --argstr sendMode          ${sendMode}              \
   --argstr cooldown          ${cooldown}              \
   --argstr addGenerators     ${addGenerators}         \
-  --arg    walletsDeployment \"${walletsDeployment}\" \
+  --argstr edgeNodes         ${edgeNodes}             \
   )/bin/collect-data.sh
 ''

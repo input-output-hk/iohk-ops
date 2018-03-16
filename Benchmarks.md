@@ -2,12 +2,12 @@
 
 The scripts that are used are the following:
 
-  * set-cluster.nix, which sets up the cluster.
-  * run-bench.nix, which creates and executes a run.
-  * collect-data.nix, which collects data from the nodes
-                      and create the plots. It is called
-                      by run-bench.nix.
-  * create-plots.nix, which creates the plots. It is 
+  * set-cluster.nix    , which sets up the cluster.
+  * run-bench.nix      , which creates and executes a run.
+  * collect-data.nix   , which collects data from the nodes
+                         and create the plots. It is called
+                         by run-bench.nix.
+  * create-plots.nix   , which creates the plots. It is 
                          called by collect-data.nix.
   * destroy-cluster.nix, which destroys the current cluster.
 
@@ -28,7 +28,9 @@ The scripts that are used are the following:
     --argstr clusterName benchmarks110policies                    \
     --argstr commit      517e7c7aa7e46bc584f309d423d2f18fd8d5365f \
     )/bin/set-cluster.sh
-   ```
+    ```
+
+1. `export TMPDIR=/tmp`
 
 1. To run a benchmark set the settings as in the following example:
     ```
@@ -41,6 +43,7 @@ The scripts that are used are the following:
     --argstr sendMode send-random \
     --argstr cooldown      10     \
     --argstr addGenerators 6      \
+    --argstr edgeNodes     0      \
     )/bin/run-bench.sh
     ```
 
@@ -68,11 +71,29 @@ can be collected with the following command:
   --argstr sendMode send-random   \
   --argstr cooldown      10       \
   --argstr addGenerators 6        \
-  --arg    walletsDeployment \"\" \
+  --argstr edgeNodes     0        \
   )/bin/collect-data.sh
   ```
 
 Collecting the data with collect-data.nix requires the
-walletsDeployment argument (edge nodes) to be set. If
-edge nodes are not used the argument must be set with
-an empty string as in the above example.
+edgeNodes argument (edge nodes) to be set. If edge nodes 
+are not used the argument must be set to zero.
+
+If edgenodes-cluster is not set up at all then argument
+walletsDeployment must set as an empty string as in the
+following example:
+
+  ```
+  $(nix-build run-bench.nix     \
+  --argstr coreNodes     7      \
+  --argstr startWaitTime 10     \
+  --argstr time          500    \
+  --argstr conc          1      \
+  --argstr delay         250    \
+  --argstr sendMode send-random \
+  --argstr cooldown      10     \
+  --argstr addGenerators 6      \
+  --argstr edgeNodes     0      \
+  --arg walletsDeployment  \"\" \
+  )/bin/run-bench.sh
+  ```
