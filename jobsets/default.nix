@@ -51,7 +51,7 @@ let
       nixexprpath = "jobsets/cardano.nix";
       inputs = {
         nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
-        jobsets = mkFetchGithub "https://github.com/${info.head.repo.owner.login}/${info.head.repo.name}.git ${info.head.ref}";
+        jobsets = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
         nixops = mkFetchGithub "https://github.com/NixOS/NixOps.git tags/v1.5";
       };
     };
@@ -73,7 +73,7 @@ let
       nixexprpath = "release.nix";
       inputs = {
         nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
-        cardano = mkFetchGithub "https://github.com/${info.head.repo.owner.login}/${info.head.repo.name}.git ${info.head.ref}";
+        cardano = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
       };
     };
   };
@@ -92,7 +92,7 @@ let
       nixexprinput = "daedalus";
       nixexprpath = "release.nix";
       inputs = {
-        daedalus = mkFetchGithub "https://github.com/${info.head.repo.owner.login}/${info.head.repo.name}.git ${info.head.ref}";
+        daedalus = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
       };
     };
   };
