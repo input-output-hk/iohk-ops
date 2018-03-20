@@ -149,7 +149,7 @@ writeScriptBin "run-bench.sh" ''
     export NIXOPS_DEPLOYMENT=''${WALLETS_DEPLOYMENT}
     nixops ssh-for-each 'for x in cardano-node-{1..10}; do systemctl stop $x ;done'
     # nixops ssh-for-each 'rm -rf /home/cardano-node-*/state-wallet-override'
-    # export NIXOPS_DEPLOYMENT=''${CLUSTERNAME}
+    export NIXOPS_DEPLOYMENT=''${CLUSTERNAME}
   fi
 
   $(nix-build collect-data.nix                        \
@@ -163,4 +163,7 @@ writeScriptBin "run-bench.sh" ''
   --argstr addGenerators     ${addGenerators}         \
   --argstr edgeNodes         ${edgeNodes}             \
   )/bin/collect-data.sh
+
+  nixops ssh-for-each 'systemctl stop cardano-node-recorder; systemctl stop cardano-node'
+
 ''
