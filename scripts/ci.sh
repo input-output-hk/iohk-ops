@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -xeu
+set -eu
 
 # https://github.com/NixOS/nixops/issues/693
 export BOTO_CONFIG=/dev/null
@@ -18,9 +18,6 @@ WITH_REPORT_SERVER=${8:-true}
 WITH_INFRA_PRODUCTION=${9:-true}
 shift || true
 WITH_INFRA_STAGING=${9:-true}
-
-homestate="$(mktemp -d -t iohk-ops.XXXXXXXXXXXX)"
-export HOME="${homestate}"
 
 # PREPARE
 mkdir -p cardano-sl/explorer/frontend/dist
