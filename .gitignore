@@ -35,3 +35,4 @@ txgen.json
 
 .terraform
 **/terraform.tfvars
+nixpkgs
