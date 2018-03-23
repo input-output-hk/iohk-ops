@@ -102,7 +102,7 @@ data Command where
   -- * cluster lifecycle
   Nixops'               :: NixopsCmd -> [Arg] -> Command
   Modify                :: Command
-  Deploy                :: RebuildExplorer -> BuildOnly -> DryRun -> PassCheck -> Maybe Seconds -> Command
+  Deploy                :: BuildOnly -> DryRun -> PassCheck -> Maybe Seconds -> Command
   Destroy               :: Command
   Delete                :: Command
   Info                  :: Command
@@ -168,8 +168,7 @@ centralCommandParser =
    , ("create",                 "Same as modify",                                                   pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> flag NoExplorerRebuild "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
-                                <*> flag BuildOnly         "build-only"          'b' "Pass --build-only to 'nixops deploy'"
+                                <$> flag BuildOnly         "build-only"          'b' "Pass --build-only to 'nixops deploy'"
                                 <*> flag DryRun            "dry-run"             'd' "Pass --dry-run to 'nixops deploy'"
                                 <*> flag PassCheck         "check"               'c' "Pass --check to 'nixops build'"
                                 <*> ((Seconds . (* 60) . fromIntegral <$>)
@@ -254,7 +253,7 @@ runTop o@Options{..} args topcmd = do
             -- * deployment lifecycle
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
             Modify                   -> Ops.modify                    o c
-            Deploy ner bu dry ch buh -> Ops.deploy                    o c dry bu ch ner buh
+            Deploy bu dry ch buh     -> Ops.deploy                    o c dry bu ch buh
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             Info                     -> Ops.nixops                    o c "info" []
