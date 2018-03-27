@@ -1,4 +1,4 @@
-{ 
+{
   coreNodes          # the number of core nodes
 , startWaitTime      # how many minutes to wait for the cluster to start
 , time               # number of transactions that each thread should send
@@ -9,7 +9,9 @@
 , addGenerators      # using more than one generator increases the load for stress-tests
 , edgeNodes          # the number of edge nodes (wallets)
                      # must be a multiple of 10
-}:
+, corePolicy         # policy file for core nodes
+, relayPolicy        # policy file for relay nodes
+}@args:
 
 with import <nixpkgs> {};
 writeScriptBin "collect-data.sh" ''
@@ -61,9 +63,17 @@ writeScriptBin "collect-data.sh" ''
   # cluster topology file
   TOPOLOGY=`grep topology: config.yaml | awk '{print $2}'`
 
+  # policy files
+  CORE_POLICY=${corePolicy}
+  RELAY_POLICY=${relayPolicy}
+
   # archive settings and topology file
   echo "commit=$COMMIT, sendmode=$SENDMODE, time=$TIME, conc=$CONC, delay=$DELAY, generators=$((ADDGENERATORS + 1)), edgenodes=$EDGENODES, systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
   cp $TOPOLOGY $LOGDIR/
+
+  # archive policy files
+  cp $CORE_POLICY $LOGDIR/
+  cp $RELAY_POLICY $LOGDIR/
 
   # parse slot duration and start time from tx generator output
   SLOTDURATION=`grep -oP '(?<=slotDuration=)[0-9]+' tps-sent.csv`
@@ -127,6 +137,13 @@ writeScriptBin "collect-data.sh" ''
   mv auxx-*.log $LOGDIR
 
   $(nix-build create-plots.nix --argstr last $LAST)/bin/create-plots.sh
+
+  # save arguments with which nix-script was called
+  cat <<EOF >collect-data-args.txt
+ ${toString (lib.mapAttrsToList (name: value: name + "=" + value + "\n") args)}
+EOF
+
+  mv *-args.txt $LOGDIR
 
   tar cJf run-$LAST.tar.xz -C experiments/ $LAST
 

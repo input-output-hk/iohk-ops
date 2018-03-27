@@ -1,4 +1,4 @@
-{ 
+{
   coreNodes     ? "7"     # the number of core nodes
 , startWaitTime ? "10"    # how many minutes to wait for the cluster to start
 , time          ? "500"   # number of transactions that each thread should send
@@ -10,7 +10,9 @@
 , edgeNodes     ? "0"     # the number of edge nodes (wallets)
                           # must be a multiple of 10
 , walletsDeployment ? "edgenodes-cluster"  # edge nodes' deployment
-}:
+, corePolicy    ? "policy_core.yaml"       # policy file for core nodes
+, relayPolicy   ? "policy_relay.yaml"      # policy file for relay nodes
+}@args:
 
 with import <nixpkgs> {};
 writeScriptBin "run-bench.sh" ''
@@ -18,6 +20,10 @@ writeScriptBin "run-bench.sh" ''
 
   set -e        # exit on error
   set -o xtrace # print commands
+
+  # set policy files to be used
+  awk '$1=="(\"--policies" {$1="    (\"--policies"; $12="\"''${./../${corePolicy}}\"" ; $14="\"''${./../${relayPolicy}}\"))"} 1' modules/cardano-service.nix  > modules/cardano-service.nix.new
+  mv modules/cardano-service.nix.new modules/cardano-service.nix
 
   CLUSTERNAME=`grep name: config.yaml | awk '{print $2}'`
 
@@ -39,9 +45,9 @@ writeScriptBin "run-bench.sh" ''
   COOLDOWN=${cooldown}             # number of minutes to wait for cooldown
   ADDGENERATORS=${addGenerators}   # using more than one generator might help increase the
                                    # load for stress-tests
-  WALLETS_NODES=$((${edgeNodes} / 10)) 
+  WALLETS_NODES=$((${edgeNodes} / 10))
                                    # each deployment node runs 10 wallets
-  WALLETS_DEPLOYMENT=${walletsDeployment} 
+  WALLETS_DEPLOYMENT=${walletsDeployment}
                                    # edge nodes can be added for further investigation
 
 
@@ -152,6 +158,11 @@ writeScriptBin "run-bench.sh" ''
     export NIXOPS_DEPLOYMENT=''${CLUSTERNAME}
   fi
 
+  # save arguments with which nix-script was called
+  cat <<EOF >run-bench-args.txt
+ ${toString (lib.mapAttrsToList (name: value: name + "=" + value + "\n") args)}
+EOF
+
   $(nix-build collect-data.nix                        \
   --argstr coreNodes         ${coreNodes}             \
   --argstr startWaitTime     ${startWaitTime}         \
@@ -162,6 +173,8 @@ writeScriptBin "run-bench.sh" ''
   --argstr cooldown          ${cooldown}              \
   --argstr addGenerators     ${addGenerators}         \
   --argstr edgeNodes         ${edgeNodes}             \
+  --argstr corePolicy        ${corePolicy}            \
+  --argstr relayPolicy       ${relayPolicy}           \
   )/bin/collect-data.sh
 
   nixops ssh-for-each 'systemctl stop cardano-node-recorder; systemctl stop cardano-node'
