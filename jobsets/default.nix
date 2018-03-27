@@ -100,9 +100,9 @@ let
   cardanoPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeCardanoPR cardanoPrs);
   daedalusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeDaedalusPR daedalusPrs);
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
-    cardano-sl = mkCardano "master" nixpkgs-src.rev;
-    cardano-sl-1-0 = mkCardano "cardano-sl-1.0" nixpkgs-src.rev;
-    cardano-sl-1-1 = mkCardano "release/1.1.0" nixpkgs-src.rev;
+    cardano-sl = mkCardano "develop" nixpkgs-src.rev;
+    cardano-sl-master = mkCardano "master" nixpkgs-src.rev;
+    cardano-sl-1-0 = mkCardano "release/1.0.x" nixpkgs-src.rev;
     daedalus = mkDaedalus "develop";
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
     iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
