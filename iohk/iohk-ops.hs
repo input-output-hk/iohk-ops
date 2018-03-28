@@ -24,6 +24,7 @@ import           NixOps
 import qualified NixOps                        as Ops
 import           Types
 import           Utils
+import           UpdateProposal
 
 
 -- * Elementary parsers
@@ -110,6 +111,7 @@ data Command where
   -- * high-level scenarios
   FromScratch           :: Command
   ReallocateCoreIPs     :: Command
+  UpdateProposal        :: UpdateProposalCommand -> Command
 
   -- * live cluster ops
   Ssh                   :: Exec -> [Arg] -> Command
@@ -178,6 +180,7 @@ centralCommandParser =
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
    , ("reallocate-core-ips",    "Destroy elastic IPs corresponding to the nodes listed and redeploy cluster",
                                                                                                     pure ReallocateCoreIPs)
+   , ("update-proposal",        "Fixme command help",                                               UpdateProposal <$> parseUpdateProposalCommand)
    , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
 
    <|> subcommandGroup "Live cluster ops:"
@@ -260,6 +263,7 @@ runTop o@Options{..} args topcmd = do
             -- * High-level scenarios
             FromScratch              -> Ops.fromscratch               o c
             ReallocateCoreIPs        -> Ops.reallocateCoreIPs         o c
+            UpdateProposal up        -> updateProposal                c up
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c
