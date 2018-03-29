@@ -117,7 +117,6 @@ in {
         zdAccount = if cfg.zendesk.accountName != "" then "--zd-account \"${cfg.zendesk.accountName}\"" else "";
         zdSendLogs = if cfg.zendesk.sendLogs then "--zd-send-logs" else "";
       in ''
-        set -e
         exec ${cfg.executable}/bin/cardano-report-server \
             -p ${toString cfg.port} \
             ${zdEmail} ${zdToken} ${zdAccount} ${zdSendLogs} \
