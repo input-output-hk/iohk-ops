@@ -180,7 +180,7 @@ centralCommandParser =
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
    , ("reallocate-core-ips",    "Destroy elastic IPs corresponding to the nodes listed and redeploy cluster",
                                                                                                     pure ReallocateCoreIPs)
-   , ("update-proposal",        "Fixme command help",                                               UpdateProposal <$> parseUpdateProposalCommand)
+   , ("update-proposal",        "Subcommands for updating wallet installers. Apply commands in the order listed.", UpdateProposal <$> parseUpdateProposalCommand)
    , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
 
    <|> subcommandGroup "Live cluster ops:"
