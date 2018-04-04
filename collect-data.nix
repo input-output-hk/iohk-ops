@@ -4,7 +4,6 @@
 , time               # number of transactions that each thread should send
 , conc               # number of each generator's threads
 , delay              # number of milliseconds to wait between each send
-, sendMode
 , cooldown           # number of minutes to wait for cooldown
 , addGenerators      # using more than one generator increases the load for stress-tests
 , edgeNodes          # the number of edge nodes (wallets)
@@ -36,7 +35,6 @@ writeScriptBin "collect-data.sh" ''
   TIME=${time}                     # number of transactions that each thread should send
   CONC=${conc}                     # number of threads
   DELAY=${delay}                   # number of milliseconds to wait between each send
-  SENDMODE=${sendMode}
   COOLDOWN=${cooldown}             # number of minutes to wait for cooldown
   ADDGENERATORS=${addGenerators}   # using more than one generator might help increase the
                                    # load for stress-tests
@@ -68,7 +66,7 @@ writeScriptBin "collect-data.sh" ''
   RELAY_POLICY=${relayPolicy}
 
   # archive settings and topology file
-  echo "commit=$COMMIT, sendmode=$SENDMODE, time=$TIME, conc=$CONC, delay=$DELAY, generators=$((ADDGENERATORS + 1)), edgenodes=$EDGENODES, systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
+  echo "commit=$COMMIT, time=$TIME, conc=$CONC, delay=$DELAY, generators=$((ADDGENERATORS + 1)), edgenodes=$EDGENODES, systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
   cp $TOPOLOGY $LOGDIR/
 
   # archive policy files
@@ -84,12 +82,11 @@ writeScriptBin "collect-data.sh" ''
 
   # assemble csv file from tx generator and node logs
   TPSFILE="run-$LAST.csv"
-  echo "time,txCount,txType,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,time,delay" >$TPSFILE
+  echo "time,txCount,txType,slotDuration,conc,clustersize,startTime,commit,node,run,time,delay" >$TPSFILE
   # output from generators
-  awk 'FNR>2{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,time,delay}' FS=, OFS=, \
+  awk 'FNR>2{print $1,$2,$3,slotDuration,conc,clustersize,startTime,commit,node,run,time,delay}' FS=, OFS=, \
       slotDuration=$SLOTDURATION \
       conc=$CONC \
-      sendMode=$SENDMODE \
       clustersize=$CORENODES \
       startTime=$STARTTIME \
       commit=$COMMIT \
@@ -100,10 +97,9 @@ writeScriptBin "collect-data.sh" ''
       tps-sent.csv >> $TPSFILE
   mv tps-sent.csv $LOGDIR
   for n in $(seq 1 $ADDGENERATORS); do
-      awk 'FNR>2{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,time,delay}' FS=, OFS=, \
+      awk 'FNR>2{print $1,$2,$3,slotDuration,conc,clustersize,startTime,commit,node,run,time,delay}' FS=, OFS=, \
           slotDuration=$SLOTDURATION \
           conc=$CONC \
-          sendMode=$SENDMODE \
           clustersize=$CORENODES \
           startTime=$STARTTIME \
           commit=$COMMIT \
@@ -115,10 +111,9 @@ writeScriptBin "collect-data.sh" ''
       mv tps-sent-$n.csv $LOGDIR
   done
   # output from post-mortem analyser
-  awk 'FNR>1{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,$4,run,time,delay}' FS=, OFS=, \
+  awk 'FNR>1{print $1,$2,$3,slotDuration,conc,clustersize,startTime,commit,$4,run,time,delay}' FS=, OFS=, \
       slotDuration=$SLOTDURATION \
       conc=$CONC \
-      sendMode=$SENDMODE \
       clustersize=$CORENODES \
       startTime=$STARTTIME \
       commit=$COMMIT \

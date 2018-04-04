@@ -4,7 +4,6 @@
 , time          ? "500"   # number of transactions that each thread should send
 , conc          ? "1"     # number of each generator's threads
 , delay         ? "250"   # number of milliseconds to wait between each send
-, sendMode      ? "send-random"
 , cooldown      ? "10"    # number of minutes to wait for cooldown
 , addGenerators ? "6"     # using more than one generator increases the load for stress-tests
 , edgeNodes     ? "0"     # the number of edge nodes (wallets)
@@ -41,7 +40,6 @@ writeScriptBin "run-bench.sh" ''
   TIME=${time}                     # number of transactions that each thread should send
   CONC=${conc}                     # number of threads
   DELAY=${delay}                   # number of milliseconds to wait between each send
-  SENDMODE=${sendMode}
   COOLDOWN=${cooldown}             # number of minutes to wait for cooldown
   ADDGENERATORS=${addGenerators}   # using more than one generator might help increase the
                                    # load for stress-tests
@@ -91,8 +89,8 @@ writeScriptBin "run-bench.sh" ''
   UNPRIV_RELAYS=`nixops info | grep 'u-[abc]-[0-9] ' | awk 'NF>=2 {print $(NF-1)}' | sed 's/\([0-9.]*\)/  --peer=\1:3000/'`
 
   # where trx are sent to
-  #TRX2RELAYS=''${UNPRIV_RELAYS}
-  TRX2RELAYS=''${PRIV_RELAYS}
+  TRX2RELAYS=''${UNPRIV_RELAYS}
+  #TRX2RELAYS=''${PRIV_RELAYS}
 
   # wait for the cluster to be available
   sleep ''${START_WAIT_TIME}m
@@ -109,7 +107,7 @@ writeScriptBin "run-bench.sh" ''
           ''${TRX2RELAYS} \
           --system-start ''${SYSTEMSTART} \
           --mode with-config \
-          cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE ./tps-sent-''${n}.csv" +RTS -s -N1 -RTS > auxx-''${n}.log 2>&1 &
+          cmd --commands "send-to-all-genesis $TIME $CONC $DELAY ./tps-sent-''${n}.csv" +RTS -s -N1 -RTS > auxx-''${n}.log 2>&1 &
 
       auxxpids[n]=$!
 
@@ -128,7 +126,7 @@ writeScriptBin "run-bench.sh" ''
       ''${TRX2RELAYS} \
       --system-start ''${SYSTEMSTART} \
       --mode with-config \
-      cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE ./tps-sent.csv" +RTS -s -N1 -RTS > auxx-0.log 2>&1 &
+      cmd --commands "send-to-all-genesis $TIME $CONC $DELAY ./tps-sent.csv" +RTS -s -N1 -RTS > auxx-0.log 2>&1 &
 
   auxxpids[0]=$!
 
@@ -169,7 +167,6 @@ EOF
   --argstr time              ${time}                  \
   --argstr conc              ${conc}                  \
   --argstr delay             ${delay}                 \
-  --argstr sendMode          ${sendMode}              \
   --argstr cooldown          ${cooldown}              \
   --argstr addGenerators     ${addGenerators}         \
   --argstr edgeNodes         ${edgeNodes}             \
