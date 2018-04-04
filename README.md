@@ -20,5 +20,8 @@ Collection of tooling and automation to deploy IOHK infrastructure.
 
 ### Getting SSH access
 
-1. Append https://github.com/input-output-hk/iohk-ops/blob/master/lib.nix#L83 and submit a PR.
-2. Wait until the DevOps team deploys the infrastructure cluster.
+1. Add your key:
+    - contents at the end of https://github.com/input-output-hk/iohk-ops/blob/develop/ssh-keys.nix, under an appropriate name,
+    - key name at the end of the `devKeys` list https://github.com/input-output-hk/iohk-ops/blob/develop/lib.nix#L63.
+2. Submit a PR and let DevOps know.
+3. Wait until the DevOps team deploys the infrastructure cluster.
