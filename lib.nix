@@ -66,15 +66,15 @@ in lib // (rec {
   ];
 
   devKeys = devOpsKeys ++ (with ssh-keys; [
+    akegaljKey
     alanKey
+    alexandersKey
+    alfredoKey
+    andreasKey
     dshevchenkoKey
+    ksaric
     larsKey
     philippKey
-    ksaric
-    akegaljKey
-    alfredoKey
     vasilisKey
-    andreasKey
-    alexandersKey
   ]);
 })
