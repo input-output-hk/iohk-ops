@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude #-}
+{-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude -Wno-missing-local-signatures #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
@@ -26,10 +26,12 @@ module UpdateLogic
 import           Appveyor                     (AppveyorArtifact (AppveyorArtifact),
                                                build, fetchAppveyorArtifacts,
                                                fetchAppveyorBuild,
-                                               getArtifactUrl, jobId, jobs,
+                                               getArtifactUrl, jobId,
                                                parseCiUrl)
 import qualified Appveyor
-import           Buildkite.API                (APIToken(APIToken), Artifact(..)
+import           Buildkite.API                (APIToken(APIToken)
+                                              , Artifact
+                                              , artifactFilename, artifactSha1sum
                                               , listArtifactsForBuild,
                                                getBuild, getJobLog)
 import qualified Buildkite.API                as BK
@@ -116,7 +118,7 @@ data CiResult = AppveyorResult
 data GlobalResults = GlobalResults {
       grCardanoCommit      :: T.Text
     , grDaedalusCommit     :: T.Text
-    , grApplicationVersion :: Integer
+    , grApplicationVersion :: Int
   } deriving Show
 data InstallersResults = InstallersResults
   { appveyorResult  :: Maybe CiResult
@@ -133,8 +135,6 @@ data VersionJson = VersionJson {
   } deriving (Show, Generic)
 
 instance ToJSON VersionJson
-
-type BuildNumber = Int
 
 -- | Get VERSION environment variable from pipeline definition.
 -- First looks in global env, otherwise finds first build step with a version.
@@ -402,7 +402,7 @@ findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status =
       return (Just globalResults, Just travisResult')
     Just (StatusContextAppveyor user project version) -> do
       appveyorBuild <- fetchAppveyorBuild user project version
-      let jobid = appveyorBuild ^. build . jobs . to head . jobId
+      let jobid = appveyorBuild ^. build . Appveyor.jobs . to head . jobId
       artifacts <- fetchAppveyorArtifacts jobid
       case headMay artifacts of
         Just (AppveyorArtifact filename "Daedalus Win64 Installer") -> do

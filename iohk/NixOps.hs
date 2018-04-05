@@ -50,6 +50,7 @@ module NixOps (
   , jsonLowerStrip
   , lowerShowT
   , parallelIO
+  , nixopsConfigurationKey
 
   -- * Types
   , Arg(..)
@@ -468,6 +469,15 @@ deplArg    NixopsConfig{..} k def = Map.lookup k cDeplArgs & fromMaybe def
 
 setDeplArg :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 setDeplArg p v c@NixopsConfig{..} = c { cDeplArgs = Map.insert p v cDeplArgs }
+
+-- | Gets the "configurationKey" string out of the NixOps deployment args
+nixopsConfigurationKey :: NixopsConfig -> Maybe Text
+nixopsConfigurationKey = (>>= asString) . Map.lookup "configurationKey" . cDeplArgs
+  where
+    -- maybe generating prisms on NixValue would be better.
+    -- or maybe using hnix instead of Nix.hs and generating prisms
+    asString (NixStr s) = Just s
+    asString _ = Nothing
 
 -- | Interpret inputs into a NixopsConfig
 mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
