@@ -913,7 +913,7 @@ s3Upload :: T.Text -> NixopsConfig -> IO ()
 s3Upload daedalus_rev c = do
   let
     say = liftIO . TIO.putStrLn
-    uploadOneFile :: BucketName -> T.Text -> ObjectKey -> Integer -> T.Text -> AWST (ResourceT IO) ()
+    uploadOneFile :: BucketName -> T.Text -> ObjectKey -> Int -> T.Text -> AWST (ResourceT IO) ()
     uploadOneFile bucketName localPath remoteKey appver cardanoCommit = do
       bdy <- chunkedFile defaultChunkSize (T.unpack localPath)
       let
@@ -926,7 +926,7 @@ s3Upload daedalus_rev c = do
       void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata newMetaData $ putObject bucketName remoteKey bdy
     copyObject' :: BucketName -> T.Text -> ObjectKey -> AWST (ResourceT IO) ()
     copyObject' bucketName source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName source dest
-    uploadHashedInstaller :: T.Text -> T.Text -> Integer -> T.Text -> AWST (ResourceT IO) (T.Text, T.Text)
+    uploadHashedInstaller :: T.Text -> T.Text -> Int -> T.Text -> AWST (ResourceT IO) (T.Text, T.Text)
     uploadHashedInstaller bucketName localPath appver cardanoCommit = do
       hash <- (liftIO . hashInstaller) localPath
       let
@@ -937,7 +937,7 @@ s3Upload daedalus_rev c = do
         uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
         copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
       return (hash, s3Link (toText region) bucketName basename')
-    hashAndUpload :: Integer -> T.Text -> CiResult -> AWST (ResourceT IO) ()
+    hashAndUpload :: Int -> T.Text -> CiResult -> AWST (ResourceT IO) ()
     hashAndUpload appver cardanoCommit ciResult = do
       let path = resultLocalPath ciResult
       (hash, url) <- uploadHashedInstaller (cUpdateBucket c) path appver cardanoCommit

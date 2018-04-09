@@ -118,7 +118,7 @@ data CiResult = AppveyorResult
 data GlobalResults = GlobalResults {
       grCardanoCommit      :: T.Text
     , grDaedalusCommit     :: T.Text
-    , grApplicationVersion :: Integer
+    , grApplicationVersion :: Int
   } deriving Show
 data InstallersResults = InstallersResults
   { appveyorResult  :: Maybe CiResult
@@ -349,7 +349,7 @@ printDarwinBuildInfo ci cardanoBuildNumber cardanoRev url = do
 -- | Gets version information from the config files in the cardano-sl git repo.
 grabAppVersion :: T.Text     -- ^ git commit id to check out
                -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -- ^ yaml keys to find
-               -> IO Integer -- ^ an integer version, not sure really
+               -> IO Int     -- ^ an integer version, not sure really
 grabAppVersion rev (winKey, macosKey) = do
     let
       readPath name = readFileFromGit rev name "cardano" "https://github.com/input-output-hk/cardano-sl"
