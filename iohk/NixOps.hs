@@ -52,6 +52,7 @@ module NixOps (
   , parallelIO
   , nixopsConfigurationKey
   , configurationKeys
+  , getCardanoSLSource
 
   -- * Types
   , Arg(..)
@@ -802,6 +803,12 @@ build :: Options -> NixopsConfig -> Deployment -> IO ()
 build o _c depl = do
   echo "Building derivation..."
   cmd o "nix-build" ["--max-jobs", "4", "--cores", "2", "-A", fromAttr $ deploymentBuildTarget depl]
+
+
+-- | Use nix to grab the sources of cardano-sl.
+getCardanoSLSource :: Options -> IO Path.FilePath
+getCardanoSLSource o = parent . fromText <$> incmdStrip o "nix-instantiate" args
+  where args = [ "--eval", "-A", "cardano-sl.src", "default.nix" ]
 
 
 -- * State management
