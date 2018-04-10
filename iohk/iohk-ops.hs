@@ -126,7 +126,6 @@ data Command where
   PrintDate             :: Command
   S3Upload              :: String -> Command
   FindInstallers        :: String -> Command
-  SetVersionJson       :: String -> Command
 deriving instance Show Command
 
 centralCommandParser :: Parser Command
@@ -210,8 +209,6 @@ centralCommandParser =
    , ("date",                   "Print date/time",                                                  pure PrintDate)
    , ("s3upload",               "test S3 upload",                                                   S3Upload <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV"))  )
    , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
-   -- DEVOPS-709 - command temporarily removed
-   -- , ("set-version-json",       "set daedalus-latest-version.json to a given rev",                  SetVersionJson <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
    ]
 
    <|> subcommandGroup "Other:"
@@ -281,7 +278,6 @@ runTop o@Options{..} args topcmd = do
             PrintDate                -> Ops.date                      o c
             S3Upload               d -> Ops.s3Upload                  (T.pack d) c
             FindInstallers         d -> Ops.findInstallers            (T.pack d) c
-            SetVersionJson         d -> Ops.setVersionJson            (T.pack d) c
             Clone{..}                -> error "impossible"
             New{..}                  -> error "impossible"
             SetRev   _ _ _           -> error "impossible"

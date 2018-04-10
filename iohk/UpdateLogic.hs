@@ -15,7 +15,6 @@ module UpdateLogic
   , githubWikiRecord
   , InstallersResults(..)
   , GlobalResults(..)
-  , updateVersionJson
   , updateVersionJsonS3
   , extractBuildId
   , parseStatusContext
@@ -134,14 +133,6 @@ data InstallersResults = InstallersResults
   } deriving (Show, Generic)
 type TextPath = T.Text
 type RepoUrl = T.Text
-
-data VersionJson = VersionJson {
-      _linux :: ApplicationVersion 'Linux64
-    , _macos :: ApplicationVersion 'Mac64
-    , _win64 :: ApplicationVersion 'Win64
-  } deriving (Show, Generic)
-
-instance ToJSON VersionJson
 
 -- | Get VERSION environment variable from pipeline definition.
 -- First looks in global env, otherwise finds first build step with a version.
@@ -482,14 +473,6 @@ githubWikiRecord results = join [ T.pack $ show appVersion
     ciLink Nothing = "*missing*"
 
     join = T.intercalate " | "
-
-updateVersionJson :: InstallersResults -> T.Text -> IO ()
-updateVersionJson info bucket = do
-  let
-    macVersion = bkVersion <$> buildkiteResult info
-    winVersion = avVersion <$> appveyorResult info
-    json = encode $ VersionJson "" (fromMaybe "" macVersion) (fromMaybe "" winVersion)
-  void $ updateVersionJsonS3 bucket json
 
 updateVersionJsonS3 :: T.Text -> LBS.ByteString -> IO T.Text
 updateVersionJsonS3 bucket json = runAWS' $ do

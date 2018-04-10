@@ -36,7 +36,6 @@ module NixOps (
   , NixOps.date
   , s3Upload
   , findInstallers
-  , setVersionJson
 
   , awsPublicIPURL
   , defaultEnvironment
@@ -942,12 +941,6 @@ findInstallers daedalus_rev c = do
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
     TIO.putStrLn $ githubWikiRecord res
-
-setVersionJson :: T.Text -> NixopsConfig -> IO ()
-setVersionJson daedalus_rev c = do
-  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
-    print res
-    updateVersionJson res (cUpdateBucket c)
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do
