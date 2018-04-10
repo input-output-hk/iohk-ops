@@ -468,7 +468,7 @@ githubWikiRecord results = join [ T.pack $ show appVersion
                                 , githubLink cardano_rev "cardano-sl"
                                 , ciLink buildkite
                                 , ciLink appvey
-                                , "DATE" ]
+                                , "DATE\n" ]
   where
     buildkiteDetails = buildkiteResult results
     appveyorDetails = appveyorResult results
