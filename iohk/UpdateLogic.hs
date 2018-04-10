@@ -10,6 +10,9 @@
 module UpdateLogic
   ( realFindInstallers
   , CiResult(..)
+  , ciResultLocalPath
+  , ciResultVersion
+  , ciResultUrl
   , hashInstaller
   , uploadHashedInstaller
   , githubWikiRecord
@@ -120,6 +123,18 @@ data CiResult = AppveyorResult
                 , bkUrl           :: T.Text
                 }
               deriving (Show, Generic)
+
+ciResultLocalPath :: CiResult -> T.Text
+ciResultLocalPath (AppveyorResult p _ _) = p
+ciResultLocalPath (BuildkiteResult p _ _ _ _) = p
+
+ciResultVersion :: CiResult -> T.Text
+ciResultVersion (AppveyorResult _ v _) = getApplicationVersion v
+ciResultVersion (BuildkiteResult _ v _ _ _) = getApplicationVersion v
+
+ciResultUrl :: CiResult -> T.Text
+ciResultUrl (AppveyorResult _ _ u) = u
+ciResultUrl (BuildkiteResult _ _ _ _ u) = u
 
 data GlobalResults = GlobalResults {
       grCardanoCommit      :: T.Text
