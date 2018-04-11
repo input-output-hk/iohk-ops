@@ -118,7 +118,7 @@ data CiResult = AppveyorResult
 data GlobalResults = GlobalResults {
       grCardanoCommit      :: T.Text
     , grDaedalusCommit     :: T.Text
-    , grApplicationVersion :: Int
+    , grApplicationVersion :: Integer
   } deriving Show
 data InstallersResults = InstallersResults
   { appveyorResult  :: Maybe CiResult

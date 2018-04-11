@@ -8,21 +8,20 @@ module UpdateProposal
 
 import Prelude hiding (FilePath)
 import Options.Applicative
-import Turtle hiding (Parser, switch, option)
+import Turtle hiding (Parser, switch)
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (formatTime, iso8601DateFormat, defaultTimeLocale)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
 import Control.Monad (forM_)
 import Filesystem.Path.CurrentOS (encodeString)
 import Data.Yaml (decodeFileEither, encodeFile)
 import Data.Aeson
 import qualified Control.Foldl as Fold
 import Data.Char (isHexDigit)
-import Data.Bifunctor (first)
+import Data.Maybe (fromMaybe)
 
 import NixOps (NixopsConfig(..), nixopsConfigurationKey)
-import Types (NixopsDepl(..), Environment(..))
+import Types (NixopsDepl(..))
 
 
 ----------------------------------------------------------------------------
@@ -31,14 +30,7 @@ import Types (NixopsDepl(..), Environment(..))
 data UpdateProposalCommand
   = UpdateProposalInit
     { updateProposalDate              :: Maybe Text
-    , updateProposalInitialConfig     :: Either Text UpdateProposalConfig1
-    }
-  | UpdateProposalFindInstallers
-    { updateProposalDate              :: Maybe Text
-    , updateProposalCardanoSourcePath :: FilePath
-    }
-  | UpdateProposalUploadS3
-    { updateProposalDate              :: Maybe Text
+    , updateProposalFrom              :: Maybe Text
     }
   | UpdateProposalGenerate
     { updateProposalDate              :: Maybe Text
@@ -55,14 +47,8 @@ data UpdateProposalCommand
 parseUpdateProposalCommand :: Parser UpdateProposalCommand
 parseUpdateProposalCommand = subparser $
      ( command "init"
-       (info ((UpdateProposalInit <$> date <*> initialInfo) <**> helper)
-         (progDesc "Create template config file and working directory.") ) )
-  <> ( command "find-installers"
-       (info ((UpdateProposalFindInstallers <$> date <*> cslPath) <**> helper)
-         (progDesc "Download installer files from the Daedalus build.") ) )
-  <> ( command "upload-s3"
-       (info ((UpdateProposalUploadS3 <$> date) <**> helper)
-         (progDesc "Upload installer files to the S3 bucket.") ) )
+       (info ((UpdateProposalInit <$> date <*> fromDate) <**> helper)
+         (progDesc "Create template config file and working directory") ) )
   <> ( command "generate"
        (info ((UpdateProposalGenerate <$> date <*> cslPath) <**> helper)
          (progDesc "Create a voting transaction") ) )
@@ -75,21 +61,8 @@ parseUpdateProposalCommand = subparser $
               metavar "DATE"
               <> help "Date string to identify the update proposal (default: today)"
 
-    initialInfo :: Parser (Either Text UpdateProposalConfig1)
-    initialInfo = (Left <$> fromDate) <|> (Right <$> updateProposalConfig)
-
-    updateProposalConfig :: Parser UpdateProposalConfig1
-    updateProposalConfig = UpdateProposalConfig1
-      <$> ( option (eitherReader (gitRevision . T.pack))
-            (long "revision" <> short 'r' <> metavar "SHA1"
-              <> help "Daedalus revision to fetch") )
-      <*> ( option auto (long "block-version" <> short 'b' <> metavar "VERSION"
-           <> help "Last known block version. Check the wiki for more info.") )
-      <*> ( option auto (long "voter-index" <> short 'v' <> metavar "INTEGER"
-           <> help "A number representing you, the vote proposer. Check the wiki for more info.") )
-
-    fromDate :: Parser Text
-    fromDate = option auto $
+    fromDate :: Parser (Maybe Text)
+    fromDate = fmap (fmap fromString) . optional . strOption $
                long "from" <> short 'f' <> metavar "DATE"
                <> help "Copy the previous config from date"
 
@@ -99,9 +72,11 @@ parseUpdateProposalCommand = subparser $
               <> help "Path to clone of cardano-sl (default: ./cardano-sl)"
 
     relayIP :: Parser Text
-    relayIP = option auto $
-              long "relay-ip" <> short 'r' <> metavar "ADDR"
-              <> help "IP address of privileged relay"
+    relayIP = fromString <$> strOption
+      ( long "relay-ip"
+        <> short 'r'
+        <> metavar "ADDR"
+        <> help "IP address of privileged relay" )
 
     dryRun :: Parser Bool
     dryRun = switch ( long "dry-run" <> short 'n' <> help "Don't actually do anything" )
@@ -112,12 +87,7 @@ updateProposal cfg up = do
   top <- pwd
   uid <- makeUpdateId (cName cfg) (updateProposalDate up)
   sh $ case up of
-    UpdateProposalInit _ initial -> updateProposalInit top uid (first (UpdateID (cName cfg)) initial)
-    UpdateProposalFindInstallers _ cslPath -> updateProposalFindInstallers
-      (commandOptions (workPath top uid) cslPath configKey Nothing False (cUpdateBucket cfg))
-      (cEnvironment cfg)
-    UpdateProposalUploadS3 _ cslPath -> updateProposalUploadS3
-      (commandOptions (workPath top uid) "none" configKey Nothing False (cUpdateBucket cfg))
+    UpdateProposalInit _ from -> updateProposalInit top uid (UpdateID (cName cfg) <$> from)
     UpdateProposalGenerate _ cslPath -> updateProposalGenerate
       (commandOptions (workPath top uid) cslPath configKey Nothing False (cUpdateBucket cfg))
     UpdateProposalSubmit _ cslPath relay dryRun -> updateProposalSubmit
@@ -127,76 +97,59 @@ updateProposal cfg up = do
 -- Parameters files. These are loaded/saved to yaml in the work dir.
 -- There are three versions, for each step in the update proposal.
 
-data UpdateProposalConfig1 = UpdateProposalConfig1
-  { cfgDaedalusRevision      :: GitRevision
+data UpdateProposalConfig = UpdateProposalConfig
+  { cfgApplicationVersion :: Int
   , cfgLastKnownBlockVersion :: Text
-  , cfgVoterIndex            :: Int
-  } deriving (Show)
-
-data UpdateProposalConfig2 = UpdateProposalConfig2
-  { cfgUpdateProposal1    :: UpdateProposalConfig1
-  , cfgApplicationVersion :: Int
-  , cfgInstallers         :: InstallersConfig
+  , cfgInstallers :: InstallersConfig
+  , cfgVoterIndex :: Int
   } deriving (Show)
 
 data InstallersConfig = InstallersConfig
-  { cfgInstallerDarwin  :: Text
+  { cfgInstallerDarwin :: Text
   , cfgInstallerWindows :: Text
+  } deriving (Show)
+
+data UpdateProposalConfig2 = UpdateProposalConfig2
+  { cfgUpdateProposal :: UpdateProposalConfig
+  , cfgUpdateProposalAddrs :: Text
   } deriving (Show)
 
 data UpdateProposalConfig3 = UpdateProposalConfig3
   { cfgUpdateProposal2 :: UpdateProposalConfig2
-  , cfgUpdateProposalAddrs :: Text
-  } deriving (Show)
-
-data UpdateProposalConfig4 = UpdateProposalConfig4
-  { cfgUpdateProposal3 :: UpdateProposalConfig3
   , cfgUpdateProposalId :: Text
   } deriving (Show)
 
-instance FromJSON UpdateProposalConfig1 where
-  parseJSON = withObject "UpdateProposalConfig1" $ \o ->
-    UpdateProposalConfig1 <$> o .: "daedalusRevision"
-                          <*> o .: "lastKnownBlockVersion"
-                          <*> o .: "voterIndex"
-
-instance FromJSON GitRevision where
-  parseJSON = withText "SHA1" parseGitRevision
+instance FromJSON UpdateProposalConfig where
+  parseJSON = withObject "UpdateProposalConfig" $ \o ->
+    UpdateProposalConfig <$> o .: "applicationVersion"
+                         <*> o .: "lastKnownBlockVersion"
+                         <*> o .: "installerHash"
+                         <*> o .: "voterIndex"
 
 instance FromJSON UpdateProposalConfig2 where
   parseJSON = withObject "UpdateProposalConfig2" $ \o ->
-    UpdateProposalConfig2 <$> parseJSON (Object o) <*> o .: "applicationVersion" <*> o .: "installerHash"
+    UpdateProposalConfig2 <$> parseJSON (Object o) <*> o .:? "addrs" .!= ""
 
 instance FromJSON UpdateProposalConfig3 where
   parseJSON = withObject "UpdateProposalConfig3" $ \o ->
-    UpdateProposalConfig3 <$> parseJSON (Object o) <*> o .:? "addrs" .!= ""
-
-instance FromJSON UpdateProposalConfig4 where
-  parseJSON = withObject "UpdateProposalConfig4" $ \o ->
-    UpdateProposalConfig4 <$> parseJSON (Object o) <*> o .: "proposalId"
+    UpdateProposalConfig3 <$> parseJSON (Object o) <*> o .: "proposalId"
 
 instance FromJSON InstallersConfig where
   parseJSON = withObject "InstallersConfig" $ \o ->
     InstallersConfig <$> o .: "darwin" <*> o .: "windows"
 
-instance ToJSON UpdateProposalConfig1 where
-  toJSON (UpdateProposalConfig1 r v p) = object [ "daedalusRevision" .= r
-                                                , "lastKnownBlockVersion" .= v
-                                                , "voterIndex" .= p ]
-
-instance ToJSON GitRevision where
-  toJSON (GitRevision r) = String r
+instance ToJSON UpdateProposalConfig where
+  toJSON (UpdateProposalConfig a v i p) = object [ "applicationVersion" .= a
+                                                 , "lastKnownBlockVersion" .= v
+                                                 , "installerHash" .= i
+                                                 , "voterIndex" .= p ]
 
 instance ToJSON UpdateProposalConfig2 where
-  toJSON (UpdateProposalConfig2 p a i)
-    = mergeObjects (toJSON p) (object [ "applicationVersion" .= a, "installerHash" .= i ])
+  toJSON (UpdateProposalConfig2 p a)
+    = mergeObjects (toJSON p) (object [ "addrs" .= a ])
 
 instance ToJSON UpdateProposalConfig3 where
   toJSON (UpdateProposalConfig3 p a)
-    = mergeObjects (toJSON p) (object [ "addrs" .= a ])
-
-instance ToJSON UpdateProposalConfig4 where
-  toJSON (UpdateProposalConfig4 p a)
     = mergeObjects (toJSON p) (object [ "updateProposal" .= a ])
 
 instance ToJSON InstallersConfig where
@@ -231,19 +184,15 @@ storeParams opts params = do
 class Checkable cfg where
   checkConfig :: cfg -> Maybe Text
 
-instance Checkable UpdateProposalConfig1 where
-  checkConfig UpdateProposalConfig1{..}
+instance Checkable UpdateProposalConfig where
+  checkConfig UpdateProposalConfig{..}
+    | cfgApplicationVersion <= 0 = Just "Application version must be set"
     | T.null cfgLastKnownBlockVersion = Just "Last known block version must be set"
     | cfgVoterIndex <= 0 = Just "Voter index must be set"
     | otherwise = Nothing
 
 instance Checkable UpdateProposalConfig2 where
-  checkConfig UpdateProposalConfig2{..}
-    | cfgApplicationVersion <= 0 = Just "Application version must be set"
-    | otherwise = Nothing
-
-instance Checkable UpdateProposalConfig3 where
-  checkConfig (UpdateProposalConfig3 p a) = checkConfig p <|> checkAddr a
+  checkConfig (UpdateProposalConfig2 p a) = checkConfig p <|> checkAddr a
     where
       checkAddr "" = Just "No addresses stored in config. Has the generate step been run?"
       checkAddr _ = Nothing
@@ -258,20 +207,6 @@ instance Checkable InstallersConfig where
 -- | Installer hashes are 64 hex digits.
 isInstallerHash :: Text -> Bool
 isInstallerHash t = T.length t == 64 && T.all isHexDigit t
-
--- | Wrapper for sha1 hash.
-newtype GitRevision = GitRevision { unGitRevision :: Text } deriving (Show, Eq)
-
--- | Validates sha1 hash text.
-gitRevision :: Text -> Either String GitRevision
-gitRevision t | T.length t /= 40 = Left "SHA1 revision is not 40 characters"
-              | T.any (not . isHexDigit) t = Left "Revision must be all hex digits"
-              | otherwise = Right (GitRevision t)
-
-parseGitRevision :: Monad m => Text -> m GitRevision
-parseGitRevision t = case gitRevision t of
-                       Right rev -> pure rev
-                       Left e    -> fail e
 
 -- | Die if not valid.
 doCheckConfig :: (MonadIO io, Checkable cfg) => cfg -> io cfg
@@ -327,9 +262,6 @@ workPath topDir uid = topDir </> "update-proposals" </> fmtUpdatePath uid
 paramsFile :: FilePath -> FilePath
 paramsFile workPath = workPath </> "params.yaml"
 
-wikiFile :: FilePath -> FilePath
-wikiFile workPath = workPath </> "wiki.md"
-
 findKeys :: FilePath -> Shell FilePath
 findKeys = Turtle.find (ends ".sk")
 
@@ -344,8 +276,8 @@ installersPath opts hash = cmdWorkPath opts </> "installers" </> fromText hash
 ----------------------------------------------------------------------------
 
 -- | Step 1. Init a new work directory
-updateProposalInit :: FilePath -> UpdateID -> Either UpdateID UpdateProposalConfig1 -> Shell ()
-updateProposalInit top uid initial = do
+updateProposalInit :: FilePath -> UpdateID -> Maybe UpdateID -> Shell ()
+updateProposalInit top uid from = do
   let dir = workPath top uid
       yaml = paramsFile dir
       keysDir = top </> "keys"
@@ -356,14 +288,14 @@ updateProposalInit top uid initial = do
   testfile yaml >>= \case
     True -> die "Config file already exists, stopping."
     False -> pure ()
-  case initial of
-    Left fromUid -> do
+  case from of
+    Just fromUid -> do
       let src = paramsFile (workPath top fromUid)
       printf ("Copying from "%fp%"\n") src
       cp src yaml
-    Right cfg -> do
+    Nothing -> do
       printf "Creating blank template\n"
-      liftIO $ encodeFile (encodeString yaml) cfg
+      liftIO $ encodeFile (encodeString yaml) (UpdateProposalConfig (-1) "" installers (-1))
   liftIO . sh $ copyKeys keysDir (dir </> "keys")
   mktree (dir </> "installers")
   printf ("*** Now edit "%fp%" and update all fields.\n") yaml
@@ -378,25 +310,7 @@ copyKeys src dst = mkdir dst >> findKeys src >>= copy
 
 ----------------------------------------------------------------------------
 
--- | Step 2. Find installers and download them.
-updateProposalFindInstallers :: CommandOptions -> Environment -> Shell ()
-updateProposalFindInstallers opts env = do
-  params <- loadParams opts
-  doCheckConfig (cfgInstallers params)
-  echo "*** Finding installers"
-  res <- realFindInstallers (unGitRevision . cfgDaedalusRevision params) (configurationKeys env)
-  writeWikiRecord opts res
-  storeParams opts (makeUpdateProposalConfig2 params res)
-
-writeWikiRecord :: CommandOptions -> InstallersResults -> Shell ()
-writeWikiRecord opts = do
-  let md = wikiPath (cmdWorkPath opts)
-  printf ("*** Writing wiki table entry to "%fp%"\n") md
-  TIO.putStrLn md $ githubWikiRecord res
-
-----------------------------------------------------------------------------
-
--- | Step 4. Generate database with keys, download installers.
+-- | Step 2. Generate database with keys, download installers.
 updateProposalGenerate :: CommandOptions -> Shell ()
 updateProposalGenerate opts@CommandOptions{..} = do
   params <- loadParams opts
@@ -405,7 +319,7 @@ updateProposalGenerate opts@CommandOptions{..} = do
   downloadInstallers opts (cfgInstallers params)
   echo "*** Generating keys and database."
   addrs <- doGenerate opts params
-  storeParams opts (UpdateProposalConfig3 params addrs)
+  storeParams opts (UpdateProposalConfig2 params addrs)
   echo "*** Finished generate step. Next step is to submit."
 
 -- | Download installers by hash and check that they are the correct type
@@ -438,8 +352,8 @@ hashInstaller opts i = strict . limit 1 . grep isHash $ runCommands opts [cmd]
     cmd = format ("hash-installer "%fp) i
     isHash = text " is " *> count 64 hexDigit
 
-doGenerate :: CommandOptions -> UpdateProposalConfig2 -> Shell Text
-doGenerate opts UpdateProposalConfig2{..} = do
+doGenerate :: CommandOptions -> UpdateProposalConfig -> Shell Text
+doGenerate opts UpdateProposalConfig{..} = do
   keys <- fold (findWorkDirKeys opts) Fold.list
   mapM_ (rearrangeKey opts) keys
   let cmds = map (format ("add-key "%fp%" primary:true")) keys ++ [ "listaddr" ]
@@ -456,26 +370,25 @@ grabAddresses = fmap grab . flip fold Fold.list
 
 ----------------------------------------------------------------------------
 
--- | Step 5. Submit update proposal.
+-- | Step 3. Submit update proposal.
 updateProposalSubmit :: CommandOptions -> Shell ()
 updateProposalSubmit opts@CommandOptions{..} = do
   echo "*** Submitting update proposal"
   params <- loadParams opts
   fmap (format l) <$> doPropose opts params >>= \case
     Just updateId -> do
-      storeParams opts (UpdateProposalConfig4 params updateId)
+      storeParams opts (UpdateProposalConfig3 params updateId)
       echo "*** Update proposal submitted!"
     Nothing -> echo "*** Submission of update proposal failed."
 
-doPropose :: CommandOptions -> UpdateProposalConfig3 -> Shell (Maybe Line)
+doPropose :: CommandOptions -> UpdateProposalConfig2 -> Shell (Maybe Line)
 doPropose opts cfg = fold (runCommands opts [cmd] & grep isUpdateId) Fold.last
   where
     cmd = format upd cfgVoterIndex cfgLastKnownBlockVersion cfgApplicationVersion
           (inst cfgInstallerDarwin) (inst cfgInstallerWindows)
     upd = "propose-update "%d%" vote-all:true "%s%" ~software~csl-daedalus:"%d%" (upd-bin \"win64\" "%fp%") (upd-bin \"macos64\" "%fp%")"
     isUpdateId = count 64 hexDigit
-    UpdateProposalConfig1{..} = cfgUpdateProposal1
-    UpdateProposalConfig2{..} = cfgUpdateProposal2 cfg
+    UpdateProposalConfig{..} = cfgUpdateProposal cfg
     inst f = installersPath opts (f cfgInstallers)
 
 ----------------------------------------------------------------------------
