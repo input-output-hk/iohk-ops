@@ -261,7 +261,7 @@ runTop o@Options{..} args topcmd = do
             -- * High-level scenarios
             FromScratch              -> Ops.fromscratch               o c
             ReallocateCoreIPs        -> Ops.reallocateCoreIPs         o c
-            UpdateProposal up        -> updateProposal                c up
+            UpdateProposal up        -> updateProposal                o c up
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c

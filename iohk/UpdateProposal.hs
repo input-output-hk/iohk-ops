@@ -7,39 +7,50 @@ module UpdateProposal
   ) where
 
 import Prelude hiding (FilePath)
-import Options.Applicative
-import Turtle hiding (Parser, switch)
+import Options.Applicative hiding (action)
+import Turtle hiding (Parser, switch, option, date, o, e)
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (formatTime, iso8601DateFormat, defaultTimeLocale)
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+import qualified Data.ByteString.Lazy.Char8   as L8
 import Control.Monad (forM_)
 import Filesystem.Path.CurrentOS (encodeString)
 import Data.Yaml (decodeFileEither, encodeFile)
 import Data.Aeson
+import qualified Data.HashMap.Strict as HM
 import qualified Control.Foldl as Fold
 import Data.Char (isHexDigit)
-import Data.Maybe (fromMaybe)
+import Data.Bifunctor (first)
 
-import NixOps (NixopsConfig(..), nixopsConfigurationKey)
-import Types (NixopsDepl(..))
-
+import NixOps ( Options, NixopsConfig(..)
+              , nixopsConfigurationKey, configurationKeys
+              , getCardanoSLSource )
+import Types ( NixopsDepl(..), Environment(..), ApplicationVersion(..)
+             , getApplicationVersion )
+import UpdateLogic ( InstallersResults(..), GlobalResults(..)
+                   , CiResult(..), ciResultLocalPath, ciResultVersion
+                   , realFindInstallers, githubWikiRecord
+                   , runAWS', uploadHashedInstaller, updateVersionJsonS3 )
 
 ----------------------------------------------------------------------------
 -- Command-line arguments
 
-data UpdateProposalCommand
+data UpdateProposalCommand = UpdateProposalCommand
+    { updateProposalDate :: Maybe Text
+    , updateProposalStep :: UpdateProposalStep
+    } deriving Show
+
+data UpdateProposalStep
   = UpdateProposalInit
-    { updateProposalDate              :: Maybe Text
-    , updateProposalFrom              :: Maybe Text
+    { updateProposalInitialConfig     :: Either Text UpdateProposalConfig1
     }
+  | UpdateProposalFindInstallers
+  | UpdateProposalUploadS3
+  | UpdateProposalSetVersionJSON
   | UpdateProposalGenerate
-    { updateProposalDate              :: Maybe Text
-    , updateProposalCardanoSourcePath :: FilePath
-    }
   | UpdateProposalSubmit
-    { updateProposalDate              :: Maybe Text
-    , updateProposalCardanoSourcePath :: FilePath
-    , updateProposalRelayIP           :: Text
+    { updateProposalRelayIP           :: Text
     , updateProposalDryRun            :: Bool
     }
   deriving Show
@@ -47,13 +58,22 @@ data UpdateProposalCommand
 parseUpdateProposalCommand :: Parser UpdateProposalCommand
 parseUpdateProposalCommand = subparser $
      ( command "init"
-       (info ((UpdateProposalInit <$> date <*> fromDate) <**> helper)
-         (progDesc "Create template config file and working directory") ) )
+       (info ((UpdateProposalCommand <$> date <*> (UpdateProposalInit <$> initialInfo)) <**> helper)
+         (progDesc "Create template config file and working directory.") ) )
+  <> ( command "find-installers"
+       (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalFindInstallers) <**> helper)
+         (progDesc "Download installer files from the Daedalus build.") ) )
+  <> ( command "upload-s3"
+       (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalUploadS3) <**> helper)
+         (progDesc "Upload installer files to the S3 bucket.") ) )
+  <> ( command "set-version-json"
+       (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalSetVersionJSON) <**> helper)
+         (progDesc "Update the version info file in the the S3 bucket.") ) )
   <> ( command "generate"
-       (info ((UpdateProposalGenerate <$> date <*> cslPath) <**> helper)
+       (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalGenerate) <**> helper)
          (progDesc "Create a voting transaction") ) )
   <> ( command "submit"
-       (info (UpdateProposalSubmit <$> date <*> cslPath <*> relayIP <*> dryRun)
+       (info (UpdateProposalCommand <$> date <*> (UpdateProposalSubmit <$> relayIP <*> dryRun))
          (progDesc "Send update proposal transaction to the network") ) )
   where
     date :: Parser (Maybe Text)
@@ -61,99 +81,149 @@ parseUpdateProposalCommand = subparser $
               metavar "DATE"
               <> help "Date string to identify the update proposal (default: today)"
 
-    fromDate :: Parser (Maybe Text)
-    fromDate = fmap (fmap fromString) . optional . strOption $
+    initialInfo :: Parser (Either Text UpdateProposalConfig1)
+    initialInfo = (Left <$> fromDate) <|> (Right <$> updateProposalConfig)
+
+    updateProposalConfig :: Parser UpdateProposalConfig1
+    updateProposalConfig = UpdateProposalConfig1
+      <$> ( option (eitherReader (gitRevision . T.pack))
+            (long "revision" <> short 'r' <> metavar "SHA1"
+              <> help "Daedalus revision to fetch") )
+      <*> ( fmap T.pack $ strOption (long "block-version" <> short 'B' <> metavar "VERSION"
+           <> help "Last known block version. Check the wiki for more info.") )
+      <*> ( option auto (long "voter-index" <> short 'V' <> metavar "INTEGER"
+           <> help "A number representing you, the vote proposer. Check the wiki for more info.") )
+
+    fromDate :: Parser Text
+    fromDate = fmap T.pack $ strOption $
                long "from" <> short 'f' <> metavar "DATE"
                <> help "Copy the previous config from date"
 
-    cslPath :: Parser FilePath
-    cslPath = fmap fromString . strOption $
-              long "cardano-sl" <> metavar "PATH" <> value "./cardano-sl"
-              <> help "Path to clone of cardano-sl (default: ./cardano-sl)"
-
     relayIP :: Parser Text
-    relayIP = fromString <$> strOption
-      ( long "relay-ip"
-        <> short 'r'
-        <> metavar "ADDR"
-        <> help "IP address of privileged relay" )
+    relayIP = fmap T.pack $ strOption $
+              long "relay-ip" <> short 'r' <> metavar "ADDR"
+              <> help "IP address of privileged relay"
 
     dryRun :: Parser Bool
     dryRun = switch ( long "dry-run" <> short 'n' <> help "Don't actually do anything" )
 
-updateProposal :: NixopsConfig -> UpdateProposalCommand -> IO ()
-updateProposal cfg up = do
+updateProposal :: Options -> NixopsConfig -> UpdateProposalCommand -> IO ()
+updateProposal o cfg UpdateProposalCommand{..} = do
   configKey <- maybe (fail "configurationKey not found") pure (nixopsConfigurationKey cfg)
   top <- pwd
-  uid <- makeUpdateId (cName cfg) (updateProposalDate up)
-  sh $ case up of
-    UpdateProposalInit _ from -> updateProposalInit top uid (UpdateID (cName cfg) <$> from)
-    UpdateProposalGenerate _ cslPath -> updateProposalGenerate
-      (commandOptions (workPath top uid) cslPath configKey Nothing False (cUpdateBucket cfg))
-    UpdateProposalSubmit _ cslPath relay dryRun -> updateProposalSubmit
-      (commandOptions (workPath top uid) cslPath configKey (Just relay) dryRun (cUpdateBucket cfg))
+  uid <- makeUpdateId (cName cfg) updateProposalDate
+  cslPath <- getCardanoSLSource o
+  let opts = commandOptions (workPath top uid) cslPath configKey (cUpdateBucket cfg)
+  sh $ case updateProposalStep of
+    UpdateProposalInit initial -> updateProposalInit top uid (first (UpdateID (cName cfg)) initial)
+    UpdateProposalFindInstallers -> updateProposalFindInstallers opts (cEnvironment cfg)
+    UpdateProposalUploadS3 -> updateProposalUploadS3 opts
+    UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON opts
+    UpdateProposalGenerate -> updateProposalGenerate opts
+    UpdateProposalSubmit relay dryRun ->
+      let opts' = opts { cmdRelayIP = Just relay, cmdDryRun = dryRun }
+      in updateProposalSubmit opts'
 
 ----------------------------------------------------------------------------
 -- Parameters files. These are loaded/saved to yaml in the work dir.
--- There are three versions, for each step in the update proposal.
+-- There are five versions, for each step in the update proposal.
 
-data UpdateProposalConfig = UpdateProposalConfig
-  { cfgApplicationVersion :: Int
+data UpdateProposalConfig1 = UpdateProposalConfig1
+  { cfgDaedalusRevision      :: GitRevision
   , cfgLastKnownBlockVersion :: Text
-  , cfgInstallers :: InstallersConfig
-  , cfgVoterIndex :: Int
-  } deriving (Show)
-
-data InstallersConfig = InstallersConfig
-  { cfgInstallerDarwin :: Text
-  , cfgInstallerWindows :: Text
+  , cfgVoterIndex            :: Int
   } deriving (Show)
 
 data UpdateProposalConfig2 = UpdateProposalConfig2
-  { cfgUpdateProposal :: UpdateProposalConfig
-  , cfgUpdateProposalAddrs :: Text
+  { cfgUpdateProposal1    :: UpdateProposalConfig1
+  , cfgInstallersResults  :: InstallersResults
   } deriving (Show)
 
 data UpdateProposalConfig3 = UpdateProposalConfig3
-  { cfgUpdateProposal2 :: UpdateProposalConfig2
+  { cfgUpdateProposal2    :: UpdateProposalConfig2
+  , cfgInstallerHashes    :: InstallerHashes
+  } deriving (Show)
+
+data InstallerHashes = InstallerHashes
+  { cfgInstallerDarwin  :: Text
+  , cfgInstallerWindows :: Text
+  } deriving (Show)
+
+data UpdateProposalConfig4 = UpdateProposalConfig4
+  { cfgUpdateProposal3 :: UpdateProposalConfig3
+  , cfgUpdateProposalAddrs :: Text
+  } deriving (Show)
+
+data UpdateProposalConfig5 = UpdateProposalConfig5
+  { cfgUpdateProposal4 :: UpdateProposalConfig4
   , cfgUpdateProposalId :: Text
   } deriving (Show)
 
-instance FromJSON UpdateProposalConfig where
-  parseJSON = withObject "UpdateProposalConfig" $ \o ->
-    UpdateProposalConfig <$> o .: "applicationVersion"
-                         <*> o .: "lastKnownBlockVersion"
-                         <*> o .: "installerHash"
-                         <*> o .: "voterIndex"
+instance FromJSON UpdateProposalConfig1 where
+  parseJSON = withObject "UpdateProposalConfig1" $ \o ->
+    UpdateProposalConfig1 <$> o .: "daedalusRevision"
+                          <*> o .: "lastKnownBlockVersion"
+                          <*> o .: "voterIndex"
+
+instance FromJSON GitRevision where
+  parseJSON = withText "SHA1" parseGitRevision
 
 instance FromJSON UpdateProposalConfig2 where
   parseJSON = withObject "UpdateProposalConfig2" $ \o ->
-    UpdateProposalConfig2 <$> parseJSON (Object o) <*> o .:? "addrs" .!= ""
+    UpdateProposalConfig2 <$> parseJSON (Object o) <*> o .: "installersResults"
 
 instance FromJSON UpdateProposalConfig3 where
   parseJSON = withObject "UpdateProposalConfig3" $ \o ->
-    UpdateProposalConfig3 <$> parseJSON (Object o) <*> o .: "proposalId"
+    UpdateProposalConfig3 <$> parseJSON (Object o) <*> o .: "installerHashes"
 
-instance FromJSON InstallersConfig where
-  parseJSON = withObject "InstallersConfig" $ \o ->
-    InstallersConfig <$> o .: "darwin" <*> o .: "windows"
+instance FromJSON UpdateProposalConfig4 where
+  parseJSON = withObject "UpdateProposalConfig4" $ \o ->
+    UpdateProposalConfig4 <$> parseJSON (Object o) <*> o .:? "addrs" .!= ""
 
-instance ToJSON UpdateProposalConfig where
-  toJSON (UpdateProposalConfig a v i p) = object [ "applicationVersion" .= a
-                                                 , "lastKnownBlockVersion" .= v
-                                                 , "installerHash" .= i
-                                                 , "voterIndex" .= p ]
+instance FromJSON UpdateProposalConfig5 where
+  parseJSON = withObject "UpdateProposalConfig5" $ \o ->
+    UpdateProposalConfig5 <$> parseJSON (Object o) <*> o .: "proposalId"
+
+instance FromJSON InstallerHashes where
+  parseJSON = withObject "InstallerHashes" $ \o ->
+    InstallerHashes <$> o .: "darwin" <*> o .: "windows"
+
+instance FromJSON InstallersResults
+instance FromJSON GlobalResults
+instance FromJSON CiResult
+instance FromJSON (ApplicationVersion a) where
+  parseJSON = withText "ApplicationVersion" (pure . ApplicationVersion)
+
+instance ToJSON UpdateProposalConfig1 where
+  toJSON (UpdateProposalConfig1 r v p) = object [ "daedalusRevision" .= r
+                                                , "lastKnownBlockVersion" .= v
+                                                , "voterIndex" .= p ]
+
+instance ToJSON GitRevision where
+  toJSON (GitRevision r) = String r
 
 instance ToJSON UpdateProposalConfig2 where
-  toJSON (UpdateProposalConfig2 p a)
-    = mergeObjects (toJSON p) (object [ "addrs" .= a ])
+  toJSON (UpdateProposalConfig2 p r)
+    = mergeObjects (toJSON p) (object [ "installersResults" .= r ])
 
 instance ToJSON UpdateProposalConfig3 where
-  toJSON (UpdateProposalConfig3 p a)
+  toJSON (UpdateProposalConfig3 p h)
+    = mergeObjects (toJSON p) (object [ "installerHashes" .= h ])
+
+instance ToJSON UpdateProposalConfig4 where
+  toJSON (UpdateProposalConfig4 p a)
+    = mergeObjects (toJSON p) (object [ "addrs" .= a ])
+
+instance ToJSON UpdateProposalConfig5 where
+  toJSON (UpdateProposalConfig5 p a)
     = mergeObjects (toJSON p) (object [ "updateProposal" .= a ])
 
-instance ToJSON InstallersConfig where
-  toJSON (InstallersConfig d w) = object [ "darwin" .= d, "windows" .= w ]
+instance ToJSON InstallerHashes where
+  toJSON (InstallerHashes dh wh) = object [ "darwin" .= dh, "windows" .= wh ]
+
+instance ToJSON InstallersResults
+instance ToJSON GlobalResults
+instance ToJSON CiResult
 
 -- | Adds two json objects together.
 mergeObjects :: Value -> Value -> Value
@@ -184,35 +254,64 @@ storeParams opts params = do
 class Checkable cfg where
   checkConfig :: cfg -> Maybe Text
 
-instance Checkable UpdateProposalConfig where
-  checkConfig UpdateProposalConfig{..}
-    | cfgApplicationVersion <= 0 = Just "Application version must be set"
+instance Checkable UpdateProposalConfig1 where
+  checkConfig UpdateProposalConfig1{..}
     | T.null cfgLastKnownBlockVersion = Just "Last known block version must be set"
     | cfgVoterIndex <= 0 = Just "Voter index must be set"
     | otherwise = Nothing
 
 instance Checkable UpdateProposalConfig2 where
-  checkConfig (UpdateProposalConfig2 p a) = checkConfig p <|> checkAddr a
+  checkConfig (UpdateProposalConfig2 p r) = checkConfig p <|> check r
+    where
+      check InstallersResults{..}
+        | grApplicationVersion <= 0 = Just "Application version must be set"
+        | T.null grCardanoCommit = Just "Missing cardano commit"
+        | missingVersion buildkiteResult = Just "Buildkite version is missing"
+        | missingVersion appveyorResult = Just "Appveyor version is missing"
+        | otherwise = Nothing
+        where
+          GlobalResults{..} = globalResult
+          missingVersion = T.null . maybe "" ciResultVersion
+
+instance Checkable UpdateProposalConfig3 where
+  checkConfig (UpdateProposalConfig3 p h) = checkConfig p <|> checkConfig h
+
+instance Checkable UpdateProposalConfig4 where
+  checkConfig (UpdateProposalConfig4 p a) = checkConfig p <|> checkAddr a
     where
       checkAddr "" = Just "No addresses stored in config. Has the generate step been run?"
       checkAddr _ = Nothing
 
-instance Checkable InstallersConfig where
-  checkConfig (InstallersConfig d w)
-    | T.null d || T.null w = Just "Need to set installer hashes"
-    | not (isInstallerHash d) = Just "Bad hash for darwin installer"
-    | not (isInstallerHash w) = Just "Bad hash for windows installer"
+instance Checkable InstallerHashes where
+  checkConfig (InstallerHashes dh wh)
+    | T.null dh || T.null wh = Just "Need to set installer hashes"
+    | not (isInstallerHash dh) = Just "Bad hash for darwin installer"
+    | not (isInstallerHash wh) = Just "Bad hash for windows installer"
     | otherwise = Nothing
 
 -- | Installer hashes are 64 hex digits.
 isInstallerHash :: Text -> Bool
 isInstallerHash t = T.length t == 64 && T.all isHexDigit t
 
+-- | Wrapper for sha1 hash.
+newtype GitRevision = GitRevision { unGitRevision :: Text } deriving (Show, Eq)
+
+-- | Validates sha1 hash text.
+gitRevision :: Text -> Either String GitRevision
+gitRevision t | T.length t /= 40 = Left "SHA1 revision is not 40 characters"
+              | T.any (not . isHexDigit) t = Left "Revision must be all hex digits"
+              | otherwise = Right (GitRevision t)
+
+parseGitRevision :: Monad m => Text -> m GitRevision
+parseGitRevision t = case gitRevision t of
+                       Right rev -> pure rev
+                       Left e    -> fail e
+
 -- | Die if not valid.
 doCheckConfig :: (MonadIO io, Checkable cfg) => cfg -> io cfg
 doCheckConfig cfg = case checkConfig cfg of
                        Nothing -> pure cfg
-                       Just err -> die err
+                       Just e  -> die e
 
 ----------------------------------------------------------------------------
 -- Update proposal
@@ -221,16 +320,17 @@ doCheckConfig cfg = case checkConfig cfg of
 data UpdateID = UpdateID NixopsDepl Text
   deriving Show
 
--- | All the context for running an update proposal
+-- | The context for running cardano-sl commands relating to an update
+-- proposal.
 data CommandOptions = CommandOptions
   { cmdWorkPath          :: FilePath
   , cmdCardanoConfigFile :: FilePath
   , cmdCardanoConfigKey  :: Text
   , cmdCardanoLogConfig  :: FilePath
+  , cmdDryRun            :: Bool
+  , cmdUpdateBucket      :: Text
   , cmdRelayIP           :: Maybe Text
   , cmdRelayPort         :: Int
-  , cmdDryRun            :: Bool
-  , cmdInstallersURL     :: Text
   } deriving Show
 
 -- | Constructs an UpdateID, using current date as tag if not provided.
@@ -241,13 +341,14 @@ makeUpdateId name mdate = UpdateID name <$> maybe today pure mdate
     fmt = formatTime defaultTimeLocale (iso8601DateFormat Nothing)
 
 -- | Constructs a CommandOptions record.
-commandOptions :: FilePath -> FilePath -> Text -> Maybe Text -> Bool -> Text -> CommandOptions
-commandOptions cmdWorkPath cardanoSource cmdCardanoConfigKey cmdRelayIP cmdDryRun updateBucket
+commandOptions :: FilePath -> FilePath -> Text -> Text -> CommandOptions
+commandOptions cmdWorkPath cardanoSource cmdCardanoConfigKey cmdUpdateBucket
   = CommandOptions{..}
   where
     cmdCardanoConfigFile = cardanoSource </> "lib/configuration.yaml"
     cmdCardanoLogConfig = cardanoSource </> "log-configs/cluster.yaml"
-    cmdInstallersURL = "https://" <> updateBucket <> "/"
+    cmdDryRun = False
+    cmdRelayIP = Nothing -- not required on all commands
     cmdRelayPort = 3000 -- hard-coded for now
 
 ----------------------------------------------------------------------------
@@ -260,7 +361,10 @@ workPath :: FilePath -> UpdateID -> FilePath
 workPath topDir uid = topDir </> "update-proposals" </> fmtUpdatePath uid
 
 paramsFile :: FilePath -> FilePath
-paramsFile workPath = workPath </> "params.yaml"
+paramsFile = (</> "params.yaml")
+
+wikiFile :: FilePath -> FilePath
+wikiFile = (</> "wiki.md")
 
 findKeys :: FilePath -> Shell FilePath
 findKeys = Turtle.find (ends ".sk")
@@ -270,35 +374,37 @@ findWorkDirKeys :: CommandOptions -> Shell FilePath
 findWorkDirKeys opts = findKeys (cmdWorkPath opts </> "keys")
 
 -- | Path to an installer (hash) in the work directory.
-installersPath :: CommandOptions -> Text -> FilePath
-installersPath opts hash = cmdWorkPath opts </> "installers" </> fromText hash
+installersPath :: CommandOptions -> FilePath -> FilePath
+installersPath opts hash = cmdWorkPath opts </> "installers" </> hash
+
+-- | Path to the version info json in the work directory.
+versionFile :: CommandOptions -> FilePath
+versionFile opts = cmdWorkPath opts </> "daedalus-latest-version.json"
 
 ----------------------------------------------------------------------------
 
 -- | Step 1. Init a new work directory
-updateProposalInit :: FilePath -> UpdateID -> Maybe UpdateID -> Shell ()
-updateProposalInit top uid from = do
+updateProposalInit :: FilePath -> UpdateID -> Either UpdateID UpdateProposalConfig1 -> Shell ()
+updateProposalInit top uid initial = do
   let dir = workPath top uid
       yaml = paramsFile dir
       keysDir = top </> "keys"
-      -- TODO: find installers rather than asking the user
-      installers = InstallersConfig "" ""
   printf ("*** Setting up working area for "%fp%"\n") dir
   mktree dir
   testfile yaml >>= \case
     True -> die "Config file already exists, stopping."
     False -> pure ()
-  case from of
-    Just fromUid -> do
+  case initial of
+    Left fromUid -> do
       let src = paramsFile (workPath top fromUid)
       printf ("Copying from "%fp%"\n") src
       cp src yaml
-    Nothing -> do
+    Right cfg -> do
       printf "Creating blank template\n"
-      liftIO $ encodeFile (encodeString yaml) (UpdateProposalConfig (-1) "" installers (-1))
+      liftIO $ encodeFile (encodeString yaml) cfg
   liftIO . sh $ copyKeys keysDir (dir </> "keys")
   mktree (dir </> "installers")
-  printf ("*** Now edit "%fp%" and update all fields.\n") yaml
+  printf ("*** Now check that "%fp%" is correct.\n") yaml
 
 -- | Copy secret keys out of top-level keys directory into the work directory.
 copyKeys :: FilePath -> FilePath -> Shell ()
@@ -310,50 +416,214 @@ copyKeys src dst = mkdir dst >> findKeys src >>= copy
 
 ----------------------------------------------------------------------------
 
--- | Step 2. Generate database with keys, download installers.
+-- | Step 2. Find installers and download them.
+updateProposalFindInstallers :: CommandOptions -> Environment -> Shell ()
+updateProposalFindInstallers opts env = do
+  params <- loadParams opts
+  void $ doCheckConfig params
+  echo "*** Finding installers"
+  let rev = unGitRevision . cfgDaedalusRevision $ params
+  res <- using $ realFindInstallers rev (configurationKeys env)
+  echo "*** Finished. Moving files to work dir"
+  res' <- moveInstallersToWorkDir opts res
+  writeWikiRecord opts res'
+  storeParams opts (UpdateProposalConfig2 params res')
+
+-- | Move installer files from wherever they were found into the work dir.
+moveInstallersToWorkDir :: CommandOptions -> InstallersResults -> Shell InstallersResults
+moveInstallersToWorkDir opts InstallersResults{..} = do
+  bk <- case buildkiteResult of
+    Just res -> do
+      p <- move (bkLocalPath res)
+      pure . Just $ res { bkLocalPath = p }
+    Nothing -> pure Nothing
+  av <- case appveyorResult of
+    Just res -> do
+      p <- move (avLocalPath res)
+      pure . Just $ res { avLocalPath = p }
+    Nothing -> pure Nothing
+  pure $ InstallersResults
+    { buildkiteResult = bk
+    , appveyorResult = av
+    , globalResult = globalResult }
+  where
+    move :: Text -> Shell Text
+    move src = do
+      let src' = fromText src
+      let dst = installersPath opts (filename src')
+      mv src' dst
+      pure (format fp dst)
+
+writeWikiRecord :: CommandOptions -> InstallersResults -> Shell ()
+writeWikiRecord opts res = do
+  let md = wikiFile (cmdWorkPath opts)
+  printf ("*** Writing wiki table entry to "%fp%"\n") md
+  liftIO $ TIO.writeFile (encodeString md) $ githubWikiRecord res
+
+----------------------------------------------------------------------------
+
+-- | Step 3. Hash installers and upload to S3
+updateProposalUploadS3 :: CommandOptions -> Shell ()
+updateProposalUploadS3 opts@CommandOptions{..} = do
+  params@UpdateProposalConfig2{..} <- loadParams opts
+  void $ doCheckConfig params
+  echo "*** Hashing installers with sha256sum"
+  sha256 <- getHashes sha256sum cfgInstallersResults
+  echo "*** Hashing installers with cardano-auxx"
+  hashes <- getHashes (cardanoHashInstaller opts) cfgInstallersResults
+  printf ("*** Uploading installers to S3 bucket "%s%"\n") cmdUpdateBucket
+  urls <- uploadInstallers cmdUpdateBucket cfgInstallersResults hashes
+  printf ("*** Writing "%fp%"\n") (versionFile opts)
+  let dvis = makeDownloadVersionInfo cfgInstallersResults urls hashes sha256
+  liftIO $ writeVersionJSON (versionFile opts) dvis
+  storeParams opts (UpdateProposalConfig3 params hashes)
+
+uploadInstallers :: Text -> InstallersResults -> InstallerHashes -> Shell (Text, Text)
+uploadInstallers bucket res InstallerHashes{..} = runAWS' $ do
+  darwin <- needResultDarwin res $ upload cfgInstallerDarwin
+  windows <- needResultWindows res $ upload cfgInstallerWindows
+  pure (darwin, windows)
+  where
+    upload hash ci = do
+      printf ("***   "%s%"  "%s%"\n") hash (ciResultLocalPath ci)
+      uploadHashedInstaller bucket (ciResultLocalPath ci) (globalResult res) hash
+
+-- | Apply a hashing command to all the installer files.
+getHashes :: (FilePath -> Shell Text) -> InstallersResults -> Shell InstallerHashes
+getHashes getHash res = do
+  cfgInstallerDarwin <- needResultDarwin res resultHash
+  cfgInstallerWindows <- needResultWindows res resultHash
+  pure $ InstallerHashes{..}
+  where
+   resultHash = getHash . fromText . ciResultLocalPath
+
+-- | Run cardano-auxx "hash-installer" command on a file and capture
+-- its output.
+cardanoHashInstaller :: CommandOptions -> FilePath -> Shell Text
+cardanoHashInstaller opts i = runCommands opts [cmd] & grep hash & sed hash & chomp
+  where
+    cmd = format ("hash-installer "%fp) i
+    hash = text "Hash" *> star anyChar *> text " is " *> plus hexDigit
+
+-- | Capture output of sha256sum from gnu coreutils.
+sha256sum :: FilePath -> Shell Text
+sha256sum f = inproc "sha256sum" ["--binary", tt f] empty & hash & chomp
+  where hash = sed (prefix (plus hexDigit))
+
+chomp :: Shell Line -> Shell Text
+chomp = fmap T.stripEnd . strict . limit 1
+
+makeDownloadVersionInfo :: InstallersResults -> (Text, Text)
+                        -> InstallerHashes -> InstallerHashes
+                        -> [DownloadVersionInfo]
+makeDownloadVersionInfo InstallersResults{..} (macosURL, windowsURL) hashes sha256 = [macos, win64]
+  where
+    macos = DownloadVersionInfo
+      { dviPlatform = "macos"
+      , dviVersion = maybe "" (getApplicationVersion . bkVersion) buildkiteResult
+      , dviURL = macosURL
+      , dviHash = cfgInstallerDarwin hashes
+      , dviSHA256 = cfgInstallerDarwin sha256
+      }
+    win64 = DownloadVersionInfo
+      { dviPlatform = "win64"
+      , dviVersion = maybe "" (getApplicationVersion . avVersion) appveyorResult
+      , dviURL = windowsURL
+      , dviHash = cfgInstallerWindows hashes
+      , dviSHA256 = cfgInstallerWindows sha256
+      }
+
+-- | Intermediate data type for the daeadlus download json file.
+data DownloadVersionInfo = DownloadVersionInfo
+  { dviPlatform :: Text
+  , dviVersion  :: Text
+  , dviURL      :: Text
+  , dviHash     :: Text
+  , dviSHA256   :: Text
+  } deriving (Show)
+
+-- | Splat version info to an aeson object.
+downloadVersionInfoObject :: [DownloadVersionInfo] -> Value
+downloadVersionInfoObject = foldr mergeObjects (Object mempty) . map toObject
+  where
+    toObject :: DownloadVersionInfo -> Value
+    toObject DownloadVersionInfo{..} = Object (HM.fromList attrs)
+      where
+        attrs = [ (dviPlatform <> k, String v) | (k, v) <-
+                    [ (""       , dviVersion)
+                    , ("URL"    , dviURL)
+                    , ("Hash"   , dviHash)
+                    , ("SHA256" , dviSHA256)
+                    ] ]
+
+writeVersionJSON :: FilePath -> [DownloadVersionInfo] -> IO ()
+writeVersionJSON out dvis = L8.writeFile (encodeString out) (encode v)
+  where v = downloadVersionInfoObject dvis
+
+----------------------------------------------------------------------------
+
+-- | Step 3a. Update version JSON file in S3.
+-- Doesn't do anything except upload the file which was previously
+-- written into the work dir.
+updateProposalSetVersionJSON :: CommandOptions -> Shell ()
+updateProposalSetVersionJSON opts@CommandOptions{..} = do
+  params <- loadParams opts :: Shell UpdateProposalConfig3
+  void $ doCheckConfig params
+  printf ("*** Uploading version JSON from "%fp%"\n") (versionFile opts)
+  contents <- liftIO $ L8.readFile (encodeString $ versionFile opts)
+  url <- liftIO $ updateVersionJsonS3 cmdUpdateBucket contents
+  printf ("*** Uploaded to "%s%"\n") url
+
+----------------------------------------------------------------------------
+
+-- | Step 4. Generate database with keys, download installers.
 updateProposalGenerate :: CommandOptions -> Shell ()
 updateProposalGenerate opts@CommandOptions{..} = do
-  params <- loadParams opts
-  doCheckConfig (cfgInstallers params)
-  echo "*** Downloading installers."
-  downloadInstallers opts (cfgInstallers params)
+  params@UpdateProposalConfig3{..} <- loadParams opts
+  void $ doCheckConfig cfgInstallerHashes
+  echo "*** Copying and checking installers."
+  copyInstallerFiles opts (cfgInstallersResults cfgUpdateProposal2) cfgInstallerHashes
   echo "*** Generating keys and database."
   addrs <- doGenerate opts params
-  storeParams opts (UpdateProposalConfig2 params addrs)
+  storeParams opts (UpdateProposalConfig4 params addrs)
   echo "*** Finished generate step. Next step is to submit."
+  echo "*** Carefully check the parameters yaml file."
 
--- | Download installers by hash and check that they are the correct type
-downloadInstallers :: CommandOptions -> InstallersConfig -> Shell ()
-downloadInstallers opts InstallersConfig{..} = do
-  download "xar" cfgInstallerDarwin
-  download "MS Windows" cfgInstallerWindows
+needResultDarwin, needResultWindows :: MonadIO io => InstallersResults
+                                    -> (CiResult -> io a) -> io a
+needResultDarwin res = needResult "darwin" (buildkiteResult res)
+needResultWindows res = needResult "windows" (appveyorResult res)
+
+needResult :: MonadIO io => Text -> Maybe CiResult -> (CiResult -> io a) -> io a
+needResult _ (Just res) action = action res
+needResult name Nothing _ = die $ format ("The CI result for "%s%" is required but was not found.") name
+
+-- | Copy installers to a filename which is their hash and then use
+-- "file" to verify that installers are of the expected type. Exit the
+-- program otherwise.
+copyInstallerFiles :: CommandOptions -> InstallersResults -> InstallerHashes -> Shell ()
+copyInstallerFiles opts res InstallerHashes{..} = do
+  needResultDarwin res $ copy "xar" cfgInstallerDarwin
+  needResultWindows res $ copy "MS Windows" cfgInstallerWindows
+
   where
-    download :: Text -> Text -> Shell ()
-    download magic hash = do
-      let dst = installersPath opts hash
-      curl hash dst
-      -- TODO: check hash after downloading
+    copy :: Text -> Text -> CiResult -> Shell ()
+    copy magic hash res = do
+      let dst = installersPath opts (fromText hash)
+      cp (fromText $ ciResultLocalPath res) dst
+      checkMagic magic dst
+
+    checkMagic :: Text -> FilePath -> Shell ()
+    checkMagic magic dst = do
       info <- file dst
       unless (magic `T.isInfixOf` info) $
         die $ format ("Downloaded installer file "%fp%" is not of type "%s%". Instead is:\n"%s%"\n") dst magic info
 
-    curl :: Text -> FilePath -> Shell ()
-    curl hash dst = do
-      let url = cmdInstallersURL opts <> hash
-      printf ("Downloading from "%s%"\n") url
-      procs "curl" ["--output", tt dst, url] empty
-
     file :: FilePath -> Shell Text
     file dst = snd <$> procStrict "file" [tt dst] empty
 
-hashInstaller :: CommandOptions -> FilePath -> Shell Text
-hashInstaller opts i = strict . limit 1 . grep isHash $ runCommands opts [cmd]
-  where
-    cmd = format ("hash-installer "%fp) i
-    isHash = text " is " *> count 64 hexDigit
-
-doGenerate :: CommandOptions -> UpdateProposalConfig -> Shell Text
-doGenerate opts UpdateProposalConfig{..} = do
+doGenerate :: CommandOptions -> UpdateProposalConfig3 -> Shell Text
+doGenerate opts UpdateProposalConfig3{..} = do
   keys <- fold (findWorkDirKeys opts) Fold.list
   mapM_ (rearrangeKey opts) keys
   let cmds = map (format ("add-key "%fp%" primary:true")) keys ++ [ "listaddr" ]
@@ -370,26 +640,29 @@ grabAddresses = fmap grab . flip fold Fold.list
 
 ----------------------------------------------------------------------------
 
--- | Step 3. Submit update proposal.
+-- | Step 5. Submit update proposal.
 updateProposalSubmit :: CommandOptions -> Shell ()
 updateProposalSubmit opts@CommandOptions{..} = do
   echo "*** Submitting update proposal"
   params <- loadParams opts
   fmap (format l) <$> doPropose opts params >>= \case
     Just updateId -> do
-      storeParams opts (UpdateProposalConfig3 params updateId)
+      storeParams opts (UpdateProposalConfig5 params updateId)
       echo "*** Update proposal submitted!"
     Nothing -> echo "*** Submission of update proposal failed."
 
-doPropose :: CommandOptions -> UpdateProposalConfig2 -> Shell (Maybe Line)
+doPropose :: CommandOptions -> UpdateProposalConfig4 -> Shell (Maybe Line)
 doPropose opts cfg = fold (runCommands opts [cmd] & grep isUpdateId) Fold.last
   where
-    cmd = format upd cfgVoterIndex cfgLastKnownBlockVersion cfgApplicationVersion
+    cmd = format upd cfgVoterIndex cfgLastKnownBlockVersion appVer
           (inst cfgInstallerDarwin) (inst cfgInstallerWindows)
     upd = "propose-update "%d%" vote-all:true "%s%" ~software~csl-daedalus:"%d%" (upd-bin \"win64\" "%fp%") (upd-bin \"macos64\" "%fp%")"
     isUpdateId = count 64 hexDigit
-    UpdateProposalConfig{..} = cfgUpdateProposal cfg
-    inst f = installersPath opts (f cfgInstallers)
+    UpdateProposalConfig1{..} = cfgUpdateProposal1
+    UpdateProposalConfig2{..} = cfgUpdateProposal2
+    UpdateProposalConfig3{..} = cfgUpdateProposal3 cfg
+    inst f = installersPath opts (fromText . f $ cfgInstallerHashes)
+    appVer = grApplicationVersion . globalResult $ cfgInstallersResults
 
 ----------------------------------------------------------------------------
 -- Running cardano tools
