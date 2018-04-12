@@ -36,7 +36,6 @@ module NixOps (
   , NixOps.date
   , s3Upload
   , findInstallers
-  , setVersionJson
 
   , awsPublicIPURL
   , defaultEnvironment
@@ -51,6 +50,8 @@ module NixOps (
   , lowerShowT
   , parallelIO
   , nixopsConfigurationKey
+  , configurationKeys
+  , getCardanoSLSource
 
   -- * Types
   , Arg(..)
@@ -156,14 +157,9 @@ import qualified Turtle                        as Turtle
 
 import           Network.AWS.Auth
 import           Network.AWS               hiding (Seconds, Debug, Region)
-import           Network.AWS.Data                 (toText)
-import           Control.Monad.Trans.AWS          (runAWST, AWST)
-import           Network.AWS.S3.PutObject
-import           Network.AWS.S3.CopyObject
 import           Network.AWS.S3.Types      hiding (All, URL, Region)
 import           Control.Monad.Trans.Resource
 import           Data.Coerce
-import qualified Data.HashMap.Strict as HMS
 import           UpdateLogic
 
 import           Constants
@@ -807,6 +803,12 @@ build o _c depl = do
   echo "Building derivation..."
   cmd o "nix-build" ["--max-jobs", "4", "--cores", "2", "-A", fromAttr $ deploymentBuildTarget depl]
 
+
+-- | Use nix to grab the sources of cardano-sl.
+getCardanoSLSource :: Options -> IO Path.FilePath
+getCardanoSLSource o = parent . fromText <$> incmdStrip o "nix-instantiate" args
+  where args = [ "--eval", "-A", "cardano-sl.src", "default.nix" ]
+
 
 -- * State management
 --
@@ -913,45 +915,19 @@ s3Upload :: T.Text -> NixopsConfig -> IO ()
 s3Upload daedalus_rev c = do
   let
     say = liftIO . TIO.putStrLn
-    uploadOneFile :: BucketName -> T.Text -> ObjectKey -> Integer -> T.Text -> AWST (ResourceT IO) ()
-    uploadOneFile bucketName localPath remoteKey appver cardanoCommit = do
-      bdy <- chunkedFile defaultChunkSize (T.unpack localPath)
-      let
-        newMetaData :: HMS.HashMap Text Text
-        newMetaData = HMS.fromList [
-              ("daedalus-revision", daedalus_rev)
-            , ("cardano-revision", cardanoCommit)
-            , ("application-version", (T.pack. show) appver)
-          ]
-      void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata newMetaData $ putObject bucketName remoteKey bdy
-    copyObject' :: BucketName -> T.Text -> ObjectKey -> AWST (ResourceT IO) ()
-    copyObject' bucketName source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName source dest
-    uploadHashedInstaller :: T.Text -> T.Text -> Integer -> T.Text -> AWST (ResourceT IO) (T.Text, T.Text)
-    uploadHashedInstaller bucketName localPath appver cardanoCommit = do
-      hash <- (liftIO . hashInstaller) localPath
-      let
-        -- splitOn always returns at least 1 item in the list
-        basename' = last $ T.splitOn "/" $ localPath
-      region <- bucketRegion (BucketName bucketName)
-      within region $ do
-        uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
-        copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
-      return (hash, s3Link (toText region) bucketName basename')
-    hashAndUpload :: Integer -> T.Text -> CiResult -> AWST (ResourceT IO) ()
-    hashAndUpload appver cardanoCommit ciResult = do
+
+    hashAndUpload :: GlobalResults -> CiResult -> AWS ()
+    hashAndUpload gr ciResult = do
       let path = resultLocalPath ciResult
-      (hash, url) <- uploadHashedInstaller (cUpdateBucket c) path appver cardanoCommit
+      hash <- liftIO $ hashInstaller path
+      url <- uploadHashedInstaller (cUpdateBucket c) path gr hash
       say $ hash <> " " <> url <> " - " <> resultDesc ciResult
 
-  env <- newEnv Discover
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
-    let
-      appver = grApplicationVersion $ globalResult res
-      cardanoCommit' = grCardanoCommit $ globalResult res
-    liftIO $ runResourceT . runAWST env $ do
+    runAWS' $ do
       say $ "uploading things to " <> coerce (cUpdateBucket c)
-      let maybeHashAndUpload = maybe (pure ()) (hashAndUpload appver cardanoCommit')
+      let maybeHashAndUpload = maybe (pure ()) (hashAndUpload (globalResult res))
       maybeHashAndUpload $ buildkiteResult res
       maybeHashAndUpload $ appveyorResult res
 
@@ -965,12 +941,6 @@ findInstallers daedalus_rev c = do
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
     TIO.putStrLn $ githubWikiRecord res
-
-setVersionJson :: T.Text -> NixopsConfig -> IO ()
-setVersionJson daedalus_rev c = do
-  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
-    print res
-    updateVersionJson res (cUpdateBucket c)
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do

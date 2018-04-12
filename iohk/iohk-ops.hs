@@ -126,7 +126,6 @@ data Command where
   PrintDate             :: Command
   S3Upload              :: String -> Command
   FindInstallers        :: String -> Command
-  SetVersionJson       :: String -> Command
 deriving instance Show Command
 
 centralCommandParser :: Parser Command
@@ -210,8 +209,6 @@ centralCommandParser =
    , ("date",                   "Print date/time",                                                  pure PrintDate)
    , ("s3upload",               "test S3 upload",                                                   S3Upload <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV"))  )
    , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
-   -- DEVOPS-709 - command temporarily removed
-   -- , ("set-version-json",       "set daedalus-latest-version.json to a given rev",                  SetVersionJson <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
    ]
 
    <|> subcommandGroup "Other:"
@@ -264,7 +261,7 @@ runTop o@Options{..} args topcmd = do
             -- * High-level scenarios
             FromScratch              -> Ops.fromscratch               o c
             ReallocateCoreIPs        -> Ops.reallocateCoreIPs         o c
-            UpdateProposal up        -> updateProposal                c up
+            UpdateProposal up        -> updateProposal                o c up
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c
@@ -281,7 +278,6 @@ runTop o@Options{..} args topcmd = do
             PrintDate                -> Ops.date                      o c
             S3Upload               d -> Ops.s3Upload                  (T.pack d) c
             FindInstallers         d -> Ops.findInstallers            (T.pack d) c
-            SetVersionJson         d -> Ops.setVersionJson            (T.pack d) c
             Clone{..}                -> error "impossible"
             New{..}                  -> error "impossible"
             SetRev   _ _ _           -> error "impossible"
@@ -340,15 +336,10 @@ runNew _ _ _ = error "impossible"
 -- | Use 'cardano-keygen' to create keys for a develoment cluster.
 generateStakeKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
 generateStakeKeys o configurationKey outdir = do
-  -- XXX: compute cardano source path globally
-  configuration <- (<> "/configuration.yaml") <$> incmdStrip o "nix-instantiate"
-    [ "--eval"
-    , "-A", "cardano-sl.src"
-    , "default.nix"
-    ]
+  cardanoSrc <- getCardanoSLSource o
   cmd o "cardano-keygen"
     [ "--system-start", "0"
-    , "--configuration-file", configuration
+    , "--configuration-file", format (fp%"/lib/configuration.yaml") cardanoSrc
     , "--configuration-key", fromConfigurationKey configurationKey
     , "generate-keys-by-spec"
     , "--genesis-out-dir", T.pack $ Path.encodeString outdir

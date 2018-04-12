@@ -10,17 +10,22 @@
 module UpdateLogic
   ( realFindInstallers
   , CiResult(..)
+  , ciResultLocalPath
+  , ciResultVersion
+  , ciResultUrl
   , hashInstaller
+  , uploadHashedInstaller
   , githubWikiRecord
   , InstallersResults(..)
   , GlobalResults(..)
-  , updateVersionJson
+  , updateVersionJsonS3
   , extractBuildId
   , parseStatusContext
   , StatusContext(..)
   , resultLocalPath
   , resultDesc
   , bucketRegion
+  , runAWS'
   ) where
 
 import           Appveyor                     (AppveyorArtifact (AppveyorArtifact),
@@ -44,8 +49,7 @@ import           Control.Lens                 (to, (^.))
 import qualified Control.Lens                 as Lens
 import           Control.Monad                (guard)
 import           Control.Monad.Managed        (Managed, liftIO, with)
-import           Control.Monad.Trans.AWS      (AWST, runAWST)
-import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
+import           Control.Monad.Trans.Resource (runResourceT)
 import           Data.Aeson                   (ToJSON, encode)
 import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Char8        as BSC
@@ -76,13 +80,18 @@ import           Github                       (Status, context,
                                                fetchGithubStatus, statuses,
                                                targetUrl)
 import           Network.AWS                  (Credentials (Discover), newEnv,
-                                               send, toBody, within, Region)
+                                               send, toBody, within, Region,
+                                               AWS, runAWS,
+                                               chunkedFile, defaultChunkSize)
 import           Network.AWS.S3.PutObject     (poACL, putObject)
 import           Network.AWS.S3.GetBucketLocation (getBucketLocation, gblbrsLocationConstraint)
 
 import           Network.AWS.S3.Types         (BucketName (BucketName), constraintRegion,
                                                ObjectCannedACL (OPublicRead),
-                                               ObjectKey)
+                                               ObjectKey (ObjectKey))
+import           Network.AWS.S3.PutObject
+import           Network.AWS.S3.CopyObject
+import qualified Network.AWS.Data             as AWS
 import           Network.URI                  (uriPath, parseURI)
 import           Safe                         (headMay, lastMay, readMay)
 import           System.Console.ANSI          (Color (Green, Red),
@@ -92,14 +101,14 @@ import           System.Console.ANSI          (Color (Green, Red),
 import           System.IO.Error              (ioeGetErrorString)
 import           System.Exit                  (ExitCode (ExitFailure, ExitSuccess), die)
 import           Text.Regex.PCRE              ((=~))
-import           Turtle                       (empty, void)
+import           Turtle                       (empty, void, MonadIO)
 import           Turtle.Prelude               (mktempdir, proc, procStrict,
                                                pushd)
 import           Types                        (ApplicationVersion (ApplicationVersion),
                                                ApplicationVersionKey (ApplicationVersionKey),
                                                Arch (Linux64, Mac64, Win64),
                                                getApplicationVersion)
-import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1)
+import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1, s3Link)
 
 data CiResult = AppveyorResult
                 { avLocalPath :: T.Text
@@ -113,28 +122,32 @@ data CiResult = AppveyorResult
                 , bkBuildNumber   :: Int
                 , bkUrl           :: T.Text
                 }
-              deriving (Show)
+              deriving (Show, Generic)
+
+ciResultLocalPath :: CiResult -> T.Text
+ciResultLocalPath (AppveyorResult p _ _) = p
+ciResultLocalPath (BuildkiteResult p _ _ _ _) = p
+
+ciResultVersion :: CiResult -> T.Text
+ciResultVersion (AppveyorResult _ v _) = getApplicationVersion v
+ciResultVersion (BuildkiteResult _ v _ _ _) = getApplicationVersion v
+
+ciResultUrl :: CiResult -> T.Text
+ciResultUrl (AppveyorResult _ _ u) = u
+ciResultUrl (BuildkiteResult _ _ _ _ u) = u
 
 data GlobalResults = GlobalResults {
       grCardanoCommit      :: T.Text
     , grDaedalusCommit     :: T.Text
-    , grApplicationVersion :: Integer
-  } deriving Show
+    , grApplicationVersion :: Int
+  } deriving (Show, Generic)
 data InstallersResults = InstallersResults
   { appveyorResult  :: Maybe CiResult
   , buildkiteResult :: Maybe CiResult
   , globalResult    :: GlobalResults
-  } deriving Show
+  } deriving (Show, Generic)
 type TextPath = T.Text
 type RepoUrl = T.Text
-
-data VersionJson = VersionJson {
-      _linux :: ApplicationVersion 'Linux64
-    , _macos :: ApplicationVersion 'Mac64
-    , _win64 :: ApplicationVersion 'Win64
-  } deriving (Show, Generic)
-
-instance ToJSON VersionJson
 
 -- | Get VERSION environment variable from pipeline definition.
 -- First looks in global env, otherwise finds first build step with a version.
@@ -349,7 +362,7 @@ printDarwinBuildInfo ci cardanoBuildNumber cardanoRev url = do
 -- | Gets version information from the config files in the cardano-sl git repo.
 grabAppVersion :: T.Text     -- ^ git commit id to check out
                -> (ApplicationVersionKey 'Win64, ApplicationVersionKey 'Mac64) -- ^ yaml keys to find
-               -> IO Integer -- ^ an integer version, not sure really
+               -> IO Int     -- ^ an integer version, not sure really
 grabAppVersion rev (winKey, macosKey) = do
     let
       readPath name = readFileFromGit rev name "cardano" "https://github.com/input-output-hk/cardano-sl"
@@ -455,7 +468,7 @@ githubWikiRecord results = join [ T.pack $ show appVersion
                                 , githubLink cardano_rev "cardano-sl"
                                 , ciLink buildkite
                                 , ciLink appvey
-                                , "DATE" ]
+                                , "DATE\n" ]
   where
     buildkiteDetails = buildkiteResult results
     appveyorDetails = appveyorResult results
@@ -476,24 +489,53 @@ githubWikiRecord results = join [ T.pack $ show appVersion
 
     join = T.intercalate " | "
 
-updateVersionJson :: InstallersResults -> T.Text -> IO ()
-updateVersionJson info bucket = do
-  let
-    macVersion = bkVersion <$> buildkiteResult info
-    winVersion = avVersion <$> appveyorResult info
-    json = encode $ VersionJson "" (fromMaybe "" macVersion) (fromMaybe "" winVersion)
-    uploadOneFile :: BucketName -> LBS.ByteString -> ObjectKey -> AWST (ResourceT IO) ()
-    uploadOneFile bucketName body remoteKey = do
-      --bdy <- chunkedFile defaultChunkSize body
-      let
-        bdy = toBody body
-      void . send $ Lens.set poACL (Just OPublicRead) $ putObject bucketName remoteKey bdy
-  env' <- newEnv Discover
-  let bucketName = BucketName bucket
-  liftIO . runResourceT . runAWST env' $ do
-    region <- bucketRegion bucketName
-    within region $ uploadOneFile bucketName json "daedalus-latest-version.json"
+updateVersionJsonS3 :: T.Text -> LBS.ByteString -> IO T.Text
+updateVersionJsonS3 bucket json = runAWS' $ do
+  region <- bucketRegion bucketName
+  within region $ uploadOneFile json (ObjectKey fileName)
+  return $ s3Link (AWS.toText region) bucket fileName
+  where
+    fileName = "daedalus-latest-version.json" :: T.Text
+    bucketName = BucketName bucket
+    uploadOneFile :: LBS.ByteString -> ObjectKey -> AWS ()
+    uploadOneFile body remoteKey = void . send $
+      makePublic $ putObject bucketName remoteKey (toBody body)
+    makePublic = Lens.set poACL (Just OPublicRead)
 
-bucketRegion :: BucketName -> AWST (ResourceT IO) Region
+bucketRegion :: BucketName -> AWS Region
 bucketRegion = fmap getRegion . send . getBucketLocation
   where getRegion lc = constraintRegion (lc ^. gblbrsLocationConstraint)
+
+runAWS' :: MonadIO io => AWS a -> io a
+runAWS' action = liftIO $ do
+  env <- newEnv Discover
+  runResourceT . runAWS env $ action
+
+
+uploadHashedInstaller :: T.Text -> T.Text -> GlobalResults -> T.Text -> AWS T.Text
+uploadHashedInstaller bucketName localPath GlobalResults{..} hash = do
+  region <- bucketRegion bucketName'
+  within region $ do
+    uploadOneFile localPath (ObjectKey hash)
+    copyObject' hashedPath (ObjectKey basename')
+  return $ s3Link (AWS.toText region) bucketName basename'
+
+  where
+    -- splitOn always returns at least 1 item in the list
+    basename' = last $ T.splitOn "/" $ localPath
+    bucketName' = BucketName bucketName
+    hashedPath = bucketName <> "/" <> hash
+
+    meta :: HashMap.HashMap T.Text T.Text
+    meta = HashMap.fromList
+      [ ("daedalus-revision", grDaedalusCommit)
+      , ("cardano-revision", grCardanoCommit)
+      , ("application-version", (T.pack. show) grApplicationVersion)
+      ]
+
+    uploadOneFile :: T.Text -> ObjectKey -> AWS ()
+    uploadOneFile localPath remoteKey = do
+      bdy <- chunkedFile defaultChunkSize (T.unpack localPath)
+      void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata meta $ putObject bucketName' remoteKey bdy
+    copyObject' :: T.Text -> ObjectKey -> AWS ()
+    copyObject' source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName' source dest

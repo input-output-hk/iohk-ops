@@ -15,7 +15,7 @@ data ConfigurationRoot = ConfigurationRoot {
   } deriving (Show, Generic, Eq)
 
 data ConfigurationUpdate = ConfigurationUpdate {
-    applicationVersion :: Integer
+    applicationVersion :: Int
   } deriving (Show, Generic, Eq)
 
 instance FromJSON ConfigurationRoot

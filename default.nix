@@ -31,6 +31,7 @@ let
     file
     nixops
     terraform
+    coreutils
   ];
   terraform = pkgs.terraform_0_11.withPlugins (ps: [ ps.aws ]);
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
