@@ -22,6 +22,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Control.Foldl as Fold
 import Data.Char (isHexDigit)
 import Data.Bifunctor (first)
+import Data.Maybe (fromMaybe, catMaybes)
 
 import NixOps ( Options, NixopsConfig(..)
               , nixopsConfigurationKey, configurationKeys
@@ -31,7 +32,8 @@ import Types ( NixopsDepl(..), Environment(..), ApplicationVersion(..)
 import UpdateLogic ( InstallersResults(..), GlobalResults(..)
                    , CiResult(..), ciResultLocalPath, ciResultVersion
                    , realFindInstallers, githubWikiRecord
-                   , runAWS', uploadHashedInstaller, updateVersionJsonS3 )
+                   , runAWS', uploadHashedInstaller, updateVersionJson
+                   , uploadSignature )
 
 ----------------------------------------------------------------------------
 -- Command-line arguments
@@ -46,6 +48,9 @@ data UpdateProposalStep
     { updateProposalInitialConfig     :: Either Text UpdateProposalConfig1
     }
   | UpdateProposalFindInstallers
+  | UpdateProposalSignInstallers
+    { updateProposalGPGUserId         :: Text
+    }
   | UpdateProposalUploadS3
   | UpdateProposalSetVersionJSON
   | UpdateProposalGenerate
@@ -63,6 +68,9 @@ parseUpdateProposalCommand = subparser $
   <> ( command "find-installers"
        (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalFindInstallers) <**> helper)
          (progDesc "Download installer files from the Daedalus build.") ) )
+  <> ( command "sign-installers"
+       (info ((UpdateProposalCommand <$> date <*> (UpdateProposalSignInstallers <$> userId)) <**> helper)
+         (progDesc "Sign installer files with GPG.") ) )
   <> ( command "upload-s3"
        (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalUploadS3) <**> helper)
          (progDesc "Upload installer files to the S3 bucket.") ) )
@@ -99,6 +107,11 @@ parseUpdateProposalCommand = subparser $
                long "from" <> short 'f' <> metavar "DATE"
                <> help "Copy the previous config from date"
 
+    userId :: Parser Text
+    userId = fmap T.pack $ strOption $
+             long "local-user" <> short 'u' <> metavar "USER-ID"
+             <> help "use USER-ID to sign"
+
     relayIP :: Parser Text
     relayIP = fmap T.pack $ strOption $
               long "relay-ip" <> short 'r' <> metavar "ADDR"
@@ -117,6 +130,7 @@ updateProposal o cfg UpdateProposalCommand{..} = do
   sh $ case updateProposalStep of
     UpdateProposalInit initial -> updateProposalInit top uid (first (UpdateID (cName cfg)) initial)
     UpdateProposalFindInstallers -> updateProposalFindInstallers opts (cEnvironment cfg)
+    UpdateProposalSignInstallers userId -> updateProposalSignInstallers opts userId
     UpdateProposalUploadS3 -> updateProposalUploadS3 opts
     UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON opts
     UpdateProposalGenerate -> updateProposalGenerate opts
@@ -428,6 +442,8 @@ updateProposalFindInstallers opts env = do
   res' <- moveInstallersToWorkDir opts res
   writeWikiRecord opts res'
   storeParams opts (UpdateProposalConfig2 params res')
+  echo "*** Installers are now in the work dir. Optionally sign them with:"
+  echo "***     gpg -u IDENTITY --detach-sig --armor --sign FILENAME"
 
 -- | Move installer files from wherever they were found into the work dir.
 moveInstallersToWorkDir :: CommandOptions -> InstallersResults -> Shell InstallersResults
@@ -462,6 +478,21 @@ writeWikiRecord opts res = do
 
 ----------------------------------------------------------------------------
 
+-- | Step 2a. (Optional) Sign installers with GPG. This will leave
+-- .asc files next to the installers which will be picked up in the
+-- upload S3 step.
+updateProposalSignInstallers :: CommandOptions -> Text -> Shell ()
+updateProposalSignInstallers opts@CommandOptions{..} userId = do
+  params <- loadParams opts
+  void $ doCheckConfig params
+  mapM_ signInstaller (listInstallers $ cfgInstallersResults params)
+  where
+    signInstaller f = procs "gpg2" ["-u", userId, "--detach-sig", "--armor", "--sign", f] empty
+    listInstallers InstallersResults{..} = map ciResultLocalPath $ catMaybes
+      [ appveyorResult, buildkiteResult ]
+
+----------------------------------------------------------------------------
+
 -- | Step 3. Hash installers and upload to S3
 updateProposalUploadS3 :: CommandOptions -> Shell ()
 updateProposalUploadS3 opts@CommandOptions{..} = do
@@ -473,8 +504,10 @@ updateProposalUploadS3 opts@CommandOptions{..} = do
   hashes <- getHashes (cardanoHashInstaller opts) cfgInstallersResults
   printf ("*** Uploading installers to S3 bucket "%s%"\n") cmdUpdateBucket
   urls <- uploadInstallers cmdUpdateBucket cfgInstallersResults hashes
+  printf ("*** Uploading signatures to same S3 bucket.\n")
+  signatures <- uploadSignatures cmdUpdateBucket cfgInstallersResults
   printf ("*** Writing "%fp%"\n") (versionFile opts)
-  let dvis = makeDownloadVersionInfo cfgInstallersResults urls hashes sha256
+  let dvis = makeDownloadVersionInfo cfgInstallersResults urls hashes sha256 signatures
   liftIO $ writeVersionJSON (versionFile opts) dvis
   storeParams opts (UpdateProposalConfig3 params hashes)
 
@@ -486,7 +519,7 @@ uploadInstallers bucket res InstallerHashes{..} = runAWS' $ do
   where
     upload hash ci = do
       printf ("***   "%s%"  "%s%"\n") hash (ciResultLocalPath ci)
-      uploadHashedInstaller bucket (ciResultLocalPath ci) (globalResult res) hash
+      uploadHashedInstaller bucket (fromText $ ciResultLocalPath ci) (globalResult res) hash
 
 -- | Apply a hashing command to all the installer files.
 getHashes :: (FilePath -> Shell Text) -> InstallersResults -> Shell InstallerHashes
@@ -513,10 +546,35 @@ sha256sum f = inproc "sha256sum" ["--binary", tt f] empty & hash & chomp
 chomp :: Shell Line -> Shell Text
 chomp = fmap T.stripEnd . strict . limit 1
 
-makeDownloadVersionInfo :: InstallersResults -> (Text, Text)
+-- | Slurp in previously created signatures.
+uploadSignatures :: Text -> InstallersResults -> Shell (Maybe Text, Maybe Text)
+uploadSignatures bucket InstallersResults{..} = do
+  (,) <$> r buildkiteResult <*> r appveyorResult
+  where
+    r :: (Maybe CiResult) -> Shell (Maybe Text)
+    r Nothing = pure Nothing
+    r (Just res) = liftIO $ uploadResultSignature bucket res
+
+uploadResultSignature :: Text -> CiResult -> IO (Maybe Text)
+uploadResultSignature bucket res = liftIO $ maybeReadFile sigFile >>= \case
+  Just sig -> do
+    runAWS' $ uploadSignature bucket sigFile
+    pure $ Just sig
+  Nothing -> do
+    printf ("***   Signature file "%fp%" does not exist.\n") sigFile
+    pure Nothing
+  where
+    sigFile = fromText (ciResultLocalPath res <> ".asc")
+    maybeReadFile f = testfile f >>= \case
+      True -> Just <$> readTextFile f
+      False -> pure Nothing
+
+makeDownloadVersionInfo :: InstallersResults
+                        -> (Text, Text)
                         -> InstallerHashes -> InstallerHashes
+                        -> (Maybe Text, Maybe Text)
                         -> [DownloadVersionInfo]
-makeDownloadVersionInfo InstallersResults{..} (macosURL, windowsURL) hashes sha256 = [macos, win64]
+makeDownloadVersionInfo InstallersResults{..} (macosURL, windowsURL) hashes sha256 (macosSig, windowsSig) = [macos, win64]
   where
     macos = DownloadVersionInfo
       { dviPlatform = "macos"
@@ -524,6 +582,7 @@ makeDownloadVersionInfo InstallersResults{..} (macosURL, windowsURL) hashes sha2
       , dviURL = macosURL
       , dviHash = cfgInstallerDarwin hashes
       , dviSHA256 = cfgInstallerDarwin sha256
+      , dviSignature = macosSig
       }
     win64 = DownloadVersionInfo
       { dviPlatform = "win64"
@@ -531,15 +590,17 @@ makeDownloadVersionInfo InstallersResults{..} (macosURL, windowsURL) hashes sha2
       , dviURL = windowsURL
       , dviHash = cfgInstallerWindows hashes
       , dviSHA256 = cfgInstallerWindows sha256
+      , dviSignature = windowsSig
       }
 
 -- | Intermediate data type for the daeadlus download json file.
 data DownloadVersionInfo = DownloadVersionInfo
-  { dviPlatform :: Text
-  , dviVersion  :: Text
-  , dviURL      :: Text
-  , dviHash     :: Text
-  , dviSHA256   :: Text
+  { dviPlatform  :: Text
+  , dviVersion   :: Text
+  , dviURL       :: Text
+  , dviHash      :: Text
+  , dviSHA256    :: Text
+  , dviSignature :: Maybe Text
   } deriving (Show)
 
 -- | Splat version info to an aeson object.
@@ -550,10 +611,11 @@ downloadVersionInfoObject = foldr mergeObjects (Object mempty) . map toObject
     toObject DownloadVersionInfo{..} = Object (HM.fromList attrs)
       where
         attrs = [ (dviPlatform <> k, String v) | (k, v) <-
-                    [ (""       , dviVersion)
-                    , ("URL"    , dviURL)
-                    , ("Hash"   , dviHash)
-                    , ("SHA256" , dviSHA256)
+                    [ (""         , dviVersion)
+                    , ("URL"      , dviURL)
+                    , ("Hash"     , dviHash)
+                    , ("SHA256"   , dviSHA256)
+                    , ("Signature", fromMaybe "" dviSignature)
                     ] ]
 
 writeVersionJSON :: FilePath -> [DownloadVersionInfo] -> IO ()
@@ -571,7 +633,7 @@ updateProposalSetVersionJSON opts@CommandOptions{..} = do
   void $ doCheckConfig params
   printf ("*** Uploading version JSON from "%fp%"\n") (versionFile opts)
   contents <- liftIO $ L8.readFile (encodeString $ versionFile opts)
-  url <- liftIO $ updateVersionJsonS3 cmdUpdateBucket contents
+  url <- liftIO $ updateVersionJson cmdUpdateBucket contents
   printf ("*** Uploaded to "%s%"\n") url
 
 ----------------------------------------------------------------------------
