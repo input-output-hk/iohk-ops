@@ -442,8 +442,6 @@ updateProposalFindInstallers opts env = do
   res' <- moveInstallersToWorkDir opts res
   writeWikiRecord opts res'
   storeParams opts (UpdateProposalConfig2 params res')
-  echo "*** Installers are now in the work dir. Optionally sign them with:"
-  echo "***     gpg -u IDENTITY --detach-sig --armor --sign FILENAME"
 
 -- | Move installer files from wherever they were found into the work dir.
 moveInstallersToWorkDir :: CommandOptions -> InstallersResults -> Shell InstallersResults
