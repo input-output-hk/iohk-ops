@@ -18,8 +18,8 @@ sampleCardanoSLSrc = "{ \"url\": \"https://github.com/input-output-hk/cardano-sl
 
 spec :: Spec
 spec = do
-  describe "travis log output" $ do
-    it "tests travis log output parsing" $ do
+  describe "Cardano SL version spec" $ do
+    it "Correctly parses cardano-sl version spec" $ do
       let src = decode sampleCardanoSLSrc
       fmap srcOwner src `shouldBe` Just "input-output-hk"
       fmap srcRepo src `shouldBe` Just "cardano-sl"

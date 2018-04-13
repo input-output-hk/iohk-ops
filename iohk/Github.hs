@@ -53,7 +53,7 @@ uriParser u = case parseAbsoluteURI (T.unpack u) of
                 Just uri -> pure uri
                 Nothing -> fail "Could not parse absolute URI"
 
--- | Gets owner/repo from gitcom.com URL
+-- | Gets owner/repo from github.com URL
 gitHubURLParser :: URI -> Parser (Org, Repo)
 gitHubURLParser uri | null repo = fail "Missing repo in GitHub URL path"
                     | otherwise = pure (T.pack owner, T.pack (drop 1 repo))
