@@ -75,6 +75,7 @@ in lib // (rec {
     ksaric
     larsKey
     philippKey
+    pkellyKey
     vasilisKey
   ]);
 })
