@@ -124,6 +124,4 @@ envSettings env =
     Any -> error "envSettings called with 'Any'"
 
 selectDeployer :: Environment -> [Deployment] -> NodeName
-selectDeployer Staging   delts | elem Nodes delts = "iohk"
-                               | otherwise        = "cardano-deployer"
-selectDeployer _ _                                = "cardano-deployer"
+selectDeployer _ _ = "iohk"
