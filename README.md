@@ -22,11 +22,3 @@ Collection of tooling and automation to deploy IOHK infrastructure.
 
 1. Append https://github.com/input-output-hk/iohk-ops/blob/master/lib.nix#L83 and submit a PR.
 2. Wait until the DevOps team deploys the infrastructure cluster.
-
-### edge nodes - watch log
-# 10 nodes "edgenode-1", each has 10 wallets "cardano-node-[1-10]"
-export NIXOPS_DEPLOYMENT=edgenodes-cluster
-nixops ssh edgenode-1
-
-journalctl -f -u cardano-node-1
-
