@@ -15,10 +15,11 @@ module UpdateLogic
   , ciResultUrl
   , hashInstaller
   , uploadHashedInstaller
+  , uploadSignature
+  , updateVersionJson
   , githubWikiRecord
   , InstallersResults(..)
   , GlobalResults(..)
-  , updateVersionJsonS3
   , parseStatusContext
   , StatusContext(..)
   , resultLocalPath
@@ -27,6 +28,7 @@ module UpdateLogic
   , runAWS'
   ) where
 
+import           Prelude                      hiding (FilePath)
 import           Appveyor                     (AppveyorArtifact (AppveyorArtifact),
                                                build, fetchAppveyorArtifacts,
                                                fetchAppveyorBuild,
@@ -98,7 +100,7 @@ import           System.Console.ANSI          (Color (Green, Red),
 import           System.IO.Error              (ioeGetErrorString)
 import           System.Exit                  (ExitCode (ExitFailure, ExitSuccess), die)
 import           Text.Regex.PCRE              ((=~))
-import           Turtle                       (empty, void, MonadIO)
+import           Turtle                       (FilePath, empty, void, MonadIO, format, fp)
 import           Turtle.Prelude               (mktempdir, proc, procStrict,
                                                pushd)
 import           Types                        (ApplicationVersion (ApplicationVersion),
@@ -468,16 +470,15 @@ githubWikiRecord results = join [ T.pack $ show appVersion
 
     join = T.intercalate " | "
 
-updateVersionJsonS3 :: T.Text -> LBS.ByteString -> IO T.Text
-updateVersionJsonS3 bucket json = runAWS' $ do
-  region <- bucketRegion bucketName
-  within region $ uploadOneFile json (ObjectKey fileName)
-  return $ s3Link (AWS.toText region) bucket fileName
+updateVersionJson :: T.Text -> LBS.ByteString -> IO T.Text
+updateVersionJson bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
+  uploadFile json key
+  pure $ s3Link region bucketName key
   where
-    fileName = "daedalus-latest-version.json" :: T.Text
+    key = ObjectKey "daedalus-latest-version.json"
     bucketName = BucketName bucket
-    uploadOneFile :: LBS.ByteString -> ObjectKey -> AWS ()
-    uploadOneFile body remoteKey = void . send $
+    uploadFile :: LBS.ByteString -> ObjectKey -> AWS ()
+    uploadFile body remoteKey = void . send $
       makePublic $ putObject bucketName remoteKey (toBody body)
     makePublic = Lens.set poACL (Just OPublicRead)
 
@@ -490,31 +491,46 @@ runAWS' action = liftIO $ do
   env <- newEnv Discover
   runResourceT . runAWS env $ action
 
+withinBucketRegion :: BucketName -> (Region -> AWS a) -> AWS a
+withinBucketRegion bucketName action = do
+  region <- bucketRegion bucketName
+  within region $ action region
 
-uploadHashedInstaller :: T.Text -> T.Text -> GlobalResults -> T.Text -> AWS T.Text
-uploadHashedInstaller bucketName localPath GlobalResults{..} hash = do
-  region <- bucketRegion bucketName'
-  within region $ do
-    uploadOneFile localPath (ObjectKey hash)
-    copyObject' hashedPath (ObjectKey basename')
-  return $ s3Link (AWS.toText region) bucketName basename'
+type AWSMeta = HashMap.HashMap T.Text T.Text
+
+uploadHashedInstaller :: T.Text -> FilePath -> GlobalResults -> T.Text -> AWS T.Text
+uploadHashedInstaller bucketName localPath GlobalResults{..} hash =
+  withinBucketRegion bucketName' $ \region -> do
+    uploadOneFile bucketName' localPath (ObjectKey hash) meta
+    copyObject' hashedPath key
+    pure $ s3Link region bucketName' key
 
   where
-    -- splitOn always returns at least 1 item in the list
-    basename' = last $ T.splitOn "/" $ localPath
+    key = simpleKey localPath
     bucketName' = BucketName bucketName
     hashedPath = bucketName <> "/" <> hash
 
-    meta :: HashMap.HashMap T.Text T.Text
     meta = HashMap.fromList
       [ ("daedalus-revision", grDaedalusCommit)
       , ("cardano-revision", grCardanoCommit)
       , ("application-version", (T.pack. show) grApplicationVersion)
-      ]
+      ] :: AWSMeta
 
-    uploadOneFile :: T.Text -> ObjectKey -> AWS ()
-    uploadOneFile localPath remoteKey = do
-      bdy <- chunkedFile defaultChunkSize (T.unpack localPath)
-      void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata meta $ putObject bucketName' remoteKey bdy
     copyObject' :: T.Text -> ObjectKey -> AWS ()
     copyObject' source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName' source dest
+
+uploadSignature :: T.Text -> FilePath -> AWS ()
+uploadSignature bucket localPath = withinBucketRegion bucketName . const $
+  uploadOneFile bucketName localPath (simpleKey localPath) mempty
+  where bucketName = BucketName bucket
+
+-- | S3 object key is just the base name of the filepath.
+simpleKey :: FilePath -> ObjectKey
+simpleKey = ObjectKey . format fp . FP.filename
+
+uploadOneFile :: BucketName -> FilePath -> ObjectKey -> AWSMeta -> AWS ()
+uploadOneFile bucket localPath remoteKey meta = do
+  bdy <- chunkedFile defaultChunkSize (FP.encodeString localPath)
+  void . send $ makePublic $ Lens.set poMetadata meta $ putObject bucket remoteKey bdy
+  where
+    makePublic = Lens.set poACL (Just OPublicRead)

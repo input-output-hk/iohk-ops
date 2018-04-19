@@ -920,7 +920,7 @@ s3Upload daedalus_rev c = do
     hashAndUpload gr ciResult = do
       let path = resultLocalPath ciResult
       hash <- liftIO $ hashInstaller path
-      url <- uploadHashedInstaller (cUpdateBucket c) path gr hash
+      url <- uploadHashedInstaller (cUpdateBucket c) (Turtle.fromText path) gr hash
       say $ hash <> " " <> url <> " - " <> resultDesc ciResult
 
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do

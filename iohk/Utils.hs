@@ -25,6 +25,9 @@ import qualified Data.Char                     as C
 import           Data.Text                        (Text)
 import           GHC.Generics              hiding (from, to)
 import           Turtle
+import           Network.AWS               (Region)
+import           Network.AWS.S3            (BucketName(..), ObjectKey(..))
+import qualified Network.AWS.Data          as AWS
 
 fetchCachedUrl :: HasCallStack => T.Text -> T.Text -> T.Text-> IO ()
 fetchCachedUrl url name outPath = fetchCachedUrl' url name outPath Nothing
@@ -104,9 +107,6 @@ jsonLowerStrip n = AE.genericToJSON $ AE.defaultOptions { AE.fieldLabelModifier 
 -- | Returns the public download URL for an object in S3, according to
 -- the AWS path-style convention.
 -- https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAPI.html
-s3Link :: Text -- ^ Region
-       -> Text -- ^ Bucket name
-       -> Text -- ^ Object key
-       -> Text -- ^ URL to download
-s3Link region bucket key = mconcat [ "https://s3-", region, ".amazonaws.com/"
-                                   , bucket, "/", key ]
+s3Link :: Region -> BucketName -> ObjectKey -> Text
+s3Link region (BucketName bucket) (ObjectKey key) =
+  mconcat [ "https://s3-", AWS.toText region, ".amazonaws.com/" , bucket, "/", key ]
