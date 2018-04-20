@@ -100,4 +100,7 @@ test-suite iohk-ops-test
                   , regex-pcre
                   , time
                   , foldl
+                  , hourglass
+                  , containers
+                  , lens-aeson
   hs-source-dirs:   test .
