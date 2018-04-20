@@ -13,7 +13,6 @@ module UpdateLogic
   , ciResultLocalPath
   , ciResultVersion
   , ciResultUrl
-  , hashInstaller
   , uploadHashedInstaller
   , uploadSignature
   , updateVersionJson
@@ -426,21 +425,6 @@ findInstaller buildkiteToken daedalus_rev daedalus_version tempdir keys status =
     Nothing -> do
       putStrLn $ "unrecognized CI status: " <> T.unpack (context status)
       pure (Nothing, Nothing)
-
-hashInstaller :: T.Text -> IO T.Text
-hashInstaller path = do
-  let
-    -- TODO DEVOPS-502
-    -- once cardano in `cardano-sl-src.json` has been bumped enough, switch this to building on the fly
-    -- with `nix-build -A cardano-sl-auxx`
-    exepath :: T.Text
-    exepath = "/nix/store/hjvv6dxy197c9mjc2gh635am0c0shx5l-cardano-sl-auxx-1.0.3/bin/cardano-hash-installer"
-  (exitStatus, res) <- procStrict exepath [ path ] empty
-  case exitStatus of
-    ExitSuccess -> do
-      let cleanHash = fromMaybe res (T.stripSuffix "\n" res)
-      return cleanHash
-    ExitFailure _ -> error "error running cardano-hash-installer"
 
 githubWikiRecord :: InstallersResults -> T.Text
 githubWikiRecord results = join [ T.pack $ show appVersion

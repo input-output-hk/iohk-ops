@@ -111,7 +111,6 @@ data Command where
   -- * high-level scenarios
   FromScratch           :: Command
   ReallocateCoreIPs     :: Command
-  UpdateProposal        :: UpdateProposalCommand -> Command
 
   -- * live cluster ops
   Ssh                   :: Exec -> [Arg] -> Command
@@ -124,8 +123,8 @@ data Command where
   GetJournals           :: JournaldTimeSpec -> Maybe JournaldTimeSpec -> Command
   CWipeNodeDBs          :: Confirmation -> Command
   PrintDate             :: Command
-  S3Upload              :: String -> Command
   FindInstallers        :: String -> Command
+  UpdateProposal        :: UpdateProposalCommand -> Command
 deriving instance Show Command
 
 centralCommandParser :: Parser Command
@@ -179,7 +178,6 @@ centralCommandParser =
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
    , ("reallocate-core-ips",    "Destroy elastic IPs corresponding to the nodes listed and redeploy cluster",
                                                                                                     pure ReallocateCoreIPs)
-   , ("update-proposal",        "Subcommands for updating wallet installers. Apply commands in the order listed.", UpdateProposal <$> parseUpdateProposalCommand)
    , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
 
    <|> subcommandGroup "Live cluster ops:"
@@ -207,7 +205,7 @@ centralCommandParser =
                                 CWipeNodeDBs
                                 <$> parserConfirmation "Wipe node DBs on the entire cluster?")
    , ("date",                   "Print date/time",                                                  pure PrintDate)
-   , ("s3upload",               "test S3 upload",                                                   S3Upload <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV"))  )
+   , ("update-proposal",        "Subcommands for updating wallet installers. Apply commands in the order listed.", UpdateProposal <$> parseUpdateProposalCommand)
    , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
    ]
 
@@ -261,7 +259,6 @@ runTop o@Options{..} args topcmd = do
             -- * High-level scenarios
             FromScratch              -> Ops.fromscratch               o c
             ReallocateCoreIPs        -> Ops.reallocateCoreIPs         o c
-            UpdateProposal up        -> updateProposal                o c up
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c
@@ -276,8 +273,8 @@ runTop o@Options{..} args topcmd = do
             GetJournals since until  -> Ops.getJournals               o c since until
             CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
-            S3Upload               d -> Ops.s3Upload                  (T.pack d) c
             FindInstallers         d -> Ops.findInstallers            (T.pack d) c
+            UpdateProposal up        -> updateProposal                o c up
             Clone{..}                -> error "impossible"
             New{..}                  -> error "impossible"
             SetRev   _ _ _           -> error "impossible"

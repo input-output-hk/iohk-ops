@@ -34,7 +34,6 @@ module NixOps (
   , checkstatus
   , parallelSSH
   , NixOps.date
-  , s3Upload
   , findInstallers
 
   , awsPublicIPURL
@@ -910,26 +909,6 @@ date o c = parallelIO o c $
   \n -> ssh' o c "date" [] n
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
-
-s3Upload :: T.Text -> NixopsConfig -> IO ()
-s3Upload daedalus_rev c = do
-  let
-    say = liftIO . TIO.putStrLn
-
-    hashAndUpload :: GlobalResults -> CiResult -> AWS ()
-    hashAndUpload gr ciResult = do
-      let path = resultLocalPath ciResult
-      hash <- liftIO $ hashInstaller path
-      url <- uploadHashedInstaller (cUpdateBucket c) (Turtle.fromText path) gr hash
-      say $ hash <> " " <> url <> " - " <> resultDesc ciResult
-
-  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
-    print res
-    runAWS' $ do
-      say $ "uploading things to " <> coerce (cUpdateBucket c)
-      let maybeHashAndUpload = maybe (pure ()) (hashAndUpload (globalResult res))
-      maybeHashAndUpload $ buildkiteResult res
-      maybeHashAndUpload $ appveyorResult res
 
 configurationKeys :: Environment -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64)
 configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")
