@@ -10,12 +10,14 @@ import           Data.ByteString.Lazy.Char8       (ByteString)
 import           Data.Foldable                    (asum)
 import qualified Data.Map.Strict               as Map
 import           Data.Maybe
-import           Data.Text
+import           Data.Text                        (Text, toTitle)
 import qualified Data.Text                     as T
 import           Data.Yaml                        (FromJSON(..), ToJSON(..))
 import           GHC.Generics              hiding (from, to)
 import           Prelude                   hiding (FilePath)
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x)
+import           Turtle                    hiding (env, err, fold, prefix, procs, e, f, o, x)
+import           Filesystem.Path                  (FilePath)
+import qualified Filesystem.Path.CurrentOS     as FP
 
 import Constants
 import Types
@@ -108,3 +110,17 @@ nixArgCmdline (NixParam name) x            = ["--arg",    name, nixValueStr x]
 fromNixStr :: NixValue -> Text
 fromNixStr (NixStr s) = s
 fromNixStr x = error $ "fromNixStr, got a non-NixStr: " <> show x
+
+-- | Evaluate a nix expression, returning its value in nix syntax.
+nixEvalExpr :: T.Text -> Shell Line
+nixEvalExpr expr = inproc "nix-instantiate" [ "--read-write-mode" , "--eval" , "--expr", expr ] empty
+
+-- | Build a nix expression, returning the store path.
+nixBuildExpr :: T.Text -> IO FilePath
+nixBuildExpr expr = nixBuild & strict & fmap (FP.fromText . T.stripEnd)
+  where nixBuild = inproc "nix-build" ["--no-out-link", "--expr", expr] empty
+
+-- | Cheap and nasty conversion of a quoted string to an unquoted
+-- string.
+unquoteNixString :: T.Text -> T.Text
+unquoteNixString = T.drop 1 . T.dropEnd 1 . T.strip
