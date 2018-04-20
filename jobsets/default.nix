@@ -56,13 +56,12 @@ let
       };
     };
   };
-  mkCardano = cardanoBranch: nixpkgsRev: {
+  mkCardano = cardanoBranch: {
     nixexprpath = "release.nix";
     nixexprinput = "cardano";
     description = "Cardano SL";
     inputs = {
       cardano = mkFetchGithub "https://github.com/input-output-hk/cardano-sl.git ${cardanoBranch}";
-      nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgsRev}";
     };
   };
   makeCardanoPR = num: info: {
@@ -72,7 +71,6 @@ let
       nixexprinput = "cardano";
       nixexprpath = "release.nix";
       inputs = {
-        nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
         cardano = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
       };
     };
@@ -100,9 +98,10 @@ let
   cardanoPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeCardanoPR cardanoPrs);
   daedalusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeDaedalusPR daedalusPrs);
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
-    cardano-sl = mkCardano "develop" nixpkgs-src.rev;
-    cardano-sl-master = mkCardano "master" nixpkgs-src.rev;
-    cardano-sl-1-0 = mkCardano "release/1.0.x" nixpkgs-src.rev;
+    cardano-sl = mkCardano "develop";
+    cardano-sl-master = mkCardano "master";
+    cardano-sl-1-0 = mkCardano "release/1.0.x";
+    cardano-sl-1-2 = mkCardano "release/1.2.0";
     daedalus = mkDaedalus "develop";
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
     iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
