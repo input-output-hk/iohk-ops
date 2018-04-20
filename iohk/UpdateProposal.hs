@@ -14,7 +14,7 @@ import Data.Time.Format (formatTime, iso8601DateFormat, defaultTimeLocale)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import qualified Data.ByteString.Lazy.Char8   as L8
-import Control.Monad (forM_)
+import Control.Monad (forM_, forM)
 import Filesystem.Path.CurrentOS (encodeString)
 import Data.Yaml (decodeFileEither, encodeFile)
 import Data.Aeson
@@ -22,18 +22,18 @@ import qualified Data.HashMap.Strict as HM
 import qualified Control.Foldl as Fold
 import Data.Char (isHexDigit)
 import Data.Bifunctor (first)
-import Data.Maybe (fromMaybe, catMaybes)
+import Data.Maybe (fromMaybe)
 
 import NixOps ( Options, NixopsConfig(..)
               , nixopsConfigurationKey, configurationKeys
               , getCardanoSLSource )
-import Types ( NixopsDepl(..), Environment(..), ApplicationVersion(..)
-             , getApplicationVersion )
-import UpdateLogic ( InstallersResults(..), GlobalResults(..)
-                   , CiResult(..), ciResultLocalPath, ciResultVersion
+import Types ( NixopsDepl(..), Environment(..), Arch(..) )
+import UpdateLogic ( InstallersResults(..), CIResult(..)
                    , realFindInstallers, githubWikiRecord
                    , runAWS', uploadHashedInstaller, updateVersionJson
                    , uploadSignature )
+import InstallerVersions (GlobalResults(..), InstallerNetwork(..), installerNetwork)
+import Utils (tt)
 
 ----------------------------------------------------------------------------
 -- Command-line arguments
@@ -202,12 +202,6 @@ instance FromJSON InstallerHashes where
   parseJSON = withObject "InstallerHashes" $ \o ->
     InstallerHashes <$> o .: "darwin" <*> o .: "windows"
 
-instance FromJSON InstallersResults
-instance FromJSON GlobalResults
-instance FromJSON CiResult
-instance FromJSON (ApplicationVersion a) where
-  parseJSON = withText "ApplicationVersion" (pure . ApplicationVersion)
-
 instance ToJSON UpdateProposalConfig1 where
   toJSON (UpdateProposalConfig1 r v p) = object [ "daedalusRevision" .= r
                                                 , "lastKnownBlockVersion" .= v
@@ -234,10 +228,6 @@ instance ToJSON UpdateProposalConfig5 where
 
 instance ToJSON InstallerHashes where
   toJSON (InstallerHashes dh wh) = object [ "darwin" .= dh, "windows" .= wh ]
-
-instance ToJSON InstallersResults
-instance ToJSON GlobalResults
-instance ToJSON CiResult
 
 -- | Adds two json objects together.
 mergeObjects :: Value -> Value -> Value
@@ -280,12 +270,12 @@ instance Checkable UpdateProposalConfig2 where
       check InstallersResults{..}
         | grApplicationVersion <= 0 = Just "Application version must be set"
         | T.null grCardanoCommit = Just "Missing cardano commit"
-        | missingVersion buildkiteResult = Just "Buildkite version is missing"
-        | missingVersion appveyorResult = Just "Appveyor version is missing"
+        | missingVersion Mac64 ciResults = Just "macOS version is missing"
+        | missingVersion Win64 ciResults = Just "Windows version is missing"
         | otherwise = Nothing
         where
           GlobalResults{..} = globalResult
-          missingVersion = T.null . maybe "" ciResultVersion
+          missingVersion arch = not . any ((== arch) . fst)
 
 instance Checkable UpdateProposalConfig3 where
   checkConfig (UpdateProposalConfig3 p h) = checkConfig p <|> checkConfig h
@@ -437,36 +427,38 @@ updateProposalFindInstallers opts env = do
   void $ doCheckConfig params
   echo "*** Finding installers"
   let rev = unGitRevision . cfgDaedalusRevision $ params
-  res <- using $ realFindInstallers rev (configurationKeys env)
+  res <- using $ realFindInstallers (configurationKeys env) (installerForEnv env) rev
   echo "*** Finished. Moving files to work dir"
   res' <- moveInstallersToWorkDir opts res
   writeWikiRecord opts res'
   storeParams opts (UpdateProposalConfig2 params res')
 
+-- | Checks if an installer from a CI result matches the environment
+-- that iohk-ops is running under.
+installerForEnv :: Environment -> CIResult -> Bool
+installerForEnv env = matchNet . installerNetwork . ciResultLocalPath
+  where matchNet n = case env of
+          Production  -> n == Just InstallerMainnet
+          Staging     -> n == Just InstallerStaging
+          Development -> True
+          Any         -> False
+
 -- | Move installer files from wherever they were found into the work dir.
 moveInstallersToWorkDir :: CommandOptions -> InstallersResults -> Shell InstallersResults
-moveInstallersToWorkDir opts InstallersResults{..} = do
-  bk <- case buildkiteResult of
-    Just res -> do
-      p <- move (bkLocalPath res)
-      pure . Just $ res { bkLocalPath = p }
-    Nothing -> pure Nothing
-  av <- case appveyorResult of
-    Just res -> do
-      p <- move (avLocalPath res)
-      pure . Just $ res { avLocalPath = p }
-    Nothing -> pure Nothing
-  pure $ InstallersResults
-    { buildkiteResult = bk
-    , appveyorResult = av
-    , globalResult = globalResult }
+moveInstallersToWorkDir opts irs = do
+  cis <- mapM moveInstaller (ciResults irs)
+  pure irs { ciResults = cis }
   where
-    move :: Text -> Shell Text
+    moveInstaller :: (Arch, CIResult) -> Shell (Arch, CIResult)
+    moveInstaller (arch, res) = do
+      p <- move (ciResultLocalPath res)
+      pure (arch, res { ciResultLocalPath = p })
+    move :: FilePath -> Shell FilePath
     move src = do
-      let src' = fromText src
-      let dst = installersPath opts (filename src')
-      mv src' dst
-      pure (format fp dst)
+      let dst = installersPath opts (filename src)
+      mv src dst
+      void $ chmod writable dst
+      pure dst
 
 writeWikiRecord :: CommandOptions -> InstallersResults -> Shell ()
 writeWikiRecord opts res = do
@@ -483,11 +475,9 @@ updateProposalSignInstallers :: CommandOptions -> Text -> Shell ()
 updateProposalSignInstallers opts@CommandOptions{..} userId = do
   params <- loadParams opts
   void $ doCheckConfig params
-  mapM_ signInstaller (listInstallers $ cfgInstallersResults params)
+  mapM_ signInstaller (map (ciResultLocalPath . snd) . ciResults . cfgInstallersResults $ params)
   where
-    signInstaller f = procs "gpg2" ["-u", userId, "--detach-sig", "--armor", "--sign", f] empty
-    listInstallers InstallersResults{..} = map ciResultLocalPath $ catMaybes
-      [ appveyorResult, buildkiteResult ]
+    signInstaller f = procs "gpg2" ["-u", userId, "--detach-sig", "--armor", "--sign", tt f] empty
 
 ----------------------------------------------------------------------------
 
@@ -511,22 +501,22 @@ updateProposalUploadS3 opts@CommandOptions{..} = do
 
 uploadInstallers :: Text -> InstallersResults -> InstallerHashes -> Shell (Text, Text)
 uploadInstallers bucket res InstallerHashes{..} = runAWS' $ do
-  darwin <- needResultDarwin res $ upload cfgInstallerDarwin
-  windows <- needResultWindows res $ upload cfgInstallerWindows
+  darwin <- needResult Mac64 res $ upload cfgInstallerDarwin
+  windows <- needResult Win64 res $ upload cfgInstallerWindows
   pure (darwin, windows)
   where
     upload hash ci = do
-      printf ("***   "%s%"  "%s%"\n") hash (ciResultLocalPath ci)
-      uploadHashedInstaller bucket (fromText $ ciResultLocalPath ci) (globalResult res) hash
+      printf ("***   "%s%"  "%fp%"\n") hash (ciResultLocalPath ci)
+      uploadHashedInstaller bucket (ciResultLocalPath ci) (globalResult res) hash
 
 -- | Apply a hashing command to all the installer files.
 getHashes :: (FilePath -> Shell Text) -> InstallersResults -> Shell InstallerHashes
 getHashes getHash res = do
-  cfgInstallerDarwin <- needResultDarwin res resultHash
-  cfgInstallerWindows <- needResultWindows res resultHash
+  cfgInstallerDarwin <- needResult Mac64 res resultHash
+  cfgInstallerWindows <- needResult Win64 res resultHash
   pure $ InstallerHashes{..}
   where
-   resultHash = getHash . fromText . ciResultLocalPath
+   resultHash = getHash . ciResultLocalPath
 
 -- | Run cardano-auxx "hash-installer" command on a file and capture
 -- its output.
@@ -545,15 +535,12 @@ chomp :: Shell Line -> Shell Text
 chomp = fmap T.stripEnd . strict . limit 1
 
 -- | Slurp in previously created signatures.
-uploadSignatures :: Text -> InstallersResults -> Shell (Maybe Text, Maybe Text)
-uploadSignatures bucket InstallersResults{..} = do
-  (,) <$> r buildkiteResult <*> r appveyorResult
-  where
-    r :: (Maybe CiResult) -> Shell (Maybe Text)
-    r Nothing = pure Nothing
-    r (Just res) = liftIO $ uploadResultSignature bucket res
+uploadSignatures :: Text -> InstallersResults -> Shell [(Arch, Maybe Text)]
+uploadSignatures bucket InstallersResults{..} = forM ciResults $ \(a, res) -> do
+  sig <- liftIO $ uploadResultSignature bucket res
+  pure (a, sig)
 
-uploadResultSignature :: Text -> CiResult -> IO (Maybe Text)
+uploadResultSignature :: Text -> CIResult -> IO (Maybe Text)
 uploadResultSignature bucket res = liftIO $ maybeReadFile sigFile >>= \case
   Just sig -> do
     runAWS' $ uploadSignature bucket sigFile
@@ -562,7 +549,7 @@ uploadResultSignature bucket res = liftIO $ maybeReadFile sigFile >>= \case
     printf ("***   Signature file "%fp%" does not exist.\n") sigFile
     pure Nothing
   where
-    sigFile = fromText (ciResultLocalPath res <> ".asc")
+    sigFile = ciResultLocalPath res <.> "asc"
     maybeReadFile f = testfile f >>= \case
       True -> Just <$> readTextFile f
       False -> pure Nothing
@@ -570,25 +557,25 @@ uploadResultSignature bucket res = liftIO $ maybeReadFile sigFile >>= \case
 makeDownloadVersionInfo :: InstallersResults
                         -> (Text, Text)
                         -> InstallerHashes -> InstallerHashes
-                        -> (Maybe Text, Maybe Text)
+                        -> [(Arch, Maybe Text)]
                         -> [DownloadVersionInfo]
-makeDownloadVersionInfo InstallersResults{..} (macosURL, windowsURL) hashes sha256 (macosSig, windowsSig) = [macos, win64]
+makeDownloadVersionInfo InstallersResults{..} (macosURL, windowsURL) hashes sha256 sigs = [macos, win64]
   where
     macos = DownloadVersionInfo
       { dviPlatform = "macos"
-      , dviVersion = maybe "" (getApplicationVersion . bkVersion) buildkiteResult
+      , dviVersion = grDaedalusVersion globalResult
       , dviURL = macosURL
       , dviHash = cfgInstallerDarwin hashes
       , dviSHA256 = cfgInstallerDarwin sha256
-      , dviSignature = macosSig
+      , dviSignature = join (lookup Mac64 sigs)
       }
     win64 = DownloadVersionInfo
       { dviPlatform = "win64"
-      , dviVersion = maybe "" (getApplicationVersion . avVersion) appveyorResult
+      , dviVersion = grDaedalusVersion globalResult
       , dviURL = windowsURL
       , dviHash = cfgInstallerWindows hashes
       , dviSHA256 = cfgInstallerWindows sha256
-      , dviSignature = windowsSig
+      , dviSignature = join (lookup Win64 sigs)
       }
 
 -- | Intermediate data type for the daeadlus download json file.
@@ -649,28 +636,24 @@ updateProposalGenerate opts@CommandOptions{..} = do
   echo "*** Finished generate step. Next step is to submit."
   echo "*** Carefully check the parameters yaml file."
 
-needResultDarwin, needResultWindows :: MonadIO io => InstallersResults
-                                    -> (CiResult -> io a) -> io a
-needResultDarwin res = needResult "darwin" (buildkiteResult res)
-needResultWindows res = needResult "windows" (appveyorResult res)
-
-needResult :: MonadIO io => Text -> Maybe CiResult -> (CiResult -> io a) -> io a
-needResult _ (Just res) action = action res
-needResult name Nothing _ = die $ format ("The CI result for "%s%" is required but was not found.") name
+needResult :: MonadIO io => Arch -> InstallersResults -> (CIResult -> io a) -> io a
+needResult arch rs action = case lookup arch (ciResults rs) of
+  Just r -> action r
+  Nothing -> die $ format ("The CI result for "%w%" is required but was not found.") arch
 
 -- | Copy installers to a filename which is their hash and then use
 -- "file" to verify that installers are of the expected type. Exit the
 -- program otherwise.
 copyInstallerFiles :: CommandOptions -> InstallersResults -> InstallerHashes -> Shell ()
 copyInstallerFiles opts res InstallerHashes{..} = do
-  needResultDarwin res $ copy "xar" cfgInstallerDarwin
-  needResultWindows res $ copy "MS Windows" cfgInstallerWindows
+  needResult Mac64 res $ copy "xar" cfgInstallerDarwin
+  needResult Win64 res $ copy "MS Windows" cfgInstallerWindows
 
   where
-    copy :: Text -> Text -> CiResult -> Shell ()
+    copy :: Text -> Text -> CIResult -> Shell ()
     copy magic hash res = do
       let dst = installersPath opts (fromText hash)
-      cp (fromText $ ciResultLocalPath res) dst
+      cp (ciResultLocalPath res) dst
       checkMagic magic dst
 
     checkMagic :: Text -> FilePath -> Shell ()
@@ -759,9 +742,6 @@ commonOpts CommandOptions{..} = [ "--system-start", "0"
                                 , "--configuration-file", tt cmdCardanoConfigFile
                                 , "--configuration-key", cmdCardanoConfigKey
                                 ]
-
-tt :: FilePath -> Text
-tt = format fp
 
 ----------------------------------------------------------------------------
 -- Testing utils, just for ghci.

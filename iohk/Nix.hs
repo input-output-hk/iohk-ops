@@ -1,23 +1,30 @@
-{-# LANGUAGE DataKinds, DeriveGeneric, FlexibleInstances, GADTs, KindSignatures, OverloadedStrings, RecordWildCards, StandaloneDeriving, ViewPatterns #-}
+{-# LANGUAGE DataKinds, DeriveGeneric, DeriveDataTypeable, FlexibleInstances, GADTs, KindSignatures, OverloadedStrings, RecordWildCards, StandaloneDeriving, ViewPatterns #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-orphans -Wno-missing-signatures #-}
 
 module Nix where
 
+import           Prelude                   hiding (FilePath)
+
+import           Control.Monad.Catch              (Exception, throwM, MonadThrow)
 import qualified Data.Aeson                    as AE
-import           Data.Aeson                       ((.:), (.=))
-import qualified Data.ByteString.Lazy          as BL
-import           Data.ByteString.Lazy.Char8       (ByteString)
+import           Data.Aeson                       ((.:), (.=), eitherDecodeStrict, Value)
+import qualified Data.ByteString.Lazy.Char8    as L8
+import qualified Data.ByteString.Char8         as S8
 import           Data.Foldable                    (asum)
 import qualified Data.Map.Strict               as Map
 import           Data.Maybe
 import           Data.Text                        (Text, toTitle)
 import qualified Data.Text                     as T
+import qualified Data.Text.IO                  as T
+import qualified Data.Text.Encoding            as T
+import           Data.Text.Encoding.Error         (lenientDecode)
+import           Data.Typeable                    (Typeable)
 import           Data.Yaml                        (FromJSON(..), ToJSON(..))
-import           GHC.Generics              hiding (from, to)
-import           Prelude                   hiding (FilePath)
-import           Turtle                    hiding (env, err, fold, prefix, procs, e, f, o, x)
 import           Filesystem.Path                  (FilePath)
 import qualified Filesystem.Path.CurrentOS     as FP
+import           GHC.Generics              hiding (from, to)
+import           Turtle                    hiding (env, err, fold, prefix, procs, e, f, o, x)
+import qualified Turtle.Bytes                  as B
 
 import Constants
 import Types
@@ -63,16 +70,16 @@ instance FromJSON (NixSource 'Github) where
       <*> v .: "rev"
       <*> v .: "sha256"
 
-githubSource :: ByteString -> Maybe (NixSource 'Github)
+githubSource :: L8.ByteString -> Maybe (NixSource 'Github)
 githubSource = AE.decode
-gitSource    :: ByteString -> Maybe (NixSource 'Git)
+gitSource    :: L8.ByteString -> Maybe (NixSource 'Git)
 gitSource    = AE.decode
 
 -- XXX: make independent of Constants
-readSource :: (ByteString -> Maybe (NixSource a)) -> Project -> IO (NixSource a)
+readSource :: (L8.ByteString -> Maybe (NixSource a)) -> Project -> IO (NixSource a)
 readSource parser (projectSrcFile -> path) =
   (fromMaybe (errorT $ format ("File doesn't parse as NixSource: "%fp) path) . parser)
-  <$> BL.readFile (T.unpack $ format fp path)
+  <$> L8.readFile (T.unpack $ format fp path)
 
 instance FromJSON FilePath where parseJSON = AE.withText "filepath" $ \v -> pure $ fromText v
 instance ToJSON   FilePath where toJSON    = AE.String . format fp
@@ -112,15 +119,26 @@ fromNixStr (NixStr s) = s
 fromNixStr x = error $ "fromNixStr, got a non-NixStr: " <> show x
 
 -- | Evaluate a nix expression, returning its value in nix syntax.
-nixEvalExpr :: T.Text -> Shell Line
-nixEvalExpr expr = inproc "nix-instantiate" [ "--read-write-mode" , "--eval" , "--expr", expr ] empty
+nixEvalExpr :: Text -> IO Value
+nixEvalExpr expr = eval >>= parseNixOutput
+  where eval = procNix "nix-instantiate" [ "--json", "--read-write-mode" , "--eval" , "--expr", expr ]
 
 -- | Build a nix expression, returning the store path.
-nixBuildExpr :: T.Text -> IO FilePath
-nixBuildExpr expr = nixBuild & strict & fmap (FP.fromText . T.stripEnd)
-  where nixBuild = inproc "nix-build" ["--no-out-link", "--expr", expr] empty
+nixBuildExpr :: Text -> IO FilePath
+nixBuildExpr expr = fp <$> procNix "nix-build" ["--no-out-link", "--expr", expr]
+  where fp = FP.decode . S8.takeWhile (/= '\n')
 
--- | Cheap and nasty conversion of a quoted string to an unquoted
--- string.
-unquoteNixString :: T.Text -> T.Text
-unquoteNixString = T.drop 1 . T.dropEnd 1 . T.strip
+data NixError = NixError { nixErrorStatus :: Int, nixErrorMessage :: Text } deriving (Show, Typeable)
+instance Exception NixError
+
+parseNixOutput :: (MonadThrow m, FromJSON a) => S8.ByteString -> m a
+parseNixOutput json = case eitherDecodeStrict json of
+  Right val -> pure val
+  Left e -> throwM $ NixError 0 ("Could not parse nix output: " <> T.pack e)
+
+procNix :: Text -> [Text] -> IO S8.ByteString
+procNix cmd args = log >> B.procStrictWithErr cmd args empty >>= handle
+  where
+    log = T.putStrLn $ T.intercalate " " (cmd:args)
+    handle (ExitSuccess, out, _) = pure out
+    handle (ExitFailure status, _, err) = throwM $ NixError status (T.decodeUtf8With lenientDecode err)

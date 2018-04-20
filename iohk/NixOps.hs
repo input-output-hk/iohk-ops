@@ -118,7 +118,6 @@ where
 import           Control.Arrow                   ((***))
 import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
-import qualified Control.Lens                  as Lens
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
@@ -154,11 +153,7 @@ import           Time.Types
 import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText, within)
 import qualified Turtle                        as Turtle
 
-import           Network.AWS.Auth
-import           Network.AWS               hiding (Seconds, Debug, Region)
 import           Network.AWS.S3.Types      hiding (All, URL, Region)
-import           Control.Monad.Trans.Resource
-import           Data.Coerce
 import           UpdateLogic
 
 import           Constants
@@ -909,17 +904,16 @@ date o c = parallelIO o c $
   \n -> ssh' o c "date" [] n
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
-
-configurationKeys :: Environment -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64)
-configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")
-configurationKeys Staging = ("mainnet_dryrun_wallet_win64", "mainnet_dryrun_wallet_macos64")
-configurationKeys env = error $ "Application versions not used in '" <> show env <> "' environment"
+configurationKeys :: Environment -> Arch -> T.Text
+configurationKeys Production Win64 = "mainnet_wallet_win64"
+configurationKeys Production Mac64 = "mainnet_wallet_macos64"
+configurationKeys Staging    Win64 = "mainnet_dryrun_wallet_win64"
+configurationKeys Staging    Mac64 = "mainnet_dryrun_wallet_macos64"
+configurationKeys env _ = error $ "Application versions not used in '" <> show env <> "' environment"
 
 findInstallers :: T.Text -> NixopsConfig -> IO ()
-findInstallers daedalus_rev c = do
-  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
-    print res
-    TIO.putStrLn $ githubWikiRecord res
+findInstallers daedalusRev c = with installers printInstallersResults
+  where installers = realFindInstallers (configurationKeys $ cEnvironment c) (const True) daedalusRev
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do

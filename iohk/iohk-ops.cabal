@@ -31,6 +31,7 @@ executable iohk-ops
                      , cassava >=0.4
                      , containers >=0.5
                      , dns
+                     , exceptions
                      , hourglass
                      , lens >=4.14
                      , lens-aeson >=1.0
@@ -96,6 +97,7 @@ test-suite iohk-ops-test
                   , network-uri
                   , cryptonite
                   , errors
+                  , exceptions
                   , memory
                   , regex-pcre
                   , time
