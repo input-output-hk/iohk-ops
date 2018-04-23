@@ -427,7 +427,8 @@ updateProposalFindInstallers opts env = do
   void $ doCheckConfig params
   echo "*** Finding installers"
   let rev = unGitRevision . cfgDaedalusRevision $ params
-  res <- using $ realFindInstallers (configurationKeys env) (installerForEnv env) rev
+  tempdir <- mktempdir "/tmp" "iohk-ops"
+  res <- liftIO $ realFindInstallers (configurationKeys env) (installerForEnv env) rev (Just tempdir)
   echo "*** Finished. Moving files to work dir"
   res' <- moveInstallersToWorkDir opts res
   writeWikiRecord opts res'

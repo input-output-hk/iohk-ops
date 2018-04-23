@@ -911,9 +911,13 @@ configurationKeys Staging    Win64 = "mainnet_dryrun_wallet_win64"
 configurationKeys Staging    Mac64 = "mainnet_dryrun_wallet_macos64"
 configurationKeys env _ = error $ "Application versions not used in '" <> show env <> "' environment"
 
-findInstallers :: T.Text -> NixopsConfig -> IO ()
-findInstallers daedalusRev c = with installers printInstallersResults
-  where installers = realFindInstallers (configurationKeys $ cEnvironment c) (const True) daedalusRev
+findInstallers :: NixopsConfig -> T.Text -> Maybe FilePath -> IO ()
+findInstallers c daedalusRev destDir = do
+  installers <- realFindInstallers (configurationKeys $ cEnvironment c) (const True) daedalusRev destDir
+  printInstallersResults installers
+  case destDir of
+    Just dir -> void $ proc "ls" [ "-ltrha", tt dir ] mempty
+    Nothing -> pure ()
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do

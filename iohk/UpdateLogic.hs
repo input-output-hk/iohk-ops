@@ -41,13 +41,14 @@ import           Control.Applicative          ((<|>))
 import           Control.Exception            (try)
 import           Control.Lens                 (to, (^.))
 import qualified Control.Lens                 as Lens
-import           Control.Monad                (guard, forM)
+import           Control.Monad                (guard, forM, when)
 import           Control.Monad.Managed        (Managed, liftIO)
 import           Control.Monad.Trans.Resource (runResourceT)
 import           Data.Aeson                   (ToJSON, FromJSON)
 import qualified Data.ByteString.Lazy         as LBS
 import qualified Data.HashMap.Strict          as HashMap
 import           Data.List                    (nub)
+import           Data.Maybe                   (fromMaybe, isJust)
 import           Data.Monoid                  ((<>))
 import qualified Data.Text                    as T
 import qualified Data.Text.IO                 as T
@@ -122,14 +123,12 @@ loadBuildkiteToken = try (T.readFile buildkiteTokenFile) >>= \case
 
 buildkiteTokenFile = "static/buildkite_token" :: String
 
-realFindInstallers :: ApplicationVersionKey -> InstallerPredicate -> Rev -> Managed InstallersResults
-realFindInstallers keys instP daedalusRev = do
-  buildkiteToken <- liftIO $loadBuildkiteToken
-  globalResult <- liftIO $findVersionInfo keys daedalusRev
+realFindInstallers :: ApplicationVersionKey -> InstallerPredicate -> Rev -> Maybe FilePath -> IO InstallersResults
+realFindInstallers keys instP daedalusRev destDir = do
+  buildkiteToken <- liftIO $ loadBuildkiteToken
+  globalResult <- liftIO $ findVersionInfo keys daedalusRev
   st <- liftIO $ statuses <$> fetchGithubStatus "input-output-hk" "daedalus" daedalusRev
-  tempdir <- mktempdir "/tmp" "iohk-ops"
-  results <- liftIO $ concat <$> mapM (findInstallersFromStatus buildkiteToken tempdir instP) st
-  void $ proc "ls" [ "-ltrha", format fp tempdir ] mempty
+  results <- liftIO $ concat <$> mapM (findInstallersFromStatus buildkiteToken destDir instP) st
   pure $ InstallersResults results globalResult
 
 buildkiteOrg     = "input-output-hk" :: T.Text
@@ -138,47 +137,49 @@ pipelineDaedalus = "daedalus"        :: T.Text
 bkArtifactIsInstaller :: Artifact -> Bool
 bkArtifactIsInstaller = T.isSuffixOf ".pkg" . artifactFilename
 
-findInstallersBuildKite :: APIToken -> FilePath -> InstallerPredicate -> Int -> T.Text -> IO [(Arch, CIResult)]
-findInstallersBuildKite apiToken tempdir instP buildNum buildUrl = do
+findInstallersBuildKite :: APIToken -> Maybe FilePath -> InstallerPredicate -> Int -> T.Text -> IO [(Arch, CIResult)]
+findInstallersBuildKite apiToken destDir instP buildNum buildUrl = do
   arts <- listArtifactsForBuild apiToken buildkiteOrg pipelineDaedalus buildNum
 
   rs <- forInstallers bkArtifactIsInstaller arts $ \art -> do
     -- ask Buildkite what the download URL is
     url <- BK.getArtifactURL apiToken buildkiteOrg pipelineDaedalus buildNum art
 
-    let out = tempdir </> FP.fromText (artifactFilename art)
+    let out = fromMaybe "." destDir </> FP.fromText (artifactFilename art)
         res = CIResult out buildUrl url buildNum
     printCIResult "Buildkite" Mac64 res
     pure (res, artifactSha1sum art)
 
   forM (filter (instP . fst) rs) $ \(res, sha1) -> do
-    -- download artifact into nix store
-    let out = ciResultLocalPath res
-    fetchCachedUrlWithSHA1 (ciResultDownloadUrl res) (filename out) out sha1
+    when (isJust destDir) $
+      -- download artifact into nix store
+      let out = ciResultLocalPath res
+      in fetchCachedUrlWithSHA1 (ciResultDownloadUrl res) (filename out) out sha1
     pure (Mac64, res)
 
 avArtifactIsInstaller :: AppveyorArtifact -> Bool
 avArtifactIsInstaller (AppveyorArtifact _ name) = name == "Daedalus Win64 Installer"
 
-findInstallersAppVeyor :: FilePath -> InstallerPredicate -> T.Text
+findInstallersAppVeyor :: Maybe FilePath -> InstallerPredicate -> T.Text
                        -> Appveyor.Username -> Appveyor.Project -> ApplicationVersion
                        -> IO [(Arch, CIResult)]
-findInstallersAppVeyor tempdir instP url user project version = do
+findInstallersAppVeyor destDir instP url user project version = do
   appveyorBuild <- fetchAppveyorBuild user project version
   let jobid = appveyorBuild ^. build . Appveyor.jobs . to head . jobId
   artifacts <- fetchAppveyorArtifacts jobid
   rs <- forInstallers avArtifactIsInstaller artifacts $ \(AppveyorArtifact art _) ->
     pure CIResult
-      { ciResultLocalPath = tempdir </> filename (FP.fromText art)
-      , ciResultUrl = url
+      { ciResultLocalPath   = fromMaybe "." destDir </> filename (FP.fromText art)
+      , ciResultUrl         = url
       , ciResultDownloadUrl = getArtifactUrl jobid art
       , ciResultBuildNumber = appveyorBuild ^. build . buildNumber . to unBuildNumber
       }
 
   forM (filter instP rs) $ \res -> do
     printCIResult "AppVeyor" Win64 res
-    let out = ciResultLocalPath res
-    fetchCachedUrl (ciResultDownloadUrl res) (filename out) out
+    when (isJust destDir) $
+      let out = ciResultLocalPath res
+      in fetchCachedUrl (ciResultDownloadUrl res) (filename out) out
     pure (Win64, res)
 
 forInstallers :: (a -> Bool) -> [a] -> (a -> IO b) -> IO [b]
@@ -246,13 +247,13 @@ parseStatusContext status = parseAppveyor <|> parseBuildKite
     isAppveyor = context status == "continuous-integration/appveyor/branch"
     isBuildkite = "buildkite/" `T.isPrefixOf` context status
 
-findInstallersFromStatus :: BK.APIToken -> FilePath -> InstallerPredicate -> Status -> IO [(Arch, CIResult)]
-findInstallersFromStatus buildkiteToken tempdir instP status =
+findInstallersFromStatus :: BK.APIToken -> Maybe FilePath -> InstallerPredicate -> Status -> IO [(Arch, CIResult)]
+findInstallersFromStatus buildkiteToken destDir instP status =
   case parseStatusContext status of
     Just (StatusContextBuildkite _repo buildNum) ->
-      findInstallersBuildKite buildkiteToken tempdir instP buildNum (targetUrl status)
+      findInstallersBuildKite buildkiteToken destDir instP buildNum (targetUrl status)
     Just (StatusContextAppveyor user project version) ->
-      findInstallersAppVeyor tempdir instP (targetUrl status) user project version
+      findInstallersAppVeyor destDir instP (targetUrl status) user project version
     Nothing -> do
       putStrLn $ "unrecognized CI status: " <> T.unpack (context status)
       pure []

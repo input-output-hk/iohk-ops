@@ -4,6 +4,7 @@
 
 module Main where
 
+import           Prelude                   hiding (FilePath)
 import           Control.Monad                    (forM_)
 import           Data.Char                        (toLower)
 import           Data.List
@@ -123,7 +124,7 @@ data Command where
   GetJournals           :: JournaldTimeSpec -> Maybe JournaldTimeSpec -> Command
   CWipeNodeDBs          :: Confirmation -> Command
   PrintDate             :: Command
-  FindInstallers        :: String -> Command
+  FindInstallers        :: Text -> Maybe FilePath -> Command
   UpdateProposal        :: UpdateProposalCommand -> Command
 deriving instance Show Command
 
@@ -206,7 +207,7 @@ centralCommandParser =
                                 <$> parserConfirmation "Wipe node DBs on the entire cluster?")
    , ("date",                   "Print date/time",                                                  pure PrintDate)
    , ("update-proposal",        "Subcommands for updating wallet installers. Apply commands in the order listed.", UpdateProposal <$> parseUpdateProposalCommand)
-   , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
+   , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (T.pack <$> strOption (long "daedalus-rev" <> short 'r' <> metavar "SHA1")) <*> optional (optPath "download" 'd' "Download the found installers to the given directory."))
    ]
 
    <|> subcommandGroup "Other:"
@@ -273,7 +274,7 @@ runTop o@Options{..} args topcmd = do
             GetJournals since until  -> Ops.getJournals               o c since until
             CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
-            FindInstallers         d -> Ops.findInstallers            (T.pack d) c
+            FindInstallers rev dl    -> Ops.findInstallers            c rev dl
             UpdateProposal up        -> updateProposal                o c up
             Clone{..}                -> error "impossible"
             New{..}                  -> error "impossible"
