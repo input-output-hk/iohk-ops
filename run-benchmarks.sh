@@ -21,15 +21,15 @@ CORENODES=7 # the number of core nodes.
 #     io -v new -t topology-staging.yaml -k bench benchmarks110policies nodes
 #     This step will take some time
 START_WAIT_TIME=10  # how many minutes to wait for the cluster to start
-                   # before starting the transaction generator
+                    # before starting the transaction generator
 
-TIME=250      # number of transactions that each thread should send
-CONC=2          # number of threads
-DELAY=500       # number of milliseconds to wait between each send
+TXS_PER_THREAD=250 # number of transactions that each thread should send
+CONC=2             # number of threads
+DELAY=500          # number of milliseconds to wait between each send
 SENDMODE='send-random'
-COOLDOWN=10     # number of minutes to wait for cooldown
-ADDGENERATORS=0 # using more than one generator might help increase the
-                # load for stress-tests
+COOLDOWN=10        # number of minutes to wait for cooldown
+ADDGENERATORS=0    # using more than one generator might help increase the
+                   # load for stress-tests
 
 export NIXOPS_DEPLOYMENT=${CLUSTERNAME}
 
@@ -78,7 +78,7 @@ sleep ${START_WAIT_TIME}m
 
 for n in $(seq 1 $ADDGENERATORS); do
 
-    export AUXX_START_AT=$((TIME * CONC * n))
+    export AUXX_START_AT=$((TXS_PER_THREAD * CONC * n))
 
     ./auxx/bin/cardano-auxx \
       --db-path wdb${n} \
@@ -88,7 +88,7 @@ for n in $(seq 1 $ADDGENERATORS); do
       ${TRX2RELAYS} \
       --system-start $SYSTEMSTART \
       --mode with-config \
-      cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE ./tps-sent-${n}.csv" +RTS -s -N1 -RTS > auxx-${n}.log 2>&1 &
+      cmd --commands "send-to-all-genesis $TXS_PER_THREAD $CONC $DELAY $SENDMODE ./tps-sent-${n}.csv" +RTS -s -N1 -RTS > auxx-${n}.log 2>&1 &
 
     auxxpids[n]=$!
 
@@ -107,7 +107,7 @@ export AUXX_START_AT=0
     ${TRX2RELAYS} \
     --system-start $SYSTEMSTART \
     --mode with-config \
-    cmd --commands "send-to-all-genesis $TIME $CONC $DELAY $SENDMODE ./tps-sent.csv" +RTS -s -N1 -RTS > auxx-0.log 2>&1 &
+    cmd --commands "send-to-all-genesis $TXS_PER_THREAD $CONC $DELAY $SENDMODE ./tps-sent.csv" +RTS -s -N1 -RTS > auxx-0.log 2>&1 &
 
 auxxpids[0]=$!
 
@@ -140,7 +140,7 @@ COMMIT=`grep rev cardano-sl-src.json | awk '{print $2}' | cut -c 2- | cut -c -7`
 TOPOLOGY=`grep topology: config.yaml | awk '{print $2}'`
 
 # archive settings and topology file
-echo "commit=${COMMIT}, sendmode=${SENDMODE}, time=${TIME}, conc=${CONC}, delay=${DELAY}, generators=$((ADDGENERATORS + 1)), systemstart=${SYSTEMSTART}" > ${LOGDIR}/bench-settings
+echo "commit=${COMMIT}, sendmode=${SENDMODE}, txsPerThread=${TXS_PER_THREAD}, conc=${CONC}, delay=${DELAY}, generators=$((ADDGENERATORS + 1)), systemstart=${SYSTEMSTART}" > ${LOGDIR}/bench-settings
 cp $TOPOLOGY ${LOGDIR}/
 
 # parse slot duration and start time from tx generator output
@@ -152,9 +152,9 @@ STARTTIME=`grep -oP '(?<=startTime=)[0-9]+' tps-sent.csv`
 
 # assemble csv file from tx generator and node logs
 TPSFILE="run-${LAST}.csv"
-echo "time,txCount,txType,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,time,delay" > ${TPSFILE}
+echo "time,txCount,txType,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,txsPerThread,delay" > ${TPSFILE}
 # output from generators
-awk 'FNR>2{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,time,delay}' FS=, OFS=, \
+awk 'FNR>2{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,txsPerThread,delay}' FS=, OFS=, \
     slotDuration=$SLOTDURATION \
     conc=$CONC \
     sendMode=$SENDMODE \
@@ -163,12 +163,12 @@ awk 'FNR>2{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commi
     commit=$COMMIT \
     node="generator" \
     run="$LAST" \
-    time="$TIME" \
+    txsPerThread="$TXS_PER_THREAD" \
     delay="$DELAY" \
     tps-sent.csv >> ${TPSFILE}
 mv tps-sent.csv ${LOGDIR}
 for n in $(seq 1 $ADDGENERATORS); do
-    awk 'FNR>2{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,time,delay}' FS=, OFS=, \
+    awk 'FNR>2{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,node,run,txsPerThread,delay}' FS=, OFS=, \
         slotDuration=$SLOTDURATION \
         conc=$CONC \
         sendMode=$SENDMODE \
@@ -177,13 +177,13 @@ for n in $(seq 1 $ADDGENERATORS); do
         commit=$COMMIT \
         node="generator$n" \
         run="$LAST" \
-        time="$TIME" \
+        txsPerThread="$TXS_PER_THREAD" \
         delay="$DELAY" \
         tps-sent-$n.csv >> ${TPSFILE}
     mv tps-sent-$n.csv ${LOGDIR}
 done
 # output from post-mortem analyser
-awk 'FNR>1{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,$4,run,time,delay}' FS=, OFS=, \
+awk 'FNR>1{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commit,$4,run,txsPerThread,delay}' FS=, OFS=, \
     slotDuration=$SLOTDURATION \
     conc=$CONC \
     sendMode=$SENDMODE \
@@ -191,7 +191,7 @@ awk 'FNR>1{print $1,$2,$3,slotDuration,conc,sendMode,clustersize,startTime,commi
     startTime=$STARTTIME \
     commit=$COMMIT \
     run="$LAST" \
-    time="$TIME" \
+    txsPerThread="$TXS_PER_THREAD" \
     delay="$DELAY" \
     csv_${LAST}.csv >> ${TPSFILE}
 mv csv_${LAST}.csv ${LOGDIR}
@@ -212,5 +212,5 @@ echo "    ${PWD}/${LOGDIR}/${TPSFILE}"
 echo "    ${PWD}/${LOGDIR}/report_${LAST}.txt"
 echo "    ${LOGDIR}"
 
-# $IO destroy --confirm delete 
+# $IO destroy --confirm delete
 

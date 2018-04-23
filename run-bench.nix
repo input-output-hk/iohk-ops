@@ -1,7 +1,7 @@
 {
   coreNodes     ? "7"     # the number of core nodes
 , startWaitTime ? "10"    # how many minutes to wait for the cluster to start
-, time          ? "500"   # number of transactions that each thread should send
+, txsPerThread  ? "500"   # number of transactions that each thread should send
 , conc          ? "1"     # number of each generator's threads
 , delay         ? "250"   # number of milliseconds to wait between each send
 , cooldown      ? "10"    # number of minutes to wait for cooldown
@@ -37,7 +37,7 @@ writeScriptBin "run-bench.sh" ''
   # - destroy the cluster and re-set it with the new commit
   START_WAIT_TIME=${startWaitTime} # how many minutes to wait for the cluster to start
                                    # before starting the transaction generator
-  TIME=${time}                     # number of transactions that each thread should send
+  TXS_PER_THREAD=${txsPerThread}   # number of transactions that each thread should send
   CONC=${conc}                     # number of threads
   DELAY=${delay}                   # number of milliseconds to wait between each send
   COOLDOWN=${cooldown}             # number of minutes to wait for cooldown
@@ -97,7 +97,7 @@ writeScriptBin "run-bench.sh" ''
 
   for n in $(seq 1 $ADDGENERATORS); do
 
-      export AUXX_START_AT=$((TIME * CONC * n))
+      export AUXX_START_AT=$((TXS_PER_THREAD * CONC * n))
 
       ./auxx/bin/cardano-auxx \
           --db-path wdb''${n} \
@@ -107,7 +107,7 @@ writeScriptBin "run-bench.sh" ''
           ''${TRX2RELAYS} \
           --system-start ''${SYSTEMSTART} \
           --mode with-config \
-          cmd --commands "send-to-all-genesis $TIME $CONC $DELAY ./tps-sent-''${n}.csv" +RTS -s -N1 -RTS > auxx-''${n}.log 2>&1 &
+          cmd --commands "send-to-all-genesis $TXS_PER_THREAD $CONC $DELAY ./tps-sent-''${n}.csv" +RTS -s -N1 -RTS > auxx-''${n}.log 2>&1 &
 
       auxxpids[n]=$!
 
@@ -126,7 +126,7 @@ writeScriptBin "run-bench.sh" ''
       ''${TRX2RELAYS} \
       --system-start ''${SYSTEMSTART} \
       --mode with-config \
-      cmd --commands "send-to-all-genesis $TIME $CONC $DELAY ./tps-sent.csv" +RTS -s -N1 -RTS > auxx-0.log 2>&1 &
+      cmd --commands "send-to-all-genesis $TXS_PER_THREAD $CONC $DELAY ./tps-sent.csv" +RTS -s -N1 -RTS > auxx-0.log 2>&1 &
 
   auxxpids[0]=$!
 
@@ -164,7 +164,7 @@ EOF
   $(nix-build collect-data.nix                        \
   --argstr coreNodes         ${coreNodes}             \
   --argstr startWaitTime     ${startWaitTime}         \
-  --argstr time              ${time}                  \
+  --argstr txsPerThread      ${txsPerThread}          \
   --argstr conc              ${conc}                  \
   --argstr delay             ${delay}                 \
   --argstr cooldown          ${cooldown}              \

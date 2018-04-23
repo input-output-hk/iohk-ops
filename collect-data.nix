@@ -1,7 +1,7 @@
 {
   coreNodes          # the number of core nodes
 , startWaitTime      # how many minutes to wait for the cluster to start
-, time               # number of transactions that each thread should send
+, txsPerThread       # number of transactions that each thread should send
 , conc               # number of each generator's threads
 , delay              # number of milliseconds to wait between each send
 , cooldown           # number of minutes to wait for cooldown
@@ -32,7 +32,7 @@ writeScriptBin "collect-data.sh" ''
   # - destroy the cluster and re-set it with the new commit
   START_WAIT_TIME=${startWaitTime} # how many minutes to wait for the cluster to start
                                    # before starting the transaction generator
-  TIME=${time}                     # number of transactions that each thread should send
+  TXS_PER_THREAD=${txsPerThread}   # number of transactions that each thread should send
   CONC=${conc}                     # number of threads
   DELAY=${delay}                   # number of milliseconds to wait between each send
   COOLDOWN=${cooldown}             # number of minutes to wait for cooldown
@@ -66,7 +66,7 @@ writeScriptBin "collect-data.sh" ''
   RELAY_POLICY=${relayPolicy}
 
   # archive settings and topology file
-  echo "commit=$COMMIT, time=$TIME, conc=$CONC, delay=$DELAY, generators=$((ADDGENERATORS + 1)), edgenodes=$EDGENODES, systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
+  echo "commit=$COMMIT, txsPerThread=$TXS_PER_THREAD, conc=$CONC, delay=$DELAY, generators=$((ADDGENERATORS + 1)), edgenodes=$EDGENODES, systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
   cp $TOPOLOGY $LOGDIR/
 
   # archive policy files
@@ -82,9 +82,9 @@ writeScriptBin "collect-data.sh" ''
 
   # assemble csv file from tx generator and node logs
   TPSFILE="run-$LAST.csv"
-  echo "time,txCount,txType,slotDuration,conc,clustersize,startTime,commit,node,run,time,delay" >$TPSFILE
+  echo "time,txCount,txType,slotDuration,conc,clustersize,startTime,commit,node,run,txsPerThread,delay" >$TPSFILE
   # output from generators
-  awk 'FNR>2{print $1,$2,$3,slotDuration,conc,clustersize,startTime,commit,node,run,time,delay}' FS=, OFS=, \
+  awk 'FNR>2{print $1,$2,$3,slotDuration,conc,clustersize,startTime,commit,node,run,txsPerThread,delay}' FS=, OFS=, \
       slotDuration=$SLOTDURATION \
       conc=$CONC \
       clustersize=$CORENODES \
@@ -92,12 +92,12 @@ writeScriptBin "collect-data.sh" ''
       commit=$COMMIT \
       node="generator" \
       run="$LAST" \
-      time="$TIME" \
+      txsPerThread="$TXS_PER_THREAD" \
       delay="$DELAY" \
       tps-sent.csv >> $TPSFILE
   mv tps-sent.csv $LOGDIR
   for n in $(seq 1 $ADDGENERATORS); do
-      awk 'FNR>2{print $1,$2,$3,slotDuration,conc,clustersize,startTime,commit,node,run,time,delay}' FS=, OFS=, \
+      awk 'FNR>2{print $1,$2,$3,slotDuration,conc,clustersize,startTime,commit,node,run,txsPerThread,delay}' FS=, OFS=, \
           slotDuration=$SLOTDURATION \
           conc=$CONC \
           clustersize=$CORENODES \
@@ -105,20 +105,20 @@ writeScriptBin "collect-data.sh" ''
           commit=$COMMIT \
           node="generator$n" \
           run="$LAST" \
-          time="$TIME" \
+          txsPerThread="$TXS_PER_THREAD" \
           delay="$DELAY" \
           tps-sent-$n.csv >> $TPSFILE
       mv tps-sent-$n.csv $LOGDIR
   done
   # output from post-mortem analyser
-  awk 'FNR>1{print $1,$2,$3,slotDuration,conc,clustersize,startTime,commit,$4,run,time,delay}' FS=, OFS=, \
+  awk 'FNR>1{print $1,$2,$3,slotDuration,conc,clustersize,startTime,commit,$4,run,txsPerThread,delay}' FS=, OFS=, \
       slotDuration=$SLOTDURATION \
       conc=$CONC \
       clustersize=$CORENODES \
       startTime=$STARTTIME \
       commit=$COMMIT \
       run="$LAST" \
-      time="$TIME" \
+      txsPerThread="$TXS_PER_THREAD" \
       delay="$DELAY" \
       csv_$LAST.csv >> $TPSFILE
   mv csv_$LAST.csv $LOGDIR

@@ -7,7 +7,7 @@ The scripts that are used are the following:
   * collect-data.nix   , which collects data from the nodes
                          and create the plots. It is called
                          by run-bench.nix.
-  * create-plots.nix   , which creates the plots. It is 
+  * create-plots.nix   , which creates the plots. It is
                          called by collect-data.nix.
   * destroy-cluster.nix, which destroys the current cluster.
 
@@ -37,7 +37,7 @@ The scripts that are used are the following:
     $(nix-build run-bench.nix     \
     --argstr coreNodes     7      \
     --argstr startWaitTime 10     \
-    --argstr time          500    \
+    --argstr txsPerThread  500    \
     --argstr conc          1      \
     --argstr delay         250    \
     --argstr sendMode send-random \
@@ -47,7 +47,7 @@ The scripts that are used are the following:
     )/bin/run-bench.sh
     ```
 
-Results after run is finished are placed in 
+Results after run is finished are placed in
 experiments/{date of run}/ folder. Plots are located in the
 experiments/{date of run}/plots/.
 
@@ -65,7 +65,7 @@ can be collected with the following command:
   $(nix-build collect-data.nix    \
   --argstr coreNodes     7        \
   --argstr startWaitTime 10       \
-  --argstr time          500      \
+  --argstr txsPerThread  500      \
   --argstr conc          1        \
   --argstr delay         250      \
   --argstr sendMode send-random   \
@@ -76,7 +76,7 @@ can be collected with the following command:
   ```
 
 Collecting the data with collect-data.nix requires the
-edgeNodes argument (edge nodes) to be set. If edge nodes 
+edgeNodes argument (edge nodes) to be set. If edge nodes
 are not used the argument must be set to zero.
 
 If edgenodes-cluster is not set up at all then argument
@@ -87,7 +87,7 @@ following example:
   $(nix-build run-bench.nix     \
   --argstr coreNodes     7      \
   --argstr startWaitTime 10     \
-  --argstr time          500    \
+  --argstr txsPerThread  500    \
   --argstr conc          1      \
   --argstr delay         250    \
   --argstr sendMode send-random \
