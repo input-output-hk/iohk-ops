@@ -13,7 +13,7 @@ let
       autoStart = true;
       privateNetwork = false;
       config = { ... }: {
-        imports = [ 
+        imports = [
           ./common.nix
           (import ./cardano-service.nix globals params)
           ./network-wide.nix

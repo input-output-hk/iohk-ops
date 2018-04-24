@@ -21,8 +21,8 @@ writeScriptBin "run-bench.sh" ''
   set -o xtrace # print commands
 
   # set policy files to be used
-  awk '$1=="(\"--policies" {$1="    (\"--policies"; $12="\"''${./../${corePolicy}}\"" ; $14="\"''${./../${relayPolicy}}\"))"} 1' modules/cardano-service.nix  > modules/cardano-service.nix.new
-  mv modules/cardano-service.nix.new modules/cardano-service.nix
+  awk '$1=="(\"--policies" {$1="    (\"--policies"; $7="\"''${./../benchmarks/${corePolicy}}\"" ; $9="\"''${./../benchmarks/${relayPolicy}}\"))"} 1' ../modules/cardano-service.nix  > ../modules/cardano-service.nix.new
+  mv ../modules/cardano-service.nix.new ../modules/cardano-service.nix
 
   CLUSTERNAME=`grep name: config.yaml | awk '{print $2}'`
 
@@ -75,7 +75,7 @@ writeScriptBin "run-bench.sh" ''
   # new wallets
   if [ ''${WALLETS_NODES} -gt "0" ]; then
     WALLETS2RELAYS=`nixops info --no-eval --plain | grep 'r-a-1' | awk 'NF>=2 {print $(NF-1)}'`
-    sed -i 's/addr: \([0-9.]*\)/addr: '"''${WALLETS2RELAYS}"'/' ./topology-edgenode.yaml
+    sed -i 's/addr: \([0-9.]*\)/addr: '"''${WALLETS2RELAYS}"'/' ../topology-edgenode.yaml
     export NIXOPS_DEPLOYMENT=''${WALLETS_DEPLOYMENT}
     nixops set-args --arg systemStart ''${SYSTEMSTART}  --arg nodes ''${WALLETS_NODES}
     nixops deploy
@@ -112,7 +112,7 @@ writeScriptBin "run-bench.sh" ''
       auxxpids[n]=$!
 
       sleep 1
-      ./record-stats.sh -pid ''${auxxpids[n]} > auxx-''${n}-ts.log &
+      ./scripts/record-stats.sh -pid ''${auxxpids[n]} > auxx-''${n}-ts.log &
       recorderpids[n]=$!
   done
 
@@ -131,7 +131,7 @@ writeScriptBin "run-bench.sh" ''
   auxxpids[0]=$!
 
   sleep 3
-  ./record-stats.sh -pid ''${auxxpids[0]} > auxx-0-ts.log &
+  ./scripts/record-stats.sh -pid ''${auxxpids[0]} > auxx-0-ts.log &
   recorderpids[0]=$!
 
   echo "All the auxx processes: ''${auxxpids[*]}"
@@ -163,7 +163,7 @@ EOF
 
   $(nix-build collect-data.nix                        \
   --argstr coreNodes         ${coreNodes}             \
-  --argstr startWaitTime     ${startWaitTime}         \
+  --argstr startWaitTimmodulese     ${startWaitTime}         \
   --argstr txsPerThread      ${txsPerThread}          \
   --argstr conc              ${conc}                  \
   --argstr delay             ${delay}                 \

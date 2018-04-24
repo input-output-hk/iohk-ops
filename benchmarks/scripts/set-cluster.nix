@@ -1,7 +1,7 @@
 {
   clusterName ? "benchmarkspb51"
   # commit of cardano-sl
-, commit      ? "517e7c7aa7e46bc584f309d423d2f18fd8d5365f" 
+, commit      ? "517e7c7aa7e46bc584f309d423d2f18fd8d5365f"
 }:
 
 with import <nixpkgs> {};
