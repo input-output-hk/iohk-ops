@@ -4,7 +4,7 @@ in
 { system ? builtins.currentSystem
 , config ? {}
 , pkgs ? (import (localLib.fetchNixPkgs) { inherit system config; })
-, compiler ? pkgs.haskell.packages.ghc802
+, compiler ? pkgs.haskellPackages
 , enableDebugging ? false
 , enableProfiling ? false
 }:
