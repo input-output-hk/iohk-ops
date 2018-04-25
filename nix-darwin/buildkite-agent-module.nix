@@ -22,18 +22,17 @@ in {
     openssh.publicKeyPath = "${keys}/id_buildkite.pub";
     hooks.pre-command = ''
       creds=${keys}/buildkite_aws_creds
-      if [ -e \$creds ]; then
-        source \$creds
+      if [ -e $creds ]; then
+        source $creds
       else
-        (>&2 echo "\$creds doesn't exist. The build is going to fail.")
+        (>&2 echo "$creds doesn't exist. The build is going to fail.")
       fi
     '';
-    # Protip: escape all $ not intended for expansion by nix
     hooks.environment = ''
       # For iconutil, security, pkgutil, etc.
       # Required for daedalus installer build,
       # or any build which expects to have apple tools.
-      export PATH=\$PATH:/usr/bin:/usr/sbin
+      export PATH=$PATH:/usr/bin:/usr/sbin
     '';
     extraConfig = ''
       # debug=true
