@@ -5,16 +5,16 @@ let
 
 in {
   services.buildkite-agent = let
-    # something off the nixos-unstable branch
+    # nixos-unstable channel as of 2018-04-30
     unstablePkgs = import (pkgs.fetchFromGitHub {
       owner = "NixOS";
       repo = "nixpkgs";
-      rev = "8b1cf100cd8badad6e1b6d4650b904b88aa870db";
-      sha256 = "1p0xxyz30bd2bg0wrfviqgsskz00w647h0l2vi33w90i42k8r3li";
+      rev = "af55a0c300224fe9debfc4a57d7ee789e00e649d";
+      sha256 = "13kgv7gr9p7fb51pqxx9dr51qz7f8ghqy57afzww1zhgmh4ismrx";
     }) { inherit config; };
   in {
     enable = true;
-    package = unstablePkgs.buildkite-agent;
+    package = unstablePkgs.buildkite-agent3;
     runtimePackages = with pkgs; [ bash nix git ];
     meta-data = "system=x86_64-darwin";
     tokenPath = "${keys}/buildkite_token";
