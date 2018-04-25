@@ -1,4 +1,4 @@
-{ pkgs ? import (builtins.fetchTarball https://nixos.org/channels/nixpkgs-17.09-darwin/nixexprs.tar.xz) {} }:
+{ pkgs ? import (builtins.fetchTarball https://nixos.org/channels/nixpkgs-18.03-darwin/nixexprs.tar.xz) {} }:
 
 let
   ghc = pkgs.haskellPackages.ghcWithPackages (ps: [ ps.turtle ]);

@@ -12,15 +12,15 @@ import System.Environment (getExecutablePath)
 import Filesystem.Path.CurrentOS (decodeString)
 import Control.Monad (forM_)
 
--- nix-darwin master branch on 26/02/2018
+-- nix-darwin master branch on 22/04/2018
 darwinSource :: Text
-darwinSource = "https://github.com/LnL7/nix-darwin/archive/e9fc93dab56e3a383db61501beafc0070e120dca.tar.gz"
+darwinSource = "https://github.com/rvl/nix-darwin/archive/80baf761852f4f8ad4b04972aeea50cc4a4eb424.tar.gz"
 
 nixpkgsSource :: Text
 nixpkgsSource = nixChannel <> "/nixexprs.tar.xz"
 
 nixChannel :: Text
-nixChannel = "https://nixos.org/channels/nixpkgs-17.09-darwin"
+nixChannel = "https://nixos.org/channels/nixpkgs-18.03-darwin"
 
 iohkOpsSource :: Text
 iohkOpsSource = "https://github.com/input-output-hk/iohk-ops/archive/master.tar.gz"
