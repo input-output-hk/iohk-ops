@@ -75,6 +75,20 @@ rec {
     };
   };
 
+  inodes_monitor = warningDays: criticalDays: let
+    inodes = days: 2160 * 2 * 2;  # 2 files per block, 24 hours of blocks.
+    warning = inodes warningDays;
+    critical = inodes criticalDays;
+  in {
+    name = "Low available inodes";
+    type = "metric alert";
+    query = config: "max(last_5m):avg:system.fs.inodes.free{depl:${config.deployment.name}} by {host,device} < ${toString critical}";
+    monitorOptions.thresholds = {
+      warning = "${toString warning}";
+      critical = "${toString critical}";
+    };
+  };
+
   ram_monitor = {
     name = "RAM is running low";
     type = "metric alert";
