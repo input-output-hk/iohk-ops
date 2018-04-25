@@ -35,6 +35,7 @@ in {
       export PATH=$PATH:/usr/bin:/usr/sbin
     '';
     extraConfig = ''
+      no-pty=true
       # debug=true
       # priority=9
     '';
