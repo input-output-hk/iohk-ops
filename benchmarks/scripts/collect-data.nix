@@ -19,7 +19,7 @@ writeScriptBin "collect-data.sh" ''
   set -e        # exit on error
   set -o xtrace # print commands
 
-  CLUSTERNAME=`grep name: config.yaml | awk '{print $2}'`
+  CLUSTERNAME=`grep name: ../config.yaml | awk '{print $2}'`
 
   export TZ=UTC
 
@@ -46,20 +46,25 @@ writeScriptBin "collect-data.sh" ''
   # build needed tools
   nix-build -A cardano-sl-tools -o post-mortem # for cardano-post-mortem
 
-  TOPOLOGY=`grep topology: config.yaml | awk '{print $2}'`
+  TOPOLOGY=`grep topology: ../config.yaml | awk '{print $2}'`
   CONFIGURATIONYAML=`nix-instantiate -E '(import ./. {}).cardano-sl.src + "/configuration.yaml"' --eval`
 
-  SYSTEMSTART=`grep -A 2 systemStart config.yaml | grep contents | awk '{print $2}'`
+  SYSTEMSTART=`grep -A 2 systemStart ../config.yaml | grep contents | awk '{print $2}'`
 
-  $IO dumplogs nodes
+  $IO -C .. dumplogs nodes
 
   # timestamp identifying this run
-  LAST=`ls experiments/ | grep 20 | sort | tail -1`
+  LAST=`ls ../experiments/ | grep 20 | sort | tail -1`
   LOGDIR="experiments/$LAST"
+
+  mkdir -p ./$LOGDIR
+  mv ../$LOGDIR/* ./$LOGDIR
+  rm -r ../experiments
+
   # commit of cardano-sl
-  COMMIT=`grep rev cardano-sl-src.json | awk '{print $2}' | cut -c 2- | cut -c -7`
+  COMMIT=`grep rev ../cardano-sl-src.json | awk '{print $2}' | cut -c 2- | cut -c -7`
   # cluster topology file
-  TOPOLOGY=`grep topology: config.yaml | awk '{print $2}'`
+  TOPOLOGY=`grep topology: ../config.yaml | awk '{print $2}'`
 
   # policy files
   CORE_POLICY=${corePolicy}
@@ -67,11 +72,11 @@ writeScriptBin "collect-data.sh" ''
 
   # archive settings and topology file
   echo "commit=$COMMIT, txsPerThread=$TXS_PER_THREAD, conc=$CONC, delay=$DELAY, generators=$((ADDGENERATORS + 1)), edgenodes=$EDGENODES, systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
-  cp $TOPOLOGY $LOGDIR/
+  cp ../$TOPOLOGY $LOGDIR
 
   # archive policy files
-  cp $CORE_POLICY $LOGDIR/
-  cp $RELAY_POLICY $LOGDIR/
+  cp $CORE_POLICY $LOGDIR
+  cp $RELAY_POLICY $LOGDIR
 
   # parse slot duration and start time from tx generator output
   SLOTDURATION=`grep -oP '(?<=slotDuration=)[0-9]+' tps-sent.csv`
@@ -131,7 +136,7 @@ writeScriptBin "collect-data.sh" ''
   mv times.svg $LOGDIR/times.svg
   mv auxx-*.log $LOGDIR
 
-  $(nix-build create-plots.nix --argstr last $LAST)/bin/create-plots.sh
+  $(nix-build ./scripts/create-plots.nix --argstr last $LAST)/bin/create-plots.sh
 
   # save arguments with which nix-script was called
   cat <<EOF >collect-data-args.txt

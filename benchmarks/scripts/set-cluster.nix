@@ -17,6 +17,6 @@ writeScriptBin "set-cluster.sh" ''
 
   IO=$(nix-build -A iohk-ops)/bin/iohk-ops
 
-  $IO set-rev cardanosl $COMMIT
-  $IO -v new -t topology-staging.yaml -k bench $CLUSTERNAME nodes
+  $IO -C .. set-rev cardanosl $COMMIT
+  $IO -C .. -v new -t topology-staging.yaml -k bench $CLUSTERNAME nodes
 ''

@@ -21,10 +21,10 @@ writeScriptBin "run-bench.sh" ''
   set -o xtrace # print commands
 
   # set policy files to be used
-  awk '$1=="(\"--policies" {$1="    (\"--policies"; $7="\"''${./../benchmarks/${corePolicy}}\"" ; $9="\"''${./../benchmarks/${relayPolicy}}\"))"} 1' ../modules/cardano-service.nix  > ../modules/cardano-service.nix.new
+  awk '$2=="cfg.enablePolicies" {$1="    (optionalString"; $9="\"''${./../benchmarks/${corePolicy}}\"" ; $11="\"''${./../benchmarks/${relayPolicy}}\")))"} 1' ../modules/cardano-service.nix  > ../modules/cardano-service.nix.new
   mv ../modules/cardano-service.nix.new ../modules/cardano-service.nix
 
-  CLUSTERNAME=`grep name: config.yaml | awk '{print $2}'`
+  CLUSTERNAME=`grep name: ../config.yaml | awk '{print $2}'`
 
   export TZ=UTC
 
@@ -53,7 +53,7 @@ writeScriptBin "run-bench.sh" ''
 
   IO=$(nix-build -A iohk-ops)/bin/iohk-ops
 
-  TOPOLOGY=`grep topology: config.yaml | awk '{print $2}'`
+  TOPOLOGY=`grep topology: ../config.yaml | awk '{print $2}'`
   CONFIGURATIONYAML=`nix-instantiate -E '(import ./. {}).cardano-sl.src + "/configuration.yaml"' --eval`
 
   # build needed tools
@@ -68,9 +68,9 @@ writeScriptBin "run-bench.sh" ''
   fi
 
   # re-start the cluster
-  $IO stop wipe-node-dbs --confirm wipe-journals
-  $IO deploy -t ''${START_WAIT_TIME}
-  SYSTEMSTART=`grep -A 2 systemStart config.yaml | grep contents | awk '{print $2}'`
+  $IO -C .. stop wipe-node-dbs --confirm wipe-journals
+  $IO -C .. deploy -t ''${START_WAIT_TIME}
+  SYSTEMSTART=`grep -A 2 systemStart ../config.yaml | grep contents | awk '{print $2}'`
 
   # new wallets
   if [ ''${WALLETS_NODES} -gt "0" ]; then
@@ -101,7 +101,7 @@ writeScriptBin "run-bench.sh" ''
 
       ./auxx/bin/cardano-auxx \
           --db-path wdb''${n} \
-          --log-config static/txgen-logging.yaml --logs-prefix experiments/txgen/txgen-''${n}  \
+          --log-config ../static/txgen-logging.yaml --logs-prefix experiments/txgen/txgen-''${n}  \
           --configuration-file ''${CONFIGURATIONYAML} \
           --configuration-key bench \
           ''${TRX2RELAYS} \
@@ -120,7 +120,7 @@ writeScriptBin "run-bench.sh" ''
 
   ./auxx/bin/cardano-auxx \
       --db-path wdb \
-      --log-config static/txgen-logging.yaml --logs-prefix experiments/txgen/txgen  \
+      --log-config ../static/txgen-logging.yaml --logs-prefix experiments/txgen/txgen  \
       --configuration-file ''${CONFIGURATIONYAML} \
       --configuration-key bench \
       ''${TRX2RELAYS} \
@@ -131,7 +131,7 @@ writeScriptBin "run-bench.sh" ''
   auxxpids[0]=$!
 
   sleep 3
-  ./scripts/record-stats.sh -pid ''${auxxpids[0]} > auxx-0-ts.log &
+ ./scripts/record-stats.sh -pid ''${auxxpids[0]} > auxx-0-ts.log &
   recorderpids[0]=$!
 
   echo "All the auxx processes: ''${auxxpids[*]}"
@@ -161,9 +161,9 @@ writeScriptBin "run-bench.sh" ''
  ${toString (lib.mapAttrsToList (name: value: name + "=" + value + "\n") args)}
 EOF
 
-  $(nix-build collect-data.nix                        \
+  $(nix-build ./scripts/collect-data.nix              \
   --argstr coreNodes         ${coreNodes}             \
-  --argstr startWaitTimmodulese     ${startWaitTime}         \
+  --argstr startWaitTime     ${startWaitTime}         \
   --argstr txsPerThread      ${txsPerThread}          \
   --argstr conc              ${conc}                  \
   --argstr delay             ${delay}                 \

@@ -22,6 +22,15 @@ The scripts that are used are the following:
 
 1. `nix-shell`
 
+1. Set the revision of cardano-sl passing the commit number:
+    ```
+    $(nix-build set-rev.nix                                       \
+    --argstr commit      517e7c7aa7e46bc584f309d423d2f18fd8d5365f \
+    )/bin/set-rev.sh
+    ```
+1. ctrl-d and `nix-shell`
+
+#change it and io set rev in ./pb-13 NOT in pb-13/benchmarks
 1. To set up the cluster choose a name and a cardano-sl commit:
     ```
     $(nix-build set-cluster.nix                                   \

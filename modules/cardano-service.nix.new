@@ -48,7 +48,7 @@ let
     "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
     "--node-id ${params.name}"
-    (optionalString cfg.enablePolicies ("--policies " + (if (params.typeIsCore) then "${./../benchmarks/policy_core.yaml}" else "${./../benchmarks/policy_relay.yaml}")))
+    (optionalString cfg.enablePolicies ("--policies " + (if (params.typeIsCore) then "${./../benchmarks/${corePolicy}}" else "${./../benchmarks/${relayPolicy}}"))
     (optionalString cfg.enableProfiling "+RTS -p -RTS")
   ];
 in {
@@ -223,7 +223,7 @@ in {
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       path = [ pkgs.glibc pkgs.procps ];  # dependencies
       script = ''
-        ${./../benchmarks/scripts/record-stats.sh} -exec ${cfg.executable} >> "${stateDir}/time-slave.log"
+        ${./../record-stats.sh} -exec ${cfg.executable} >> "${stateDir}/time-slave.log"
       '';
       serviceConfig = {
         User = "cardano-node";

@@ -22,4 +22,3 @@ $(nix-build ./scripts/run-bench.nix\
     )/bin/run-bench.sh
 
 #    --arg    walletsDeployment \"edgenodes-cluster\" \
-
