@@ -379,7 +379,11 @@ findWorkDirKeys opts = findKeys (cmdWorkPath opts </> "keys")
 
 -- | Path to an installer (hash) in the work directory.
 installersPath :: CommandOptions -> FilePath -> FilePath
-installersPath opts hash = cmdWorkPath opts </> "installers" </> hash
+installersPath opts hash = installersDir opts </> hash
+
+-- | Where the installers are downloaded to
+installersDir :: CommandOptions -> FilePath
+installersDir opts = cmdWorkPath opts </> "installers"
 
 -- | Path to the version info json in the work directory.
 versionFile :: CommandOptions -> FilePath
@@ -427,12 +431,11 @@ updateProposalFindInstallers opts env = do
   void $ doCheckConfig params
   echo "*** Finding installers"
   let rev = unGitRevision . cfgDaedalusRevision $ params
-  tempdir <- mktempdir "/tmp" "iohk-ops"
-  res <- liftIO $ realFindInstallers (configurationKeys env) (installerForEnv env) rev (Just tempdir)
-  echo "*** Finished. Moving files to work dir"
-  res' <- moveInstallersToWorkDir opts res
-  writeWikiRecord opts res'
-  storeParams opts (UpdateProposalConfig2 params res')
+      destDir = Just (installersDir opts)
+  res <- liftIO $ realFindInstallers (configurationKeys env) (installerForEnv env) rev destDir
+  echo "*** Finished."
+  writeWikiRecord opts res
+  storeParams opts (UpdateProposalConfig2 params res)
 
 -- | Checks if an installer from a CI result matches the environment
 -- that iohk-ops is running under.
@@ -443,23 +446,6 @@ installerForEnv env = matchNet . installerNetwork . ciResultLocalPath
           Staging     -> n == Just InstallerStaging
           Development -> True
           Any         -> False
-
--- | Move installer files from wherever they were found into the work dir.
-moveInstallersToWorkDir :: CommandOptions -> InstallersResults -> Shell InstallersResults
-moveInstallersToWorkDir opts irs = do
-  cis <- mapM moveInstaller (ciResults irs)
-  pure irs { ciResults = cis }
-  where
-    moveInstaller :: (Arch, CIResult) -> Shell (Arch, CIResult)
-    moveInstaller (arch, res) = do
-      p <- move (ciResultLocalPath res)
-      pure (arch, res { ciResultLocalPath = p })
-    move :: FilePath -> Shell FilePath
-    move src = do
-      let dst = installersPath opts (filename src)
-      mv src dst
-      void $ chmod writable dst
-      pure dst
 
 writeWikiRecord :: CommandOptions -> InstallersResults -> Shell ()
 writeWikiRecord opts res = do
