@@ -1,7 +1,9 @@
 { nixopsPrsJSON ? ./simple-pr-dummy.json
 , cardanoPrsJSON ? ./simple-pr-dummy.json
+, daedalusPrsJSON ? ./simple-pr-dummy.json
 , nixpkgs ? <nixpkgs>
 , declInput ? {}
+, handleCardanoPRs ? true
 }:
 
 # Followed by https://github.com/NixOS/hydra/pull/418/files
@@ -9,6 +11,8 @@
 let
   nixopsPrs = builtins.fromJSON (builtins.readFile nixopsPrsJSON);
   cardanoPrs = builtins.fromJSON (builtins.readFile cardanoPrsJSON);
+  daedalusPrs = builtins.fromJSON (builtins.readFile daedalusPrsJSON);
+
   iohkNixopsUri = "https://github.com/input-output-hk/iohk-nixops.git";
   mkFetchGithub = value: {
     inherit value;
@@ -47,18 +51,17 @@ let
       nixexprpath = "jobsets/cardano.nix";
       inputs = {
         nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
-        jobsets = mkFetchGithub "https://github.com/${info.head.repo.owner.login}/${info.head.repo.name}.git ${info.head.ref}";
+        jobsets = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
         nixops = mkFetchGithub "https://github.com/NixOS/NixOps.git tags/v1.5";
       };
     };
   };
-  mkCardano = cardanoBranch: nixpkgsRev: {
+  mkCardano = cardanoBranch: {
     nixexprpath = "release.nix";
     nixexprinput = "cardano";
     description = "Cardano SL";
     inputs = {
       cardano = mkFetchGithub "https://github.com/input-output-hk/cardano-sl.git ${cardanoBranch}";
-      nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgsRev}";
     };
   };
   makeCardanoPR = num: info: {
@@ -68,20 +71,42 @@ let
       nixexprinput = "cardano";
       nixexprpath = "release.nix";
       inputs = {
-        nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
-        cardano = mkFetchGithub "https://github.com/${info.head.repo.owner.login}/${info.head.repo.name}.git ${info.head.ref}";
+        cardano = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+      };
+    };
+  };
+  mkDaedalus = daedalusBranch: {
+    nixexprpath = "release.nix";
+    nixexprinput = "daedalus";
+    description = "Daedalus Wallet";
+    inputs = {
+      daedalus = mkFetchGithub "https://github.com/input-output-hk/daedalus.git ${daedalusBranch}";
+    };
+  };
+  makeDaedalusPR = num: info: {
+    name = "daedalus-pr-${num}";
+    value = defaultSettings // {
+      description = "PR ${num}: ${info.title}";
+      nixexprinput = "daedalus";
+      nixexprpath = "release.nix";
+      inputs = {
+        daedalus = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
       };
     };
   };
   nixopsPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeNixopsPR nixopsPrs);
   cardanoPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeCardanoPR cardanoPrs);
+  daedalusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeDaedalusPR daedalusPrs);
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
-    cardano-sl = mkCardano "master" nixpkgs-src.rev;
-    cardano-sl-1-0 = mkCardano "cardano-sl-1.0" nixpkgs-src.rev;
+    cardano-sl = mkCardano "develop";
+    cardano-sl-master = mkCardano "master";
+    cardano-sl-1-0 = mkCardano "release/1.0.x";
+    cardano-sl-1-2 = mkCardano "release/1.2.0";
+    daedalus = mkDaedalus "develop";
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
     iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
   });
-  jobsetsAttrs =  nixopsPrJobsets // cardanoPrJobsets // mainJobsets;
+  jobsetsAttrs =  daedalusPrJobsets // nixopsPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);
 in {
   jobsets = with pkgs.lib; pkgs.runCommand "spec.json" {} ''

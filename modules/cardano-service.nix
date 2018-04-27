@@ -23,7 +23,6 @@ let
     #"+RTS -N -pa -hb -T -A6G -qg -RTS"
     # Event logging (cannot be used with profiling)
     #"+RTS -N -T -l -A6G -qg -RTS"
-    "--no-ntp" # DEVOPS-160
     (optionalString cfg.stats "--stats")
     (optionalString (!cfg.productionMode) "--rebuild-db")
     (optionalString (!cfg.productionMode) "--spending-genesis ${toString cfg.nodeIndex}")
@@ -79,7 +78,7 @@ in {
       autoStart = mkOption { type = types.bool; default = true; };
 
       topologyYaml = mkOption { type = types.path; };
-      
+
       genesisN = mkOption { type = types.int; default = 6; };
       slotDuration = mkOption { type = types.int; default = 20; };
       networkDiameter = mkOption { type = types.int; default = 15; };

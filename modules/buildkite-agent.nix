@@ -8,11 +8,11 @@
   services.buildkite-agent = {
     enable = true;
     name   = name;
-    openssh.privateKey = "/run/keys/buildkite-ssh-private";
-    openssh.publicKey  = "/run/keys/buildkite-ssh-public";
-    token              = "/run/keys/buildkite-token";
-    meta-data          = "system=x86_64-linux";
-    hooksPath          = "/var/lib/buildkite-agent/hooks";
+    openssh.privateKeyPath = "/run/keys/buildkite-ssh-private";
+    openssh.publicKeyPath  = "/run/keys/buildkite-ssh-public";
+    tokenPath              = "/run/keys/buildkite-token";
+    meta-data              = "system=x86_64-linux";
+    hooksPath              = "/var/lib/buildkite-agent/hooks";
   };
   users.users.buildkite-agent.extraGroups = [ "keys" ];
 

@@ -14,5 +14,6 @@
          ,"nixpkgs": { "type": "git", "value": "https://github.com/NixOS/nixpkgs-channels.git nixos-16.09", "emailresponsible": false }
          ,"nixopsPrsJSON": { "type": "githubpulls", "value": "input-output-hk iohk-nixops", "emailresponsible": false }
          ,"cardanoPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-sl", "emailresponsible": false }
+         ,"daedalusPrsJSON": { "type": "githubpulls", "value": "input-output-hk daedalus", "emailresponsible": false }
      }
 }
