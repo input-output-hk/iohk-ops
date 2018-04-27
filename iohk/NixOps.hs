@@ -36,7 +36,6 @@ module NixOps (
   , NixOps.date
   , s3Upload
   , findInstallers
-  , setVersionJson
 
   , awsPublicIPURL
   , defaultEnvironment
@@ -50,6 +49,9 @@ module NixOps (
   , jsonLowerStrip
   , lowerShowT
   , parallelIO
+  , nixopsConfigurationKey
+  , configurationKeys
+  , getCardanoSLSource
 
   -- * Types
   , Arg(..)
@@ -87,7 +89,6 @@ module NixOps (
   , DoCommit(..)
   , DryRun(..)
   , PassCheck(..)
-  , RebuildExplorer(..)
   , enabled
   , disabled
   , opposite
@@ -151,19 +152,14 @@ import qualified System.IO                     as Sys
 import qualified System.IO.Unsafe              as Sys
 import           Time.System
 import           Time.Types
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText, within)
+import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText, within, sort, nub)
 import qualified Turtle                        as Turtle
 
 import           Network.AWS.Auth
 import           Network.AWS               hiding (Seconds, Debug, Region)
-import           Network.AWS.Data                 (toText)
-import           Control.Monad.Trans.AWS          (runAWST, AWST)
-import           Network.AWS.S3.PutObject
-import           Network.AWS.S3.CopyObject
 import           Network.AWS.S3.Types      hiding (All, URL, Region)
 import           Control.Monad.Trans.Resource
 import           Data.Coerce
-import qualified Data.HashMap.Strict as HMS
 import           UpdateLogic
 
 import           Constants
@@ -181,7 +177,8 @@ deriving instance Generic Elapsed; instance FromJSON Elapsed; instance ToJSON El
 
 
 establishDeployerIP :: Options -> Maybe IP -> IO IP
-establishDeployerIP o Nothing   = IP <$> incmdStrip o "curl" ["--silent", fromURL awsPublicIPURL]
+establishDeployerIP o Nothing   = IP <$> incmdStrip o "curl" opts
+  where opts = ["--connect-timeout", "2", "--silent", fromURL awsPublicIPURL]
 establishDeployerIP _ (Just ip) = pure ip
 
 
@@ -341,6 +338,7 @@ data Options = Options
   , oSerial           :: Serialize
   , oVerbose          :: Verbose
   , oNoComponentCheck :: ComponentCheck
+  , oInitialHeapSize  :: Maybe Int
   } deriving Show
 
 parserBranch :: Optional HelpMessage -> Parser Branch
@@ -370,6 +368,18 @@ parserOptions = Options
                 <*> flag Serialize        "serial"             's' "Disable parallelisation"
                 <*> flag Verbose          "verbose"            'v' "Print all commands that are being run"
                 <*> flag NoComponentCheck "no-component-check" 'p' "Disable deployment/*.nix component check"
+                <*> initialHeapSizeFlag
+
+-- Nix initial heap size -- default 12GiB, specify 0 to disable.
+-- For 100 nodes it eats 12GB of ram *and* needs a bigger heap.
+initialHeapSizeFlag :: Parser (Maybe Int)
+initialHeapSizeFlag = interpret <$> optional o
+  where
+    o = optInt "initial-heap-size" 'G' "Initial heap size for Nix (GiB), default 12"
+    interpret (Just n) | n > 0 = Just (gb n)
+                       | otherwise = Nothing
+    interpret Nothing = Just (gb 12)
+    gb n = n * 1024 * 1024 * 1024
 
 nixopsCmdOptions :: Options -> NixopsConfig -> [Text]
 nixopsCmdOptions Options{..} NixopsConfig{..} =
@@ -455,6 +465,15 @@ deplArg    NixopsConfig{..} k def = Map.lookup k cDeplArgs & fromMaybe def
 
 setDeplArg :: NixParam -> NixValue -> NixopsConfig -> NixopsConfig
 setDeplArg p v c@NixopsConfig{..} = c { cDeplArgs = Map.insert p v cDeplArgs }
+
+-- | Gets the "configurationKey" string out of the NixOps deployment args
+nixopsConfigurationKey :: NixopsConfig -> Maybe Text
+nixopsConfigurationKey = (>>= asString) . Map.lookup "configurationKey" . cDeplArgs
+  where
+    -- maybe generating prisms on NixValue would be better.
+    -- or maybe using hnix instead of Nix.hs and generating prisms
+    asString (NixStr s) = Just s
+    asString _ = Nothing
 
 -- | Interpret inputs into a NixopsConfig
 mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
@@ -632,21 +651,21 @@ setenv o@Options{..} (EnvVar k) v = do
   when (oVerbose == Verbose) $
     cmd o "/bin/sh" ["-c", format ("echo 'export "%s%"='$"%s) k k]
 
-deploy :: Options -> NixopsConfig -> DryRun -> BuildOnly -> PassCheck -> RebuildExplorer -> Maybe Seconds -> IO ()
-deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check reExplorer bumpSystemStartHeldBy = do
+deploy :: Options -> NixopsConfig -> DryRun -> BuildOnly -> PassCheck -> Maybe Seconds -> IO ()
+deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check bumpSystemStartHeldBy = do
   when (elem Nodes cElements) $ do
      keyExists <- testfile "keys/key1.sk"
      unless keyExists $
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
   _ <- pure $ clusterConfigurationKey c
-  when (dryrun /= DryRun && elem Explorer cElements && reExplorer /= NoExplorerRebuild) $ do
-    cmd o "scripts/generate-explorer-frontend.sh" []
   when (dryrun /= DryRun && buonly /= BuildOnly) $ do
     deployerIP <- establishDeployerIP o oDeployerIP
     setenv o "SMART_GEN_IP" $ getIP deployerIP
-  when (elem Nodes cElements) $
-    setenv o "GC_INITIAL_HEAP_SIZE" (showT $ 12 * 1024*1024*1024) -- for 100 nodes it eats 12GB of ram *and* needs a bigger heap
+  -- Pre-allocate nix heap to improve performance
+  when (elem Nodes cElements) $ case oInitialHeapSize of
+    Just size -> setenv o "GC_INITIAL_HEAP_SIZE" (showT size)
+    Nothing -> pure ()
 
   now <- timeCurrent
   let startParam             = NixParam "systemStart"
@@ -702,7 +721,7 @@ nodeDestroyElasticIP o c name =
 --
 defaultDeploy :: Options -> NixopsConfig -> IO ()
 defaultDeploy o c =
-  deploy o c NoDryRun NoBuildOnly DontPassCheck RebuildExplorer (Just defaultHold)
+  deploy o c NoDryRun NoBuildOnly DontPassCheck (Just defaultHold)
 
 fromscratch :: Options -> NixopsConfig -> IO ()
 fromscratch o c = do
@@ -783,6 +802,12 @@ build :: Options -> NixopsConfig -> Deployment -> IO ()
 build o _c depl = do
   echo "Building derivation..."
   cmd o "nix-build" ["--max-jobs", "4", "--cores", "2", "-A", fromAttr $ deploymentBuildTarget depl]
+
+
+-- | Use nix to grab the sources of cardano-sl.
+getCardanoSLSource :: Options -> IO Path.FilePath
+getCardanoSLSource o = parent . fromText <$> incmdStrip o "nix-instantiate" args
+  where args = [ "--eval", "-A", "cardano-sl.src", "default.nix" ]
 
 
 -- * State management
@@ -890,64 +915,32 @@ s3Upload :: T.Text -> NixopsConfig -> IO ()
 s3Upload daedalus_rev c = do
   let
     say = liftIO . TIO.putStrLn
-    uploadOneFile :: BucketName -> T.Text -> ObjectKey -> Integer -> T.Text -> AWST (ResourceT IO) ()
-    uploadOneFile bucketName localPath remoteKey appver cardanoCommit = do
-      bdy <- chunkedFile defaultChunkSize (T.unpack localPath)
-      let
-        newMetaData :: HMS.HashMap Text Text
-        newMetaData = HMS.fromList [
-              ("daedalus-revision", daedalus_rev)
-            , ("cardano-revision", cardanoCommit)
-            , ("application-version", (T.pack. show) appver)
-          ]
-      void . send $ Lens.set poACL (Just OPublicRead) $ Lens.set poMetadata newMetaData $ putObject bucketName remoteKey bdy
-    copyObject' :: BucketName -> T.Text -> ObjectKey -> AWST (ResourceT IO) ()
-    copyObject' bucketName source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName source dest
-    uploadHashedInstaller :: T.Text -> T.Text -> Integer -> T.Text -> AWST (ResourceT IO) (T.Text, T.Text)
-    uploadHashedInstaller bucketName localPath appver cardanoCommit = do
-      hash <- (liftIO . hashInstaller) localPath
-      let
-        -- splitOn always returns at least 1 item in the list
-        basename' = last $ T.splitOn "/" $ localPath
-      region <- bucketRegion (BucketName bucketName)
-      within region $ do
-        uploadOneFile (BucketName bucketName) localPath (ObjectKey hash) appver cardanoCommit
-        copyObject' (BucketName bucketName) (bucketName <> "/" <> hash) (ObjectKey basename')
-      return (hash, s3Link (toText region) bucketName basename')
-    hashAndUpload :: Integer -> T.Text -> CiResult -> AWST (ResourceT IO) ()
-    hashAndUpload appver cardanoCommit ciResult = do
+
+    hashAndUpload :: GlobalResults -> CiResult -> AWS ()
+    hashAndUpload gr ciResult = do
       let path = resultLocalPath ciResult
-      (hash, url) <- uploadHashedInstaller (cUpdateBucket c) path appver cardanoCommit
+      hash <- liftIO $ hashInstaller path
+      url <- uploadHashedInstaller (cUpdateBucket c) (Turtle.fromText path) gr hash
       say $ hash <> " " <> url <> " - " <> resultDesc ciResult
 
-  env <- newEnv Discover
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
-    let
-      appver = grApplicationVersion $ globalResult res
-      cardanoCommit' = grCardanoCommit $ globalResult res
-    liftIO $ runResourceT . runAWST env $ do
+    runAWS' $ do
       say $ "uploading things to " <> coerce (cUpdateBucket c)
-      let maybeHashAndUpload = maybe (pure ()) (hashAndUpload appver cardanoCommit')
+      let maybeHashAndUpload = maybe (pure ()) (hashAndUpload (globalResult res))
       maybeHashAndUpload $ buildkiteResult res
-      maybeHashAndUpload $ travisResult res
       maybeHashAndUpload $ appveyorResult res
 
 configurationKeys :: Environment -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64)
 configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")
 configurationKeys Staging = ("mainnet_dryrun_wallet_win64", "mainnet_dryrun_wallet_macos64")
+configurationKeys env = error $ "Application versions not used in '" <> show env <> "' environment"
 
 findInstallers :: T.Text -> NixopsConfig -> IO ()
 findInstallers daedalus_rev c = do
   with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
     print res
     TIO.putStrLn $ githubWikiRecord res
-
-setVersionJson :: T.Text -> NixopsConfig -> IO ()
-setVersionJson daedalus_rev c = do
-  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
-    print res
-    updateVersionJson res (cUpdateBucket c)
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do

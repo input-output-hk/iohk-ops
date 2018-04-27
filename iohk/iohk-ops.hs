@@ -24,6 +24,7 @@ import           NixOps
 import qualified NixOps                        as Ops
 import           Types
 import           Utils
+import           UpdateProposal
 
 
 -- * Elementary parsers
@@ -102,7 +103,7 @@ data Command where
   -- * cluster lifecycle
   Nixops'               :: NixopsCmd -> [Arg] -> Command
   Modify                :: Command
-  Deploy                :: RebuildExplorer -> BuildOnly -> DryRun -> PassCheck -> Maybe Seconds -> Command
+  Deploy                :: BuildOnly -> DryRun -> PassCheck -> Maybe Seconds -> Command
   Destroy               :: Command
   Delete                :: Command
   Info                  :: Command
@@ -110,6 +111,7 @@ data Command where
   -- * high-level scenarios
   FromScratch           :: Command
   ReallocateCoreIPs     :: Command
+  UpdateProposal        :: UpdateProposalCommand -> Command
 
   -- * live cluster ops
   Ssh                   :: Exec -> [Arg] -> Command
@@ -124,7 +126,6 @@ data Command where
   PrintDate             :: Command
   S3Upload              :: String -> Command
   FindInstallers        :: String -> Command
-  SetVersionJson       :: String -> Command
 deriving instance Show Command
 
 centralCommandParser :: Parser Command
@@ -168,8 +169,7 @@ centralCommandParser =
    , ("create",                 "Same as modify",                                                   pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> flag NoExplorerRebuild "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
-                                <*> flag BuildOnly         "build-only"          'b' "Pass --build-only to 'nixops deploy'"
+                                <$> flag BuildOnly         "build-only"          'b' "Pass --build-only to 'nixops deploy'"
                                 <*> flag DryRun            "dry-run"             'd' "Pass --dry-run to 'nixops deploy'"
                                 <*> flag PassCheck         "check"               'c' "Pass --check to 'nixops build'"
                                 <*> ((Seconds . (* 60) . fromIntegral <$>)
@@ -179,6 +179,7 @@ centralCommandParser =
    , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
    , ("reallocate-core-ips",    "Destroy elastic IPs corresponding to the nodes listed and redeploy cluster",
                                                                                                     pure ReallocateCoreIPs)
+   , ("update-proposal",        "Subcommands for updating wallet installers. Apply commands in the order listed.", UpdateProposal <$> parseUpdateProposalCommand)
    , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
 
    <|> subcommandGroup "Live cluster ops:"
@@ -208,7 +209,6 @@ centralCommandParser =
    , ("date",                   "Print date/time",                                                  pure PrintDate)
    , ("s3upload",               "test S3 upload",                                                   S3Upload <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV"))  )
    , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
-   , ("set-version-json",       "set daedalus-latest-version.json to a given rev",                  SetVersionJson <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
    ]
 
    <|> subcommandGroup "Other:"
@@ -254,13 +254,14 @@ runTop o@Options{..} args topcmd = do
             -- * deployment lifecycle
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
             Modify                   -> Ops.modify                    o c
-            Deploy ner bu dry ch buh -> Ops.deploy                    o c dry bu ch ner buh
+            Deploy bu dry ch buh     -> Ops.deploy                    o c dry bu ch buh
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             Info                     -> Ops.nixops                    o c "info" []
             -- * High-level scenarios
             FromScratch              -> Ops.fromscratch               o c
             ReallocateCoreIPs        -> Ops.reallocateCoreIPs         o c
+            UpdateProposal up        -> updateProposal                o c up
             -- * live deployment ops
             DeployedCommit m         -> Ops.deployedCommit            o c m
             CheckStatus              -> Ops.checkstatus               o c
@@ -277,7 +278,6 @@ runTop o@Options{..} args topcmd = do
             PrintDate                -> Ops.date                      o c
             S3Upload               d -> Ops.s3Upload                  (T.pack d) c
             FindInstallers         d -> Ops.findInstallers            (T.pack d) c
-            SetVersionJson         d -> Ops.setVersionJson            (T.pack d) c
             Clone{..}                -> error "impossible"
             New{..}                  -> error "impossible"
             SetRev   _ _ _           -> error "impossible"
@@ -336,15 +336,10 @@ runNew _ _ _ = error "impossible"
 -- | Use 'cardano-keygen' to create keys for a develoment cluster.
 generateStakeKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
 generateStakeKeys o configurationKey outdir = do
-  -- XXX: compute cardano source path globally
-  configuration <- (<> "/configuration.yaml") <$> incmdStrip o "nix-instantiate"
-    [ "--eval"
-    , "-A", "cardano-sl.src"
-    , "default.nix"
-    ]
+  cardanoSrc <- getCardanoSLSource o
   cmd o "cardano-keygen"
     [ "--system-start", "0"
-    , "--configuration-file", configuration
+    , "--configuration-file", format (fp%"/lib/configuration.yaml") cardanoSrc
     , "--configuration-key", fromConfigurationKey configurationKey
     , "generate-keys-by-spec"
     , "--genesis-out-dir", T.pack $ Path.encodeString outdir

@@ -20,7 +20,7 @@ import           Types           (ApplicationVersion(ApplicationVersion), Arch(W
 import           Data.Coerce                      (coerce)
 
 newtype JobId = JobId T.Text deriving (Show, Eq, Monoid)
-newtype BuildNumber = BuildNumber Integer deriving (Show, Eq)
+newtype BuildNumber = BuildNumber Int deriving (Show, Eq)
 newtype Username = Username { usernameToText :: T.Text } deriving (Show, Eq, Monoid, IsString)
 newtype Project = Project { projectToText :: T.Text } deriving (Show, Eq, Monoid, IsString)
 
