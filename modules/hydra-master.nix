@@ -27,6 +27,10 @@ let
       patches = [ ./chomp.patch ];
     });
   };
+  cleanIp = host: let
+      ip1 = if nodes.${host}.options.networking.publicIPv4.isDefined then nodes.${host}.config.networking.publicIPv4 else "0.0.0.0";
+    in
+      if ip1 == null then "0.0.0.0" else ip1;
 in {
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
@@ -41,8 +45,8 @@ in {
   nix = {
     distributedBuilds = true;
     buildMachines = [
-      (mkLinux nodes.hydra-build-slave-1.config.networking.publicIPv4)
-      (mkLinux nodes.hydra-build-slave-2.config.networking.publicIPv4)
+      (mkLinux (cleanIp "hydra-build-slave-1"))
+      (mkLinux (cleanIp "hydra-build-slave-2"))
       (mkMac "de302.macincloud.com")
       (mkMac "du516.macincloud.com")
       (mkMac "de528.macincloud.com")
