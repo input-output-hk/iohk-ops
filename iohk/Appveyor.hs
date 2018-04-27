@@ -18,7 +18,7 @@ import           GHC.Generics    (Generic)
 import           Utils           (fetchJson)
 import           Types           (ApplicationVersion(ApplicationVersion, getApplicationVersion))
 
-newtype JobId = JobId T.Text deriving (Show, Eq, Monoid)
+newtype JobId = JobId { unJobId :: T.Text } deriving (Show, Eq, Monoid)
 newtype BuildNumber = BuildNumber { unBuildNumber :: Int } deriving (Show, Eq)
 newtype Username = Username { usernameToText :: T.Text } deriving (Show, Eq, Monoid, IsString)
 newtype Project = Project { projectToText :: T.Text } deriving (Show, Eq, Monoid, IsString)

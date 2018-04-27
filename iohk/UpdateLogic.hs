@@ -29,7 +29,7 @@ import           Appveyor                     (AppveyorArtifact (AppveyorArtifac
                                                build, fetchAppveyorArtifacts,
                                                fetchAppveyorBuild,
                                                buildNumber, unBuildNumber,
-                                               getArtifactUrl, jobId,
+                                               getArtifactUrl, jobId, unJobId,
                                                parseCiUrl)
 import qualified Appveyor
 import           Buildkite.API                (APIToken(APIToken)
@@ -76,8 +76,7 @@ import           System.Console.ANSI          (Color (Green),
                                                ConsoleLayer (Foreground),
                                                SGR (Reset, SetColor), setSGR)
 import           System.IO.Error              (ioeGetErrorString)
-import           System.Exit                  (die)
-import           Turtle                       (void, MonadIO, printf, format, fp, d, s, w, (%))
+import           Turtle                       (void, MonadIO, printf, format, fp, d, s, w, (%), die, makeFormat)
 import           Turtle.Prelude               (mktempdir, proc)
 import           Filesystem.Path              (FilePath, (</>), filename)
 
@@ -113,13 +112,15 @@ loadBuildkiteToken :: IO APIToken
 loadBuildkiteToken = try (T.readFile buildkiteTokenFile) >>= \case
   Right contents -> case process contents of
     Just token -> pure $ APIToken token
-    Nothing -> die $ buildkiteTokenFile <> " was empty." <> advice
-  Left (e :: IOError) -> die $ "Could not read " <> buildkiteTokenFile <> ": " <> ioeGetErrorString e <> advice
+    Nothing -> die $ format (st%" was empty.\n"%s) buildkiteTokenFile advice
+  Left (e :: IOError) -> die $ format ("Could not read "%st%": "%st%s)
+    buildkiteTokenFile (ioeGetErrorString e) advice
   where
     process = headMay . filter (not . T.null) . T.lines
-    advice = concat [ "\nObtain an API access token with read_builds scope from\n"
-                    , "https://buildkite.com/user/api-access-tokens"
-                    , "\nExiting!" ]
+    advice = "Obtain an API access token with read_builds scope from\n" <>
+             "https://buildkite.com/user/api-access-tokens\n" <>
+             "Exiting!" :: T.Text
+    st = makeFormat T.pack
 
 buildkiteTokenFile = "static/buildkite_token" :: String
 
@@ -139,9 +140,10 @@ bkArtifactIsInstaller = T.isSuffixOf ".pkg" . artifactFilename
 
 findInstallersBuildKite :: APIToken -> Maybe FilePath -> InstallerPredicate -> Int -> T.Text -> IO [(Arch, CIResult)]
 findInstallersBuildKite apiToken destDir instP buildNum buildUrl = do
+  let buildDesc = format ("Buildkite build #"%d) buildNum
   arts <- listArtifactsForBuild apiToken buildkiteOrg pipelineDaedalus buildNum
 
-  rs <- forInstallers bkArtifactIsInstaller arts $ \art -> do
+  rs <- forInstallers buildDesc bkArtifactIsInstaller arts $ \art -> do
     -- ask Buildkite what the download URL is
     url <- BK.getArtifactURL apiToken buildkiteOrg pipelineDaedalus buildNum art
 
@@ -166,8 +168,9 @@ findInstallersAppVeyor :: Maybe FilePath -> InstallerPredicate -> T.Text
 findInstallersAppVeyor destDir instP url user project version = do
   appveyorBuild <- fetchAppveyorBuild user project version
   let jobid = appveyorBuild ^. build . Appveyor.jobs . to head . jobId
+      jobDesc = format ("AppVeyor job "%s) (unJobId jobid)
   artifacts <- fetchAppveyorArtifacts jobid
-  rs <- forInstallers avArtifactIsInstaller artifacts $ \(AppveyorArtifact art _) ->
+  rs <- forInstallers jobDesc avArtifactIsInstaller artifacts $ \(AppveyorArtifact art _) ->
     pure CIResult
       { ciResultLocalPath   = fromMaybe "." destDir </> filename (FP.fromText art)
       , ciResultUrl         = url
@@ -182,11 +185,11 @@ findInstallersAppVeyor destDir instP url user project version = do
       in fetchCachedUrl (ciResultDownloadUrl res) (filename out) out
     pure (Win64, res)
 
-forInstallers :: (a -> Bool) -> [a] -> (a -> IO b) -> IO [b]
-forInstallers p arts action = case filter p arts of
+forInstallers :: T.Text -> (a -> Bool) -> [a] -> (a -> IO b) -> IO [b]
+forInstallers job p arts action = case filter p arts of
   [] -> die $ if null arts
-    then "No artifacts for job"
-    else "Installer package file not found in artifacts"
+    then "No artifacts for " <> job
+    else "Installer package file not found in artifacts of " <> job
   files -> mapM action files
 
 printCIResult :: T.Text -> Arch -> CIResult -> IO ()
