@@ -243,7 +243,10 @@ loadParams opts = do
   printf ("Loading update proposal parameters from "%w%"\n") yaml
   liftIO (decodeFileEither yaml) >>= \case
     Right cfg -> doCheckConfig cfg >> pure cfg
-    Left e -> die $ format ("Bad config: "%w%"\n") e
+    Left e ->
+      let msg = "Could not parse: "%w%"\n" %
+                "The update-proposal steps need to be run in order.\n"
+      in die $ format msg e
 
 storeParams :: ToJSON cfg => CommandOptions -> cfg -> Shell ()
 storeParams opts params = do
