@@ -4,6 +4,7 @@
   imports = [
     ./auto-gc.nix
     ./nix_nsswitch.nix
+    ./docker-builder.nix
   ];
 
   services.buildkite-agent = {
@@ -16,7 +17,10 @@
     hooksPath              = "/var/lib/buildkite-agent/hooks";
     runtimePackages        = with pkgs; [ gnutar gzip bzip2 xz ];
   };
-  users.users.buildkite-agent.extraGroups = [ "keys" ];
+  users.users.buildkite-agent.extraGroups = [
+    "keys"
+    "docker"
+  ];
 
   deployment.keys = {
     pre-command = {
