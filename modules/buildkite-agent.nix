@@ -2,7 +2,8 @@
 
 {
   imports = [
-    ./../modules/hydra-slave.nix
+    ./auto-gc.nix
+    ./nix_nsswitch.nix
   ];
 
   services.buildkite-agent = {
