@@ -18,7 +18,6 @@ with lib;
     })
   ];
   nix = {
-    binaryCaches = mkForce [ "https://cache.nixos.org" ];
     package = pkgs.nix';
   };
 }
