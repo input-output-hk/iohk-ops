@@ -18,6 +18,17 @@ This project uses multiple modules in order to allow the management of resources
 
 The `regional` folder is for resources that should be created in all regions that we want to do stuff in. If you need to create a resource in only 1 region you should create a new module for that region.
 
+When you are creating resources in a region, you must add the `region` attribute to all aws resources, e.g.
+
+```
+resource "aws_s3_bucket" "nix_cache" {
+  provider = "aws.${var.aws_region}"
+  bucket   = "iele-nix-cache-${var.aws_region}"
+  acl      = "private"
+  region   = "${var.aws_region}"
+}
+```
+
 ## Setting up IAM users
 
 1. Ask the user to send you their gpg public key, this should be in binary format, base64 encoded: `gpg --export myuser | base64 > myuser.pub`
