@@ -13,12 +13,12 @@ provider "aws" {
 }
 
 module "eu-west-1" {
-  source = "./regional"
+  source     = "./regional"
   aws_region = "eu-west-1"
 }
 
 module "eu-west-2" {
-  source = "./regional"
+  source     = "./regional"
   aws_region = "eu-west-2"
 }
 
