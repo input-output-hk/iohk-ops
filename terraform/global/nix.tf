@@ -1,9 +1,3 @@
-resource "aws_s3_bucket" "nix_cache" {
-  bucket = "iele-nix-cache-${var.aws_region}"
-  acl    = "private"
-  region = "${var.aws_region}"
-}
-
 resource "aws_iam_role" "ec2_assume_role" {
   name               = "EC2AssumeRole"
   assume_role_policy = "${file("${path.module}/templates/assume_role_policy.json")}"
@@ -13,7 +7,7 @@ data "template_file" "s3_bucket_policy" {
   template = "${file("${path.module}/templates/s3_bucket_policy.json")}"
 
   vars {
-    bucket = "iele-nix-cache-${var.aws_region}"
+    bucket = "iele-nix-cache-*"
   }
 }
 

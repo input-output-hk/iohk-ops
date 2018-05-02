@@ -9,5 +9,19 @@ terraform {
 }
 
 provider "aws" {
-  region = "${var.aws_region}"
+  region = "eu-west-1"
+}
+
+module "eu-west-1" {
+  source = "./regional"
+  aws_region = "eu-west-1"
+}
+
+module "eu-west-2" {
+  source = "./regional"
+  aws_region = "eu-west-2"
+}
+
+module "global" {
+  source = "./global"
 }
