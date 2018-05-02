@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 
 module Types where
@@ -40,12 +41,17 @@ newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (Fro
 newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
 newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
 newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
-data Arch = Linux64 | Mac64 | Win64 deriving Show
-newtype ApplicationVersionKey (a :: Arch) = ApplicationVersionKey Text deriving IsString
-newtype ApplicationVersion (a :: Arch) = ApplicationVersion Text deriving (IsString, Show, Eq, Generic, ToJSON)
+data Arch = Linux64 | Mac64 | Win64 deriving (Show, Read, Eq, Generic)
+newtype ApplicationVersion = ApplicationVersion { getApplicationVersion :: Text } deriving (FromJSON, IsString, Show, Eq, Generic, ToJSON)
+type ApplicationVersionKey = Arch -> Text
 
-getApplicationVersion :: ApplicationVersion a -> Text
-getApplicationVersion (ApplicationVersion v) = v
+instance FromJSON Arch
+instance ToJSON Arch
+
+formatArch :: Arch -> Text
+formatArch Linux64 = "Linux"
+formatArch Mac64 = "macOS"
+formatArch Win64 = "Windows"
 
 -- * Flags
 --
