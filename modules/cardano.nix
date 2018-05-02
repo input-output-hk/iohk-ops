@@ -81,7 +81,7 @@ globals: imports: params:
          then globals.topologyYaml
          else
            let relayAddressSpecs =
-             if globals.environment == "development"
+             if (globals.environment == "development" || globals.environment == "benchmark")
              then map (name: { addrType = "addr"; addr = nodeNameToPublicIP name; })
                       (map (x: x.name) globals.relays)
              else map (idx:  { addrType = "host"; addr = "cardano-node-${toString idx}.${config.global.dnsDomainname}"; })

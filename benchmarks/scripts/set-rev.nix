@@ -9,8 +9,6 @@ writeScriptBin "set-rev.sh" ''
   set -e        # exit on error
   set -o xtrace # print commands
 
-  CLUSTERNAME=${clusterName}
-
   IO=$(nix-build -A iohk-ops)/bin/iohk-ops
 
   $IO -C .. set-rev cardanosl ${commit}

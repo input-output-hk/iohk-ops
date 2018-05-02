@@ -317,7 +317,7 @@ runNew o@Options{..} New{..} args = do
   Ops.create o config
 
   -- generate dev-keys & ensure secrets exist:
-  when (tEnvironment == Development) $ do
+  when (tEnvironment == Development || tEnvironment == Benchmark) $ do
     let secrets = [ "static/github_token"
                   , "static/id_buildfarm"
                   , "static/datadog-api.secret"

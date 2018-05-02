@@ -16,6 +16,7 @@ WITH_DEVELOPMENT=${6:-true}
 WITH_EXPLORER=${7:-true}
 WITH_REPORT_SERVER=${8:-true}
 WITH_INFRA=${9:-true}
+WITH_BENCHMARK=${10:-true}
 
 homestate="$(mktemp -d -t iohk-ops.XXXXXXXXXXXX)"
 export HOME="${homestate}"
@@ -91,6 +92,13 @@ CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
 ${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment production ${COMMON_OPTIONS} 'test-infra'   Infra
 ${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-infra.yaml'  create deploy --dry-run
 banner 'Infra evaluated'
+fi
+
+if test -n "${WITH_BENCHMARK}"; then
+CLEANUP_DEPLS="${CLEANUP_DEPLS} test-bench"
+${IOHK_OPS}               new  --config 'test-bench.yaml'   --environment benchmark    ${COMMON_OPTIONS} 'test-stag'    ${CARDANO_COMPONENTS}
+${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-bench.yaml'   create deploy --dry-run
+banner 'Benchmark env evaluated'
 fi
 
 echo "Validating terraform"
