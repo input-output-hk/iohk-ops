@@ -1,8 +1,8 @@
 data "aws_iam_policy_document" "ecr_login_role_policy" {
   statement {
-    actions = ["ecr:GetAuthorizationToken"]
+    actions   = ["ecr:GetAuthorizationToken"]
     resources = ["*"]
-    effect = "Allow"
+    effect    = "Allow"
   }
 }
 
@@ -29,6 +29,7 @@ EOF
 
 resource "aws_iam_role" "ecr_login_role" {
   name = "ECRLogin"
+
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -49,6 +50,6 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "ecr_login_policy_attachment" {
-  role = "${aws_iam_role.ecr_login_role.name}"
+  role       = "${aws_iam_role.ecr_login_role.name}"
   policy_arn = "${aws_iam_policy.ecr_login_policy.arn}"
 }
