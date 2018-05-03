@@ -11,7 +11,7 @@ let nodeMap = { inherit (globals.fullMap) report-server; }; in
     ];
 
     config.services.report-server.zendesk = {
-      accountName = "iohksupport";  # NB. expires on 2018-02-26
+      accountName = "iohk";
       email = "staging-report-server@iohk.io";
       tokenFile = "/var/lib/keys/zendesk-token";
     };
