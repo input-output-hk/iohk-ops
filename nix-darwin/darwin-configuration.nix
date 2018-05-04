@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   opsLib = import <iohk-ops/lib.nix>;
@@ -54,6 +54,9 @@ in {
   nix.gc.automatic = true;
   nix.gc.options = "--max-freed $((25 * 1024**3 - 1024 * $(df -P -k /nix/store | tail -n 1 | awk '{ print $4 }')))";
 
+  environment.etc."per-user/admin/ssh/authorized_keys".text
+    = lib.concatStringsSep "\n" opsLib.devOpsKeys + "\n";
+
   ########################################################################
 
   services.nix-daemon.enable = true;
@@ -66,6 +69,20 @@ in {
     mdutil -i off -d / &> /dev/null
     mdutil -E / &> /dev/null
     echo "ok"
+
+    for user in admin buildkite hydra; do
+        authorized_keys=/etc/per-user/$user/ssh/authorized_keys
+        user_home=/Users/$user
+        printf "configuring ssh keys for $user... "
+        if [ -f $authorized_keys ]; then
+            mkdir -p $user_home/.ssh
+            cp -f $authorized_keys $user_home/.ssh/authorized_keys
+            chown $user:$user $user_home $user_home/.ssh $user_home/.ssh/authorized_keys
+            echo "ok"
+        else
+            echo "nothing to do"
+        fi
+    done
   '';
 
   ########################################################################
