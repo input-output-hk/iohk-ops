@@ -14,6 +14,9 @@ args:
   IOHKaccessKeyId:
     tag: NixStr
     contents: mainnet-iohk
+  accountId:
+    tag: NixInt
+    contents: 271217447438
 gen-cmdline: manual changes from staging-testnet.yaml
 environment: Production
 topology: topology-production.yaml

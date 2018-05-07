@@ -451,7 +451,8 @@ selectInitialConfigDeploymentArgs _ _ env delts (Elapsed systemStart) mConfigura
     pure $ Map.fromList $
       akidDependentArgs
       <> [ ("systemStart",  NixInt $ fromIntegral systemStart)
-         , ("configurationKey", NixStr $ fromConfigurationKey configurationKey) ]
+         , ("configurationKey", NixStr $ fromConfigurationKey configurationKey)
+         , ("accountId", NixInt $ envAccountId) ]
 
 deplArg :: NixopsConfig -> NixParam -> NixValue -> NixValue
 deplArg    NixopsConfig{..} k def = Map.lookup k cDeplArgs & fromMaybe def
