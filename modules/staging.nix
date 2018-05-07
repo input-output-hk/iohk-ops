@@ -16,7 +16,6 @@ with import ./../lib.nix;
 
       # DEVOPS-64: disable log bursting
       journald.rateLimitBurst    = 0;
-      journald.extraConfig       = "SystemMaxUse=50M";
     };
 
   };

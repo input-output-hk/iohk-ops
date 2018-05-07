@@ -16,7 +16,8 @@ WITH_DEVELOPMENT=${6:-true}
 WITH_EXPLORER=${7:-true}
 WITH_REPORT_SERVER=${8:-true}
 WITH_INFRA=${9:-true}
-WITH_BENCHMARK=${10:-true}
+shift || true
+WITH_BENCHMARK=${9:-true}
 
 homestate="$(mktemp -d -t iohk-ops.XXXXXXXXXXXX)"
 export HOME="${homestate}"

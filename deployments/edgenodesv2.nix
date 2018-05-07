@@ -1,4 +1,4 @@
-{ accessKeyId, nodes ? 1 , walletsPerNode ? 1
+{ accessKeyId, nodes ? 1 , walletsPerNode ? 10
 , region ? "eu-central-1"
 , topologyFile, systemStart }:
 

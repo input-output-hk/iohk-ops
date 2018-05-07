@@ -10,6 +10,7 @@ The scripts that are used are the following:
   * create-plots.nix   , which creates the plots. It is
                          called by collect-data.nix.
   * destroy-cluster.nix, which destroys the current cluster.
+  * set-wallets-cluster.nix    , which sets up a cluster for wallets (edge nodes).
 
 
 ## Steps
@@ -20,41 +21,36 @@ The scripts that are used are the following:
 
 1. `cd ISSUE-ID`
 
+1. `cd benchmarks`
+
 1. `nix-shell`
 
-1. Set the revision of cardano-sl passing the commit number:
-    ```
-    $(nix-build set-rev.nix                                       \
-    --argstr commit      517e7c7aa7e46bc584f309d423d2f18fd8d5365f \
-    )/bin/set-rev.sh
-    ```
-1. ctrl-d and `nix-shell`
+1. Change the revision (commit) of `cardano-sl` repo that is used:
 
-#change it and io set rev in ./pb-13 NOT in pb-13/benchmarks
-1. To set up the cluster choose a name and a cardano-sl commit:
+  ```
+  $(nix-build scripts/set-rev.nix                          \
+  --argstr commit 517e7c7aa7e46bc584f309d423d2f18fd8d5365f \
+  )/bin/set-rev.sh
+  ```
+
+1. ctrl-d
+
+1. `nix-shell`
+
+1. To set up the cluster choose a name:
     ```
-    $(nix-build set-cluster.nix                                   \
-    --argstr clusterName benchmarks110policies                    \
-    --argstr commit      517e7c7aa7e46bc584f309d423d2f18fd8d5365f \
+    $(nix-build scripts/set-cluster.nix    \
+    --argstr clusterName benchmarksCluster \
     )/bin/set-cluster.sh
     ```
 
-1. `export TMPDIR=/tmp`
+1. Run bm-ci.sh:
+    ```
+    ./bm-ci.sh
+    ```
 
-1. To run a benchmark set the settings as in the following example:
-    ```
-    $(nix-build run-bench.nix     \
-    --argstr coreNodes     7      \
-    --argstr startWaitTime 10     \
-    --argstr txsPerThread  500    \
-    --argstr conc          1      \
-    --argstr delay         250    \
-    --argstr sendMode send-random \
-    --argstr cooldown      10     \
-    --argstr addGenerators 6      \
-    --argstr edgeNodes     0      \
-    )/bin/run-bench.sh
-    ```
+
+## Results
 
 Results after run is finished are placed in
 experiments/{date of run}/ folder. Plots are located in the
@@ -63,24 +59,51 @@ experiments/{date of run}/plots/.
 Every time another run must take place one can just
 repeat the last step changing or not the arguments.
 
+
+## Changing revision (commit) of cardano-sl
+
+To change the revision (commit) of cardano-sl repo that is used:
+
+  ```
+  $(nix-build scripts/set-rev.nix                          \
+  --argstr commit 517e7c7aa7e46bc584f309d423d2f18fd8d5365f \
+  )/bin/set-rev.sh
+  ```
+
+
+## Set up a wallets (edge nodes) cluster
+
+To set up a wallets cluster:
+
+  ```
+  $(nix-build scripts/set-wallets-cluster.nix  \
+  --argstr clusterName edgenodes-cluster       \
+  )/bin/set-wallets-cluster.sh
+  ```
+
+
+## Destroy the cluster
+
 To destroy the current cluster:
 
   `$(nix-build destroy-cluster.nix)/bin/destroy-cluster.sh`
+
+
+## Face some errors
 
 If an error occurred during the run and stopped it results
 can be collected with the following command:
 
   ```
-  $(nix-build collect-data.nix    \
-  --argstr coreNodes     7        \
-  --argstr startWaitTime 10       \
-  --argstr txsPerThread  500      \
-  --argstr conc          1        \
-  --argstr delay         250      \
-  --argstr sendMode send-random   \
-  --argstr cooldown      10       \
-  --argstr addGenerators 6        \
-  --argstr edgeNodes     0        \
+  $(nix-build scripts/collect-data.nix \
+  --argstr coreNodes     7             \
+  --argstr startWaitTime 10            \
+  --argstr txsPerThread  500           \
+  --argstr conc          1             \
+  --argstr delay         250           \
+  --argstr cooldown      10            \
+  --argstr addGenerators 6             \
+  --argstr edgeNodes     0             \
   )/bin/collect-data.sh
   ```
 
@@ -93,16 +116,15 @@ walletsDeployment must set as an empty string as in the
 following example:
 
   ```
-  $(nix-build run-bench.nix     \
-  --argstr coreNodes     7      \
-  --argstr startWaitTime 10     \
-  --argstr txsPerThread  500    \
-  --argstr conc          1      \
-  --argstr delay         250    \
-  --argstr sendMode send-random \
-  --argstr cooldown      10     \
-  --argstr addGenerators 6      \
-  --argstr edgeNodes     0      \
-  --arg walletsDeployment  \"\" \
+  $(nix-build scripts/run-bench.nix \
+  --argstr coreNodes     7          \
+  --argstr startWaitTime 10         \
+  --argstr txsPerThread  500        \
+  --argstr conc          1          \
+  --argstr delay         250        \
+  --argstr cooldown      10         \
+  --argstr addGenerators 6          \
+  --argstr edgeNodes     0          \
+  --arg walletsDeployment  \"\"     \
   )/bin/run-bench.sh
   ```

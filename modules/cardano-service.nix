@@ -176,9 +176,9 @@ in {
       # how many minutes between nodes restarting
       nodeMinute = mod (cfg.nodeIndex * 4) 60;
     in {
-      script = ''
-        echo /run/current-system/sw/bin/systemctl restart cardano-node
-      '';
+      script = (if (config.deployment.arguments.configurationKey == "bench")
+        then '' echo System not restarted because benchmark is running.''
+        else '' /run/current-system/sw/bin/systemctl restart cardano-node'');
       # Reboot cardano-node every 36h (except Mon->Tue gap which is 24h)
       #startAt = [
       #  "Tue,Fri,Mon 13:${toString nodeMinute}"
@@ -217,13 +217,13 @@ in {
       };
     };
 
-    systemd.services.cardano-node-recorder = {
+    systemd.services.cardano-node-recorder = mkIf (config.deployment.arguments.configurationKey == "bench") {
       description   = "recording metrics on cardano node service";
       after         = [ "systemd.services.cardano-node" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       path = [ pkgs.glibc pkgs.procps ];  # dependencies
       script = ''
-        ${./../benchmarks/scripts/record-stats.sh} -exec ${cfg.executable} >> "${stateDir}/time-slave.log"
+        ${../benchmarks/scripts/record-stats.sh} -exec ${cfg.executable} >> "${stateDir}/time-slave.log"
       '';
       serviceConfig = {
         User = "cardano-node";

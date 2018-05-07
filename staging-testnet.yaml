@@ -1,30 +1,37 @@
 args:
   configurationKey:
     tag: NixStr
-    contents: bench
+    contents: mainnet_dryrun_full
   EmurgoaccessKeyId:
     tag: NixStr
-    contents: iohk
+    contents: fifth-party
   systemStart:
     tag: NixInt
-    contents: 1519741905
+    contents: 1506450213
   CFaccessKeyId:
     tag: NixStr
-    contents: iohk
+    contents: third-party
   IOHKaccessKeyId:
     tag: NixStr
     contents: iohk
-gen-cmdline: -v new -e staging -t topology-staging.yaml -k bench benchmarks110experiments
-  nodes
+gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
+  --here staging nodes reportserver explorer
 environment: Staging
-installer-bucket: default-bucket
 topology: topology-staging.yaml
-name: benchmarks110experiments
+installer-bucket: update-awstest.iohkdev.io
+name: rc-staging
 files:
-- deployments/security-groups.nix
-- deployments/cardano-nodes-env-staging.nix
 - deployments/keypairs.nix
+- deployments/security-groups.nix
 - deployments/cardano-nodes.nix
+- deployments/cardano-nodes-env-staging.nix
+- deployments/cardano-explorer.nix
+- deployments/cardano-explorer-env-staging.nix
+- deployments/report-server.nix
+- deployments/report-server-env-staging.nix
 elements:
 - Nodes
+- Explorer
+- ReportServer
+nixops: /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
 target: AWS

@@ -120,8 +120,8 @@ envSettings env =
                                ] <> deplAgnosticFiles}
     Benchmark -> EnvSettings
       { envDeployerUser      = "staging"
-      , envDefaultConfigurationKey = "bench" -- devnet??
-      , envDefaultConfig     = "config.yaml" -- "benchmark-testnet.yaml"
+      , envDefaultConfigurationKey = "bench"
+      , envDefaultConfig     = "config.yaml"
       , envDefaultTopology   = "topology-benchmark.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
@@ -130,6 +130,6 @@ envSettings env =
     Any -> error "envSettings called with 'Any'"
 
 selectDeployer :: Environment -> [Deployment] -> NodeName
-selectDeployer Staging      delts | elem Nodes delts = "iohk"
-                                  | otherwise        = "cardano-deployer"
-selectDeployer _ _                                   = "cardano-deployer"
+selectDeployer Staging delts | elem Nodes delts = "iohk"
+                             | otherwise        = "cardano-deployer"
+selectDeployer _ _                              = "cardano-deployer"
