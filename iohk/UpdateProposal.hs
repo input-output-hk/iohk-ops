@@ -688,7 +688,7 @@ doPropose :: CommandOptions -> UpdateProposalConfig4 -> Shell (Maybe Line)
 doPropose opts cfg = fold (runCommands opts [cmd] & grep isUpdateId) Fold.last
   where
     cmd = format upd cfgVoterIndex cfgLastKnownBlockVersion appVer
-          (inst cfgInstallerDarwin) (inst cfgInstallerWindows)
+          (inst cfgInstallerWindows) (inst cfgInstallerDarwin)
     upd = "propose-update "%d%" vote-all:true "%s%" ~software~csl-daedalus:"%d%" (upd-bin \"win64\" "%fp%") (upd-bin \"macos64\" "%fp%")"
     isUpdateId = count 64 hexDigit
     UpdateProposalConfig1{..} = cfgUpdateProposal1
