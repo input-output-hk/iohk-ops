@@ -18,7 +18,14 @@ resource "aws_iam_policy" "ecr_login_policy" {
         {
             "Effect": "Allow",
             "Action": [
-                "ecr:GetAuthorizationToken"
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:GetRepositoryPolicy",
+                "ecr:DescribeRepositories",
+                "ecr:ListImages",
+                "ecr:DescribeImages",
+                "ecr:BatchGetImage"
             ],
             "Resource": "*"
         }
@@ -52,4 +59,9 @@ EOF
 resource "aws_iam_role_policy_attachment" "ecr_login_policy_attachment" {
   role       = "${aws_iam_role.ecr_login_role.name}"
   policy_arn = "${aws_iam_policy.ecr_login_policy.arn}"
+}
+
+resource "aws_iam_instance_profile" "ecr_login" {
+  name = "ecr_login"
+  role = "${aws_iam_role.ecr_login_role.name}"
 }
