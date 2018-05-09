@@ -94,6 +94,14 @@ let
       };
     };
   };
+  mkMantis = mantisBranch: {
+    nixexprpath = "release.nix";
+    nixexprinput = "mantis";
+    description = "Mantis";
+    inputs = {
+      mantis = mkFetchGithub "https://github.com/input-output-hk/mantis-iele-ops.git ${mantisBranch}";
+    };
+  };
   nixopsPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeNixopsPR nixopsPrs);
   cardanoPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeCardanoPR cardanoPrs);
   daedalusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeDaedalusPR daedalusPrs);
@@ -103,10 +111,11 @@ let
     cardano-sl-1-0 = mkCardano "release/1.0.x";
     cardano-sl-1-2 = mkCardano "release/1.2.0";
     daedalus = mkDaedalus "develop";
+    mantis-testnet = mkMantis "phase/iele_testnet";
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
     iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
   });
-  jobsetsAttrs =  daedalusPrJobsets // nixopsPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
+  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);
 in {
   jobsets = with pkgs.lib; pkgs.runCommand "spec.json" {} ''
