@@ -1,11 +1,9 @@
 { config, lib, pkgs, ... }:
 
 let
-  opsLib = import <iohk-ops/lib.nix>;
+  opsLib = import ../../lib.nix;
 
 in {
-  imports = [ ];
-
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
   environment.systemPackages = with pkgs; [
@@ -42,10 +40,7 @@ in {
   nix.trustedUsers = [ "@admin" ];
 
   nix.nixPath = [
-    "nixpkgs=UNSET"
-    "darwin=UNSET"
-    "darwin-config=UNSET"
-    "iohk-ops=UNSET"
+    "nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/nixpkgs-18.03-darwin.tar.gz"
   ];
 
   ########################################################################

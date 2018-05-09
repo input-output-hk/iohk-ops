@@ -11,7 +11,7 @@ in {
       repo = "nixpkgs";
       rev = "af55a0c300224fe9debfc4a57d7ee789e00e649d";
       sha256 = "13kgv7gr9p7fb51pqxx9dr51qz7f8ghqy57afzww1zhgmh4ismrx";
-    }) { inherit config; };
+    }) { inherit (pkgs) config system; };
   in {
     enable = true;
     package = unstablePkgs.buildkite-agent3;
@@ -49,4 +49,12 @@ in {
     gid = 532;
   };
   users.groups.buildkite-agent.gid = 532;
+
+  # fix up group membership and perms on secrets directory
+  system.activationScripts.postActivation.text = ''
+    dseditgroup -o edit -a admin -t user buildkite-agent
+    mkdir -p ${keys}
+    chgrp -R buildkite-agent ${keys}
+    chmod -R o-rx ${keys}
+  '';
 }

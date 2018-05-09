@@ -12,5 +12,6 @@ in
       mkdir -p $out/bin
       cp -R "$src/"* $out
       ghc -o $out/bin/deploy $out/deploy.hs
+      ghc -o $out/bin/prepare $out/prepare.hs
     '';
   }
