@@ -5,12 +5,14 @@
 module Github where
 
 import           Data.Aeson           (FromJSON, parseJSON, withObject, (.:))
+import           Data.Aeson.Types     (Parser)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text            as T
 import           GHC.Generics         (Generic)
 import           GHC.Stack            (HasCallStack)
 import           System.Directory     (doesFileExist)
 import           Utils                (fetchJson')
+import           Network.URI          (URI, parseAbsoluteURI, uriPath)
 
 type Rev = T.Text
 type Org = T.Text
@@ -25,7 +27,7 @@ instance FromJSON CommitStatus
 
 data Status = Status {
     description  :: T.Text
-    , targetUrl :: T.Text
+    , targetUrl  :: T.Text
     , context    :: T.Text
     } deriving (Show, Generic)
 
@@ -34,6 +36,28 @@ instance FromJSON Status where
     <$> v .: "description"
     <*> v .: "target_url"
     <*> v .: "context"
+
+data GitHubSource = GitHubSource
+  { srcOwner :: Org
+  , srcRepo  :: Repo
+  , srcRev   :: Rev
+  } deriving (Show, Eq)
+
+instance FromJSON GitHubSource where
+  parseJSON = withObject "fetchGit source" $ \o -> do
+    (owner, repo) <- gitHubURLParser =<< uriParser =<< o .: "url"
+    GitHubSource owner repo <$> o .: "rev"
+
+uriParser :: T.Text -> Parser URI
+uriParser u = case parseAbsoluteURI (T.unpack u) of
+                Just uri -> pure uri
+                Nothing -> fail "Could not parse absolute URI"
+
+-- | Gets owner/repo from github.com URL
+gitHubURLParser :: URI -> Parser (Org, Repo)
+gitHubURLParser uri | null repo = fail "Missing repo in GitHub URL path"
+                    | otherwise = pure (T.pack owner, T.pack (drop 1 repo))
+  where (owner, repo) = break (== '/') (drop 1 $ uriPath uri)
 
 fetchGithubJson :: (HasCallStack, FromJSON a) => T.Text -> IO a
 fetchGithubJson url = do

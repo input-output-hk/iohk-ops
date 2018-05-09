@@ -65,13 +65,13 @@ rec {
     };
   };
 
-  disk_monitor = {
+  disk_monitor = scope_restriction: warning: critical: {
     name = "High disk usage";
     type = "metric alert";
-    query = config: "max(last_5m):avg:system.disk.in_use{depl:${config.deployment.name},!host:mainnet.ec2.report-server} by {host,device} > 0.9";
+    query = config: "max(last_5m):avg:system.disk.in_use{depl:${config.deployment.name},${scope_restriction}} by {host,device} > ${critical}";
     monitorOptions.thresholds = {
-      warning = "0.8";
-      critical = "0.9";
+      warning = "${warning}";
+      critical = "${critical}";
     };
   };
 
@@ -126,20 +126,6 @@ rec {
       thresholds = {
         warning = "99.3";
         critical = "99";
-      };
-    };
-  };
-
-  failed_cherish_loop_monitor = {
-    name = "Failed Cherish Loop";
-    type = "query alert";
-    query = config: "max(last_1m):sum:cardano.queue.FailedCherishLoop{depl:${config.deployment.name}} by {host} > 0";
-    message = "Looping indefinitely while trying to re-enqueue a message that failed to send.\n\nAs stated in [queue metrics](https://github.com/serokell/time-warp-nt/blob/master/QUEUE_METRICS.md), \"Any value above zero for this counter indicates queue misconfiguration.\"\n\n${pagerDutyPolicy.normal}";
-    monitorOptions = {
-      notify_no_data = true;
-      no_data_timeframe = 2;
-      thresholds = {
-        critical = 0;
       };
     };
   };

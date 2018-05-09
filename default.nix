@@ -19,27 +19,25 @@ let
       nixopsUnstable = pkgs.fetchFromGitHub {
         owner = "NixOS";
         repo = "nixops";
-        rev = "92034401b5291070a93ede030e718bb82b5e6da4";
-        sha256 = "139mmf8ag392w5mn419k7ajp3pgcz6q349n7vm7gsp3g4sck2jjn";
+        rev = "063e36417d800de7b73496f29b71b4280eed60b5";
+        sha256 = "1rymimzwkjfa51jzi8amsq5idq8l8nqnbb8jjwicnpn9d1d0g45k";
       };
     in (import "${nixopsUnstable}/release.nix" {
          nixpkgs = localLib.fetchNixPkgs;
         }).build.${system};
-  iohk-ops-extra-runtime-deps = [
-    pkgs.gitFull pkgs.nix-prefetch-scripts compiler.yaml
-    pkgs.wget
-    pkgs.file
-    cardano-sl-pkgs.cardano-sl-auxx
-    cardano-sl-pkgs.cardano-sl-tools
+  iohk-ops-extra-runtime-deps = with pkgs; [
+    gitFull nix-prefetch-scripts compiler.yaml
+    wget
+    file
     nixops
-    pkgs.terraform_0_11
+    terraform
+    coreutils
+    gnupg
   ];
+  terraform = pkgs.terraform_0_11.withPlugins (ps: [ ps.aws ]);
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
-  cardano-sl-pkgs =
-  # switch between fetchgit and a local clone of cardano-sl
-  import (pkgs.fetchgit cardano-sl-src) {
-  #import ./cardano-sl {
+  cardano-sl-pkgs = import (pkgs.fetchgit cardano-sl-src) {
     gitrev = cardano-sl-src.rev;
     inherit enableDebugging enableProfiling;
   };
@@ -52,6 +50,7 @@ in {
                 executableToolDepends = [ pkgs.makeWrapper ];
                 libraryHaskellDepends = iohk-ops-extra-runtime-deps;
                 postInstall = ''
+                  cp -vs $out/bin/iohk-ops $out/bin/io
                   wrapProgram $out/bin/iohk-ops \
                   --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                 '';

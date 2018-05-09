@@ -6,6 +6,7 @@
 
 module Utils where
 
+import           Prelude                   hiding (FilePath)
 import           Data.Aeson                (FromJSON, decode)
 import qualified Data.ByteString.Lazy      as LBS
 import           Data.Monoid               ((<>))
@@ -18,26 +19,28 @@ import           Network.HTTP.Client       (httpLbs, parseRequest,
 import           Network.HTTP.Client.TLS   (newTlsManager)
 import           Network.HTTP.Types.Header (RequestHeaders)
 import           System.Exit               (ExitCode (ExitFailure, ExitSuccess))
-import           Turtle.Prelude            (proc)
 import qualified Data.Aeson                    as AE
 import qualified Data.Aeson.Types              as AE
 import qualified Data.Char                     as C
 import           Data.Text                        (Text)
 import           GHC.Generics              hiding (from, to)
 import           Turtle
+import           Network.AWS               (Region)
+import           Network.AWS.S3            (BucketName(..), ObjectKey(..))
+import qualified Network.AWS.Data          as AWS
 
-fetchCachedUrl :: HasCallStack => T.Text -> T.Text -> T.Text-> IO ()
+fetchCachedUrl :: HasCallStack => T.Text -> FilePath -> FilePath -> IO ()
 fetchCachedUrl url name outPath = fetchCachedUrl' url name outPath Nothing
 
-fetchCachedUrlWithSHA1 :: HasCallStack => T.Text -> T.Text -> T.Text -> T.Text -> IO ()
+fetchCachedUrlWithSHA1 :: HasCallStack => T.Text -> FilePath -> FilePath -> T.Text -> IO ()
 fetchCachedUrlWithSHA1 url name outPath sha1 = fetchCachedUrl' url name outPath (Just sha1)
 
-fetchCachedUrl' :: HasCallStack => T.Text -> T.Text -> T.Text -> Maybe T.Text -> IO ()
+fetchCachedUrl' :: HasCallStack => T.Text -> FilePath -> FilePath -> Maybe T.Text -> IO ()
 fetchCachedUrl' url name outPath sha1 = proc "nix-build" args mempty >>= handleExit
   where
-    args = [ "-E", "with import <nixpkgs> {}; let file = " <> fetchExpr <> "; in runCommand \"" <> name <> "\" {} \"ln -sv ${file} $out\"", "-o", outPath ]
+    args = [ "-E", format ("with import <nixpkgs> {}; let file = "%s%"; in runCommand \""%fp%"\" {} \"ln -sv ${file} $out\"") fetchExpr name, "-o", format fp outPath ]
     fetchExpr = case sha1 of
-      Just hash -> "pkgs.fetchurl { url = \"" <> url <> "\"; sha1 = \"" <> hash <> "\"; }"
+      Just hash -> format ("pkgs.fetchurl { url = \""%s%"\"; sha1 = \""%s%"\"; }") url hash
       Nothing   -> "builtins.fetchurl \"" <> url <> "\""
     handleExit ExitSuccess     = return ()
     handleExit (ExitFailure _) = error "error downloading file"
@@ -96,7 +99,17 @@ lowerShowT = T.toLower . T.pack . show
 errorT :: Text -> a
 errorT = error . T.unpack
 
+tt :: FilePath -> Text
+tt = format fp
+
 -- Currently unused, but that's mere episode of the used/unused/used/unused event train.
 -- Let's keep it, because it's too painful to reinvent every time we need it.
 jsonLowerStrip :: (Generic a, AE.GToJSON AE.Zero (Rep a)) => Int -> a -> AE.Value
 jsonLowerStrip n = AE.genericToJSON $ AE.defaultOptions { AE.fieldLabelModifier = map C.toLower . drop n }
+
+-- | Returns the public download URL for an object in S3, according to
+-- the AWS path-style convention.
+-- https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAPI.html
+s3Link :: Region -> BucketName -> ObjectKey -> Text
+s3Link region (BucketName bucket) (ObjectKey key) =
+  mconcat [ "https://s3-", AWS.toText region, ".amazonaws.com/" , bucket, "/", key ]

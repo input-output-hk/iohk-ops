@@ -31,12 +31,14 @@ executable iohk-ops
                      , cassava >=0.4
                      , containers >=0.5
                      , dns
+                     , exceptions
                      , hourglass
                      , lens >=4.14
                      , lens-aeson >=1.0
                      , mtl >=2.2
                      , network-uri
                      , optional-args
+                     , regex-pcre >= 0.94
                      , safe >=0.3
                      , system-filepath >=0.4
                      , text >=1.2
@@ -62,6 +64,8 @@ executable iohk-ops
                      , cryptonite
                      , errors
                      , memory
+                     , time
+                     , foldl
 test-suite iohk-ops-test
   main-is:          Spec.hs
   default-language: Haskell2010
@@ -93,5 +97,12 @@ test-suite iohk-ops-test
                   , network-uri
                   , cryptonite
                   , errors
+                  , exceptions
                   , memory
+                  , regex-pcre
+                  , time
+                  , foldl
+                  , hourglass
+                  , containers
+                  , lens-aeson
   hs-source-dirs:   test .

@@ -4,6 +4,7 @@
 
 module Main where
 
+import           Prelude                   hiding (FilePath)
 import           Control.Monad                    (forM_)
 import           Data.Char                        (toLower)
 import           Data.List
@@ -24,6 +25,7 @@ import           NixOps
 import qualified NixOps                        as Ops
 import           Types
 import           Utils
+import           UpdateProposal
 
 
 -- * Elementary parsers
@@ -101,9 +103,8 @@ data Command where
 
   -- * cluster lifecycle
   Nixops'               :: NixopsCmd -> [Arg] -> Command
-  Create                :: Command
   Modify                :: Command
-  Deploy                :: RebuildExplorer -> BuildOnly -> DryRun -> PassCheck -> Maybe Seconds -> Command
+  Deploy                :: BuildOnly -> DryRun -> PassCheck -> Maybe Seconds -> Command
   Destroy               :: Command
   Delete                :: Command
   Info                  :: Command
@@ -123,9 +124,8 @@ data Command where
   GetJournals           :: JournaldTimeSpec -> Maybe JournaldTimeSpec -> Command
   CWipeNodeDBs          :: Confirmation -> Command
   PrintDate             :: Command
-  S3Upload              :: String -> Command
-  FindInstallers        :: String -> Command
-  SetVersionJson       :: String -> Command
+  FindInstallers        :: Text -> Maybe FilePath -> Command
+  UpdateProposal        :: UpdateProposalCommand -> Command
 deriving instance Show Command
 
 centralCommandParser :: Parser Command
@@ -165,12 +165,11 @@ centralCommandParser =
      --                           (Nixops
      --                            <$> (NixopsCmd <$> argText "CMD" "Nixops command to invoke")
      --                            <*> ???)) -- should we switch to optparse-applicative?
-     ("create",                 "Create the whole cluster",                                         pure Create)
-   , ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
+     ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
+   , ("create",                 "Same as modify",                                                   pure Modify)
    , ("deploy",                 "Deploy the whole cluster",
                                 Deploy
-                                <$> flag NoExplorerRebuild "no-explorer-rebuild" 'n' "Don't rebuild explorer frontend.  WARNING: use this only if you know what you are doing!"
-                                <*> flag BuildOnly         "build-only"          'b' "Pass --build-only to 'nixops deploy'"
+                                <$> flag BuildOnly         "build-only"          'b' "Pass --build-only to 'nixops deploy'"
                                 <*> flag DryRun            "dry-run"             'd' "Pass --dry-run to 'nixops deploy'"
                                 <*> flag PassCheck         "check"               'c' "Pass --check to 'nixops build'"
                                 <*> ((Seconds . (* 60) . fromIntegral <$>)
@@ -207,9 +206,8 @@ centralCommandParser =
                                 CWipeNodeDBs
                                 <$> parserConfirmation "Wipe node DBs on the entire cluster?")
    , ("date",                   "Print date/time",                                                  pure PrintDate)
-   , ("s3upload",               "test S3 upload",                                                   S3Upload <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV"))  )
-   , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
-   , ("set-version-json",       "set daedalus-latest-version.json to a given rev",                  SetVersionJson <$> (strOption (long "daedalus-rev" <> short 'r' <> metavar "DAEDALUSREV")))
+   , ("update-proposal",        "Subcommands for updating wallet installers. Apply commands in the order listed.", UpdateProposal <$> parseUpdateProposalCommand)
+   , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (T.pack <$> strOption (long "daedalus-rev" <> short 'r' <> metavar "SHA1")) <*> optional (optPath "download" 'd' "Download the found installers to the given directory."))
    ]
 
    <|> subcommandGroup "Other:"
@@ -254,9 +252,8 @@ runTop o@Options{..} args topcmd = do
             AMI                      -> Ops.buildAMI              o c
             -- * deployment lifecycle
             Nixops' cmd args         -> Ops.nixops                    o c cmd args
-            Create                   -> Ops.create                    o c
             Modify                   -> Ops.modify                    o c
-            Deploy ner bu dry ch buh -> Ops.deploy                    o c dry bu ch ner buh
+            Deploy bu dry ch buh     -> Ops.deploy                    o c dry bu ch buh
             Destroy                  -> Ops.destroy                   o c
             Delete                   -> Ops.delete                    o c
             Info                     -> Ops.nixops                    o c "info" []
@@ -277,9 +274,8 @@ runTop o@Options{..} args topcmd = do
             GetJournals since until  -> Ops.getJournals               o c since until
             CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
-            S3Upload               d -> Ops.s3Upload                  (T.pack d) c
-            FindInstallers         d -> Ops.findInstallers            (T.pack d) c
-            SetVersionJson         d -> Ops.setVersionJson            (T.pack d) c
+            FindInstallers rev dl    -> Ops.findInstallers            c rev dl
+            UpdateProposal up        -> updateProposal                o c up
             Clone{..}                -> error "impossible"
             New{..}                  -> error "impossible"
             SetRev   _ _ _           -> error "impossible"
@@ -313,15 +309,13 @@ runNew o@Options{..} New{..} args = do
   echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
   cmd o "cat" [configFilename]
 
-  -- nixops create:
-  Ops.create o config
-
   -- generate dev-keys & ensure secrets exist:
   when (tEnvironment == Development || tEnvironment == Benchmark) $ do
     let secrets = [ "static/github_token"
                   , "static/id_buildfarm"
                   , "static/datadog-api.secret"
-                  , "static/datadog-application.secret" ]
+                  , "static/datadog-application.secret"
+                  , "static/zendesk-token.secret" ]
     forM_ secrets touch
     echo "Ensured secrets exist"
 
@@ -340,15 +334,10 @@ runNew _ _ _ = error "impossible"
 -- | Use 'cardano-keygen' to create keys for a develoment cluster.
 generateStakeKeys :: Options -> ConfigurationKey -> Turtle.FilePath -> IO ()
 generateStakeKeys o configurationKey outdir = do
-  -- XXX: compute cardano source path globally
-  configuration <- (<> "/configuration.yaml") <$> incmdStrip o "nix-instantiate"
-    [ "--eval"
-    , "-A", "cardano-sl.src"
-    , "default.nix"
-    ]
+  cardanoSrc <- getCardanoSLSource o
   cmd o "cardano-keygen"
     [ "--system-start", "0"
-    , "--configuration-file", configuration
+    , "--configuration-file", format (fp%"/lib/configuration.yaml") cardanoSrc
     , "--configuration-key", fromConfigurationKey configurationKey
     , "generate-keys-by-spec"
     , "--genesis-out-dir", T.pack $ Path.encodeString outdir

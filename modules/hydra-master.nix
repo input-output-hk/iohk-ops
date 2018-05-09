@@ -22,6 +22,11 @@ let
     sshUser = "builder";
     supportedFeatures = [];
   };
+  hydraOverlay = self: super: {
+    hydra = super.hydra.overrideDerivation (drv: {
+      patches = [ ./chomp.patch ];
+    });
+  };
 in {
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
@@ -36,13 +41,9 @@ in {
   nix = {
     distributedBuilds = true;
     buildMachines = [
-      (commonBuildMachineOpt // {
-        hostName = "localhost";
-        maxJobs = 2;
-      })
       # TODO: DEVOPS-166: reference linux slaves by DNS
-      (mkLinux "52.59.25.105")
-      (mkLinux "18.195.34.30")
+      (mkLinux "52.59.117.254")
+      (mkLinux "18.197.104.148")
       (mkMac "de302.macincloud.com")
       (mkMac "du516.macincloud.com")
       (mkMac "de528.macincloud.com")
@@ -86,6 +87,7 @@ in {
       sha256 = "0pg2igski35wf1y4gn8dxw6444kx1107mg4ns5xj29ays2c1j5sl";
     });
   };
+  nixpkgs.overlays = [ hydraOverlay ];
 
   services.postgresql = {
     package = pkgs.postgresql96;

@@ -1,14 +1,19 @@
 {
   "42": {
-    "title": "Pull request title",
-    "head": {
+    "base": {
       "repo": {
+        "clone_url": "https://github.com/user/project.git"
+      }
+    },
+    "head": {
+      "ref": "pr-branch",
+      "repo": {
+        "name": "reponame",
         "owner": {
           "login": "githubuser"
-        },
-        "name": "reponame"
-      },
-      "ref": "pr-branch"
-    }
+        }
+      }
+    },
+    "title": "Pull request title"
   }
 }

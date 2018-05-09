@@ -11,14 +11,46 @@ Collection of tooling and automation to deploy IOHK infrastructure.
 - `default.nix` - is a collection of Haskell packages
 - `static` includes files using in deployments
 - `jobsets` is used by Hydra CI
-
-
-### Usage
-
-   $(nix-build -A iohk-ops)/bin/iohk-ops --help
-
+- `terraform` - other AWS infrastructure
+- `nix-darwin` - deployment script and configurations for MacOS X machines
 
 ### Getting SSH access
 
-1. Append https://github.com/input-output-hk/iohk-ops/blob/master/lib.nix#L83 and submit a PR.
-2. Wait until the DevOps team deploys the infrastructure cluster.
+1. Fork https://github.com/input-output-hk/iohk-ops
+2. Check out the `master` branch
+3. Add your key:
+    - contents in the developer section at https://github.com/input-output-hk/iohk-ops/blob/master/ssh-keys.nix, under an appropriate name, at an alphabetically-appropriate position,
+    - key name in the `devKeys` list https://github.com/input-output-hk/iohk-ops/blob/master/lib.nix#L63, again at the alphabetically-appropriate position.
+4. Submit a PR against `master` and let DevOps know.
+5. Wait until the DevOps team deploys the infrastructure cluster.
+
+## The `io` command
+
+Sources for the `iohk-ops` tool are in the [`iohk`](./iohk) directory.
+
+### Usage
+
+After cloning this repo, start a `nix-shell`.
+
+    % nix-shell
+    [nix-shell:~/iohk/iohk-ops]$ io --help
+
+### Development
+
+To hack on the `iohk-ops` tool, use
+
+    % nix-shell -A ioSelfBuild
+    [nix-shell:~/iohk/iohk-ops]$ type io
+    io is a function
+    io ()
+    {
+        runhaskell -iiohk iohk/iohk-ops.hs "$@"
+    }
+    [nix-shell:~/iohk/iohk-ops]$ io --help
+
+This will provide a Haskell environment where you can use `io` to run
+the script or `ghci` for development.
+
+### Run from anywhere
+
+    $(nix-build --no-out-link https://github.com/input-output-hk/iohk-ops/archive/develop.tar.gz -A iohk-ops)/bin/iohk-ops --help

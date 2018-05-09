@@ -2,12 +2,18 @@ args:
   IOHKaccessKeyId:
     tag: NixStr
     contents: cardano-deployer
+  IOHKroute53accessKeyId:
+    tag: NixStr
+    contents: iohk
   CFaccessKeyId:
     tag: NixStr
     contents: cardano-deployer
   EmurgoaccessKeyId:
     tag: NixStr
     contents: cardano-deployer
+  systemStart:
+    tag: NixInt
+    contents: 1519242329
 topology: topology-mainnet-infra.yaml
 environment: Production
 installer-bucket: stub

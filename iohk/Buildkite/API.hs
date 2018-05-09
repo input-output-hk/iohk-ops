@@ -13,6 +13,7 @@ module Buildkite.API
   , getBuild
   , getBuildsForPipeline
   , getLatestBuildForPipeline
+  , getJobLog
   , ID(..)
   , Artifact(..)
   , Build(..)
@@ -283,6 +284,12 @@ getLatestBuildForPipeline t org pipeline =
   headMay <$> getBuildsForPipeline t org pipeline q (Paging 1 1)
   where q = [("state", "passed")]
 
+-- | Gets the full text of the job's build log.
+getJobLog :: APIToken -> Job -> IO L8.ByteString
+getJobLog t j = do
+  req <- parseRequest . T.unpack . jobRawLogUrl $ j
+  getResponseBody <$> httpLBS (addUserAgentHeader . addAuthHeader t $ req)
+
 ----------------------------------------------------------------------------
 -- util
 
@@ -293,12 +300,15 @@ makeRequest token path = setRequestPath ("/v2/" <> T.encodeUtf8 (T.intercalate "
                          $ setRequestPort 443
                          $ addAuthHeader token
                          $ setRedirectCount 0
-                         $ setRequestHeader "User-Agent" ["https://github.com/input-output-hk/iohk-ops"]
+                         $ addUserAgentHeader
                          $ defaultRequest
 
 buildPath :: Text -> Text -> Int -> [Text]
 buildPath org pipeline num = [ "organizations", org, "pipelines", pipeline
                              , "builds" , T.pack (show num) ]
+
+addUserAgentHeader :: Request -> Request
+addUserAgentHeader = setRequestHeader "User-Agent" ["https://github.com/input-output-hk/iohk-ops"]
 
 addAuthHeader :: APIToken -> Request -> Request
 addAuthHeader (APIToken token) = setRequestHeader "Authorization"
@@ -319,6 +329,10 @@ checkHash h b | calc == T.encodeUtf8 h = Nothing
   where
     calc = b16 (hash b :: Digest SHA1)
     b16 = B.convertToBase B.Base16
+
+-- | Decode UTF-8 response into strict text
+getResponseText :: Response L8.ByteString -> Text
+getResponseText = T.decodeUtf8 . L8.toStrict . getResponseBody
 
 ----------------------------------------------------------------------------
 -- deserialization from api

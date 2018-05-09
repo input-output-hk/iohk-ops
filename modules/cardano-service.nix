@@ -40,7 +40,7 @@ let
       "--keyfile ${stateDir}/key${toString cfg.nodeIndex}.sk")
     (optionalString (cfg.productionMode && globals.systemStart != 0) "--system-start ${toString globals.systemStart}")
     (optionalString cfg.supporter "--supporter")
-    "--log-config ${./../static/csl-logging.yaml}"
+    "--log-config ${cardano.src + "/../log-configs/cluster.yaml"}"
     "--logs-prefix /var/lib/cardano-node"
     "--db-path ${stateDir}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")

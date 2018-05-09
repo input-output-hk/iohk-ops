@@ -4,22 +4,26 @@ module UpdateLogicSpec (spec, main) where
 
 import Test.Hspec hiding (context)
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text as T
+import Data.Aeson (decode)
 
 import UpdateLogic
-import Github (CommitStatus(..), Status(..))
+import Github (CommitStatus(..), Status(..), GitHubSource(..))
 import qualified Buildkite.API as BK
 
 main :: IO ()
 main = hspec spec
 
-sampleInput :: LBS.ByteString
-sampleInput = "junk\nbuild id is 13711'\r\r\njunk"
+sampleCardanoSLSrc = "{ \"url\": \"https://github.com/input-output-hk/cardano-sl\", \"fetchSubmodules\": \"true\", \"rev\": \"1bba2fd0183f575752f4529182205e04074db336\", \"sha256\": \"1qfi307x7nfp42ldb6sjx30mk7b0zfvd4b48pmyd9g465f7sp420\" }" :: LBS.ByteString
 
 spec :: Spec
 spec = do
-  describe "travis log output" $ do
-    it "tests travis log output parsing" $ do
-      extractBuildId sampleInput `shouldBe` 13711
+  describe "Cardano SL version spec" $ do
+    it "Correctly parses cardano-sl version spec" $ do
+      let src = decode sampleCardanoSLSrc
+      fmap srcOwner src `shouldBe` Just "input-output-hk"
+      fmap srcRepo src `shouldBe` Just "cardano-sl"
+      fmap (T.take 7 . srcRev) src `shouldBe` Just "1bba2fd"
 
   describe "GitHub commit status parsing" $ do
     it "recognizes a buildkite status entry" $

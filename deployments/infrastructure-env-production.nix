@@ -1,8 +1,9 @@
-{ IOHKaccessKeyId, ... }:
+{ IOHKaccessKeyId, IOHKroute53accessKeyId, ... }:
 
 with (import ./../lib.nix);
 let region = "eu-central-1";
     accessKeyId = IOHKaccessKeyId;
+    route53accessKeyId = IOHKroute53accessKeyId;
 in {
   network.description = "IOHK infrastructure production";
 
@@ -17,7 +18,7 @@ in {
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.hydra-ip;
 
-    deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
+    deployment.route53.accessKeyId = route53accessKeyId;
     deployment.route53.hostName = "hydra.aws.iohkdev.io";
   };
 
@@ -34,17 +35,38 @@ in {
       destDir = "/var/lib/keys";
     };
 
-    deployment.ec2.elasticIPv4 = resources.elasticIPs.cardanod-ip;
-  };
-
-  resources = {
-    datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
-      disk = mkMonitor disk_monitor;
-      ntp = mkMonitor ntp_monitor;
-    });
-    elasticIPs = {
-      hydra-ip    = { inherit region accessKeyId; };
-      cardanod-ip = { inherit region accessKeyId; };
+    users = {
+      users.live-production = {
+        description     = "cardano live-production";
+        group           = "live-production";
+        createHome      = true;
+        isNormalUser = true;
+        openssh.authorizedKeys.keys = devOpsKeys;
+      };
+      groups.live-production = {};
+      users.staging = {
+        description     = "cardano staging";
+        group           = "staging";
+        createHome      = true;
+        isNormalUser = true;
+        openssh.authorizedKeys.keys = devKeys;
+      };
+      groups.staging = {};
     };
+
+    services.tarsnap = {
+      enable = true;
+      keyfile = "/var/lib/keys/tarsnap";
+      archives.cardano-deployer = {
+        directories = [
+          "/home/live-production/.ec2-keys"
+          "/home/live-production/.aws"
+          "/home/live-production/.nixops"
+          "/etc/"
+        ];
+      };
+    };
+
+    deployment.ec2.elasticIPv4 = resources.elasticIPs.cardanod-ip;
   };
 }
