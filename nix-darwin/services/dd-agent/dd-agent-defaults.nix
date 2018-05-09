@@ -1,4 +1,5 @@
-# Generated using update-dd-agent-default, please re-run after updating dd-agent. DO NOT EDIT MANUALLY.
+# Generated using update-dd-agent-default.
+# DO NOT EDIT MANUALLY -- copy from nixpkgs.
 [
   "auto_conf"
   "agent_metrics.yaml.default"

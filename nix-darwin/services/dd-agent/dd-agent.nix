@@ -5,6 +5,7 @@ with lib;
 let
   cfg = config.services.dd-agent;
 
+  dataDir = "/var/log/datadog";
   ddConf = pkgs.writeText "datadog.conf" ''
     [Main]
     dd_url: https://app.datadoghq.com
@@ -56,8 +57,10 @@ let
 
     instances:
       - use_mount: no
+        excluded_filesystems:
+          - devfs
   '';
-  
+
   networkConfig = pkgs.writeText "network.yaml" ''
     init_config:
 
@@ -68,17 +71,17 @@ let
           - lo
           - lo0
   '';
-  
+
   postgresqlConfig = pkgs.writeText "postgres.yaml" cfg.postgresqlConfig;
   nginxConfig = pkgs.writeText "nginx.yaml" cfg.nginxConfig;
   mongoConfig = pkgs.writeText "mongo.yaml" cfg.mongoConfig;
   jmxConfig = pkgs.writeText "jmx.yaml" cfg.jmxConfig;
   processConfig = pkgs.writeText "process.yaml" cfg.processConfig;
-  
+
   etcfiles =
     let
       defaultConfd = import ./dd-agent-defaults.nix;
-    in (map (f: { source = "${pkgs.dd-agent}/agent/conf.d-system/${f}";
+    in (map (f: { source = "${cfg.package}/agent/conf.d-system/${f}";
                   target = "dd-agent/conf.d/${f}";
                 }) defaultConfd) ++ [
       { source = ddConf;
@@ -114,15 +117,32 @@ let
 in {
   options.services.dd-agent = {
     enable = mkOption {
-      description = "Whether to enable the dd-agent montioring service";
+      description = "Whether to enable the dd-agent monitoring service";
       default = false;
       type = types.bool;
+    };
+
+    package = mkOption {
+      default = pkgs.dd-agent;
+      defaultText = "pkgs.dd-agent";
+      description = "Which dd-agent derivation to use";
+      type = types.package;
     };
 
     api_key = mkOption {
       description = "The Datadog API key to associate the agent with your account";
       example = "ae0aa6a8f08efa988ba0a17578f009ab";
       type = types.str;
+      default = "";
+    };
+
+    apiKeyFile = mkOption {
+      description = ''
+        Path to a file containing the Datadog API key to associate the agent with your account.
+      '';
+      example = "/run/keys/datadog_api_key";
+      type = types.nullOr types.path;
+      default = null;
     };
 
     tags = mkOption {
@@ -150,7 +170,7 @@ in {
       default = null;
       type = types.uniq (types.nullOr types.string);
     };
-    
+
     mongoConfig = mkOption {
       description = "MongoDB integration configuration";
       default = null;
@@ -166,7 +186,7 @@ in {
     processConfig = mkOption {
       description = ''
         Process integration configuration
- 
+
         See http://docs.datadoghq.com/integrations/process/
       '';
       default = null;
@@ -176,62 +196,85 @@ in {
   };
 
   config = mkIf cfg.enable {
-    environment.systemPackages = [ pkgs."dd-agent" pkgs.sysstat pkgs.procps ];
+    environment.systemPackages = [ cfg.package pkgs.darwin.system_cmds ];
 
-    users.extraUsers.datadog = {
+    users.groups.datadog = {
+      description = "Datadog Agent Group";
+      members = [ "datadog" ];
+    };
+    users.users.datadog = {
       description = "Datadog Agent User";
-      uid = config.ids.uids.datadog;
-      group = "datadog";
-      home = "/var/log/datadog/";
-      createHome = true;
+      home = dataDir;
     };
 
-    users.extraGroups.datadog.gid = config.ids.gids.datadog;
-
-    systemd.services.dd-agent = {
-      description = "Datadog agent monitor";
-      path = [ pkgs."dd-agent" pkgs.python pkgs.sysstat pkgs.procps ];
-      wantedBy = [ "multi-user.target" ];
+    launchd.daemons.dd-agent = {
+      path = [ cfg.package pkgs.python pkgs.coreutils
+        pkgs.darwin.system_cmds "/usr/bin" "/usr/sbin" "/bin" ];
+      script = ''
+        set -e
+        DD_API_KEY=$(head -n1 ${cfg.apiKeyFile})
+        ${pkgs.gnused}/bin/sed -e "s/api_key:.*/api_key: $DD_API_KEY/" ${ddConf} > /opt/datadog-agent/etc/datadog.conf
+        exec ${cfg.package}/bin/dd-agent foreground
+      '';
       serviceConfig = {
-        ExecStart = "${pkgs.dd-agent}/bin/dd-agent foreground";
-        User = "datadog";
-        Group = "datadog";
-        Restart = "always";
-        RestartSec = 2;
+        RunAtLoad = true;
+        WorkingDirectory = dataDir;
+        UserName = "datadog";
+        GroupName = "datadog";
+        StandardErrorPath = "${dataDir}/dd-agent.log";
+        StandardOutPath = "${dataDir}/dd-agent.log";
+        KeepAlive = true;
       };
-      restartTriggers = [ pkgs.dd-agent ddConf diskConfig networkConfig postgresqlConfig nginxConfig mongoConfig jmxConfig processConfig ];
     };
 
-    systemd.services.dogstatsd = {
-      description = "Datadog statsd";
-      path = [ pkgs."dd-agent" pkgs.python pkgs.procps ];
-      wantedBy = [ "multi-user.target" ];
+    launchd.daemons.dogstatsd = {
+      path = [ cfg.package pkgs.python pkgs.darwin.system_cmds ];
+      command = "${cfg.package}/bin/dogstatsd";
       serviceConfig = {
-        ExecStart = "${pkgs.dd-agent}/bin/dogstatsd start";
-        User = "datadog";
-        Group = "datadog";
-        Type = "forking";
-        PIDFile = "/tmp/dogstatsd.pid";
-        Restart = "always";
-        RestartSec = 2;
+        RunAtLoad = true;
+        WorkingDirectory = dataDir;
+        UserName = "datadog";
+        GroupName = "datadog";
+        StandardErrorPath = "${dataDir}/dogstatsd.log";
+        StandardOutPath = "${dataDir}/dogstatsd.log";
+        KeepAlive = true;
       };
-      restartTriggers = [ pkgs.dd-agent ddConf diskConfig networkConfig postgresqlConfig nginxConfig mongoConfig jmxConfig processConfig ];
     };
 
-    systemd.services.dd-jmxfetch = lib.mkIf (cfg.jmxConfig != null) {
-      description = "Datadog JMX Fetcher";
-      path = [ pkgs."dd-agent" pkgs.python pkgs.sysstat pkgs.procps pkgs.jdk ];
-      wantedBy = [ "multi-user.target" ];
+    launchd.daemons.dd-jmxfetch = lib.mkIf (cfg.jmxConfig != null) {
+      path = [ cfg.package pkgs.python pkgs.darwin.system_cmds pkgs.jdk ];
+      command = "${cfg.package}/bin/dd-jmxfetch";
       serviceConfig = {
-        ExecStart = "${pkgs.dd-agent}/bin/dd-jmxfetch";
-        User = "datadog";
-        Group = "datadog";
-        Restart = "always";
-        RestartSec = 2;
+        RunAtLoad = true;
+        WorkingDirectory = dataDir;
+        UserName = "datadog";
+        GroupName = "datadog";
+        KeepAlive = true;
       };
-      restartTriggers = [ pkgs.dd-agent ddConf diskConfig networkConfig postgresqlConfig nginxConfig mongoConfig jmxConfig ];
     };
 
     environment.etc = etcfiles;
+
+    system.activationScripts.postActivation.text = ''
+      mkdir -p /opt/datadog-agent/etc
+      chown datadog:datadog /opt/datadog-agent/etc
+      chmod 770 /opt/datadog-agent/etc
+      ln -sf /etc/dd-agent/conf.d /opt/datadog-agent/etc
+    '';
+
+    warnings = optional (cfg.api_key != "")
+      ''config.services.dd-agent.api_key will be stored as plaintext
+        in the Nix store. Use apiKeyFile instead.'';
+    assertions = lib.singleton
+      { assertion = cfg.api_key != "" || cfg.apiKeyFile != null;
+        message = "config.services.dd-agent.apiKeyFile is not set";
+      };
+
+    # Create apiKeyFile default when api_key is configured.
+    services.dd-agent.apiKeyFile =
+      (mkDefault (toString (pkgs.writeTextFile {
+        name = "datadog-agent-api-key";
+        text = cfg.api_key;
+      })));
   };
 }
