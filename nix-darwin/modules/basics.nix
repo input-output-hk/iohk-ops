@@ -65,14 +65,14 @@ in {
     mdutil -E / &> /dev/null
     echo "ok"
 
-    for user in admin buildkite hydra; do
+    for user in admin buildkite builder; do
         authorized_keys=/etc/per-user/$user/ssh/authorized_keys
         user_home=/Users/$user
         printf "configuring ssh keys for $user... "
         if [ -f $authorized_keys ]; then
             mkdir -p $user_home/.ssh
             cp -f $authorized_keys $user_home/.ssh/authorized_keys
-            chown $user:$user $user_home $user_home/.ssh $user_home/.ssh/authorized_keys
+            chown $user: $user_home $user_home/.ssh $user_home/.ssh/authorized_keys
             echo "ok"
         else
             echo "nothing to do"

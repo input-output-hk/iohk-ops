@@ -79,4 +79,13 @@ in lib // (rec {
     pkellyKey
     vasilisKey
   ]);
+
+  buildSlaveKeys = with ssh-keys; {
+    macos = devOpsKeys ++ [
+      hydraBuildFarmKey
+      rodneyRemoteBuildKey
+    ];
+    linux = [ hydraBuildFarmKey ];
+  };
+
 })
