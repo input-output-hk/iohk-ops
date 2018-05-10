@@ -112,8 +112,8 @@ fi
 
 if test -n "${WITH_BENCHMARK}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-bench"
-${IOHK_OPS}               new  --config 'test-bench.yaml'   --environment benchmark    ${COMMON_OPTIONS} 'test-stag'    ${CARDANO_COMPONENTS}
-${IOHK_OPS} ${GENERAL_OPTIONS} --config 'test-bench.yaml'   create deploy --dry-run
+${IOHK_OPS}               new  --config 'test-bench.yaml'   --environment benchmark    "${COMMON_OPTIONS[@]}" 'test-bench'    "${CARDANO_COMPONENTS[@]}"
+${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-bench.yaml'   create deploy --dry-run
 banner 'Benchmark env evaluated'
 fi
 

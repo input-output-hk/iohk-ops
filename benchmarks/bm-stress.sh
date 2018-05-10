@@ -9,7 +9,7 @@ export TMPDIR=/tmp/
 export TEMP=/tmp/
 export TMP=/tmp/
 
-$(nix-build ./scripts/run-bench.nix \
+"$(nix-build ./scripts/run-bench.nix \
     --argstr coreNodes     7        \
     --argstr startWaitTime 10       \
     --argstr txsPerThread  6000     \
@@ -19,4 +19,4 @@ $(nix-build ./scripts/run-bench.nix \
     --argstr addGenerators 6        \
     --argstr edgeNodes     10       \
     --argstr walletsDeployment edgenodes-cluster \
-    )/bin/run-bench.sh
+    )"/bin/run-bench.sh
