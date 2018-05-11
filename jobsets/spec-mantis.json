@@ -3,13 +3,14 @@
     "hidden": false,
     "description": "Jobsets",
     "nixexprinput": "src",
-    "nixexprpath": "jobsets/default.nix",
+    "nixexprpath": "jobsets/default-mantis.nix",
     "checkinterval": 60,
     "schedulingshares": 420,
     "enableemail": true,
     "emailoverride": "",
     "keepnr": 3,
     "inputs": {
-         "src": { "type": "git", "value": "https://github.com/input-output-hk/mantis.git hydra-config", "emailresponsible": false }
+         "src": { "type": "git", "value": "https://github.com/input-output-hk/iohk-ops.git develop", "emailresponsible": false }
+        ,"nixpkgs": { "type": "git", "value": "https://github.com/NixOS/nixpkgs-channels.git nixos-18.03", "emailresponsible": false }
      }
 }
