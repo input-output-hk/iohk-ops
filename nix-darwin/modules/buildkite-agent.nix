@@ -5,16 +5,16 @@ let
 
 in {
   services.buildkite-agent = let
-    # something off the nixos-unstable branch
+    # nixos-unstable channel as of 2018-04-30
     unstablePkgs = import (pkgs.fetchFromGitHub {
       owner = "NixOS";
       repo = "nixpkgs";
-      rev = "8b1cf100cd8badad6e1b6d4650b904b88aa870db";
-      sha256 = "1p0xxyz30bd2bg0wrfviqgsskz00w647h0l2vi33w90i42k8r3li";
-    }) { inherit config; };
+      rev = "af55a0c300224fe9debfc4a57d7ee789e00e649d";
+      sha256 = "13kgv7gr9p7fb51pqxx9dr51qz7f8ghqy57afzww1zhgmh4ismrx";
+    }) { inherit (pkgs) config system; };
   in {
     enable = true;
-    package = unstablePkgs.buildkite-agent;
+    package = unstablePkgs.buildkite-agent3;
     runtimePackages = with pkgs; [ bash nix git ];
     meta-data = "system=x86_64-darwin";
     tokenPath = "${keys}/buildkite_token";
@@ -22,20 +22,20 @@ in {
     openssh.publicKeyPath = "${keys}/id_buildkite.pub";
     hooks.pre-command = ''
       creds=${keys}/buildkite_aws_creds
-      if [ -e \$creds ]; then
-        source \$creds
+      if [ -e $creds ]; then
+        source $creds
       else
-        (>&2 echo "\$creds doesn't exist. The build is going to fail.")
+        (>&2 echo "$creds doesn't exist. The build is going to fail.")
       fi
     '';
-    # Protip: escape all $ not intended for expansion by nix
     hooks.environment = ''
       # For iconutil, security, pkgutil, etc.
       # Required for daedalus installer build,
       # or any build which expects to have apple tools.
-      export PATH=\$PATH:/usr/bin:/usr/sbin
+      export PATH=$PATH:/usr/bin:/usr/sbin
     '';
     extraConfig = ''
+      no-pty=true
       # debug=true
       # priority=9
     '';
@@ -49,4 +49,12 @@ in {
     gid = 532;
   };
   users.groups.buildkite-agent.gid = 532;
+
+  # fix up group membership and perms on secrets directory
+  system.activationScripts.postActivation.text = ''
+    dseditgroup -o edit -a admin -t user buildkite-agent
+    mkdir -p ${keys}
+    chgrp -R buildkite-agent ${keys}
+    chmod -R o-rx ${keys}
+  '';
 }
