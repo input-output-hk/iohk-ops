@@ -11,5 +11,6 @@
     "keepnr": 3,
     "inputs": {
          "src": { "type": "git", "value": "https://github.com/input-output-hk/mantis.git hydra-config", "emailresponsible": false }
+        ,"nixpkgs": { "type": "git", "value": "https://github.com/NixOS/nixpkgs-channels.git nixos-18.03", "emailresponsible": false }
      }
 }

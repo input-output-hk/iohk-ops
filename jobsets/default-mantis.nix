@@ -29,7 +29,7 @@ let
     nixexprinput = "mantis";
     description = "Mantis";
     inputs = {
-      mantis = mkFetchGithub "https://github.com/input-output-hk/mantis-iele-ops.git ${mantisBranch}";
+      mantis = mkFetchGithub "https://github.com/input-output-hk/mantis.git ${mantisBranch}";
     };
   };
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
