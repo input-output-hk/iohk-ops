@@ -106,7 +106,7 @@ let
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
     iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
   });
-  jobsetsAttrs =  daedalusPrJobsets // nixopsPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
+  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);
 in {
   jobsets = with pkgs.lib; pkgs.runCommand "spec.json" {} ''
