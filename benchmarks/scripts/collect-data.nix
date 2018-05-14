@@ -49,6 +49,11 @@ writeScriptBin "collect-data.sh" ''
   TOPOLOGY=`grep topology: ../config.yaml | awk '{print $2}'`
   CONFIGURATIONYAML=`nix-instantiate -E '(import ./. {}).cardano-sl.src + "/configuration.yaml"' --eval`
 
+  K=`awk -v p1=bench ' $0 ~ p1 {found = 1} found && /k: [0-9]+/ { print $0; exit }' $CONFIGURATIONYAML | awk '{print $2}'`
+  SLOT_DURATION=`awk -v p1=bench ' $0 ~ p1 {found = 1} found && /slotDuration:[ ]+[0-9]+/ { print $0; exit }' $CONFIGURATIONYAML | awk '{print $2}'`
+
+  RATELIMIT=`awk -v p1=dequeue ' $0 ~ p1 {found = 1} found && /rateLimit: [0-9]+/ { print $0; exit }' ${relayPolicy} | awk '{print $2}'`
+
   SYSTEMSTART=`grep -A 2 systemStart ../config.yaml | grep contents | awk '{print $2}'`
 
   $IO -C .. dumplogs nodes
@@ -71,7 +76,10 @@ writeScriptBin "collect-data.sh" ''
   RELAY_POLICY=${relayPolicy}
 
   # archive settings and topology file
-  echo "commit=$COMMIT, txsPerThread=$TXS_PER_THREAD, conc=$CONC, delay=$DELAY, generators=$((ADDGENERATORS + 1)), edgenodes=$EDGENODES, systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
+  echo "commit=$COMMIT, txsPerThread=$TXS_PER_THREAD, k=$K, \
+  slotDuration=$SLOT_DURATION ms, conc=$CONC, delay=$DELAY ms, \
+  relay to core rateLimit=$RATELIMIT, generators=$((ADDGENERATORS + 1)), \
+  edgenodes=$EDGENODES, systemstart=$SYSTEMSTART" > $LOGDIR/bench-settings
   cp ../$TOPOLOGY $LOGDIR
 
   # archive policy files
