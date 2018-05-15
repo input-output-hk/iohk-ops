@@ -104,6 +104,7 @@ in {
     dataDir = "/var/db/postgresql-${config.services.postgresql.package.psqlSchema}";
   };
 
+  systemd.services.hydra-evaluator.path = [ pkgs.gawk ];
   systemd.services.hydra-manual-setup = {
     description = "Create Keys for Hydra";
     serviceConfig = {
