@@ -39,7 +39,7 @@ host* (your laptop probably).
    be buildkite or hydra.
 
        nix-build -I iohk-ops=https://github.com/input-output-hk/iohk-ops/archive/develop.tar.gz '<iohk-ops/nix-darwin>'
-       ./result/bin/prepare [ buildkite | hydra ]
+       ./result/bin/deploy [ buildkite | hydra ]
 
    This will prepare the system so that `nix-darwin` can be installed.
 
