@@ -16,6 +16,9 @@ in {
     darwin.cctools
   ] else []);
 
+  # Set all macs to same timezone
+  time.timeZone = "GMT";
+
   # Create /etc/bashrc that loads the nix-darwin environment.
   programs.bash.enable = true;
   # programs.zsh.enable = true;
