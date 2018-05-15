@@ -24,7 +24,10 @@ let
   };
   hydraOverlay = self: super: {
     hydra = super.hydra.overrideDerivation (drv: {
-      patches = [ ./chomp.patch ];
+      patches = [
+        ./chomp.patch
+        ./hydra-nix-prefetch-git.patch
+      ];
     });
   };
   cleanIp = host: let
