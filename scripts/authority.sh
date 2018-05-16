@@ -294,7 +294,9 @@ list_sub_fprs() {
 
 validate_sub_exists() {
         local fpr="$1"
-        if ! { list_sub_fprs "$GNUPGHOME" | grep "${fpr}" >/dev/null; }
+        if test -z "${fpr}"
+        then fail "subkey fingerprint was not specified:  $0 --help"
+        elif ! { list_sub_fprs "$GNUPGHOME" | grep "${fpr}" >/dev/null; }
         then fail "subkey doesn't exist: ${fpr}"
         fi
 }
@@ -317,7 +319,7 @@ EOF
 }
 
 list_keys() {
-        GNUPGHOME="$1" gpg --list-keys --fingerprint --fingerprint --list-options show-unusable-subkeys
+        GNUPGHOME="$1" gpg --list-secret-keys --fingerprint --fingerprint --list-options show-unusable-subkeys
 }
 
 op_list_keys() {
