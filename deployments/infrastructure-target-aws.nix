@@ -17,7 +17,9 @@ in rec {
       associatePublicIpAddress = true;
       securityGroups = [
         resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
-        resources.ec2SecurityGroups."allow-public-www-${region}-${org}"
+        resources.ec2SecurityGroups."allow-hydra-ssh-${region}-${org}"
+        resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
+        resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
       ];
     };
   };
@@ -57,6 +59,15 @@ in rec {
           sourceIp = deployerIP + "/32";
         }];
       };
+      "allow-hydra-ssh-${region}-${org}" = { resources, ...}: {
+        inherit region accessKeyId;
+        description = "SSH";
+        rules = [{
+          protocol = "tcp"; # TCP
+          fromPort = 22; toPort = 22;
+          sourceIp = resources.elasticIPs.hydra-ip;
+        }];
+      };
       "allow-all-ssh-${region}-${org}" = {
         inherit region accessKeyId;
         description = "SSH";
@@ -66,12 +77,21 @@ in rec {
           sourceIp = "0.0.0.0/0";
         }];
       };
-      "allow-public-www-${region}-${org}" = {
+      "allow-public-www-https-${region}-${org}" = {
         inherit region accessKeyId;
-        description = "WWW";
+        description = "WWW-https";
         rules = [{
           protocol = "tcp"; # TCP
           fromPort = 443; toPort = 443;
+          sourceIp = "0.0.0.0/0";
+        }];
+      };
+      "allow-public-www-http-${region}-${org}" = {
+        inherit region accessKeyId;
+        description = "WWW-http";
+        rules = [{
+          protocol = "tcp"; # TCP
+          fromPort = 80; toPort = 80;
           sourceIp = "0.0.0.0/0";
         }];
       };

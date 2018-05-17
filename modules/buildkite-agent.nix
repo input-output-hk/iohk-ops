@@ -2,19 +2,25 @@
 
 {
   imports = [
-    ./../modules/hydra-slave.nix
+    ./auto-gc.nix
+    ./nix_nsswitch.nix
+    ./docker-builder.nix
   ];
 
   services.buildkite-agent = {
     enable = true;
     name   = name;
-    openssh.privateKey = "/run/keys/buildkite-ssh-private";
-    openssh.publicKey  = "/run/keys/buildkite-ssh-public";
-    token              = "/run/keys/buildkite-token";
-    meta-data          = "system=x86_64-linux";
-    hooksPath          = "/var/lib/buildkite-agent/hooks";
+    openssh.privateKeyPath = "/run/keys/buildkite-ssh-private";
+    openssh.publicKeyPath  = "/run/keys/buildkite-ssh-public";
+    tokenPath              = "/run/keys/buildkite-token";
+    meta-data              = "system=x86_64-linux";
+    hooksPath              = "/var/lib/buildkite-agent/hooks";
+    runtimePackages        = with pkgs; [ gnutar gzip bzip2 xz ];
   };
-  users.users.buildkite-agent.extraGroups = [ "keys" ];
+  users.users.buildkite-agent.extraGroups = [
+    "keys"
+    "docker"
+  ];
 
   deployment.keys = {
     pre-command = {
