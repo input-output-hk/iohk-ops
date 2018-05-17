@@ -33,7 +33,9 @@ deployHost Force{..} drv outPath host = do
   printf ("Copying derivation to "%s%"\n") host
   procs "nix-copy-closure" ["--to", host, tt drv] empty
   printf ("Building derivation on "%s%"\n") host
-  procs "ssh" [host, "NIX_REMOTE=daemon", "nix-store", "-r", tt drv, "-j", "1"] empty
+  procs "ssh" [ host, "NIX_REMOTE=daemon", "nix-store", "-j", "1"
+              , "-r", tt drv
+              , "--add-root", "/nix/var/nix/gcroots/per-user/$USER/current-system" ] empty
   currentSystem <- T.stripEnd . snd <$> procStrict "ssh" [host, "readlink", "/run/current-system"] empty
 
   if currentSystem /= tt outPath || forceActivateSame
