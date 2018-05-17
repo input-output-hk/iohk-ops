@@ -91,6 +91,11 @@ in {
         inputs = cardano
         excludeBuildFromContext = 1
       </githubstatus>
+      <githubstatus>
+        jobs = serokell:daedalus-.*:tests\..*
+        inputs = daedalus
+        excludeBuildFromContext = 1
+      </githubstatus>
     '';
     logo = (pkgs.fetchurl {
       url    = "https://iohk.io/images/iohk-share-logo.jpg";
