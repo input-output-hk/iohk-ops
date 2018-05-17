@@ -76,24 +76,21 @@ sticks should then be stored at separate locations.  The loss of the master key
 would make it impossible to both produce new subkeys, and to revoke any
 compromised subkeys.
 
-### Data operations
+### Preparation
 
-The **_root-of-trust operator_** needs to deal with subkey issuance, handover,
-publishing and revocation.
+Root-of-trust initialisation (`<MASTER-DIR> `needs to reside in a secure
+file-system location, such as a directory on a mounted, ext4-formatted USB stick
+intended for off-line storage):
 
-These operations are supported by following commands:
+    authority.sh [OPTIONS..] <MASTER-DIR> setup-master "Full Name" email@address
 
-1.  Root-of-trust initialisation (`<MASTER-DIR> `needs to reside in a secure
-    file-system location, such as a directory on a mounted, ext4-formatted USB
-    stick intended for off-line storage):
+The master key parameters can be specified as options to `authority.sh`:
 
-        authority.sh [OPTIONS..] <MASTER-DIR> setup-master "Full Name" email@address
+- `--algo` (default is `RSA`)
+- `--length` in bits (default is `4096`)
+- `--expiration` for the key duration (default is `5y`)
 
-    The master key parameters can be specified as options to `authority.sh`:
-
-    - `--algo` (default is `RSA`)
-    - `--length` in bits (default is `4096`)
-    - `--expiration` for the key duration (default is `5y`)
+### Subkey operations
 
 1.  Subkey issuance:
 
@@ -109,15 +106,9 @@ These operations are supported by following commands:
 
 	`authority.sh <MASTER-DIR> export-secret-subkey-to <SUBKEY-DIR> <SUBKEY-FINGERPRINT>`
 
-1.  The public part of the keychain can be exported in two ways -- as a GPG keybox
-    (to allow convenient handover to a third party), and as an ASCII-armored
-    keychain:
-    1.  `authority.sh <MASTER-DIR> export-public-keys-to <PUBLIC-DIR> `
-    1.  `authority.sh <MASTER-DIR> print-public-keys`
-
 1.  Due to GNUPG pecularities, subkey revocation is not supported in an automated
     way, so has to be performed manually:
-    1.  `GNUPGHOME=<MASTER-DIR> gpg --edit-key email@address `will start an
+    1.  `GNUPGHOME=<MASTER-DIR> gpg --edit-key email@address` will start an
         interactive environment
     1.  the subkey to be revoked needs to be selected, using the `key` command
         with the subkey index (first subkey has index `1`)
@@ -136,6 +127,26 @@ These operations are supported by following commands:
         specifying `--keyserver` of preference):
 
          `GNUPGHOME=<MASTER-DIR> gpg --send-keys`
+
+### Publishing the keys
+
+The public part of the keychain can be exported in two ways -- as a GPG keybox (to
+allow convenient handover to a third party), and as an ASCII-armored keychain:
+
+1.  `authority.sh <MASTER-DIR> export-public-keys-to <PUBLIC-DIR> `
+1.  `authority.sh <MASTER-DIR> print-public-keys`
+
+### Master key revocation
+
+In the event of master key compromise (the worst case scenario), it needs to be
+revoked.  This procedure is not automated, and is as follows:
+
+1. Determine the master key fingerprint: `authority.sh <MASTER-DIR> show`
+1. Generate the revocation certificate: `GNUPGHOME=<MASTER-DIR> gpg --gen-revoke <MASTER-FINGERPRINT> --output master-key.rev`
+1. Attach the revocation certificate to the master key: `GNUPGHOME=<MASTER-DIR> gpg --import master-key.rev`
+1. Publish the revoked key:
+    1. To the keyservers: `GNUPGHOME=<MASTER-DIR> gpg --send-key <MASTER-FINGERPRINT>`
+    1. Extract the revoked key and send to partners: `GNUPGHOME=<MASTER-DIR> gpg --armor --export <MASTER-FINGERPRINT> --output master-public-revoked.asc`
 
 ## Workflow: artifact signing party
 
