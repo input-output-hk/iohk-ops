@@ -1,3 +1,6 @@
+############################################################################
+# Roles: Elastic Container Repository
+
 data "aws_iam_policy_document" "ecr_login_role_policy" {
   statement {
     actions   = ["ecr:GetAuthorizationToken"]
