@@ -55,4 +55,5 @@ in {
                   --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                 '';
              });
-} // cardano-sl-pkgs
+  cardano = cardano-sl-pkgs;
+}

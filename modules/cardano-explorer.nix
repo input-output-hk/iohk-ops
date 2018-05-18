@@ -4,7 +4,7 @@ globals: params:
 { config, pkgs, lib, ... }:
 
 let
-  cardanoPackages = import ./../default.nix {};
+  cardanoPackages = (import ./../default.nix {}).cardano;
   explorer-drv = cardanoPackages.cardano-sl-explorer-static;
 in
 {

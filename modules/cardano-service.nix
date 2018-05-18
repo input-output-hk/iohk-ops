@@ -6,7 +6,7 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node";
-  cardano = (import ./../default.nix { enableProfiling = cfg.enableProfiling; }).cardano-sl-node-static;
+  cardano = (import ./../default.nix { enableProfiling = cfg.enableProfiling; }).cardano.cardano-sl-node-static;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";

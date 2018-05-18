@@ -24,8 +24,8 @@ let
   withAuxx = pkgs.runCommand "shell" {
     buildInputs = [
       iohk-ops
-      iohkpkgs.cardano-sl-auxx
-      iohkpkgs.cardano-sl-tools
+      iohkpkgs.cardano.cardano-sl-auxx
+      iohkpkgs.cardano.cardano-sl-tools
     ];
   } "echo use nix-shell";
 in justIo

@@ -68,7 +68,7 @@ GENERAL_OPTIONS=(--verbose --deployer 0.0.0.0)
 COMMON_OPTIONS=( --topology topology-min.yaml )
 CARDANO_COMPONENTS=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} )
 
-nix-build default.nix -A cardano-sl-tools -o cardano-sl-tools
+nix-build default.nix -A cardano.cardano-sl-tools -o cardano-sl-tools
 
 PATH=$PATH:./cardano-sl-tools/bin/
 export PATH

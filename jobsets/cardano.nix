@@ -18,4 +18,5 @@ let
 in rec {
   inherit (jobs) iohk-ops nixops;
   tests          = import ./../tests     { inherit pkgs; supportedSystems = [ "x86_64-linux" ]; };
-} // (import "${cardanoSrc}/release.nix" { cardano = { outPath = cardanoSrc; rev = cardano-sl-src.rev; }; })
+  cardano = (import "${cardanoSrc}/release.nix" { cardano = { outPath = cardanoSrc; rev = cardano-sl-src.rev; }; });
+}
