@@ -7,3 +7,8 @@ steps:
       NIX_REMOTE: daemon
     agents:
       system: x86_64-linux
+  - label: 'hydra-jobset'
+    command: 'scripts/check-hydra.sh'
+    agents:
+      system: x86_64-linux
+
