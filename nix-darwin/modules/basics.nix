@@ -4,6 +4,8 @@ let
   opsLib = import ../../lib.nix;
 
 in {
+  imports = [ ./builder-gc.nix ];
+
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
   environment.systemPackages = with pkgs; [
@@ -48,9 +50,12 @@ in {
 
   ########################################################################
 
-  # try to ensure 25G of free space
-  nix.gc.automatic = true;
-  nix.gc.options = "--max-freed $((25 * 1024**3 - 1024 * $(df -P -k /nix/store | tail -n 1 | awk '{ print $4 }')))";
+  # Try to ensure between 1G and 26G of free space
+  nix.builder-gc = {
+    enable = true;
+    maxFreedMB = 25000;
+    minFreeMB = 1000;
+  };
 
   environment.etc."per-user/admin/ssh/authorized_keys".text
     = lib.concatStringsSep "\n" opsLib.devOpsKeys + "\n";
