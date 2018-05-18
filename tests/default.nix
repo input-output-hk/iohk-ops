@@ -4,6 +4,7 @@ with pkgs;
 with pkgs.lib;
 
 let
+  src = ./../.;
   forAllSystems = genAttrs supportedSystems;
   importTest = fn: args: system: import fn ({
     inherit system;
@@ -13,4 +14,5 @@ in rec {
   # TODO: tests of images
   # simpleNode = callTest ./simple-node.nix {};
   # simpleNodeNixOps = callTest ./simple-node-nixops.nix {};
+  runShellcheck = pkgs.callPackage ./shellcheck.nix {inherit src; };
 }
