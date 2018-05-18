@@ -148,6 +148,10 @@ revoked.  This procedure is not automated, and is as follows:
     1. To the keyservers: `GNUPGHOME=<MASTER-DIR> gpg --send-key <MASTER-FINGERPRINT>`
     1. Extract the revoked key and send to partners: `GNUPGHOME=<MASTER-DIR> gpg --armor --export <MASTER-FINGERPRINT> --output master-public-revoked.asc`
 
+**NOTE**: an important consequence of the above is that in the event of master key
+loss, it becomes impossible to revoke it.  This is one of the chief motivators for
+using two replicated USB sticks for master key storage.
+
 ## Workflow: artifact signing party
 
 The **_artifact signing party_** deals with signing and signature publishing:
