@@ -12,7 +12,7 @@
       # mount unsets PATH when running this
       device = "/run/current-system/sw/bin/s3fs#${resources.s3Buckets.report-server-logs.name}";
       fsType = "fuse";
-      options = [ "_netdev" "allow_other" ("iam_role=arn:aws:iam::${toString accountId}:policy/report-server-s3-wildcard") ];
+      options = [ "_netdev" "allow_other" "iam_role=auto" ];
     };
     environment.systemPackages = [ pkgs.s3fs ];
     # S3 is bad at appending to files, and it gets worse the larger
