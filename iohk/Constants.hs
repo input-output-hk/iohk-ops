@@ -73,7 +73,6 @@ data EnvSettings =
   , envDefaultConfig     :: FilePath
   , envDefaultTopology   :: FilePath
   , envDeploymentFiles   :: [FileSpec]
-  , envAccountId         :: Integer
   }
 
 type FileSpec = (Deployment, Target, Text)
@@ -99,8 +98,7 @@ envSettings env =
                                , (Explorer,       All, "deployments/cardano-explorer-env-staging.nix")
                                , (ReportServer,   All, "deployments/report-server-env-staging.nix")
                                , (Infra,          All, "deployments/infrastructure-env-staging.nix")
-                               ] <> deplAgnosticFiles
-      , envAccountId         = 741691143009}
+                               ] <> deplAgnosticFiles}
     Production   -> EnvSettings
       { envDeployerUser      = "live-production"
       , envDefaultConfigurationKey = "testnet_public_full"
@@ -113,8 +111,7 @@ envSettings env =
                                , (Explorer,       All, "deployments/cardano-explorer-env-production.nix")
                                , (ReportServer,   All, "deployments/report-server-env-production.nix")
                                , (Infra,          All, "deployments/infrastructure-env-production.nix")
-                               ] <> deplAgnosticFiles
-      , envAccountId         = 271217447438}
+                               ] <> deplAgnosticFiles}
     Development  -> EnvSettings
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "devnet"
@@ -123,8 +120,7 @@ envSettings env =
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
                                , (ReportServer,   All, "deployments/report-server-env-development.nix")
-                               ] <> deplAgnosticFiles
-      , envAccountId         = 741691143009}
+                               ] <> deplAgnosticFiles}
     Benchmark -> EnvSettings
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "bench"
@@ -133,8 +129,7 @@ envSettings env =
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
                                , (ReportServer,   All, "deployments/report-server-env-development.nix")
-                               ] <> deplAgnosticFiles
-      , envAccountId         = 741691143009}
+                               ] <> deplAgnosticFiles}
     Any -> error "envSettings called with 'Any'"
 
 selectDeployer :: Environment -> [Deployment] -> NodeName

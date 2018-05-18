@@ -1,4 +1,4 @@
-{ IOHKaccessKeyId, accountId, ... }:
+{ IOHKaccessKeyId, ... }:
 
 {
   # this file will create an S3 bucket, and IAM role with access to that bucket
