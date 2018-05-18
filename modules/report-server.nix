@@ -119,7 +119,8 @@ in {
       in ''
         exec ${cfg.executable}/bin/cardano-report-server \
             -p ${toString cfg.port} \
-            ${zdEmail} ${zdToken} ${zdAccount} ${zdSendLogs} \
+            ${zdEmail} ${zdAccount} ${zdSendLogs} \
+            --zd-token-path ${cfg.zendesk.tokenFile} \
             --logsdir ${cfg.logsdir}
       '';
     };
