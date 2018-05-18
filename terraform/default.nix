@@ -30,5 +30,6 @@ in {
   terraform = pkgs.terraform_0_11.withPlugins (ps: [
     awsProvider
     ps.local
+    ps.template
   ]);
 }

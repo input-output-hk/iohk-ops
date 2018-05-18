@@ -1,6 +1,3 @@
-variable "aws_region" {}
-variable "env" {}
-
 data "aws_ami" "nixos" {
   most_recent = true
 
@@ -17,19 +14,20 @@ data "aws_ami" "nixos" {
   owners = ["080433136561"] # NixOS
 }
 
-resource "aws_key_pair" "deployer" {
-  key_name   = "deployer-key"
-  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9soUucXq/jZvm4u5a49m+aB2+l1w8VRyrjcjMGHZslHZYtMuI6vNJ9AsK+cFEirq888ITa/ucriMInukvzP3WCRthvWgPINsbupOpaHxX0k6N2RRYZQbSeKMzjhnoIkM1GkrjHuRAEjUN4RbcbEzhgVGranb8+Mb6UIkFfCwgJJdzX8X9QWStVoUsO7C+x8+m1cYkxdWYrpGqyXZ+g9P7K2rKlfoz4kEAyo4Mivh8+xmO7bPSLpGuBgM7bt4Yyaq1YSuLOp5f5P4Nsa5MmXKANumEZqVNzgLlommB/3xr7N6q+K1nLt/OxvrxrNVMpwL/TYmTRGQ/UVQziglCQz1p rodney@aurora"
+data "template_file" "nixos_user_data" {
+  template = "${file("${path.module}/configuration.nix")}"
+  vars = {
+    env = "${var.env}"
+    username = "${var.username}"
+  }
 }
 
 resource "aws_instance" "deployer" {
-  ami                  = "${data.aws_ami.nixos.id}"
-  # instance_type        = "r3.2xlarge"
-  instance_type        = "t2.small"
-  user_data            = "${file("${path.module}/configuration.nix")}"
+  ami = "${data.aws_ami.nixos.id}"
+  instance_type = "${var.instance_type}"
+  user_data = "${data.template_file.nixos_user_data.rendered}"
 
-  # fixme: this might be helpful
-  # disable_api_termination = "${var.termination_protection}"
+  disable_api_termination = "${var.termination_protection}"
 
   # this allows attaching a role to the instance. however if anyone
   # but devops are allowed to login to the deployer machine then this
@@ -42,15 +40,13 @@ resource "aws_instance" "deployer" {
     "${aws_security_group.deployer.id}",
   ]
 
-  key_name = "${aws_key_pair.deployer.id}"
-
   tags {
     Name        = "${var.env}_deployer"
     Environment = "${var.env}"
   }
 
   root_block_device = {
-    volume_size = 20
+    volume_size = "${var.volume_size}"
   }
 }
 
@@ -74,6 +70,14 @@ resource "aws_security_group" "deployer" {
   }
   tags = {
     Name        = "${var.env}_deployer"
+    Environment = "${var.env}"
+  }
+}
+
+resource "aws_eip" "deployer_eip" {
+  instance = "${aws_instance.deployer.id}"
+  tags = {
+    Name = "${var.env}_deployer_ip"
     Environment = "${var.env}"
   }
 }

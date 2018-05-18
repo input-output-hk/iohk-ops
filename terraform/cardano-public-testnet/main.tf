@@ -36,3 +36,7 @@ module "deployer" {
   aws_region = "eu-west-1"
   env = "testnet"
 }
+
+output "deployer_ssh" {
+  value = "${module.deployer.deployer_ssh}"
+}
