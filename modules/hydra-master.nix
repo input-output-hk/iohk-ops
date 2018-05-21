@@ -24,7 +24,10 @@ let
   };
   hydraOverlay = self: super: {
     hydra = super.hydra.overrideDerivation (drv: {
-      patches = [ ./chomp.patch ];
+      patches = [
+        ./chomp.patch
+        ./hydra-nix-prefetch-git.patch
+      ];
     });
   };
   cleanIp = host: let
@@ -88,6 +91,11 @@ in {
         inputs = cardano
         excludeBuildFromContext = 1
       </githubstatus>
+      <githubstatus>
+        jobs = serokell:daedalus-.*:tests\..*
+        inputs = daedalus
+        excludeBuildFromContext = 1
+      </githubstatus>
     '';
     logo = (pkgs.fetchurl {
       url    = "https://iohk.io/images/iohk-share-logo.jpg";
@@ -101,6 +109,7 @@ in {
     dataDir = "/var/db/postgresql-${config.services.postgresql.package.psqlSchema}";
   };
 
+  systemd.services.hydra-evaluator.path = [ pkgs.gawk ];
   systemd.services.hydra-manual-setup = {
     description = "Create Keys for Hydra";
     serviceConfig = {
