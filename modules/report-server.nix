@@ -112,15 +112,15 @@ in {
         Group = "report-server";
       };
       script = let
-        zdEmail = if cfg.zendesk.email != "" then "--zd-email \"${cfg.zendesk.email}\"" else "";
-        zdToken = if cfg.zendesk.tokenFile != null then "--zd-token-path ${cfg.zendesk.tokenFile}" else "";
-        zdAccount = if cfg.zendesk.accountName != "" then "--zd-account \"${cfg.zendesk.accountName}\"" else "";
-        zdSendLogs = if cfg.zendesk.sendLogs then "--zd-send-logs" else "";
+        zdEmail     = if cfg.zendesk.email != ""       then "--zd-email \"${cfg.zendesk.email}\"" else "";
+        zdAccount   = if cfg.zendesk.accountName != "" then "--zd-account \"${cfg.zendesk.accountName}\"" else "";
+        zdSendLogs  = if cfg.zendesk.sendLogs          then "--zd-send-logs" else "";
+        zdTokenPath = if cfg.zendesk.tokenFile != null && cfg.zendesk.tokenFile != ""
+                                                       then "--zd-token-path ${cfg.zendesk.tokenFile}" else "";
       in ''
         exec ${cfg.executable}/bin/cardano-report-server \
             -p ${toString cfg.port} \
-            ${zdEmail} ${zdAccount} ${zdSendLogs} \
-            --zd-token-path ${cfg.zendesk.tokenFile} \
+            ${zdEmail} ${zdAccount} ${zdSendLogs} ${zdTokenPath} \
             --logsdir ${cfg.logsdir}
       '';
     };
