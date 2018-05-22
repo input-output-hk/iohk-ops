@@ -50,9 +50,9 @@ in {
     buildMachines = [
       (mkLinux (cleanIp "hydra-build-slave-1"))
       (mkLinux (cleanIp "hydra-build-slave-2"))
-      (mkMac "de302.macincloud.com")
-      (mkMac "du516.macincloud.com")
-      (mkMac "de528.macincloud.com")
+      (mkMac "osx-1.aws.iohkdev.io")
+      (mkMac "osx-2.aws.iohkdev.io")
+      (mkMac "osx-3.aws.iohkdev.io")
     ];
     extraOptions = ''
       auto-optimise-store = true

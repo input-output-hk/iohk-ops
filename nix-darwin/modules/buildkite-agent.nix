@@ -50,11 +50,17 @@ in {
   };
   users.groups.buildkite-agent.gid = 532;
 
-  # fix up group membership and perms on secrets directory
+  # Fix up group membership and perms on secrets directory.
+  # Ensure that buildkite-agent home directory exists with correct
+  # permissions.
   system.activationScripts.postActivation.text = ''
     dseditgroup -o edit -a admin -t user buildkite-agent
     mkdir -p ${keys}
     chgrp -R buildkite-agent ${keys}
     chmod -R o-rx ${keys}
+
+    mkdir -p ${config.users.users.buildkite-agent.home}
+    chown buildkite-agent:admin ${config.users.users.buildkite-agent.home}
+    chmod 770 ${config.users.users.buildkite-agent.home}
   '';
 }

@@ -4,10 +4,10 @@
   imports = [
     ../modules/basics.nix
     ../modules/datadog.nix
-    ../modules/buildkite-agent.nix
+    ../modules/hydra-slave.nix
   ];
 
   services = {
-    dd-agent.tags = ["group:buildkite-agents" "group:macos"];
+   dd-agent.tags = ["group:hydra-and-slaves" "group:macos"];
   };
 }
