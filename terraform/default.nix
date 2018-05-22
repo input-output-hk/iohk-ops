@@ -10,8 +10,8 @@ let
   awsProvider = pkgs.buildGoPackage rec {
     owner   = "terraform-providers";
     repo    = "terraform-provider-aws";
-    version = "1.10.0";
-    sha256  = "0f1r7306m59pb3akvkninr46mcgjf09bvj2p0i050skr51a3vcb7";
+    version = "1.19.0";
+    sha256  = "14ap1gfhp04jcy0kwfghaqwm4ywm7zwqk3132iybmp2zx0rjf1np";
 
     name = "${repo}-${version}";
     goPackagePath = "github.com/${owner}/${repo}";
