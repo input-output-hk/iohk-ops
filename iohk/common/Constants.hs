@@ -112,7 +112,19 @@ envSettings env =
                                , (ReportServer,   All, "deployments/report-server-env-production.nix")
                                , (Infra,          All, "deployments/infrastructure-env-production.nix")
                                ] <> deplAgnosticFiles}
-    Development  -> EnvSettings
+    Testnet  -> EnvSettings
+      { envDeployerUser      = "testnet"
+      , envDefaultConfigurationKey = "testnet_full"
+      , envDefaultConfig     = "testnet.yaml"
+      , envDefaultTopology   = "topology-testnet.yaml"
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
+                               , (Explorer,       All, "deployments/security-groups.nix")
+                               , (ReportServer,   All, "deployments/security-groups.nix")
+                               , (Nodes,          All, "deployments/cardano-nodes-env-testnet.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer-env-testnet.nix")
+                               , (ReportServer,   All, "deployments/report-server-env-testnet.nix")
+                               ] <> deplAgnosticFiles}
+    Development -> EnvSettings
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "devnet"
       , envDefaultConfig     = "config.yaml"
@@ -133,6 +145,7 @@ envSettings env =
     Any -> error "envSettings called with 'Any'"
 
 selectDeployer :: Environment -> [Deployment] -> NodeName
-selectDeployer Staging delts | elem Nodes delts = "iohk"
-                             | otherwise        = "cardano-deployer"
-selectDeployer _ _                              = "cardano-deployer"
+selectDeployer Staging   delts | elem Nodes delts = "iohk"
+                               | otherwise        = "cardano-deployer"
+selectDeployer Testnet _                          = "testnet-deployer"
+selectDeployer _ _                                = "cardano-deployer"

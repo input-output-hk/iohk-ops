@@ -892,6 +892,9 @@ configurationKeys Production Linux64 = "mainnet_wallet_linux64"
 configurationKeys Staging    Win64   = "mainnet_dryrun_wallet_win64"
 configurationKeys Staging    Mac64   = "mainnet_dryrun_wallet_macos64"
 configurationKeys Staging    Linux64 = "mainnet_dryrun_wallet_linux64"
+configurationKeys Testnet    Win64   = "testnet_wallet_win64"
+configurationKeys Testnet    Mac64   = "testnet_wallet_macos64"
+configurationKeys Testnet    Linux64 = "testnet_wallet_linux64"
 configurationKeys env _ = error $ "Application versions not used in '" <> show env <> "' environment"
 
 findInstallers :: NixopsConfig -> T.Text -> Maybe FilePath -> IO ()
