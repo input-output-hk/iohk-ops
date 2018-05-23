@@ -78,35 +78,35 @@ export PATH
 if test -n "${WITH_STAGING}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-stag"
 ${IOHK_OPS}               new  --config 'test-stag.yaml'   --environment staging    "${COMMON_OPTIONS[@]}" 'test-stag'    "${CARDANO_COMPONENTS[@]}"
-${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-stag.yaml'   create deploy --dry-run
+${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-stag.yaml'   create deploy --dry-run --initial-heap-size 4
 banner 'Staging env evaluated'
 fi
 
 if test -n "${WITH_PRODUCTION}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-prod"
 ${IOHK_OPS}               new  --config 'test-prod.yaml'   --environment production "${COMMON_OPTIONS[@]}" 'test-prod'    "${CARDANO_COMPONENTS[@]}"
-${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-prod.yaml'   create deploy --dry-run
+${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-prod.yaml'   create deploy --dry-run --initial-heap-size 4
 banner 'Production env evaluated'
 fi
 
 if test -n "${WITH_DEVELOPMENT}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-devo"
 ${IOHK_OPS}               new  --config 'test-devo.yaml'                            "${COMMON_OPTIONS[@]}" 'test-devo'    "${CARDANO_COMPONENTS[@]}"
-${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-devo.yaml'   create deploy --dry-run
+${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-devo.yaml'   create deploy --dry-run --initial-heap-size 4
 banner 'Development env evaluated'
 fi
 
 if test -n "${WITH_INFRA_PRODUCTION}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
 ${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment production "${COMMON_OPTIONS[@]}" 'test-infra'   Infra
-${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-infra.yaml'  create deploy --dry-run
+${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-infra.yaml'  create deploy --dry-run --initial-heap-size 4
 banner 'Production infra evaluated'
 fi
 
 if test -n "${WITH_INFRA_STAGING}"; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
 ${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment staging   "${COMMON_OPTIONS[@]}" 'test-infra'   Infra
-${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-infra.yaml'  create deploy --dry-run
+${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-infra.yaml'  create deploy --dry-run --initial-heap-size 4
 banner 'Staging infra evaluated'
 fi
 
