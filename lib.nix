@@ -54,41 +54,12 @@ in lib // (rec {
   #
   # Access
   #
-  ssh-keys = import ./ssh-keys.nix;
-
-  devOpsKeys = with ssh-keys; [
-    jakeKey
-    jakeKey2
-    kosergeKey
-    michaelKey
-    rodneyKey
-    samKey
-  ];
-
-  devKeys = devOpsKeys ++ (with ssh-keys; [
-    akegaljKey
-    alanKey
-    alexandersKey
-    alfredoKey
-    anatoliKey
-    andreasKey
-    benKey
-    dshevchenkoKey
-    erikdKey
-    ksaric
-    larsKey
-    mhueschenKey
-    philippKey
-    pkellyKey
-    vasilisKey
-  ]);
-
-  buildSlaveKeys = with ssh-keys; {
-    macos = devOpsKeys ++ [
-      hydraBuildFarmKey
-      rodneyRemoteBuildKey
-    ];
-    linux = [ hydraBuildFarmKey ];
+  inherit (import ./ssh-keys.nix { inherit lib; }) devOps developers remoteBuilderKeys allKeysFrom;
+  devOpsKeys = allKeysFrom devOps;
+  devKeys = devOpsKeys ++ allKeysFrom developers;
+  buildSlaveKeys = {
+    macos = devOpsKeys ++ allKeysFrom remoteBuilderKeys;
+    linux = remoteBuilderKeys.hydraBuildFarm;
   };
 
 })
