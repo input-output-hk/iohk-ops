@@ -34,7 +34,6 @@ module NixOps (
   , checkstatus
   , parallelSSH
   , NixOps.date
-  , s3Upload
   , findInstallers
 
   , awsPublicIPURL
@@ -119,7 +118,6 @@ where
 import           Control.Arrow                   ((***))
 import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
-import qualified Control.Lens                  as Lens
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))
@@ -155,11 +153,7 @@ import           Time.Types
 import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText, within, sort, nub)
 import qualified Turtle                        as Turtle
 
-import           Network.AWS.Auth
-import           Network.AWS               hiding (Seconds, Debug, Region)
 import           Network.AWS.S3.Types      hiding (All, URL, Region)
-import           Control.Monad.Trans.Resource
-import           Data.Coerce
 import           UpdateLogic
 
 import           Constants
@@ -807,7 +801,7 @@ build o _c depl = do
 -- | Use nix to grab the sources of cardano-sl.
 getCardanoSLSource :: Options -> IO Path.FilePath
 getCardanoSLSource o = parent . fromText <$> incmdStrip o "nix-instantiate" args
-  where args = [ "--eval", "-A", "cardano-sl.src", "default.nix" ]
+  where args = [ "--read-write-mode", "--eval", "-A", "cardano-sl.src", "default.nix" ]
 
 
 -- * State management
@@ -910,37 +904,20 @@ date o c = parallelIO o c $
   \n -> ssh' o c "date" [] n
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
+configurationKeys :: Environment -> Arch -> T.Text
+configurationKeys Production Win64 = "mainnet_wallet_win64"
+configurationKeys Production Mac64 = "mainnet_wallet_macos64"
+configurationKeys Staging    Win64 = "mainnet_dryrun_wallet_win64"
+configurationKeys Staging    Mac64 = "mainnet_dryrun_wallet_macos64"
+configurationKeys env _ = error $ "Application versions not used in '" <> show env <> "' environment"
 
-s3Upload :: T.Text -> NixopsConfig -> IO ()
-s3Upload daedalus_rev c = do
-  let
-    say = liftIO . TIO.putStrLn
-
-    hashAndUpload :: GlobalResults -> CiResult -> AWS ()
-    hashAndUpload gr ciResult = do
-      let path = resultLocalPath ciResult
-      hash <- liftIO $ hashInstaller path
-      url <- uploadHashedInstaller (cUpdateBucket c) (Turtle.fromText path) gr hash
-      say $ hash <> " " <> url <> " - " <> resultDesc ciResult
-
-  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
-    print res
-    runAWS' $ do
-      say $ "uploading things to " <> coerce (cUpdateBucket c)
-      let maybeHashAndUpload = maybe (pure ()) (hashAndUpload (globalResult res))
-      maybeHashAndUpload $ buildkiteResult res
-      maybeHashAndUpload $ appveyorResult res
-
-configurationKeys :: Environment -> (ApplicationVersionKey Win64, ApplicationVersionKey Mac64)
-configurationKeys Production = ("mainnet_wallet_win64", "mainnet_wallet_macos64")
-configurationKeys Staging = ("mainnet_dryrun_wallet_win64", "mainnet_dryrun_wallet_macos64")
-configurationKeys env = error $ "Application versions not used in '" <> show env <> "' environment"
-
-findInstallers :: T.Text -> NixopsConfig -> IO ()
-findInstallers daedalus_rev c = do
-  with (realFindInstallers daedalus_rev (configurationKeys $ cEnvironment c)) $ \res -> do
-    print res
-    TIO.putStrLn $ githubWikiRecord res
+findInstallers :: NixopsConfig -> T.Text -> Maybe FilePath -> IO ()
+findInstallers c daedalusRev destDir = do
+  installers <- realFindInstallers (configurationKeys $ cEnvironment c) (const True) daedalusRev destDir
+  printInstallersResults installers
+  case destDir of
+    Just dir -> void $ proc "ls" [ "-ltrha", tt dir ] mempty
+    Nothing -> pure ()
 
 wipeJournals :: Options -> NixopsConfig -> IO ()
 wipeJournals o c@NixopsConfig{..} = do

@@ -13,7 +13,10 @@ import Control.Monad (forM_)
 
 main :: IO ()
 main = sh $ do
-  void $ proc "launchctl" ["unload", "/Library/LaunchDaemons/org.nixos.nix-daemon.plist"] empty
+  sh $ do
+    let pat = star dot *> tab *> star dot *> tab *> begins "org.nixos"
+    daemon <- inproc "launchctl" ["list"] empty & grep pat & sed pat
+    void $ proc "launchctl" ["unload", format ("/Library/LaunchDaemons/"%l%".plist") daemon] empty
 
   forM_ (under "/etc" ["bashrc", "profile", "zshrc"]) $ \cfg ->
     ifExists (cfg <> ".backup-before-nix") $ \backup ->
@@ -29,6 +32,8 @@ main = sh $ do
              , "/etc/bashrc.backup-before-nix-darwin"
              , "/nix"
              , "/var/lib/buildkite-agent"
+             , "/run"
+             , "/usr/bin/nix-store"
              ] ++
              (under "/Library/LaunchDaemons"
                [ "org.nixos.nix-daemon.plist"
@@ -41,8 +46,8 @@ main = sh $ do
 
   void $ proc "rm" ("-rf":files dead) empty
 
-  let deadUsers = [ "buildkite-agent" ] ++ map (format ("nixbld" % d)) [1 .. 32]
-      deadGroups = [ "buildkite-agent", "nixbld"]
+  let deadUsers = [ "buildkite-agent", "datadog" ] ++ map (format ("nixbld" % d)) [1 .. 32]
+      deadGroups = [ "buildkite-agent", "datadog", "nixbld"]
 
   forM_ deadUsers $ \u -> proc "dscl" [".", "-delete", "/Users/" <> u] empty
   forM_ deadGroups $ \g -> proc "dscl" [".", "-delete", "/Groups/" <> g] empty

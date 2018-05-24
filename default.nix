@@ -30,11 +30,9 @@ let
     wget
     file
     nixops
-    terraform
     coreutils
     gnupg
   ];
-  terraform = pkgs.terraform_0_11.withPlugins (ps: [ ps.aws ]);
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
   cardano-sl-pkgs = import (pkgs.fetchgit cardano-sl-src) {
