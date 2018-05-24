@@ -83,4 +83,7 @@ let
 
 in {
   inherit nixops iohk-ops iohk-ops-integration-test;
+  terraform = pkgs.callPackage ./terraform/terraform.nix {};
+  mfa = pkgs.callPackage ./terraform/mfa.nix {};
+
 } // cardano-sl-pkgs

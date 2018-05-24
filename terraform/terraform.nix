@@ -1,13 +1,7 @@
-let
-  localLib = import ../lib.nix;
-in
-{ system ? builtins.currentSystem
-, config ? {}
-, pkgs ? (import (localLib.fetchNixPkgs) { inherit system config; })
-}:
+{ buildGoPackage, fetchFromGitHub, terraform_0_11 }:
 
 let
-  awsProvider = pkgs.buildGoPackage rec {
+  awsProvider = buildGoPackage rec {
     owner   = "terraform-providers";
     repo    = "terraform-provider-aws";
     version = "1.19.0";
@@ -15,7 +9,7 @@ let
 
     name = "${repo}-${version}";
     goPackagePath = "github.com/${owner}/${repo}";
-    src = pkgs.fetchFromGitHub {
+    src = fetchFromGitHub {
       inherit owner repo sha256;
       rev = "v${version}";
     };
@@ -25,16 +19,8 @@ let
     postBuild = "mv go/bin/${repo}{,_v${version}}";
   };
 
-in rec {
-  terraform = pkgs.terraform_0_11.withPlugins (ps: [
-    awsProvider
-    ps.local
-    ps.template
-  ]);
-
-  shell = pkgs.stdenv.mkDerivation {
-    name = "iohk-ops-terraform";
-    buildInputs = [ terraform pkgs.jq pkgs.awscli ];
-    src = null;
-  };
-}
+in terraform_0_11.withPlugins (ps: [
+  awsProvider
+  ps.local
+  ps.template
+])
