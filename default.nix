@@ -18,10 +18,10 @@ let
     let
       # nixopsUnstable = /path/to/local/src
       nixopsUnstable = pkgs.fetchFromGitHub {
-        owner = "NixOS";
+        owner = "rvl";
         repo = "nixops";
-        rev = "063e36417d800de7b73496f29b71b4280eed60b5";
-        sha256 = "1rymimzwkjfa51jzi8amsq5idq8l8nqnbb8jjwicnpn9d1d0g45k";
+        rev = "ab86e522373f133e2412bd28a864989eb48f58ec";
+        sha256 = "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv";
       };
     in (import "${nixopsUnstable}/release.nix" {
          nixpkgs = localLib.fetchNixPkgs;
