@@ -95,9 +95,17 @@ writeScriptBin "run-bench.sh" ''
   # wait for the cluster to be available
   sleep ''${START_WAIT_TIME}m
 
+  export GENESIS_TXS_PER_THREAD=$TXS_PER_THREAD
+
+  # if 50.000 genesis addresses are not adequate
+  # some addresses will send coins back to themselves.
+  if [ $((TXS_PER_THREAD * CONC * (ADDGENERATORS + 1))) -gt "50000" ]; then
+    export GENESIS_TXS_PER_THREAD=$((50000 / CONC / (ADDGENERATORS + 1)))
+  fi
+
   for n in $(seq 1 $ADDGENERATORS); do
 
-      export AUXX_START_AT=$((TXS_PER_THREAD * CONC * n))
+      export AUXX_START_AT=$((GENESIS_TXS_PER_THREAD * CONC * n))
 
       ./auxx/bin/cardano-auxx \
           --db-path wdb''${n} \
@@ -107,7 +115,7 @@ writeScriptBin "run-bench.sh" ''
           ''${TRX2RELAYS} \
           --system-start ''${SYSTEMSTART} \
           --mode with-config \
-          cmd --commands "send-to-all-genesis $TXS_PER_THREAD $CONC $DELAY ./tps-sent-''${n}.csv" +RTS -s -N1 -RTS > auxx-''${n}.log 2>&1 &
+          cmd --commands "send-to-all-genesis $GENESIS_TXS_PER_THREAD $TXS_PER_THREAD $CONC $DELAY ./tps-sent-''${n}.csv" +RTS -s -N1 -RTS > auxx-''${n}.log 2>&1 &
 
       auxxpids[n]=$!
 
@@ -126,7 +134,7 @@ writeScriptBin "run-bench.sh" ''
       ''${TRX2RELAYS} \
       --system-start ''${SYSTEMSTART} \
       --mode with-config \
-      cmd --commands "send-to-all-genesis $TXS_PER_THREAD $CONC $DELAY ./tps-sent.csv" +RTS -s -N1 -RTS > auxx-0.log 2>&1 &
+      cmd --commands "send-to-all-genesis $GENESIS_TXS_PER_THREAD $TXS_PER_THREAD $CONC $DELAY ./tps-sent.csv" +RTS -s -N1 -RTS > auxx-0.log 2>&1 &
 
   auxxpids[0]=$!
 
