@@ -13,7 +13,7 @@ let nodeMap = { inherit (globals.fullMap) report-server; }; in
     config.services.report-server.zendesk = {
       accountName = "iohk";
       email = "daedalus-bug-reports@iohk.io";
-      tokenFile = "/run/keys/zendesk-token";
+      tokenFile = "/var/lib/keys/zendesk-token";
     };
   };
 

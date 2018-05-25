@@ -150,7 +150,7 @@ import qualified System.IO                     as Sys
 import qualified System.IO.Unsafe              as Sys
 import           Time.System
 import           Time.Types
-import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText, within)
+import           Turtle                    hiding (env, err, fold, inproc, prefix, procs, e, f, o, x, view, toText, within, sort, nub)
 import qualified Turtle                        as Turtle
 
 import           Network.AWS.S3.Types      hiding (All, URL, Region)

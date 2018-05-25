@@ -1,4 +1,4 @@
-{ pkgs ? import (builtins.fetchTarball https://nixos.org/channels/nixpkgs-17.09-darwin/nixexprs.tar.xz) {} }:
+{ pkgs ? import (builtins.fetchTarball https://nixos.org/channels/nixpkgs-18.03-darwin/nixexprs.tar.xz) {} }:
 
 let
   ghc = pkgs.haskellPackages.ghcWithPackages (ps: [ ps.turtle ]);
@@ -12,5 +12,6 @@ in
       mkdir -p $out/bin
       cp -R "$src/"* $out
       ghc -o $out/bin/deploy $out/deploy.hs
+      ghc -o $out/bin/prepare $out/prepare.hs
     '';
   }

@@ -17,7 +17,7 @@ import qualified Data.ByteString.Lazy.Char8   as L8
 import Control.Monad (forM_, forM)
 import Filesystem.Path.CurrentOS (encodeString)
 import Data.Yaml (decodeFileEither, encodeFile)
-import Data.Aeson
+import Data.Aeson hiding (Options)
 import qualified Data.HashMap.Strict as HM
 import qualified Control.Foldl as Fold
 import Data.Char (isHexDigit)
@@ -739,7 +739,7 @@ commonOpts CommandOptions{..} = [ "--system-start", "0"
 -- | Build tools with nix, then adjust prepend them to PATH.
 loadTools :: MonadIO io => FilePath -> io ()
 loadTools dir = forM_ ["cardano-sl-tools", "cardano-sl-auxx"] $ \t -> do
-  Just p <- single $ inproc "nix-build" [tt (dir </> "default.nix"), "-A", t] empty
+  p <- single $ inproc "nix-build" [tt (dir </> "default.nix"), "-A", t] empty
   let bin = fromText (format l p) </> "bin"
   prependPath bin
 

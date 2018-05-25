@@ -70,11 +70,22 @@ in lib // (rec {
     alanKey
     alexandersKey
     alfredoKey
+    anatoliKey
     andreasKey
     dshevchenkoKey
     ksaric
     larsKey
     philippKey
+    pkellyKey
     vasilisKey
   ]);
+
+  buildSlaveKeys = with ssh-keys; {
+    macos = devOpsKeys ++ [
+      hydraBuildFarmKey
+      rodneyRemoteBuildKey
+    ];
+    linux = [ hydraBuildFarmKey ];
+  };
+
 })

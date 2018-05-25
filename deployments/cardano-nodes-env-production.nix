@@ -11,6 +11,7 @@ let nodeMap = globals.nodeMap; in
     datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
       cpu = mkMonitor cpu_monitor;
       disk = mkMonitor (disk_monitor "!host:mainnet.ec2.report-server" "0.8" "0.9");
+      inodes = mkMonitor (inodes_monitor 7 2);
       ram = mkMonitor ram_monitor;
       ntp = mkMonitor ntp_monitor;
       cardano_node_simple_process = mkMonitor cardano_node_simple_process_monitor;

@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ resources, config, pkgs, lib, nodes, ... }:
 
 with lib;
 
@@ -24,9 +24,16 @@ let
   };
   hydraOverlay = self: super: {
     hydra = super.hydra.overrideDerivation (drv: {
-      patches = [ ./chomp.patch ];
+      patches = [
+        ./chomp.patch
+        ./hydra-nix-prefetch-git.patch
+      ];
     });
   };
+  cleanIp = host: let
+      ip1 = if nodes.${host}.options.networking.publicIPv4.isDefined then nodes.${host}.config.networking.publicIPv4 else "0.0.0.0";
+    in
+      if ip1 == null then "0.0.0.0" else ip1;
 in {
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
@@ -41,14 +48,17 @@ in {
   nix = {
     distributedBuilds = true;
     buildMachines = [
-      # TODO: DEVOPS-166: reference linux slaves by DNS
-      (mkLinux "52.59.117.254")
-      (mkLinux "18.197.104.148")
-      (mkMac "de302.macincloud.com")
-      (mkMac "du516.macincloud.com")
-      (mkMac "de528.macincloud.com")
+      (mkLinux (cleanIp "hydra-build-slave-1"))
+      (mkLinux (cleanIp "hydra-build-slave-2"))
+      (mkMac "osx-1.aws.iohkdev.io")
+      (mkMac "osx-2.aws.iohkdev.io")
+      (mkMac "osx-3.aws.iohkdev.io")
     ];
-    extraOptions = "auto-optimise-store = true";
+    extraOptions = ''
+      auto-optimise-store = true
+      allowed-uris = https://github.com/NixOS/nixpkgs/archive
+    '';
+    binaryCaches = mkForce [ "https://cache.nixos.org" ];
   };
 
   # let's auto-accept fingerprints on first connection
@@ -81,6 +91,11 @@ in {
         inputs = cardano
         excludeBuildFromContext = 1
       </githubstatus>
+      <githubstatus>
+        jobs = serokell:daedalus-.*:tests\..*
+        inputs = daedalus
+        excludeBuildFromContext = 1
+      </githubstatus>
     '';
     logo = (pkgs.fetchurl {
       url    = "https://iohk.io/images/iohk-share-logo.jpg";
@@ -94,14 +109,18 @@ in {
     dataDir = "/var/db/postgresql-${config.services.postgresql.package.psqlSchema}";
   };
 
+  systemd.services.hydra-evaluator.path = [ pkgs.gawk ];
   systemd.services.hydra-manual-setup = {
     description = "Create Keys for Hydra";
-    serviceConfig.Type = "oneshot";
-    serviceConfig.RemainAfterExit = true;
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      path = config.systemd.services.hydra-init.environment.PATH;
+    };
     wantedBy = [ "multi-user.target" ];
     requires = [ "hydra-init.service" ];
     after = [ "hydra-init.service" ];
-    environment = config.systemd.services.hydra-init.environment;
+    environment = builtins.removeAttrs config.systemd.services.hydra-init.environment ["PATH"];
     script = ''
       if [ ! -e ~hydra/.setup-is-complete ]; then
         # create signing keys

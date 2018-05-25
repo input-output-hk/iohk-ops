@@ -85,6 +85,7 @@ in {
     deployment.keys.zendesk-token = {
       keyFile = ./. + "/../static/zendesk-token.secret";
       user = "report-server";
+      destDir = "/var/lib/keys";
     };
 
     networking.firewall.allowedTCPPorts = [
@@ -112,8 +113,7 @@ in {
       };
       script = let
         zdEmail = if cfg.zendesk.email != "" then "--zd-email \"${cfg.zendesk.email}\"" else "";
-        # fixme: report-server should not accept token as command-line argument
-        zdToken = if cfg.zendesk.tokenFile != null then "--zd-token `head -1 ${cfg.zendesk.tokenFile}`" else "";
+        zdToken = if cfg.zendesk.tokenFile != null then "--zd-token-path ${cfg.zendesk.tokenFile}" else "";
         zdAccount = if cfg.zendesk.accountName != "" then "--zd-account \"${cfg.zendesk.accountName}\"" else "";
         zdSendLogs = if cfg.zendesk.sendLogs then "--zd-send-logs" else "";
       in ''
