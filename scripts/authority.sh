@@ -304,7 +304,7 @@ validate_sub_exists() {
 validate_db_nkeys() {
         ## The DB should have an expected number of master keys.
         local expected_nkeys="$1" failmsg="$2"
-        local actual_nkeys="$(list_master_fprs "$GNUPGHOME" | wc -l)"
+        local actual_nkeys="$(list_master_fprs "$GNUPGHOME" | wc -l | tr -d ' ')"
         if test "${expected_nkeys}" != "${actual_nkeys}"
         then cat <<EOF
 ERROR: the key store was expected to have ${expected_nkeys} keys, but had ${actual_nkeys}:
