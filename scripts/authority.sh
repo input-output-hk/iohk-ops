@@ -49,6 +49,10 @@ set -e
 #
 #         authority.sh master-dir print-public-keys
 #
+#  7. Publish the key (with subkeys) to keyservers:
+#
+#         authority.sh master-dir publish-master
+#
 help() {
         cat >&2 <<EOF
 $(basename "$0") -- manage a GPG master/subkey setup
@@ -74,6 +78,8 @@ Commands:
 
      setup-master FULLNAME EMAIL
                               Setup a single master key;  None should pre-exist
+     publish-master [KEYSERVER..]
+                              Post the key (with subkeys) to a keyserver
      new-signing-subkey [EMAIL] [FULL-NAME] [COMMENT]
                               Create a signing subkey;  A master key should exist
 
@@ -98,7 +104,7 @@ op_selftest() {
         trap atexit_rm_CLEANUP EXIT
 
         banner "Setting up master key:"
-        $0 ${DRY:+--dry} "${MASTERDIR}" setup-master "Input Output HK Limited (test)" "info@iohk.io"
+        $0 ${DRY:+--dry} "${MASTERDIR}" setup-master "Foo Bar (test)" "test@test.test"
 
         banner "Adding a signing subkey:"
         $0 ${DRY:+--dry} "${MASTERDIR}" new-signing-subkey
@@ -120,6 +126,9 @@ op_selftest() {
                                         --lsign-key "${masterfpr}"
         banner "Verifying signature using the third party:"
         $0 --dry         "${VERDIR}"    verify-with-subkey                   "${subfpr}" "${SIGTGT}" "${SIGTGT}.asc"
+        echo
+        banner "Testing publishing:"
+        $0 --dry         "${MASTERDIR}" publish-master
         echo
         echo "Self-tests passed OK."
 }
@@ -162,13 +171,22 @@ op_setup_master() {
         chmod -R go-rwx "${GNUPGHOME}"
 
         validate_db_nkeys 0 "No master keys are allowed to pre-exist."
-        
+
         gpg ${DRY:+--batch --pinentry-mode loopback --passphrase '""'} \
             --quick-generate-key "${name} <${email}>" "${ALGO}${LENGTH}" sign "${EXPIRATION}"
-            
+
         status="$?"
         echo "GPG exit status: ${status}"
         return ${status}
+}
+
+op_publish_master() {
+        local keyserver="${1:-certserver.pgp.com}"
+        validate_db_nkeys 1 "Exactly a single master key is allowed to pre-exist."
+
+        local master_fpr="$(list_master_fprs "$GNUPGHOME")"
+
+        gpg --keyserver ${keyserver} --send-keys ${master_fpr}
 }
 
 op_add_sub() {
@@ -246,6 +264,9 @@ op_export_secret_sub() {
         then fail "INTERNAL ERROR: exported GNUPG keydb carries the secret master key!  Call support."; fi
         if test -z "$(list_secret_sub_fprs "${target_dir}" | grep "${fpr}")"
         then fail "INTERNAL ERROR: exported GNUPG keydb doesn't carry the intended subkey!  Call support."; fi
+
+        echo "Updating keyservers.."
+
 }
 
 op_sign_with_sub() {
@@ -373,6 +394,7 @@ case "${cmd}" in
         list-masters | masters )                 list_master_fprs        "$GNUPGHOME";;
         list-subkeys | subs )                    list_sub_fprs           "$GNUPGHOME";;
         setup-master | setup )                   op_setup_master           "$@"; op_list_keys;;
+        publish-master )                         op_publish_master        "$@";;
         new-signing-subkey | new-sub )
                                                  op_add_sub                "$@"; op_list_keys;;
         print-public-keys )                      op_print_public_keys;;

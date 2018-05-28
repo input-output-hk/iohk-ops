@@ -128,13 +128,17 @@ The master key parameters can be specified as options to `authority.sh`:
 
          `GNUPGHOME=<MASTER-DIR> gpg --send-keys`
 
+NOTE: we need to let the world know about any changes to the subkeys -- the way is
+to use the `publish-master` subcommand (see next section).
+
 ### Publishing the keys
 
-The public part of the keychain can be exported in two ways -- as a GPG keybox (to
-allow convenient handover to a third party), and as an ASCII-armored keychain:
+The public part of the keychain can be exported in three ways -- as a GPG keybox (to
+allow convenient handover to a third party), as an ASCII-armored keychain, and through keyservers:
 
 1.  `authority.sh <MASTER-DIR> export-public-keys-to <PUBLIC-DIR> `
 1.  `authority.sh <MASTER-DIR> print-public-keys`
+1.  `authority.sh <MASTER-DIR> publish-master [<KEYSERVER>]`
 
 ### Master key revocation
 
