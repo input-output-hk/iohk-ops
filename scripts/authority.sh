@@ -181,12 +181,18 @@ op_setup_master() {
 }
 
 op_publish_master() {
-        local keyserver="${1:-certserver.pgp.com}"
+        local extra_keyserver="$1"
         validate_db_nkeys 1 "Exactly a single master key is allowed to pre-exist."
 
         local master_fpr="$(list_master_fprs "$GNUPGHOME")"
 
-        gpg --keyserver ${keyserver} --send-keys ${master_fpr}
+        local ks_list="pool.sks-keyservers.net subkeys.pgp.net search.keyserver.net certserver.pgp.com ${extra_keyserver}"
+        for keyserver in ${ks_list}
+        do if gpg --keyserver ${keyserver} --send-keys ${master_fpr}
+           then echo "Successfully sent ${master_fpr} to ${keyserver}"
+                return
+           fi
+        done
 }
 
 op_add_sub() {
@@ -264,9 +270,6 @@ op_export_secret_sub() {
         then fail "INTERNAL ERROR: exported GNUPG keydb carries the secret master key!  Call support."; fi
         if test -z "$(list_secret_sub_fprs "${target_dir}" | grep "${fpr}")"
         then fail "INTERNAL ERROR: exported GNUPG keydb doesn't carry the intended subkey!  Call support."; fi
-
-        echo "Updating keyservers.."
-
 }
 
 op_sign_with_sub() {
