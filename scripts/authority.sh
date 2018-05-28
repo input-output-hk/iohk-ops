@@ -82,6 +82,7 @@ Commands:
                               Post the key (with subkeys) to a keyserver
      new-signing-subkey [EMAIL] [FULL-NAME] [COMMENT]
                               Create a signing subkey;  A master key should exist
+     edit-key                 Run 'gpg --edit-key' on the keychain
 
      print-public-keys        Print ASCII-armored public keys
      export-public-keys-to   GNUPGHOME-TO
@@ -195,6 +196,15 @@ op_publish_master() {
         done
 }
 
+op_edit_key() {
+        validate_db_nkeys 1 "Exactly a single master key is allowed to pre-exist."
+
+        local master_fpr="$(list_master_fprs "$GNUPGHOME")"
+
+        gpg ${DRY:+--pinentry-mode loopback --passphrase '""'} \
+            --edit-key "${master_fpr}"
+}
+
 op_add_sub() {
         validate_db_nkeys 1 "Exactly a single master key is allowed to pre-exist."
 
@@ -270,6 +280,9 @@ op_export_secret_sub() {
         then fail "INTERNAL ERROR: exported GNUPG keydb carries the secret master key!  Call support."; fi
         if test -z "$(list_secret_sub_fprs "${target_dir}" | grep "${fpr}")"
         then fail "INTERNAL ERROR: exported GNUPG keydb doesn't carry the intended subkey!  Call support."; fi
+
+        banner "Please change the master key password ('passwd', then 'save'):"
+        op_edit_key
 }
 
 op_sign_with_sub() {
@@ -397,7 +410,8 @@ case "${cmd}" in
         list-masters | masters )                 list_master_fprs        "$GNUPGHOME";;
         list-subkeys | subs )                    list_sub_fprs           "$GNUPGHOME";;
         setup-master | setup )                   op_setup_master           "$@"; op_list_keys;;
-        publish-master )                         op_publish_master        "$@";;
+        publish-master )                         op_publish_master         "$@";;
+        edit-key )                               op_edit_key               "$@";;
         new-signing-subkey | new-sub )
                                                  op_add_sub                "$@"; op_list_keys;;
         print-public-keys )                      op_print_public_keys;;

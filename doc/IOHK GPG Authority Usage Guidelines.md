@@ -106,6 +106,33 @@ The master key parameters can be specified as options to `authority.sh`:
 
 	`authority.sh <MASTER-DIR> export-secret-subkey-to <SUBKEY-DIR> <SUBKEY-FINGERPRINT>`
 
+    NOTE: the `export-secret-subkey-to` requires you to change the master key
+    password.  This is due to a very unfortunate GNUPG restriction, which simply
+    doesn't allow a straightforward way to have separate passwords for separate
+    subkeys -- our only option is changing the master key password each time we
+    make a new subkey.
+
+    Moreover, you have to go through this change manually: you will be presented
+    with a prompt, where you'll have to supply two commands manually (`passwd` and `save`):
+
+        gpg (GnuPG) 2.2.3; Copyright (C) 2017 Free Software Foundation, Inc.
+        This is free software: you are free to change and redistribute it.
+        There is NO WARRANTY, to the extent permitted by law.
+
+        Secret key is available.
+
+        sec  rsa4096/F2EB8748ED914CF6
+             created: 2018-05-28  expires: 2023-05-27  usage: SC
+             trust: ultimate      validity: ultimate
+        ssb  rsa4096/D15D1F51C207E21D
+             created: 2018-05-28  expires: 2023-05-27  usage: S
+        [ultimate] (1). Foo Bar (test) <test@test.test>
+
+        gpg> passwd
+
+        gpg> save
+
+
 1.  Due to GNUPG pecularities, subkey revocation is not supported in an automated
     way, so has to be performed manually:
     1.  `GNUPGHOME=<MASTER-DIR> gpg --edit-key email@address` will start an
