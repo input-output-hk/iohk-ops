@@ -71,12 +71,13 @@ globals: imports: params:
     '';
 
     services.cardano-node = {
-      enable      = true;
-      nodeName    = params.name;
-      nodeIndex   = params.i;
-      relayIndex  = params.relayIndex;
-      port        = params.port;
-      topologyYaml      =
+      enable         = true;
+      nodeName       = params.name;
+      nodeIndex      = params.i;
+      relayIndex     = params.relayIndex;
+      port           = params.port;
+      enablePolicies = (globals.environment == "benchmark");
+      topologyYaml   =
          if !params.typeIsExplorer
          then globals.topologyYaml
          else
