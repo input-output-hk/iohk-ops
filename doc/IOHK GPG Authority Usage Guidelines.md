@@ -167,6 +167,30 @@ allow convenient handover to a third party), as an ASCII-armored keychain, and t
 1.  `authority.sh <MASTER-DIR> print-public-keys`
 1.  `authority.sh <MASTER-DIR> publish-master [<KEYSERVER>]`
 
+### Master key password rotation
+
+The master key password change is enforced on every subkey export operation, but
+can also be performed at any time with the `edit-key` subcommand:
+
+        $ authority.sh <MASTER-DIR> edit-key
+
+        gpg (GnuPG) 2.2.3; Copyright (C) 2017 Free Software Foundation, Inc.
+        This is free software: you are free to change and redistribute it.
+        There is NO WARRANTY, to the extent permitted by law.
+
+        Secret key is available.
+
+        sec  rsa4096/F2EB8748ED914CF6
+             created: 2018-05-28  expires: 2023-05-27  usage: SC
+             trust: ultimate      validity: ultimate
+        ssb  rsa4096/D15D1F51C207E21D
+             created: 2018-05-28  expires: 2023-05-27  usage: S
+        [ultimate] (1). Foo Bar (test) <test@test.test>
+
+        gpg> passwd
+
+        gpg> save
+
 ### Master key revocation
 
 In the event of master key compromise (the worst case scenario), it needs to be
