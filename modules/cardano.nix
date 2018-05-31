@@ -94,6 +94,7 @@ wallet:
   fallbacks: 2
            '';
       systemStart = params.systemStart;
+      jsonLog = false;
       nodeType    = params.nodeType;
       neighbours = builtins.trace "${params.name}: neighbours: ${concatStringsSep sep (map ppNeighbour neighbourPairs)}"
                                   neighbourPairs;
