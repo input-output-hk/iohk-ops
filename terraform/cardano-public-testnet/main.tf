@@ -17,6 +17,10 @@ provider "aws" {
   }
 }
 
+provider "local" {
+  version = "~> 1.1"
+}
+
 # module "eu-west-1" {
 #   source     = "./regional"
 #   aws_region = "eu-west-1"
