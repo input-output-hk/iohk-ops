@@ -34,6 +34,9 @@ for user in staging testnet infra; do
     install_key $user $id $secret
 done
 
+# fixme: install credentials for all developers defined in
+# ../../ssh-keys.nix
+
 # dev_id=$(key_id user_deployer_development)
 # dev_secret=$(access_key deployer.development)
 

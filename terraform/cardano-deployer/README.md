@@ -1,10 +1,14 @@
 # Deploying the deployer
 
-Idea is to first run terraform from your laptop to create a NixOS
+The idea is to first run terraform from your laptop to create a NixOS
 instance. This is then fully deployed with NixOps by using
 `deployment.targetHost = "localhost"`.
 
-The Terraform state is stored in S3 under a workspace. There are two
+You can see the [`configuration.nix`](./configuration.nix) for this
+stage is minimal, and basically just enough to get the deployer
+running.
+
+The Terraform state is stored in S3 under a *workspace*. There are two
 deployers. Use either `testnet` or `mainnet` as the workspace.
 
 
