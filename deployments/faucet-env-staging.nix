@@ -1,5 +1,5 @@
 { globals, ... }: with (import ./../lib.nix);
-let nodeMap = { inherit (globals.fullMap) report-server; }; in
+let nodeMap = { inherit (globals.fullMap) faucet; }; in
 
 
 {
