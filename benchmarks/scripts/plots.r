@@ -295,8 +295,10 @@ plotMempools <- function(d, str='core and relay', run=RUN, desc=DESC) {
 # plot the wait and hold times for the local state lock
 plotTimes <- function(d, str='core and relay', run=RUN, desc=DESC, lin=TRUE, minfilter = 0) {
     if (lin) {
+      what <- "Work times"
       desc <- paste("\n(", desc, "linear scale,", "min =", minfilter, ")", sep=" ")
     } else {
+      what <- "Wait and work times"
       desc <- paste("\n(", desc, "log scale,", "min =", minfilter, ")", sep=" ")
     }
     dd <- d %>%
@@ -306,17 +308,16 @@ plotTimes <- function(d, str='core and relay', run=RUN, desc=DESC, lin=TRUE, min
                                , "wait block"
                                , "hold rollback"
                                , "wait rollback"
-                                 ))      %>% filter(txCount > minfilter)    ###  <<<<<<
+                                 ))      %>% filter(txCount > minfilter)
     ggplot(dd, aes(t, txCount/1000)) +
       epochs(d) +
       geom_point(aes(colour=node)) +
-#      geom_smooth() +
       ggtitle(paste(
-            'Wait and work times for', str, 'nodes, run at '
+            what, ' for', str, 'nodes, run at '
           , run, desc, sep = ' ')) +
       xlab("t [s] after start of experiment") +
       ylab("Times waiting for/holding the lock [milliseconds]") +
-      (if (lin) { scale_y_continuous(); } else { scale_y_log10(); }) +     ###  <<<<<<
+      (if (lin) { scale_y_continuous(); } else { scale_y_log10(); }) +
       facet_grid(txType ~ isRelay) +
       guides(size = "none", colour = "legend", alpha = "none")
 }
@@ -593,4 +594,3 @@ prepareOSMetrics4nodes(relays, "relays", "for relay nodes")
 
 print("all done.")
 dev.off()
-
