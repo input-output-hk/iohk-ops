@@ -57,6 +57,7 @@ in lib // (rec {
   ssh-keys = import ./ssh-keys.nix;
 
   devOpsKeys = with ssh-keys; [
+    benKey
     jakeKey
     jakeKey2
     kosergeKey
