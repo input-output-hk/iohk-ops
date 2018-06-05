@@ -7,7 +7,7 @@ let
   iohkpkgs = import ../. {};
   faucet-drv = iohkpkgs.cardano-sl-faucet-static;
   cfg = config.services.faucet;
-  tlsPath = fileName: "${cfg.home}/wallet/tls/${fileName}";
+  tlsPath = fileName: "${cfg.home}/wallet/tls/client/${fileName}";
   walletPort = cfg.faucet-config.wallet-port;
   ekgPort = 8001;
   loggingCfg = pkgs.writeText "logging.cfg"
@@ -78,8 +78,8 @@ in
             };
             source-wallet-config = mkOption { type = path; };
             logging-config = mkOption { type = path; default = loggingCfg; };
-            public-certificate = mkOption { type = path; default = tlsPath "server.crt"; };
-            private-key = mkOption { type = path; default = tlsPath "server.key"; };
+            public-certificate = mkOption { type = path; default = tlsPath "client.crt"; };
+            private-key = mkOption { type = path; default = tlsPath "client.key"; };
 
           };
         };
