@@ -14,7 +14,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     #          - DNS naming
     topologySpecList = (builtins.sort (l: r: l.name < r.name)
                                       (mapAttrsToList (k: v: { name = k; value = v;}) topologySpec))
-                       ++ [ explorerSpecElt reportServerSpecElt ];
+                       ++ [ explorerSpecElt reportServerSpecElt faucetSpecElt ];
     # NOTE: the following definitions for explorerSpecElt and reportServerSpecElt
     #       allow us to treat all cluster nodes in a uniform way.
     #       It's as if they were defined in the topology yaml.
@@ -28,6 +28,16 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                                    peers    = [];
                                    address  = "explorer.cardano";
                                    port     = 3000; }; };
+    faucetSpecElt  = { name  = "faucet";
+                       value = { org      = defaultOrg;
+                                 region   = centralRegion;
+                                 zone     = centralZone;
+                                 type     = "other";
+                                 public   = false;
+                                 kademlia = false;
+                                 peers    = [];
+                                 address  = "faucet.cardano";
+                                 port     = 3001; }; };
     reportServerSpecElt =
                        { name  = "report-server";
                          value = { org      = defaultOrg;
