@@ -98,6 +98,7 @@ in
     deployment.ec2.region         = mkForce params.region;
     deployment.ec2.accessKeyId    = params.accessKeyId;
     deployment.ec2.keyPair        = resources.ec2KeyPairs.${params.keyPairName};
+    deployment.ec2.securityGroups = map resolveSGName [ "allow-all-${params.region}-${params.org}" ];
 
     users = {
       users.faucet = {
