@@ -78,7 +78,7 @@ in
             };
             source-wallet-config = mkOption { type = path; };
             logging-config = mkOption { type = path; default = loggingCfg; };
-            public-certificate = mkOption { type = path; default = tlsPath "server.cert"; };
+            public-certificate = mkOption { type = path; default = tlsPath "server.crt"; };
             private-key = mkOption { type = path; default = tlsPath "server.key"; };
 
           };
