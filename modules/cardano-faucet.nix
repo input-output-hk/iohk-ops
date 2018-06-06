@@ -19,7 +19,7 @@ let
         severity: Debug+   # severities withdraw logger
     '';
   cfgFile = pkgs.writeText "config.json" (builtins.toJSON cfg.faucet-config);
-  walletSource = config.deployment.keys.wallet-source;
+  walletSource = cfg.home + ./wallet-source.json;
   # walletCfg cribbed from cardano-benchmark
   walletCfg = {
     walletListen = "127.0.0.1:${toString walletPort}";
