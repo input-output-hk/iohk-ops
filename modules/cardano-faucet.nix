@@ -19,6 +19,7 @@ let
         severity: Debug+   # severities withdraw logger
     '';
   cfgFile = pkgs.writeText "config.json" (builtins.toJSON cfg.faucet-config);
+  walletSource = config.deployment.keys.wallet-source;
   # walletCfg cribbed from cardano-benchmark
   walletCfg = {
     walletListen = "127.0.0.1:${toString walletPort}";
@@ -76,7 +77,7 @@ in
                 flush-interval = 1000;
               };
             };
-            source-wallet-config = mkOption { type = path; };
+            source-wallet-config = mkOption { type = path; default = walletSource; };
             logging-config = mkOption { type = path; default = loggingCfg; };
             public-certificate = mkOption { type = path; default = tlsPath "client.crt"; };
             private-key = mkOption { type = path; default = tlsPath "client.key"; };
@@ -99,6 +100,12 @@ in
     deployment.ec2.accessKeyId    = params.accessKeyId;
     deployment.ec2.keyPair        = resources.ec2KeyPairs.${params.keyPairName};
     deployment.ec2.securityGroups = [ resources.ec2SecurityGroups."allow-all-${params.region}-${params.org}" ];
+
+    deployment.keys.wallet-source = {
+      keyFile = ./. + "/../static/wallet-source.json";
+      destDir = cfg.home;
+      user = "faucet";
+    };
 
     users = {
       users.faucet = {
