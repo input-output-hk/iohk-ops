@@ -7,9 +7,6 @@ in
     imports = [
       ./../modules/development.nix
     ];
-    services.faucet.faucet-config = {
-      source-wallet-config = builtins.toString ./../static/wallet-source.json;
-    };
 
   };
 }

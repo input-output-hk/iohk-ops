@@ -8,9 +8,6 @@ let nodeMap = { inherit (globals.fullMap) faucet; }; in
       ./../modules/staging.nix
       ./../modules/datadog.nix
     ];
-    services.faucet.faucet-config = {
-      source-wallet-config = builtins.toString ./../static/wallet-source.json;
-    };
 
   };
   resources.elasticIPs = nodesElasticIPs nodeMap;
