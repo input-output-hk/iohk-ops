@@ -54,6 +54,9 @@ in {
       keyfile = "/var/lib/keys/tarsnap";
       archives.cardano-deployer = {
         directories = [
+          "/home/live-production/.ec2-keys"
+          "/home/live-production/.aws"
+          "/home/live-production/.nixops"
           "/home/staging/.ec2-keys"
           "/home/staging/.aws"
           "/home/staging/.nixops"
