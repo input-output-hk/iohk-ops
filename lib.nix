@@ -50,16 +50,19 @@ in lib // (rec {
   # mod 11 10 == 1
   # mod 1 10 == 1
   mod = base: int: base - (int * (builtins.div base int));
-
+} // (with (import ./ssh-keys.nix { inherit lib; }); {
   #
   # Access
   #
-  inherit (import ./ssh-keys.nix { inherit lib; }) devOps developers remoteBuilderKeys allKeysFrom;
+  inherit devOps csl-developers;
+
   devOpsKeys = allKeysFrom devOps;
-  devKeys = devOpsKeys ++ allKeysFrom developers;
+  devKeys = devOpsKeys ++ allKeysFrom csl-developers;
+  mantisOpsKeys = allKeysFrom devOps ++ allKeysFrom mantis-devOps;
+
   buildSlaveKeys = {
     macos = devOpsKeys ++ allKeysFrom remoteBuilderKeys;
     linux = remoteBuilderKeys.hydraBuildFarm;
   };
 
-})
+}))
