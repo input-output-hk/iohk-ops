@@ -905,10 +905,12 @@ date o c = parallelIO o c $
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
 configurationKeys :: Environment -> Arch -> T.Text
-configurationKeys Production Win64 = "mainnet_wallet_win64"
-configurationKeys Production Mac64 = "mainnet_wallet_macos64"
-configurationKeys Staging    Win64 = "mainnet_dryrun_wallet_win64"
-configurationKeys Staging    Mac64 = "mainnet_dryrun_wallet_macos64"
+configurationKeys Production Win64   = "mainnet_wallet_win64"
+configurationKeys Production Mac64   = "mainnet_wallet_macos64"
+configurationKeys Production Linux64 = "mainnet_wallet_linux64"
+configurationKeys Staging    Win64   = "mainnet_dryrun_wallet_win64"
+configurationKeys Staging    Mac64   = "mainnet_dryrun_wallet_macos64"
+configurationKeys Staging    Linux64 = "mainnet_dryrun_wallet_linux64"
 configurationKeys env _ = error $ "Application versions not used in '" <> show env <> "' environment"
 
 findInstallers :: NixopsConfig -> T.Text -> Maybe FilePath -> IO ()
