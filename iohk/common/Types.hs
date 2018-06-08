@@ -50,6 +50,8 @@ newtype FQDN         = FQDN         { fromFQDN         :: Text   } deriving (Fro
 newtype IP           = IP           { getIP            :: Text   } deriving (Show, Generic, FromField)
 newtype PortNo       = PortNo       { fromPortNo       :: Int    } deriving (FromJSON, Generic, Show, ToJSON)
 newtype Username     = Username     { fromUsername     :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+newtype GPGFinger    = GPGFinger    { fromGPGFinger    :: Text   } deriving (FromJSON, Generic, Show, IsString, ToJSON)
+data Arch = Linux64 | Mac64 | Win64 deriving (Show, Read, Eq, Generic)
 newtype ApplicationVersion = ApplicationVersion { getApplicationVersion :: Text } deriving (FromJSON, IsString, Show, Eq, Generic, ToJSON)
 
 -- * Flags
@@ -194,6 +196,7 @@ data NixopsConfig = NixopsConfig
   , cTarget           :: Target
   , cUpdateBucket     :: Text
   , cInstallerURLBase :: Maybe Text
+  , cSigningFinger    :: GPGFinger
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
   , cDeplArgs         :: DeplArgs

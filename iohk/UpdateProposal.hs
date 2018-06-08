@@ -38,7 +38,7 @@ import Data.List (find, nub)
 import NixOps ( Options, NixopsConfig(..)
               , nixopsConfigurationKey, configurationKeys
               , getCardanoSLConfig )
-import Types ( NixopsDepl(..), Environment(..), Arch(..)
+import Types ( NixopsDepl(..), Environment(..), Arch(..), GPGFinger(..)
              , formatArch, ArchMap, archMap, mkArchMap
              , archMapToList, archMapFromList, lookupArch
              , idArchMap, archMapEach)
@@ -72,8 +72,6 @@ data UpdateProposalStep
     , updateProposalAppVeyorBuildNum  :: Maybe Int
     }
   | UpdateProposalSignInstallers
-    { updateProposalGPGUserId         :: Maybe Text
-    }
   | UpdateProposalUploadS3
   | UpdateProposalSetVersionJSON
   | UpdateProposalSubmit
@@ -136,11 +134,6 @@ parseUpdateProposalCommand = subparser $
               <> help ("Select build number for " <> show ci)
         name = map toLower (show ci) <> "-build-num"
 
-    userId :: Parser Text
-    userId = fmap T.pack $ strOption $
-             long "local-user" <> short 'u' <> metavar "USER-ID"
-             <> help "use USER-ID to sign"
-
     relayIP :: Parser Text
     relayIP = fmap T.pack $ strOption $
               long "relay-ip" <> short 'r' <> metavar "ADDR"
@@ -168,7 +161,7 @@ updateProposal o cfg cmd = do
                  cslPath configKey (cUpdateBucket cfg)
       sh $ case step of
         UpdateProposalFindInstallers bk av -> updateProposalFindInstallers opts (cEnvironment cfg) bk av
-        UpdateProposalSignInstallers userId -> updateProposalSignInstallers opts userId
+        UpdateProposalSignInstallers -> updateProposalSignInstallers opts (cSigningFinger cfg)
         UpdateProposalUploadS3 -> updateProposalUploadS3 cfg opts
         UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON cfg opts
         UpdateProposalSubmit relay dryRun systems -> do
@@ -513,18 +506,16 @@ writeWikiRecord opts res = do
 -- | Step 2a. (Optional) Sign installers with GPG. This will leave
 -- .asc files next to the installers which will be picked up in the
 -- upload S3 step.
-updateProposalSignInstallers :: CommandOptions -> Maybe Text -> Shell ()
-updateProposalSignInstallers opts@CommandOptions{..} userId = do
+updateProposalSignInstallers :: CommandOptions -> GPGFinger -> Shell ()
+updateProposalSignInstallers opts@CommandOptions{..} signingFinger = do
   params <- loadParams opts
   void $ doCheckConfig params
+  printf ("*** Signing installers with GPG subkey "%s%"\n") (fromGPGFinger signingFinger)
   mapM_ signInstaller (map ciResultLocalPath . ciResults . cfgInstallersResults $ params)
   where
     -- using system instead of procs so that tty is available to gpg
     signInstaller f = system (P.proc "gpg2" $ map T.unpack $ gpgArgs f) empty
-    gpgArgs f = userArg ++ ["--detach-sig", "--armor", "--sign", tt f]
-    userArg = case userId of
-                Just u -> ["--local-user", u]
-                Nothing -> []
+    gpgArgs f = ["--default-key", fromGPGFinger signingFinger, "--detach-sig", "--armor", "--sign", tt f]
 
 ----------------------------------------------------------------------------
 

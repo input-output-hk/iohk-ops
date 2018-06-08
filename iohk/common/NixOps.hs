@@ -381,6 +381,7 @@ instance FromJSON NixopsConfig where
         <*> v .: "target"
         <*> v .: "installer-bucket"
         <*> v .:? "installer-url-base"
+        <*> v .: "signing-fingerprint" .!= "1234567890123456789012345678901234567890"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
