@@ -13,7 +13,7 @@ The scripts that are used are the following:
   * set-wallets-cluster.nix    , which sets up a cluster for wallets (edge nodes).
 
 
-## Steps
+## Steps to set up a cluster
 
 1. `SSH` to the staging jumpserver (`ssh staging@18.196.206.34`)
 
@@ -23,26 +23,33 @@ The scripts that are used are the following:
 
 1. `cd benchmarks`
 
-1. `nix-shell`
+1. `nix-shell -A withAuxx`
 
 1. Change the revision (commit) of `cardano-sl` repo that is used:
-
-  ```
-  $(nix-build scripts/set-rev.nix                          \
-  --argstr commit 517e7c7aa7e46bc584f309d423d2f18fd8d5365f \
-  )/bin/set-rev.sh
-  ```
+    ```
+    $(nix-build scripts/set-rev.nix                          \
+    --argstr commit 517e7c7aa7e46bc584f309d423d2f18fd8d5365f \
+    )/bin/set-rev.sh
+    ```
 
 1. ctrl-d
 
 1. `nix-shell`
 
-1. To set up the cluster choose a name:
+1. Choose a name for the cluster:
     ```
     $(nix-build scripts/set-cluster.nix    \
     --argstr clusterName benchmarksCluster \
     )/bin/set-cluster.sh
     ```
+
+
+## Run a benchmark
+
+1. Set the parameters for a benchmarking round
+   ```
+   nano ./bm-ci.sh
+   ```
 
 1. Run bm-ci.sh:
     ```

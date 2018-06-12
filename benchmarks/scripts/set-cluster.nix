@@ -11,6 +11,9 @@ writeScriptBin "set-cluster.sh" ''
 
   CLUSTERNAME=${clusterName}
 
+  nix-build -A cardano-sl-tools -o tools
+  export PATH=$PWD/tools/bin:$PATH
+
   IO=$(nix-build -A iohk-ops)/bin/iohk-ops
 
   $IO -C .. -v new -e benchmark $CLUSTERNAME nodes
