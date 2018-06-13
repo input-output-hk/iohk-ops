@@ -50,7 +50,7 @@ in lib // (rec {
   # mod 11 10 == 1
   # mod 1 10 == 1
   mod = base: int: base - (int * (builtins.div base int));
-} // (with (import ./ssh-keys.nix { inherit lib; }); {
+} // (with (import ./lib/ssh-keys.nix { inherit lib; }); rec {
   #
   # Access
   #
