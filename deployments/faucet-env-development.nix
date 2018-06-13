@@ -9,7 +9,7 @@ in
     ];
     services.faucet.faucet-config = {
       # TODO: use services.faucet.home here
-      source-wallet-config = builtins.toString /var/lib/faucet/wallet-source.json;
+      source-wallet = { generate-to = builtins.toString /var/lib/faucet/generated-wallet.json; };
     };
 
   };

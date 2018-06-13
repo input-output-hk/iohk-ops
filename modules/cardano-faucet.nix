@@ -18,8 +18,23 @@ let
       withdraw:          # logger for the withdraw action
         severity: Debug+   # severities withdraw logger
     '';
+  generateWalletOpts = {
+    options = {
+      generate-to = mkOption {
+        type = types.path;
+      };
+    };
+  };
+  readWalletOpts = {
+    options = {
+      read-from = mkOption {
+        type = types.path;
+      };
+    };
+  };
   cfgFile = pkgs.writeText "config.json" (builtins.toJSON cfg.faucet-config);
   walletSource = "${cfg.home}/wallet-source.json";
+  generatedWalletDefault = "${cfg.home}/generated-wallet.json";
   # walletCfg cribbed from cardano-benchmark
   walletCfg = {
     walletListen = "127.0.0.1:${toString walletPort}";
@@ -77,7 +92,10 @@ in
                 flush-interval = 1000;
               };
             };
-            source-wallet-config = mkOption { type = path; default = walletSource; };
+            source-wallet = mkOption {
+              type = either (submodule generateWalletOpts) (submodule readWalletOpts);
+              default = { generate-to = generatedWalletDefault; };
+            };
             logging-config = mkOption { type = path; default = loggingCfg; };
             public-certificate = mkOption { type = path; default = tlsPath "client.crt"; };
             private-key = mkOption { type = path; default = tlsPath "client.key"; };
@@ -154,7 +172,7 @@ in
 
     networking.firewall.allowedTCPPorts = mkIf  cfg.enable [
       # TODO: Do I need to open ports to stuff that's only running on localhost?
-      cfg.faucet-config.port ekgPort walletPort
+      cfg.faucet-config.port ekgPort walletPort config.services.statsd.graphitePort
     ];
 
   };
