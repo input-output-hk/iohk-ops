@@ -33,7 +33,7 @@ provider "local" {
 
 module "global" {
   source = "./global"
-  deployer_pgp_key = "${file("${path.module}/keys/deployer.base64")}"
+  deployer_pgp_key = "${file("${path.module}/../../lib/gpg-keys/deployer.base64")}"
 }
 
 # module "testnet_installer_bucket" {

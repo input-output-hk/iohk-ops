@@ -2,14 +2,14 @@
 #   source  = "./modules/user"
 #   name    = "ben.ford"
 #   # policy  = "AmazonEC2FullAccess"
-#   pgp_key = "${file("${path.module}/keys/ben.ford.base64")}"
+#   pgp_key = "${file("${path.module}/../../../lib/gpg-keys/ben.ford.base64")}"
 #   pgp_key = "${pgp_key}"
 # }
 
 module "user_rodney_lorrimar" {
   source  = "./modules/user"
   name    = "rodney.lorrimar"
-  # pgp_key = "${file("${path.module}/keys/rodney.lorrimar.base64")}"
+  # pgp_key = "${file("${path.module}/../../../lib/gpg-keys/rodney.lorrimar.base64")}"
   pgp_key = "${var.deployer_pgp_key}"
 }
 
