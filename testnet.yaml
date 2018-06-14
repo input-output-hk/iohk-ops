@@ -1,0 +1,34 @@
+args:
+  configurationKey:
+    tag: NixStr
+    contents: testnet_full
+  systemStart:
+    tag: NixInt
+    contents: 1527160000
+  IOHKaccessKeyId:
+    tag: NixStr
+    contents: default
+  CFaccessKeyId:
+    tag: NixStr
+    contents: default
+  EmurgoaccessKeyId:
+    tag: NixStr
+    contents: default
+environment: Testnet
+topology: topology-testnet.yaml
+installer-bucket: updates.cardano-testnet.iohkdev.io
+name: csl-testnet
+files:
+- deployments/keypairs.nix
+- deployments/security-groups.nix
+- deployments/cardano-nodes.nix
+- deployments/cardano-nodes-env-testnet.nix
+- deployments/cardano-explorer.nix
+- deployments/cardano-explorer-env-testnet.nix
+- deployments/report-server.nix
+- deployments/report-server-env-testnet.nix
+elements:
+- Nodes
+- Explorer
+- ReportServer
+target: AWS
