@@ -5,7 +5,10 @@ with (import ./../lib.nix);
 let
   iohk-pkgs = import ../default.nix {};
 in {
-  imports = [ ./ntp_fix.nix ];
+  imports = [
+    ./ntp_fix.nix
+    ./extra-statsd.nix
+  ];
   boot.kernel.sysctl = {
     ## DEVOPS-592
     "kernel.unprivileged_bpf_disabled" = 1;
@@ -40,6 +43,7 @@ in {
   };
 
   services.cron.enable = true;
+  services.extra-statsd = true;
   #services.cron.systemCronJobs = [
   #  "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 2 29 /var/log/saALL"
   #];
