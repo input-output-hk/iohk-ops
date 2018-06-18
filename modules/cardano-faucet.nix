@@ -151,7 +151,7 @@ in
         serviceConfig = {
           User = "faucet";
           Group = "faucet";
-          ExecStart = iohkpkgs.connectScripts.stagingWallet.override walletCfg;
+          ExecStart = iohkpkgs.connectScripts.staging.wallet.override walletCfg;
         };
       };
       faucet = mkIf cfg.enable {
