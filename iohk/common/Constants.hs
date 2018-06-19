@@ -98,7 +98,6 @@ envSettings env =
                                , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-staging.nix")
                                , (ReportServer,   All, "deployments/report-server-env-staging.nix")
-                               , (Faucet,         All, "deployments/faucet-env-staging.nix")
                                , (Infra,          All, "deployments/infrastructure-env-staging.nix")
                                ] <> deplAgnosticFiles}
     Production   -> EnvSettings
@@ -121,9 +120,11 @@ envSettings env =
       , envDefaultTopology   = "topology-testnet.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
                                , (Explorer,       All, "deployments/security-groups.nix")
+                               , (Faucet,         All, "deployments/security-groups.nix")
                                , (ReportServer,   All, "deployments/security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-testnet.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-testnet.nix")
+                               , (Faucet,         All, "deployments/cardano-faucet-env-testnet.nix")
                                , (ReportServer,   All, "deployments/report-server-env-testnet.nix")
                                ] <> deplAgnosticFiles}
     Development -> EnvSettings
@@ -133,8 +134,8 @@ envSettings env =
       , envDefaultTopology   = "topology-development.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
+                               , (Faucet,         All, "deployments/cardano-faucet-env-development.nix")
                                , (ReportServer,   All, "deployments/report-server-env-development.nix")
-                               , (Faucet,         All, "deployments/faucet-env-development.nix")
                                ] <> deplAgnosticFiles}
     Benchmark -> EnvSettings
       { envDeployerUser      = "staging"
