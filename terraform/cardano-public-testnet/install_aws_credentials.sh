@@ -2,36 +2,36 @@
 
 set -e
 
-top=$(cd `dirname $0`; pwd)
+top=$(cd "$(dirname "$0")"; pwd)
 keys="$top/global/modules/user/private"
 
 key_id() {
-    terraform state show module.global.module.$1.aws_iam_access_key.self | awk -F= '/^id/ { print $2; }'
+    terraform state show "module.global.module.$1.aws_iam_access_key.self" | awk -F= '/^id/ { print $2; }'
 }
 
 access_key() {
-    base64 --decode $keys/$1.secret | gpg --quiet --decrypt
+    base64 --decode "$keys/$1.secret" | gpg --quiet --decrypt
 }
 
 install_key() {
     user=$1
     id=$2
     secret=$3
-    aws=/home/$user/.aws
-    sudo mkdir -p $aws
-    sudo dd status=none of=$aws/credentials <<EOF
+    aws="/home/$user/.aws"
+    sudo mkdir -p "$aws"
+    sudo dd status=none "of=$aws/credentials" <<EOF
 [default]
 aws_access_key_id=$id
 aws_secret_access_key=$secret
 EOF
-    sudo chown -R $user: $aws
+    sudo chown -R "$user": "$aws"
 }
 
 for user in staging testnet infra; do
     echo "Setting up deployers user $user"
     id=$(key_id user_deployer_$user)
     secret=$(access_key deployer.$user)
-    install_key $user $id $secret
+    install_key "$user" "$id" "$secret"
 done
 
 # fixme: install credentials for all developers defined in
@@ -46,4 +46,4 @@ done
 # done
 
 echo "Setting up developers user rodney"
-install_key rodney $(key_id user_rodney_lorrimar) $(access_key rodney.lorrimar)
+install_key rodney "$(key_id user_rodney_lorrimar)" "$(access_key rodney.lorrimar)"
