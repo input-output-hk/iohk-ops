@@ -35,6 +35,7 @@ globals: imports: params:
       with params;
       let sgNames =
            optionals typeIsExplorer              [ "allow-to-explorer-${params.region}" ]
+        ++ optionals typeIsFaucet                [ "allow-to-faucet-${params.region}" ]
         ++ optionals typeIsCore                  [ "allow-cardano-static-peers-${params.name}-${params.region}-${params.org}" ]
         ++ optionals typeIsRelay                 [ "allow-kademlia-public-udp-${params.region}"
                                                    "allow-cardano-public-tcp-${params.region}" ]
