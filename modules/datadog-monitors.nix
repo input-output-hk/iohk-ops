@@ -129,6 +129,17 @@ rec {
     };
   };
 
+  cardano_faucet_process_monitor = {
+    name = "cardano-faucet process is down";
+    type = "service check";
+    query = config: "\"process.up\".over(\"depl:${config.deployment.name}\",\"process:cardano-faucet\").by(\"host\",\"process\").last(6).count_by_status()";
+    monitorOptions.thresholds = {
+      warning = 4;
+      critical = 5;
+      ok = 2;
+    };
+  };
+
   chain_quality_monitor = {
     name = "Degraded Chain Quality over last 2160 blocks";
     type = "metric alert";

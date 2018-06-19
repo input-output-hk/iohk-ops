@@ -1,17 +1,21 @@
-{ globals, ... }: with (import ./../lib.nix);
-let nodeMap = { inherit (globals.fullMap) report-server; }; in
+{ globals, ... }: with (import ../lib.nix);
+let nodeMap = { inherit (globals.fullMap) faucet; }; in
 
 
+(flip mapAttrs nodeMap (name: import ../modules/cardano-testnet.nix))
+//
 {
-  faucet = { config, resources, ...}: {
-    imports = [
-      ./../modules/staging.nix
-      ./../modules/datadog.nix
-    ];
-    services.faucet.faucet-config = {
-      source-wallet-config = builtins.toString ./../static/wallet-source.json;
-    };
-
+  resources = {
+    elasticIPs = nodesElasticIPs nodeMap;
+    datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
+      cardano_faucet_process = mkMonitor (cardano_faucet_process_monitor // {
+        message = pagerDutyPolicy.nonCritical;
+        monitorOptions.thresholds = {
+          warning = 3;
+          critical = 4;
+          ok = 1;
+        };
+      });
+    });
   };
-  resources.elasticIPs = nodesElasticIPs nodeMap;
 }

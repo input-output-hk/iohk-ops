@@ -1,15 +1,4 @@
 { globals, ... }: with (import ./../lib.nix);
+let nodeMap = { inherit (globals.fullMap) faucet; }; in
 
-let params = globals.fullMap.faucet;
-in
-{
-  faucet = { config, resources, ...}: {
-    imports = [
-      ./../modules/development.nix
-    ];
-    services.faucet.faucet-config = {
-      source-wallet-config = builtins.toString ./../static/wallet-source.json;
-    };
-
-  };
-}
+(flip mapAttrs nodeMap (name: import ./../modules/cardano-development.nix))
