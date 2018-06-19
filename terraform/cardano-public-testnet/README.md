@@ -71,16 +71,39 @@ users and developers.
 
     ./install_aws_credentials.sh
 
-### 5. Finished global terraform
+### 5. MFA Token setup
 
 At this stage, all user accounts are created and local deployer users
 have their credentials.
 
-Log in as a user such as `testnet@testnet-deployer`.
+The IAM users cannot be used without MFA, so this needs to be set up
+for each user. The IAM users have permission to update their own MFA
+details.
 
-Enable MFA on the given user using AWS console (fixme: password setup
-and instructions) and set up the token app (andOTP from F-Droid is
-good).
+#### AWS Console Password
+
+For each user with AWS access, decrypt the file
+`~/username-console-password.gpg` using something like:
+
+    cat username-console-password.gpg | base64 --decode | gpg --decrypt
+
+For deployer users, the console password is encrypted with the
+deployer's GPG key.
+
+For developer users, the console password is encrypted with the user's
+GPG key specified in [`global/users.tf`](./global/users.tf).
+
+#### MFA Setup
+
+Log in to [the console](https://117127962627.signin.aws.amazon.com/console) then
+follow the [AWS MFA instructions](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable.html).
+
+[andOTP](https://f-droid.org/en/packages/org.shadowice.flocke.andotp/)
+from F-Droid is a good token app.
+
+### 6. Finished global terraform
+
+Log in as a user such as `testnet@testnet-deployer`.
 
 Run:
 
@@ -89,7 +112,7 @@ Run:
 
 This should work.
 
-### 6. Please sir, can I have some more?
+### 7. Please sir, can I have some more?
 
 The network needs elastic IPs, lots of them.
 
@@ -144,7 +167,7 @@ ADA spent.
 
     cardano-keygen --system-start 0 --configuration-file cardano-sl/lib/configuration.yaml --configuration-key testnet_launch --configuration-seed `cat testnet-seed.txt` generate-keys-by-spec --genesis-out-dir genesis-keys
 
-Place the generated rich keys where they can be deployed to core
+Place the generated "rich" keys where they can be deployed to core
 nodes:
 
     cp -Rv genesis-keys/generated-keys/rich keys
@@ -160,17 +183,22 @@ From the directory `testnet@testnet-deployer:iohk-ops`.
     # datadog api
     nano static/datadog-api.secret
     nano static/datadog-application.secret
+
+    # report server
     echo foo > static/zendesk-token.secret
+
+    # recaptcha keypair for faucet
+    nano static/recaptcha_site_key
+    nano static/recaptcha_secret_key
 
     io deploy
 
-### 4. Transfer Genesis ADA
+### 4. Open Genesis Wallet in Daedalus
 
-Use a genesis key to create a wallet in Daedalus. Daedalus Testnet
-needs to be running and the key should be copied to a temporary
-location.
+Copy a genesis "poor" key to a temporary location and use it to create
+a wallet in Daedalus. Daedalus (Testnet build) needs to be running.
 
-    curl -i https://localhost:8090/api/wallets/keys \
+    curl -i https://localhost:8092/api/wallets/keys \
       --cacert ~/.local/share/Daedalus/testnet/tls/server/ca.crt \
       --cert ~/.local/share/Daedalus/testnet/tls/server/server.crt \
       --key ~/.local/share/Daedalus/testnet/tls/server/server.key \
@@ -184,3 +212,27 @@ location.
     content-type: application/json;charset=utf-8
 
     {"Right":{"cwId":"Ae2tdPwUPEZMdfwG6TGDEU24TcBURhubkqy7ExrAefGFyMTCtee5cnrvNSB","cwMeta":{"cwName":"Genesis wallet","cwAssurance":"CWANormal","cwUnit":0},"cwAccountsNumber":1,"cwAmount":{"getCCoin":"9651253048499"},"cwHasPassphrase":false,"cwPassphraseLU":1.529235276571176605e9}}
+
+### 5. Transfer Testnet ADA to faucet
+
+Use nixops to log in to the faucet node. After starting, it creates
+the file `/var/lib/faucet/generated-wallet.json`. Send an amount of
+ADA from the Genesis Wallet to the address in that file.
+
+### 6. Withdraw Testnet ADA from faucet
+
+In a new Daedalus Testnet wallet, create a new address to receive
+payments. Use that address in the following query:
+
+    curl -i -X POST http://cardano-faucet.cardano-testnet.iohkdev.io/withdraw -H 'Content-type: application/json;charset=utf-8' -d '{ "address": "DdzFFzCqrhso4y6jJo5zx8JGGVufuMNk2U1xXdrjaYDmZZT625mFQDtHHkVkicAt6dLP9wVoehGhxZnJHCYt2NWcD4sHn4PUvcWfcYkt" }'
+
+    HTTP/1.1 200 OK
+    Server: nginx
+    Date: Tue, 19 Jun 2018 16:02:47 GMT
+    Content-Type: application/json;charset=utf-8
+    Transfer-Encoding: chunked
+    Connection: keep-alive
+
+    {"success":{"creationTime":"2018-06-19T16:02:41.478137","status":{"tag":"applying","data":{}},"amount":171794,"inputs":[{"amount":999999827807,"address":"DdzFFzCqrhsvHB5f1mciD9JLsFVeHy7TEsWVLSSLPe33hFLcoJfu9a11rCmy12GCqttCJ3WWnhkREKG1sFKxsLaU2VPwV5uxQPWknmCE"}],"direction":"outgoing","outputs":[{"amount":999999656013,"address":"DdzFFzCqrht3NGCA8BgSCfymLPP2FduQeo8V6u9atYxcbH2FKbqJCzYd2WGjwtFi9h3JSE2DJyiE1zBtJ3Dsb2Be1wwkTxZwt9PLUfFv"},{"amount":812,"address":"DdzFFzCqrhso4y6jJo5zx8JGGVufuMNk2U1xXdrjaYDmZZT625mFQDtHHkVkicAt6dLP9wVoehGhxZnJHCYt2NWcD4sHn4PUvcWfcYkt"}],"confirmations":0,"id":"8e356033bfb5de3d3866cb68d9a93c3bb6fef97788bd4228ebae86f97d6f9d83","type":"foreign"}}
+
+Check http://cardano-explorer.cardano-testnet.iohkdev.io for the transaction ID.
