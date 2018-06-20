@@ -47,6 +47,7 @@ let
     "--configuration-file ${cardano.src + "/../lib/"}/configuration.yaml"
     "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
+    (optionalString (cfg.assetLockFile != null) "--asset-lock-file ${assetLockFile}")
     "--node-id ${params.name}"
     (optionalString cfg.enableProfiling "+RTS -p -RTS")
   ];
@@ -78,6 +79,7 @@ in {
       autoStart = mkOption { type = types.bool; default = true; };
 
       topologyYaml = mkOption { type = types.path; };
+      assetLockFile = mkOption { type = types.nullOr types.path; default = null; };
 
       genesisN = mkOption { type = types.int; default = 6; };
       slotDuration = mkOption { type = types.int; default = 20; };
