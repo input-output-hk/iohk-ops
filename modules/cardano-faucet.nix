@@ -28,9 +28,13 @@ globals: params:
         # TLS provided by cloudfront
         locations = {
           "/" = {
-            # root = cardanoPackages.cardano-sl-faucet-frontend;
-            # Serve static files or fallback to browser history api
-            # tryFiles = "$uri /index.html";
+            root = pkgs.runCommand "faucet-frontend" {} ''
+              mkdir -p $out
+              cp ${../lib/faucet.html} $out/index.html
+            '';
+            tryFiles = "$uri $uri/index.html @faucet";
+          };
+          "@faucet" = {
             proxyPass = "http://127.0.0.1:${toString config.services.cardano-faucet.port}";
           };
         };

@@ -5,6 +5,10 @@ writeScriptBin "aws-mfa" ''
   set -euo pipefail
   export PATH=${awscli}/bin:${jq}/bin:${gnused}/bin
 
+  unset AWS_SECRET_ACCESS_KEY
+  unset AWS_SESSION_TOKEN
+  unset AWS_ACCESS_KEY_ID
+
   token="''${1:-}"
   username=$(aws sts get-caller-identity | jq -re .Arn | sed 's=.*user/==')
   serial_number=$(aws iam list-mfa-devices --user-name $username | jq -re '.MFADevices[0].SerialNumber')
