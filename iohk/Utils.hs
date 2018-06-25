@@ -20,7 +20,6 @@ import           Network.HTTP.Client.TLS   (newTlsManager)
 import           Network.HTTP.Types.Header (RequestHeaders)
 import           System.Exit               (ExitCode (ExitFailure, ExitSuccess))
 import qualified Data.Aeson                    as AE
-import qualified Data.Aeson.Types              as AE
 import qualified Data.Char                     as C
 import           Data.Text                        (Text)
 import           GHC.Generics              hiding (from, to)
@@ -32,8 +31,8 @@ import qualified Network.AWS.Data          as AWS
 fetchCachedUrl :: HasCallStack => T.Text -> FilePath -> FilePath -> IO ()
 fetchCachedUrl url name outPath = fetchCachedUrl' url name outPath Nothing
 
-fetchCachedUrlWithSHA1 :: HasCallStack => T.Text -> FilePath -> FilePath -> T.Text -> IO ()
-fetchCachedUrlWithSHA1 url name outPath sha1 = fetchCachedUrl' url name outPath (Just sha1)
+fetchCachedUrlWithSHA1 :: HasCallStack => T.Text -> T.Text -> FilePath -> FilePath -> IO ()
+fetchCachedUrlWithSHA1 sha1 url name outPath = fetchCachedUrl' url name outPath (Just sha1)
 
 fetchCachedUrl' :: HasCallStack => T.Text -> FilePath -> FilePath -> Maybe T.Text -> IO ()
 fetchCachedUrl' url name outPath sha1 = proc "nix-build" args mempty >>= handleExit

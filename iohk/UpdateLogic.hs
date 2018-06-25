@@ -41,16 +41,17 @@ import           Control.Applicative          ((<|>))
 import           Control.Exception            (try)
 import           Control.Lens                 (to, (^.))
 import qualified Control.Lens                 as Lens
-import           Control.Monad                (guard, forM, when)
-import           Control.Monad.Managed        (Managed, liftIO)
+import           Control.Monad                (guard, when, (<=<))
+import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Trans.Resource (runResourceT)
 import           Data.Aeson                   (ToJSON, FromJSON)
 import qualified Data.ByteString.Lazy         as LBS
 import qualified Data.HashMap.Strict          as HashMap
-import           Data.List                    (nub)
+import           Data.List                    (nub, find)
 import           Data.Maybe                   (fromMaybe, isJust)
 import           Data.Monoid                  ((<>))
 import qualified Data.Text                    as T
+import           Data.Text                    (Text)
 import qualified Data.Text.IO                 as T
 import qualified Filesystem.Path.CurrentOS    as FP
 import           GHC.Generics                 (Generic)
@@ -82,25 +83,32 @@ import           Filesystem.Path              (FilePath, (</>), filename)
 
 import           InstallerVersions
 import           Types                        (ApplicationVersion, ApplicationVersionKey,
-                                               Arch (Mac64, Win64), formatArch)
+                                               Arch (Linux64, Mac64, Win64), formatArch)
 import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1, s3Link)
 
 data CIResult = CIResult
-  { ciResultLocalPath   :: FilePath
-  , ciResultUrl         :: T.Text
-  , ciResultDownloadUrl :: T.Text
+  { ciResultSystem      :: CISystem
+  , ciResultLocalPath   :: FilePath
+  , ciResultUrl         :: Text
+  , ciResultDownloadUrl :: Text
   , ciResultBuildNumber :: Int
+  , ciResultArch        :: Arch
+  , ciResultSHA1Sum     :: Maybe Text
   } deriving (Show, Generic)
 
+data CISystem = Buildkite | AppVeyor deriving (Show, Generic)
+
 data InstallersResults = InstallersResults
-  { ciResults    :: [(Arch, CIResult)]
+  { ciResults    :: [CIResult]
   , globalResult :: GlobalResults
   } deriving (Show, Generic)
 
 instance FromJSON InstallersResults
 instance FromJSON CIResult
+instance FromJSON CISystem
 instance ToJSON InstallersResults
 instance ToJSON CIResult
+instance ToJSON CISystem
 
 -- | Allow selection of which CI artifacts to download.
 type InstallerPredicate = CIResult -> Bool
@@ -119,7 +127,7 @@ loadBuildkiteToken = try (T.readFile buildkiteTokenFile) >>= \case
     process = headMay . filter (not . T.null) . T.lines
     advice = "Obtain an API access token with read_builds scope from\n" <>
              "https://buildkite.com/user/api-access-tokens\n" <>
-             "Exiting!" :: T.Text
+             "Exiting!" :: Text
     st = makeFormat T.pack
 
 buildkiteTokenFile = "static/buildkite_token" :: String
@@ -129,91 +137,100 @@ realFindInstallers keys instP daedalusRev destDir = do
   buildkiteToken <- liftIO $ loadBuildkiteToken
   globalResult <- liftIO $ findVersionInfo keys daedalusRev
   st <- liftIO $ statuses <$> fetchGithubStatus "input-output-hk" "daedalus" daedalusRev
-  results <- liftIO $ concat <$> mapM (findInstallersFromStatus buildkiteToken destDir instP) st
-  pure $ InstallersResults results globalResult
+  results <- mapM (handleCIResults instP destDir <=< findInstallersFromStatus buildkiteToken destDir) st
+  pure $ InstallersResults (concat results) globalResult
 
-buildkiteOrg     = "input-output-hk" :: T.Text
-pipelineDaedalus = "daedalus"        :: T.Text
+handleCIResults :: InstallerPredicate -> Maybe FilePath -> Either Text [CIResult] -> IO [CIResult]
+handleCIResults instP destDir (Right rs) = do
+  let rs' = filter instP rs
+  when (isJust destDir) $ fetchCIResults rs'
+  pure rs'
+handleCIResults _ _ (Left msg) = T.putStrLn msg >> pure []
 
-bkArtifactIsInstaller :: Artifact -> Bool
-bkArtifactIsInstaller = T.isSuffixOf ".pkg" . artifactFilename
+buildkiteOrg     = "input-output-hk" :: Text
+pipelineDaedalus = "daedalus"        :: Text
 
-findInstallersBuildKite :: APIToken -> Maybe FilePath -> InstallerPredicate -> Int -> T.Text -> IO [(Arch, CIResult)]
-findInstallersBuildKite apiToken destDir instP buildNum buildUrl = do
+bkArtifactInstallerArch :: Artifact -> Maybe Arch
+bkArtifactInstallerArch art | T.isSuffixOf ".pkg" fn = Just Mac64
+                            | T.isSuffixOf ".bin" fn = Just Linux64
+                            | otherwise = Nothing
+  where fn = artifactFilename art
+
+findInstallersBuildKite :: APIToken -> Maybe FilePath -> Int -> T.Text
+                        -> IO (Either Text [CIResult])
+findInstallersBuildKite apiToken destDir buildNum buildUrl = do
   let buildDesc = format ("Buildkite build #"%d) buildNum
   arts <- listArtifactsForBuild apiToken buildkiteOrg pipelineDaedalus buildNum
-
-  rs <- forInstallers buildDesc bkArtifactIsInstaller arts $ \art -> do
+  let arts' = [ (art, arch) | (art, Just arch) <- [ (art, bkArtifactInstallerArch art) | art <- arts ] ]
+  forInstallers buildDesc (const True) arts' $ \(art, arch) -> do
     -- ask Buildkite what the download URL is
     url <- BK.getArtifactURL apiToken buildkiteOrg pipelineDaedalus buildNum art
-
     let out = fromMaybe "." destDir </> FP.fromText (artifactFilename art)
-        res = CIResult out buildUrl url buildNum
-    printCIResult "Buildkite" Mac64 res
-    pure (res, artifactSha1sum art)
-
-  forM (filter (instP . fst) rs) $ \(res, sha1) -> do
-    when (isJust destDir) $
-      -- download artifact into nix store
-      let out = ciResultLocalPath res
-      in fetchCachedUrlWithSHA1 (ciResultDownloadUrl res) (filename out) out sha1
-    pure (Mac64, res)
+    pure $ CIResult Buildkite out buildUrl url buildNum arch (Just $ artifactSha1sum art)
 
 avArtifactIsInstaller :: AppveyorArtifact -> Bool
 avArtifactIsInstaller (AppveyorArtifact _ name) = name == "Daedalus Win64 Installer"
 
-findInstallersAppVeyor :: Maybe FilePath -> InstallerPredicate -> T.Text
+findInstallersAppVeyor :: Maybe FilePath -> Text
                        -> Appveyor.Username -> Appveyor.Project -> ApplicationVersion
-                       -> IO [(Arch, CIResult)]
-findInstallersAppVeyor destDir instP url user project version = do
+                       -> IO (Either Text [CIResult])
+findInstallersAppVeyor destDir url user project version = do
   appveyorBuild <- fetchAppveyorBuild user project version
   let jobid = appveyorBuild ^. build . Appveyor.jobs . to head . jobId
       jobDesc = format ("AppVeyor job "%s) (unJobId jobid)
   artifacts <- fetchAppveyorArtifacts jobid
-  rs <- forInstallers jobDesc avArtifactIsInstaller artifacts $ \(AppveyorArtifact art _) ->
+  forInstallers jobDesc avArtifactIsInstaller artifacts $ \(AppveyorArtifact art _) ->
     pure CIResult
-      { ciResultLocalPath   = fromMaybe "." destDir </> filename (FP.fromText art)
+      { ciResultSystem      = AppVeyor
+      , ciResultLocalPath   = fromMaybe "." destDir </> filename (FP.fromText art)
       , ciResultUrl         = url
       , ciResultDownloadUrl = getArtifactUrl jobid art
       , ciResultBuildNumber = appveyorBuild ^. build . buildNumber . to unBuildNumber
+      , ciResultArch        = Win64
+      , ciResultSHA1Sum     = Nothing
       }
 
-  forM (filter instP rs) $ \res -> do
-    printCIResult "AppVeyor" Win64 res
-    when (isJust destDir) $
-      let out = ciResultLocalPath res
-      in fetchCachedUrl (ciResultDownloadUrl res) (filename out) out
-    pure (Win64, res)
+-- | Download artifacts into the nix store.
+fetchCIResults :: [CIResult] -> IO ()
+fetchCIResults = mapM_ fetchResult
+  where
+    fetchResult CIResult{..} = fetchCached ciResultDownloadUrl (filename ciResultLocalPath) ciResultLocalPath
+      where fetchCached = case ciResultSHA1Sum of
+                            Just sha1 -> fetchCachedUrlWithSHA1 sha1
+                            Nothing -> fetchCachedUrl
 
-forInstallers :: T.Text -> (a -> Bool) -> [a] -> (a -> IO b) -> IO [b]
+forInstallers :: Text -> (a -> Bool) -> [a] -> (a -> IO CIResult) -> IO (Either Text [CIResult])
 forInstallers job p arts action = case filter p arts of
-  [] -> die $ if null arts
+  [] -> pure $ Left $ if null arts
     then "No artifacts for " <> job
     else "Installer package file not found in artifacts of " <> job
-  files -> mapM action files
+  files -> Right <$> mapM showResult files
+    where showResult a = do
+            b <- action a
+            printCIResult b
+            pure b
 
-printCIResult :: T.Text -> Arch -> CIResult -> IO ()
-printCIResult ci arch CIResult{..} = do
-  printf (s%" "%w%" URL: ") ci arch
+printCIResult :: CIResult -> IO ()
+printCIResult CIResult{..} = do
+  printf (w%" "%w%" URL: ") ciResultSystem ciResultArch
   setSGR [ SetColor Foreground Dull Green ]
   T.putStrLn ciResultUrl
   setSGR [ Reset ]
 
-  printf (s%" "%w%" Installer: ") ci arch
+  printf (w%" "%w%" Installer: ") ciResultSystem ciResultArch
   setSGR [ SetColor Foreground Dull Green ]
   T.putStrLn ciResultDownloadUrl
   setSGR [ Reset ]
 
-formatCIResults :: [(Arch, CIResult)] -> T.Text
+formatCIResults :: [CIResult] -> Text
 formatCIResults rs = T.unlines $ ["CI links:"] ++ ciLinks ++ [""] ++ instLinks InstallerMainnet ++ [""] ++ instLinks InstallerStaging
   where
-    ciLinks = nub $ map (("* " <>) . ciResultUrl . snd) rs
-    instLinks net = (format (w%" installers:") net:[ fmt arch (ciResultDownloadUrl res)
-                                                   | (arch, res) <- rs, isNet net res ])
+    ciLinks = nub $ map (("* " <>) . ciResultUrl) rs
+    instLinks net = (format (w%" installers:") net:[ fmt res | res <- rs, isNet net res ])
     isNet net = (== Just net) . installerNetwork . ciResultLocalPath
-    fmt arch = format (s%" - "%s) (formatArch arch)
+    fmt res = format (s%" - "%s) (formatArch $ ciResultArch res) (ciResultDownloadUrl res)
 
-formatVersionInfo :: GlobalResults -> T.Text
+formatVersionInfo :: GlobalResults -> Text
 formatVersionInfo GlobalResults{..} = T.unlines
   [ format ("Daedalus version:   "%s) grDaedalusVersion
   , format ("Daedalus rev:       "%s) grDaedalusCommit
@@ -227,10 +244,10 @@ formatVersionInfo GlobalResults{..} = T.unlines
 printInstallersResults :: InstallersResults -> IO ()
 printInstallersResults InstallersResults{..} = T.putStr $ T.unlines
   [rule, formatVersionInfo globalResult, "", formatCIResults ciResults, rule]
-  where rule = "============================================================" :: T.Text
+  where rule = "============================================================" :: Text
 
 data StatusContext = StatusContextAppveyor Appveyor.Username Appveyor.Project ApplicationVersion
-                   | StatusContextBuildkite T.Text Int
+                   | StatusContextBuildkite Text Int
                    deriving (Show, Eq)
 
 parseStatusContext :: Status -> Maybe StatusContext
@@ -250,18 +267,16 @@ parseStatusContext status = parseAppveyor <|> parseBuildKite
     isAppveyor = context status == "continuous-integration/appveyor/branch"
     isBuildkite = "buildkite/" `T.isPrefixOf` context status
 
-findInstallersFromStatus :: BK.APIToken -> Maybe FilePath -> InstallerPredicate -> Status -> IO [(Arch, CIResult)]
-findInstallersFromStatus buildkiteToken destDir instP status =
+findInstallersFromStatus :: BK.APIToken -> Maybe FilePath -> Status -> IO (Either Text [CIResult])
+findInstallersFromStatus buildkiteToken destDir status =
   case parseStatusContext status of
     Just (StatusContextBuildkite _repo buildNum) ->
-      findInstallersBuildKite buildkiteToken destDir instP buildNum (targetUrl status)
+      findInstallersBuildKite buildkiteToken destDir buildNum (targetUrl status)
     Just (StatusContextAppveyor user project version) ->
-      findInstallersAppVeyor destDir instP (targetUrl status) user project version
-    Nothing -> do
-      putStrLn $ "unrecognized CI status: " <> T.unpack (context status)
-      pure []
+      findInstallersAppVeyor destDir (targetUrl status) user project version
+    Nothing -> pure $ Left $ "unrecognized CI status: " <> context status
 
-githubWikiRecord :: InstallersResults -> T.Text
+githubWikiRecord :: InstallersResults -> Text
 githubWikiRecord InstallersResults{..} = T.intercalate " | " cols <> "\n"
   where
     cols = [ format w $ grApplicationVersion globalResult
@@ -275,12 +290,12 @@ githubWikiRecord InstallersResults{..} = T.intercalate " | " cols <> "\n"
     githubLink rev project = githubLink' (rev globalResult) project
     githubLink' rev project = mdLink (T.take 6 rev) (format ("https://github.com/input-output-hk/"%s%"/commit/"%s) project rev)
 
-    ciLink arch = maybe "*missing*" ciLink' $ lookup arch ciResults
+    ciLink arch = maybe "*missing*" ciLink' $ find ((== arch) . ciResultArch) ciResults
     ciLink' CIResult{..} = mdLink (format d ciResultBuildNumber) ciResultUrl
 
     mdLink = format ("["%s%"]("%s%")")
 
-updateVersionJson :: T.Text -> LBS.ByteString -> IO T.Text
+updateVersionJson :: Text -> LBS.ByteString -> IO Text
 updateVersionJson bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
   uploadFile json key
   pure $ s3Link region bucketName key
@@ -306,9 +321,9 @@ withinBucketRegion bucketName action = do
   region <- bucketRegion bucketName
   within region $ action region
 
-type AWSMeta = HashMap.HashMap T.Text T.Text
+type AWSMeta = HashMap.HashMap Text Text
 
-uploadHashedInstaller :: T.Text -> FilePath -> GlobalResults -> T.Text -> AWS T.Text
+uploadHashedInstaller :: Text -> FilePath -> GlobalResults -> Text -> AWS Text
 uploadHashedInstaller bucketName localPath GlobalResults{..} hash =
   withinBucketRegion bucketName' $ \region -> do
     uploadOneFile bucketName' localPath (ObjectKey hash) meta
@@ -326,10 +341,10 @@ uploadHashedInstaller bucketName localPath GlobalResults{..} hash =
       , ("application-version", (T.pack. show) grApplicationVersion)
       ] :: AWSMeta
 
-    copyObject' :: T.Text -> ObjectKey -> AWS ()
+    copyObject' :: Text -> ObjectKey -> AWS ()
     copyObject' source dest = void . send $ Lens.set coACL (Just OPublicRead) $ copyObject bucketName' source dest
 
-uploadSignature :: T.Text -> FilePath -> AWS ()
+uploadSignature :: Text -> FilePath -> AWS ()
 uploadSignature bucket localPath = withinBucketRegion bucketName . const $
   uploadOneFile bucketName localPath (simpleKey localPath) mempty
   where bucketName = BucketName bucket
