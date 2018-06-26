@@ -25,7 +25,8 @@ in {
     imports = [
       ./../modules/common.nix
       ./../modules/hydra-slave.nix
-      ./../modules/hydra-master.nix
+      ./../modules/hydra-master-common.nix
+      ./../modules/hydra-master-main.nix
     ];
   };
 
