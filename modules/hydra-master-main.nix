@@ -67,22 +67,22 @@ in {
         input-output-hk = ${builtins.readFile ../static/github_token}
       </github_authorization>
       <githubstatus>
-        jobs = serokell:iohk-nixops.*
+        jobs = iohk:iohk-nixops.*
         inputs = jobsets
         excludeBuildFromContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = serokell:cardano.*
+        jobs = iohk:cardano.*
         inputs = cardano
         excludeBuildFromContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = serokell:daedalus.*:tests\..*
+        jobs = iohk:daedalus.*:tests\..*
         inputs = daedalus
         excludeBuildFromContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = serokell:plutus.*
+        jobs = iohk:plutus.*:tests\..*
         inputs = plutus
         excludeBuildFromContext = 1
       </githubstatus>
