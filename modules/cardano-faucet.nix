@@ -70,8 +70,16 @@ in
           options = {
             wallet-host = mkOption { type = str; default = "127.0.0.1"; };
             wallet-port = mkOption { type = int; default = 8090; };
-            payment-amount = mkOption { type = int; default = 1000; };
-            payment-variation = mkOption { type = int; default = 500; };
+            payment-distribution = mkOption {
+              description = "Settings for the distribution of amount to pay out from the faucet";
+              type = submodule {
+                options = {
+                  mean = mkOption { type = int; default = 500; };
+                  scale = mkOption { type = int; default = 500; };
+                };
+              };
+              default = { mean = 1000; scale = 500;};
+            };
             port = mkOption {
               type = int;
               default = 8081 ;
