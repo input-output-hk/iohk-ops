@@ -22,6 +22,23 @@ in {
     deployment.route53.hostName = "hydra.aws.iohkdev.io";
   };
 
+  mantis-hydra = { config, pkgs, resources, ... }: {
+    # Differences from the main Hydra:
+    # 1. builds are not sandboxed
+    # 2. hydra builds things without slaves
+    imports = [
+      ./../modules/papertrail.nix
+      ./../modules/datadog.nix
+    ];
+
+    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
+
+    deployment.ec2.elasticIPv4 = resources.elasticIPs.mantis-hydra-ip;
+
+    deployment.route53.accessKeyId = route53accessKeyId;
+    deployment.route53.hostName = "mantis-hydra.aws.iohkdev.io";
+  };
+
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
       ./../modules/datadog.nix

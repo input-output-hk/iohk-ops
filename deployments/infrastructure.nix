@@ -29,6 +29,16 @@ in {
       ./../modules/hydra-master-main.nix
     ];
   };
+  mantis-hydra = { config, pkgs, ... }: {
+    # See infrastructure-env-production.nix for description.
+
+    imports = [
+      ./../modules/common.nix
+      ./../modules/hydra-slave.nix
+      ./../modules/hydra-master-common.nix
+      ./../modules/hydra-master-mantis.nix
+    ];
+  };
 
   hydra-build-slave-1 = mkHydraBuildSlave;
   hydra-build-slave-2 = mkHydraBuildSlave;
