@@ -13,9 +13,26 @@ in {
         supportedFeatures = ["kvm" "nixos-test"];
       }
     ];
+    gc.automatic = true;
+    useSandbox = mkForce false;
   };
 
-  services.hydra.hydraURL = "https://hydra-mantis.iohk.io";
+  services.fail2ban.enable = true;
+  virtualisation.docker.enable = true;
+
+  services.hydra = {
+    hydraURL = "https://hydra-mantis.iohk.io";
+    # max output is 4GB because of amis
+    # auth token needs `repo:status`
+    extraConfig = ''
+      max_output_size = 4294967296
+      store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
+      binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
+      <github_authorization>
+        input-output-hk = ${builtins.readFile ../static/github_token}
+      </github_authorization>
+    '';
+  };
 
   services.nginx = {
     virtualHosts = {
