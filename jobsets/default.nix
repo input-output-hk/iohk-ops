@@ -1,6 +1,7 @@
 { nixopsPrsJSON ? ./simple-pr-dummy.json
 , cardanoPrsJSON ? ./simple-pr-dummy.json
 , daedalusPrsJSON ? ./simple-pr-dummy.json
+, plutusPrsJSON ? ./simple-pr-dummy.json
 , nixpkgs ? <nixpkgs>
 , declInput ? {}
 , handleCardanoPRs ? true
@@ -12,6 +13,7 @@ let
   nixopsPrs = builtins.fromJSON (builtins.readFile nixopsPrsJSON);
   cardanoPrs = builtins.fromJSON (builtins.readFile cardanoPrsJSON);
   daedalusPrs = builtins.fromJSON (builtins.readFile daedalusPrsJSON);
+  plutusPrs = builtins.fromJSON (builtins.readFile plutusPrsJSON);
 
   iohkNixopsUri = "https://github.com/input-output-hk/iohk-nixops.git";
   mkFetchGithub = value: {
@@ -83,6 +85,14 @@ let
       daedalus = mkFetchGithub "https://github.com/input-output-hk/daedalus.git ${daedalusBranch}";
     };
   };
+  mkPlutus = plutusBranch: {
+    nixexprpath = "release.nix";
+    nixexprinput = "plutus";
+    description = "Plutus Language";
+    inputs = {
+      daedalus = mkFetchGithub "https://github.com/input-output-hk/plutus-prototype.git ${plutusBranch}";
+    };
+  };
   makeDaedalusPR = num: info: {
     name = "daedalus-pr-${num}";
     value = defaultSettings // {
@@ -94,19 +104,32 @@ let
       };
     };
   };
+  makePlutusPR = num: info: {
+    name = "plutus-pr-${num}";
+    value = defaultSettings // {
+      description = "PR ${num}: ${info.title}";
+      nixexprinput = "plutus";
+      nixexprpath = "release.nix";
+      inputs = {
+        plutus = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+      };
+    };
+  };
   nixopsPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeNixopsPR nixopsPrs);
   cardanoPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeCardanoPR cardanoPrs);
   daedalusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeDaedalusPR daedalusPrs);
+  plutusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makePlutusPR plutusPrs);
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
     cardano-sl = mkCardano "develop";
     cardano-sl-master = mkCardano "master";
     cardano-sl-1-0 = mkCardano "release/1.0.x";
     cardano-sl-1-2 = mkCardano "release/1.2.0";
     daedalus = mkDaedalus "develop";
+    plutus = mkPlutus "master";
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
     iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
   });
-  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
+  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);
 in {
   jobsets = with pkgs.lib; pkgs.runCommand "spec.json" {} ''
