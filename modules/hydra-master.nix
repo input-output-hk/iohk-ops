@@ -93,8 +93,13 @@ in {
         excludeBuildFromContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = serokell:daedalus-.*:tests\..*
+        jobs = serokell:daedalus.*:tests\..*
         inputs = daedalus
+        excludeBuildFromContext = 1
+      </githubstatus>
+      <githubstatus>
+        jobs = serokell:plutus.*:tests\..*
+        inputs = plutus
         excludeBuildFromContext = 1
       </githubstatus>
     '';
