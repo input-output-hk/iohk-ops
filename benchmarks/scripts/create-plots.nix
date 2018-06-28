@@ -10,7 +10,7 @@ writeScriptBin "create-plots.sh" ''
   set -e        # exit on error
   set -o xtrace # print commands
 
-  src=./scripts/plots.r
+  src=../../scripts/plots.r
 
   cd ./experiments/${last}
   mkdir -p plots

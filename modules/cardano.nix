@@ -95,7 +95,8 @@ wallet:
   fallbacks: 2
            '';
       systemStart = params.systemStart;
-      nodeType    = params.nodeType;
+      jsonLog = (globals.environment == "benchmark");
+      nodeType = params.nodeType;
       neighbours = builtins.trace "${params.name}: neighbours: ${concatStringsSep sep (map ppNeighbour neighbourPairs)}"
                                   neighbourPairs;
       publicIP = if options.networking.publicIPv4.isDefined then config.networking.publicIPv4 else null;
