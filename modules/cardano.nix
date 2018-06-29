@@ -4,6 +4,7 @@ with (import ./../lib.nix);
 globals: imports: params:
   { pkgs, nodes, config, resources, options, ...}:
   let
+    assetLockFile = ../static/asset-locked-addresses.txt;
     nodeNameToPublicIP   = name: let ip = nodes.${name}.config.services.cardano-node.publicIP;
                                  in if ip == null then "" else ip;
     neighbourPairs       = map (n: { name = n; ip = nodeNameToPublicIP n; })
@@ -101,8 +102,7 @@ wallet:
       publicIP = if options.networking.publicIPv4.isDefined then config.networking.publicIPv4 else null;
       privateIP = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
       statsdServer = "127.0.0.1:8125";
-    };
-
+    } // (optionalAttrs (params.typeIsCore && (builtins.pathExists assetLockFile)) { inherit assetLockFile; });
     deployment.keys =
       (optionalAttrs (params.typeIsCore && cfg.productionMode)
         (let keyfile = "key${toString params.i}.sk";
