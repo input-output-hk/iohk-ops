@@ -1,0 +1,19 @@
+diff --git i/src/lib/Hydra/Plugin/GithubStatus.pm w/src/lib/Hydra/Plugin/GithubStatus.pm
+index 08ba25bb..5fa8c3fe 100644
+--- i/src/lib/Hydra/Plugin/GithubStatus.pm
++++ w/src/lib/Hydra/Plugin/GithubStatus.pm
+@@ -36,12 +36,13 @@ sub common {
+             next if !$finished && $b->finished == 1;
+ 
+             my $contextTrailer = $conf->{excludeBuildFromContext} ? "" : (":" . $b->id);
++            my $github_job_name = $jobName =~ s/-pr-\d+//r;
+             my $body = encode_json(
+                 {
+                     state => $finished ? toGithubState($b->buildstatus) : "pending",
+                     target_url => "$baseurl/build/" . $b->id,
+                     description => $conf->{description} // "Hydra build #" . $b->id . " of $jobName",
+-                    context => $conf->{context} // "continuous-integration/hydra:" . $jobName . $contextTrailer
++                    context => $conf->{context} // "ci/hydra:" . $github_job_name . $contextTrailer
+                 });
+             my $inputs_cfg = $conf->{inputs};
+             my @inputs = defined $inputs_cfg ? ref $inputs_cfg eq "ARRAY" ? @$inputs_cfg : ($inputs_cfg) : ();

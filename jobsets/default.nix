@@ -67,7 +67,7 @@ let
     };
   };
   makeCardanoPR = num: info: {
-    name = "cardano-pr-${num}";
+    name = "cardano-sl-pr-${num}";
     value = defaultSettings // {
       description = "PR ${num}: ${info.title}";
       nixexprinput = "cardano";
