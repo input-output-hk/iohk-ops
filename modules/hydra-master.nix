@@ -28,6 +28,7 @@ let
         ./chomp.patch
         ./hydra-nix-prefetch-git.patch
         ./hydra-not-found.patch
+        ./hydra-github-pr-filter.patch
       ];
     });
   };
