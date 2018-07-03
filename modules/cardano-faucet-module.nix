@@ -30,17 +30,15 @@ let
     wallet-host = "127.0.0.1";
     wallet-port = walletPort;
     inherit (cfg) port;
-    # config format for newer faucet rev
     payment-distribution = {
       mean = cfg.paymentAmountMean;
       scale = cfg.paymentAmountScale;
     };
-    # config format for older faucet rev
-    # payment-amount = cfg.paymentAmountMean;
-    # payment-variation = cfg.paymentAmountScale;
     logging-config = cfg.loggingConfigFile;
     source-wallet.generate-to = "${cfg.home}/generated-wallet.json";
-  } // (optionalAttrs cfg.statsd.enable {
+  } // (optionalAttrs (cfg.recaptcha != null) {
+    recaptcha-secret = cfg.recaptcha.secretKey;
+  }) // (optionalAttrs cfg.statsd.enable {
     statsd = { inherit (cfg.statsd) host port flush-interval; };
   }) // (optionalAttrs walletUseTLS {
     public-certificate = "${tlsDir}/client/client.crt";
@@ -138,6 +136,27 @@ in {
       description = "File containing a YAML logging config";
       type = types.path;
       default = defaultLoggingCfg;
+    };
+
+    recaptcha = mkOption {
+      description = "Key pair for Google reCAPTCHA";
+      type = types.nullOr (types.submodule {
+        options = {
+          siteKey = mkOption {
+            description = ''
+              The public reCAPTCHA site key which will be embedded in the frontend HTML.
+            '';
+            type = types.str;
+          };
+          secretKey = mkOption {
+            description = ''
+              The private reCAPTCHA key shared with Google during authentication.
+            '';
+            type = types.str;
+          };
+        };
+      });
+      default = null;
     };
 
     walletDebug = mkOption {

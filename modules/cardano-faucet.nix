@@ -5,8 +5,8 @@ globals: params:
 
 let
   recaptcha = {
-    siteKey = builtins.readFile ../static/recaptcha-site-key;
-    secretKey = builtins.readFile ../static/recaptcha-secret-key;
+    siteKey = lib.fileContents ../static/recaptcha_site_key;
+    secretKey = lib.fileContents ../static/recaptcha_secret_key;
   };
   explorerURL = "http://cardano-explorer.cardano-testnet.iohkdev.io/";
   faucetFrontend = pkgs.runCommand "faucet-frontend" {} ''
