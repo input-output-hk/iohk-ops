@@ -23,10 +23,11 @@ import qualified Control.Foldl as Fold
 import Data.Char (isHexDigit)
 import Data.Bifunctor (first)
 import Data.Maybe (fromMaybe)
+import Data.List (find)
 
 import NixOps ( Options, NixopsConfig(..)
               , nixopsConfigurationKey, configurationKeys
-              , getCardanoSLSource )
+              , getCardanoSLConfig )
 import Types ( NixopsDepl(..), Environment(..), Arch(..) )
 import UpdateLogic ( InstallersResults(..), CIResult(..)
                    , realFindInstallers, githubWikiRecord
@@ -125,7 +126,7 @@ updateProposal o cfg UpdateProposalCommand{..} = do
   configKey <- maybe (fail "configurationKey not found") pure (nixopsConfigurationKey cfg)
   top <- pwd
   uid <- makeUpdateId (cName cfg) updateProposalDate
-  cslPath <- getCardanoSLSource o
+  cslPath <- getCardanoSLConfig o
   let opts = commandOptions (workPath top uid) cslPath configKey (cUpdateBucket cfg)
   sh $ case updateProposalStep of
     UpdateProposalInit initial -> updateProposalInit top uid (first (UpdateID (cName cfg)) initial)
@@ -278,7 +279,7 @@ instance Checkable UpdateProposalConfig2 where
         | otherwise = Nothing
         where
           GlobalResults{..} = globalResult
-          missingVersion arch = not . any ((== arch) . fst)
+          missingVersion arch = not . any ((== arch) . ciResultArch)
 
 instance Checkable UpdateProposalConfig3 where
   checkConfig (UpdateProposalConfig3 p h) = checkConfig p <|> checkConfig h
@@ -465,7 +466,7 @@ updateProposalSignInstallers :: CommandOptions -> Text -> Shell ()
 updateProposalSignInstallers opts@CommandOptions{..} userId = do
   params <- loadParams opts
   void $ doCheckConfig params
-  mapM_ signInstaller (map (ciResultLocalPath . snd) . ciResults . cfgInstallersResults $ params)
+  mapM_ signInstaller (map ciResultLocalPath . ciResults . cfgInstallersResults $ params)
   where
     signInstaller f = procs "gpg2" ["-u", userId, "--detach-sig", "--armor", "--sign", tt f] empty
 
@@ -526,9 +527,9 @@ chomp = fmap T.stripEnd . strict . limit 1
 
 -- | Slurp in previously created signatures.
 uploadSignatures :: Text -> InstallersResults -> Shell [(Arch, Maybe Text)]
-uploadSignatures bucket InstallersResults{..} = forM ciResults $ \(a, res) -> do
+uploadSignatures bucket InstallersResults{..} = forM ciResults $ \res -> do
   sig <- liftIO $ uploadResultSignature bucket res
-  pure (a, sig)
+  pure (ciResultArch res, sig)
 
 uploadResultSignature :: Text -> CIResult -> IO (Maybe Text)
 uploadResultSignature bucket res = liftIO $ maybeReadFile sigFile >>= \case
@@ -627,7 +628,7 @@ updateProposalGenerate opts@CommandOptions{..} = do
   echo "*** Carefully check the parameters yaml file."
 
 needResult :: MonadIO io => Arch -> InstallersResults -> (CIResult -> io a) -> io a
-needResult arch rs action = case lookup arch (ciResults rs) of
+needResult arch rs action = case Data.List.find ((== arch) . ciResultArch) (ciResults rs) of
   Just r -> action r
   Nothing -> die $ format ("The CI result for "%w%" is required but was not found.") arch
 

@@ -27,6 +27,8 @@ let
       patches = [
         ./chomp.patch
         ./hydra-nix-prefetch-git.patch
+        ./hydra-not-found.patch
+        ./hydra-github-pr-filter.patch
       ];
     });
   };
@@ -76,8 +78,13 @@ in {
     # auth token needs `repo:status`
     extraConfig = ''
       max_output_size = 4294967296
-      store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
-      binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
+
+      store_uri = s3://iohk-nix-cache?secret-key=/etc/nix/hydra.iohk.io-1/secret&log-compression=br&region=eu-central-1
+      server_store_uri = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/
+      binary_cache_public_uri = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/
+      log_prefix = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/
+      upload_logs_to_binary_cache = true
+
       <github_authorization>
         input-output-hk = ${builtins.readFile ../static/github_token}
       </github_authorization>
@@ -92,8 +99,13 @@ in {
         excludeBuildFromContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = serokell:daedalus-.*:tests\..*
+        jobs = serokell:daedalus.*:tests\..*
         inputs = daedalus
+        excludeBuildFromContext = 1
+      </githubstatus>
+      <githubstatus>
+        jobs = serokell:plutus.*:tests\..*
+        inputs = plutus
         excludeBuildFromContext = 1
       </githubstatus>
     '';
@@ -183,6 +195,9 @@ in {
           proxy_set_header REMOTE_ADDR $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto https;
+        }
+        location ~ /(nix-cache-info|.*\.narinfo|nar/*) {
+          return 301 https://iohk-nix-cache.s3-eu-central-1.amazonaws.com$request_uri;
         }
       }
     '';

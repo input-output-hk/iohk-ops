@@ -2,9 +2,11 @@
 
 with (import ./../lib.nix);
 
-let
-  iohk-pkgs = import ../default.nix {};
-in {
+{
+  imports = [
+    ./ntp_fix.nix
+    ./extra-statsd.nix
+  ];
   boot.kernel.sysctl = {
     ## DEVOPS-592
     "kernel.unprivileged_bpf_disabled" = 1;
@@ -12,7 +14,7 @@ in {
 
   environment.systemPackages = with pkgs;
     # nixopsUnstable: wait for 1.5.1 release
-    [ git tmux vim sysstat iohk-pkgs.nixops lsof ncdu tree mosh tig
+    [ git tmux vim sysstat lsof ncdu tree mosh tig
       cabal2nix stack iptables graphviz tcpdump strace gdb binutils nix-repl ];
 
   services.openssh.passwordAuthentication = false;
@@ -39,6 +41,7 @@ in {
   };
 
   services.cron.enable = true;
+  services.extra-statsd = true;
   #services.cron.systemCronJobs = [
   #  "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 2 29 /var/log/saALL"
   #];

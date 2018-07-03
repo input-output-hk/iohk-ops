@@ -26,6 +26,7 @@ in {
     imports = [
       ./../modules/datadog.nix
       ./../modules/papertrail.nix
+      ../modules/deployer.nix
     ];
 
     services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
