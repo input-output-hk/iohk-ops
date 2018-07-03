@@ -12,8 +12,8 @@ let
   src = pkgs.fetchFromGitHub {
     owner = "input-output-hk";
     repo = "iohk-ops";
-    rev = "9579e210d446821ce30658b5b9db9e6590e1aedf";
-    sha256 = "0filamx40g9yhkvacvs0fwc5f1xkdfj6fga98qb1sqd0szdv3x8q";
+    rev = "2ecf92b2c105abbcbc72abb90cc89fbcdedf1bd9";
+    sha256 = "19p0722w135l36y64vmn5x1imqxmkx8gzrw2zzkmnh7xd0c1fyay";
   };
   iohk-pkgs = import src {};
   localLib = import (src + "/lib.nix");
@@ -46,6 +46,7 @@ in {
       binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
     };
 
-    environment.systemPackages = with pkgs;
-      [ tmux git vim nixops iohk-pkgs.iohk-ops ];
+    environment.systemPackages =
+      with pkgs; [ tmux git vim ] ++
+      with iohk-pkgs; [ nixops iohk-ops ];
 }
