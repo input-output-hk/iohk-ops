@@ -503,11 +503,13 @@ uploadInstallers bucket res InstallerHashes{..} = runAWS' $ do
 -- | Apply a hashing command to all the installer files.
 getHashes :: (FilePath -> Shell Text) -> InstallersResults -> Shell InstallerHashes
 getHashes getHash res = do
-  cfgInstallerDarwin <- needResult Mac64 res resultHash
-  cfgInstallerWindows <- needResult Win64 res resultHash
+  cfgInstallerDarwin <- check Mac64 =<< needResult Mac64 res resultHash
+  cfgInstallerWindows <- check Win64 =<< needResult Win64 res resultHash
   pure $ InstallerHashes{..}
   where
-   resultHash = getHash . ciResultLocalPath
+    resultHash = getHash . ciResultLocalPath
+    check arch "" = die $ format ("Hash for "%w%" installer is empty") arch
+    check _ h     = pure h
 
 -- | Run cardano-auxx "hash-installer" command on a file and capture
 -- its output.
