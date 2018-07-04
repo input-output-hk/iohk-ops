@@ -503,11 +503,13 @@ uploadInstallers bucket res InstallerHashes{..} = runAWS' $ do
 -- | Apply a hashing command to all the installer files.
 getHashes :: (FilePath -> Shell Text) -> InstallersResults -> Shell InstallerHashes
 getHashes getHash res = do
-  cfgInstallerDarwin <- needResult Mac64 res resultHash
-  cfgInstallerWindows <- needResult Win64 res resultHash
+  cfgInstallerDarwin <- check Mac64 =<< needResult Mac64 res resultHash
+  cfgInstallerWindows <- check Win64 =<< needResult Win64 res resultHash
   pure $ InstallerHashes{..}
   where
-   resultHash = getHash . ciResultLocalPath
+    resultHash = getHash . ciResultLocalPath
+    check arch "" = die $ format ("Hash for "%w%" installer is empty") arch
+    check _ h     = pure h
 
 -- | Run cardano-auxx "hash-installer" command on a file and capture
 -- its output.
@@ -515,12 +517,16 @@ cardanoHashInstaller :: CommandOptions -> FilePath -> Shell Text
 cardanoHashInstaller opts i = runCommands opts [cmd] & grep hash & sed hash & chomp
   where
     cmd = format ("hash-installer "%fp) i
-    hash = text "Hash" *> star anyChar *> text " is " *> plus hexDigit
+    hash = prefix (text "Hash" *> star anyChar *> text " is " *> hash256Hex)
+
+-- | Matches 64 hex digits, which is a 256 bit value
+hash256Hex :: Pattern Text
+hash256Hex = fixed 64 (star hexDigit)
 
 -- | Capture output of sha256sum from gnu coreutils.
 sha256sum :: FilePath -> Shell Text
 sha256sum f = inproc "sha256sum" ["--binary", tt f] empty & hash & chomp
-  where hash = sed (prefix (plus hexDigit))
+  where hash = sed (prefix hash256Hex)
 
 chomp :: Shell Line -> Shell Text
 chomp = fmap T.stripEnd . strict . limit 1
