@@ -39,8 +39,6 @@ let
     gitrev = cardano-sl-src.rev;
     inherit enableDebugging enableProfiling;
   };
-in {
-  inherit nixops;
 
   iohk-ops = pkgs.haskell.lib.overrideCabal
              (compiler.callPackage ./iohk/default.nix {})
@@ -53,4 +51,22 @@ in {
                   --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                 '';
              });
+
+  iohk-ops-integration-test = let
+    parts = with cardano-sl-pkgs; [ cardano-sl-auxx cardano-sl-tools iohk-ops ];
+  in pkgs.runCommand "iohk-ops-integration-test" {} ''
+    mkdir -p $out/nix-support
+    export PATH=${pkgs.lib.makeBinPath parts}:$PATH
+    export CARDANO_SL_CONFIG=${cardano-sl-pkgs.cardano-sl-config}
+    mkdir test
+    cp ${iohk-ops.src}/test/Spec.hs test  # a file to hash
+    iohk-ops-integration-test | tee $out/test.log
+    if [ $? -ne 0 ]; then
+      touch $out/nix-support/failed
+    fi
+    exit 0
+  '';
+
+in {
+  inherit nixops iohk-ops iohk-ops-integration-test;
 } // cardano-sl-pkgs
