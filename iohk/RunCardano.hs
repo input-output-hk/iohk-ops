@@ -43,9 +43,11 @@ commandOptions cmdWorkPath cardanoSource cmdCardanoConfigKey cmdUpdateBucket
 -- | Run cardano-auxx "hash-installer" command on a file and capture
 -- its output.
 cardanoHashInstaller :: CommandOptions -> FilePath -> Shell Text
-cardanoHashInstaller opts i = runCommands opts [cmd] & grep hash & sed hash & chomp
+cardanoHashInstaller opts installer = do
+  path <- realpath installer -- path needs to start with /
+  runCommands opts [cmd path] & grep hash & sed hash & chomp
   where
-    cmd = format ("hash-installer "%fp) i
+    cmd = format ("hash-installer "%fp)
     hash = prefix (text "Hash" *> star anyChar *> text " is " *> hash256Hex)
 
 -- | Matches 64 hex digits, which is a 256 bit value
