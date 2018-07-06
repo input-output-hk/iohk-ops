@@ -675,7 +675,7 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check bumpSystemStartHeldB
     printf ("Setting --system-start to "%s%" ("%d%" minutes into future)\n")
            timePretty (div holdSecs 60)
     cFp <- writeConfig oConfigFile c'
-    unless (cEnvironment == Development) $ do
+    unless (cEnvironment == Development || cEnvironment == Benchmark) $ do
       cmd o "git" (["add", format fp cFp])
       cmd o "git" ["commit", "-m", format ("Bump systemStart to "%s) timePretty]
 

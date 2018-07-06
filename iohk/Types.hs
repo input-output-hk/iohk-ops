@@ -133,6 +133,7 @@ instance FromJSON Deployment
 
 data Environment
   = Any               -- ^ Wildcard or unspecified, depending on context.
+  | Benchmark
   | Production
   | Staging
   | Development

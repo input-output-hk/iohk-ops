@@ -51,6 +51,7 @@ let
     "--topology ${cfg.topologyYaml}"
     (optionalString (cfg.assetLockFile != null) "--asset-lock-file ${assetLockFile}")
     "--node-id ${params.name}"
+    (optionalString cfg.enablePolicies ("--policies " + (if (params.typeIsCore) then "${./../benchmarks/policy_core.yaml}" else "${./../benchmarks/policy_relay.yaml}")))
     (optionalString cfg.enableProfiling "+RTS -p -RTS")
   ];
 in {
@@ -63,6 +64,7 @@ in {
       enableP2P = mkOption { type = types.bool; default = true; };
       supporter = mkOption { type = types.bool; default = false; };
       enableProfiling = mkOption { type = types.bool; default = false; };
+      enablePolicies = mkOption { type = types.bool; default = false; };
       productionMode = mkOption {
         type = types.bool;
         default = true;
@@ -178,9 +180,9 @@ in {
       # how many minutes between nodes restarting
       nodeMinute = mod (cfg.nodeIndex * 4) 60;
     in {
-      script = ''
-        /run/current-system/sw/bin/systemctl restart cardano-node
-      '';
+      script = (if (config.deployment.arguments.configurationKey == "bench")
+        then '' echo System not restarted because benchmark is running.''
+        else '' /run/current-system/sw/bin/systemctl restart cardano-node'');
       # Reboot cardano-node every 36h (except Mon->Tue gap which is 24h)
       startAt = [
         "Tue,Fri,Mon 13:${toString nodeMinute}"
@@ -215,6 +217,20 @@ in {
         WorkingDirectory = stateDir;
         PrivateTmp = true;
         Type = "notify";
+      };
+    };
+
+    systemd.services.cardano-node-recorder = mkIf (config.deployment.arguments.configurationKey == "bench") {
+      description   = "recording metrics on cardano node service";
+      after         = [ "systemd.services.cardano-node" ];
+      wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
+      path = [ pkgs.glibc pkgs.procps ];  # dependencies
+      script = ''
+        ${../benchmarks/scripts/record-stats.sh} -exec ${cfg.executable} >> "${stateDir}/time-slave.log"
+      '';
+      serviceConfig = {
+        User = "cardano-node";
+        Group = "cardano-node";
       };
     };
   };

@@ -99,7 +99,7 @@ envSettings env =
                                , (ReportServer,   All, "deployments/report-server-env-staging.nix")
                                , (Infra,          All, "deployments/infrastructure-env-staging.nix")
                                ] <> deplAgnosticFiles}
-    Production  -> EnvSettings
+    Production   -> EnvSettings
       { envDeployerUser      = "live-production"
       , envDefaultConfigurationKey = "testnet_public_full"
       , envDefaultConfig     = "production-testnet.yaml"
@@ -112,7 +112,7 @@ envSettings env =
                                , (ReportServer,   All, "deployments/report-server-env-production.nix")
                                , (Infra,          All, "deployments/infrastructure-env-production.nix")
                                ] <> deplAgnosticFiles}
-    Development -> EnvSettings
+    Development  -> EnvSettings
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "devnet"
       , envDefaultConfig     = "config.yaml"
@@ -121,9 +121,18 @@ envSettings env =
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
                                , (ReportServer,   All, "deployments/report-server-env-development.nix")
                                ] <> deplAgnosticFiles}
+    Benchmark -> EnvSettings
+      { envDeployerUser      = "staging"
+      , envDefaultConfigurationKey = "bench"
+      , envDefaultConfig     = "config.yaml"
+      , envDefaultTopology   = "topology-benchmark.yaml"
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
+                               , (ReportServer,   All, "deployments/report-server-env-development.nix")
+                               ] <> deplAgnosticFiles}
     Any -> error "envSettings called with 'Any'"
 
 selectDeployer :: Environment -> [Deployment] -> NodeName
-selectDeployer Staging   delts | elem Nodes delts = "iohk"
-                               | otherwise        = "cardano-deployer"
-selectDeployer _ _                                = "cardano-deployer"
+selectDeployer Staging delts | elem Nodes delts = "iohk"
+                             | otherwise        = "cardano-deployer"
+selectDeployer _ _                              = "cardano-deployer"

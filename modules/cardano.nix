@@ -72,17 +72,18 @@ globals: imports: params:
     '';
 
     services.cardano-node = {
-      enable      = true;
-      nodeName    = params.name;
-      nodeIndex   = params.i;
-      relayIndex  = params.relayIndex;
-      port        = params.port;
-      topologyYaml      =
+      enable         = true;
+      nodeName       = params.name;
+      nodeIndex      = params.i;
+      relayIndex     = params.relayIndex;
+      port           = params.port;
+      enablePolicies = (globals.environment == "benchmark");
+      topologyYaml   =
          if !params.typeIsExplorer
          then globals.topologyYaml
          else
            let relayAddressSpecs =
-             if globals.environment == "development"
+             if (globals.environment == "development" || globals.environment == "benchmark")
              then map (name: { addrType = "addr"; addr = nodeNameToPublicIP name; })
                       (map (x: x.name) globals.relays)
              else map (idx:  { addrType = "host"; addr = "cardano-node-${toString idx}.${config.global.dnsDomainname}"; })
@@ -95,7 +96,7 @@ wallet:
   fallbacks: 2
            '';
       systemStart = params.systemStart;
-      jsonLog = false;
+      jsonLog = (globals.environment == "benchmark");
       nodeType    = params.nodeType;
       neighbours = builtins.trace "${params.name}: neighbours: ${concatStringsSep sep (map ppNeighbour neighbourPairs)}"
                                   neighbourPairs;
