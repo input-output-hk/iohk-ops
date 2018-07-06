@@ -71,8 +71,9 @@ COMMON_OPTIONS=( --topology topology-min.yaml )
 CARDANO_COMPONENTS=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} )
 
 nix-build default.nix -A cardano-sl-tools -o cardano-sl-tools
+nix-build default.nix -A nix -o nix
 
-PATH=$PATH:./cardano-sl-tools/bin/
+PATH=./nix/bin/:$PATH:./cardano-sl-tools/bin/
 export PATH
 
 if test -n "${WITH_STAGING}"; then

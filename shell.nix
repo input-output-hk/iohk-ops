@@ -6,7 +6,7 @@ let
   iohkpkgs = import ./default.nix {};
   iohk-ops = iohkpkgs.iohk-ops;
   justIo = pkgs.runCommand "shell" {
-    buildInputs = with pkgs; [ iohk-ops terraform_0_11 nixops ];
+    buildInputs = with pkgs; [ iohk-ops terraform_0_11 nixops iohkpkgs.nix];
     passthru = {
       inherit ioSelfBuild withAuxx;
     };
@@ -26,6 +26,7 @@ let
       iohk-ops
       iohkpkgs.cardano-sl-auxx
       iohkpkgs.cardano-sl-tools
+      iohkpkgs.nix
     ];
   } "echo use nix-shell";
 in justIo

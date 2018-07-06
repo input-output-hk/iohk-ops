@@ -17,6 +17,6 @@ let
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./../cardano-sl-src.json);
   cardanoSrc = pkgs.fetchgit cardano-sl-src;
 in rec {
-  inherit (jobs) iohk-ops iohk-ops-integration-test nixops;
+  inherit (jobs) iohk-ops iohk-ops-integration-test nixops nix;
   tests          = import ./../tests     { inherit pkgs; supportedSystems = [ "x86_64-linux" ]; };
 } // (import "${cardanoSrc}/release.nix" { cardano = { outPath = cardanoSrc; rev = cardano-sl-src.rev; }; })

@@ -25,6 +25,19 @@ let
     in (import "${nixopsUnstable}/release.nix" {
          nixpkgs = localLib.fetchNixPkgs;
         }).build.${system};
+  nix-src = pkgs.fetchFromGitHub {
+    owner = "NixOS";
+    repo = "nix";
+    rev = "0395b9b94af56bb814810a32d680c606614b29e0";
+    sha256 = "1np655i8gxx8pyc7469q5fz85vqrlpxs4z9jcbc2h8v5mrlzx9hk";
+  };
+  nix = pkgs.nix.overrideAttrs (drv: {
+    src = nix-src;
+    nativeBuildInputs = drv.nativeBuildInputs ++ [ pkgs.bison pkgs.flex pkgs.autoreconfHook ];
+    name = "nix-memoise";
+    configureFlags = drv.configureFlags ++ [ "--disable-doc-gen" ];
+    outputs = [ "out" "dev" ];
+  });
   iohk-ops-extra-runtime-deps = with pkgs; [
     gitFull nix-prefetch-scripts compiler.yaml
     wget
@@ -68,5 +81,5 @@ let
   '';
 
 in {
-  inherit nixops iohk-ops iohk-ops-integration-test;
+  inherit nixops iohk-ops iohk-ops-integration-test nix;
 } // cardano-sl-pkgs

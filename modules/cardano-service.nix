@@ -6,7 +6,7 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node";
-  iohkPkgs = import ./../default.nix { enableProfiling = cfg.enableProfiling; };
+  iohkPkgs = builtins.memoise (import ./../default.nix) { enableProfiling = cfg.enableProfiling; };
   cardano = iohkPkgs.cardano-sl-node-static;
   cardano-config = iohkPkgs.cardano-sl-config;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
