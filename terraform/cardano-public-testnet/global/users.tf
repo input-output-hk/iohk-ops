@@ -2,15 +2,15 @@
 #   source  = "./modules/user"
 #   name    = "ben.ford"
 #   # policy  = "AmazonEC2FullAccess"
-#   pgp_key = "${file("${path.module}/../../../lib/gpg-keys/ben.ford.base64")}"
-#   pgp_key = "${pgp_key}"
+#   pgp_key  = "${pgp_key}"
+#   pgp_user = "${file("${path.module}/../../../lib/gpg-keys/ben.ford.base64")}"
 # }
 
 module "user_rodney_lorrimar" {
   source  = "./modules/user"
   name    = "rodney.lorrimar"
-  # pgp_key = "${file("${path.module}/../../../lib/gpg-keys/rodney.lorrimar.base64")}"
-  pgp_key = "${var.deployer_pgp_key}"
+  pgp_key  = "${var.deployer_pgp_key}"
+  pgp_user = "${file("${path.module}/../../../lib/gpg-keys/rodney.lorrimar.base64")}"
 }
 
 # resource "aws_iam_user_policy_attachment" "ben_ford_ec2" {
@@ -29,27 +29,31 @@ resource "aws_iam_user_policy_attachment" "rodney_lorrimar_enforce_mfa" {
 }
 
 module "user_deployer_staging" {
-  source  = "./modules/user"
-  name    = "deployer.staging"
-  pgp_key = "${var.deployer_pgp_key}"
+  source   = "./modules/user"
+  name     = "deployer.staging"
+  pgp_key  = "${var.deployer_pgp_key}"
+  pgp_user = "${var.deployer_pgp_key}"
 }
 
 module "user_deployer_testnet" {
   source  = "./modules/user"
   name    = "deployer.testnet"
   pgp_key = "${var.deployer_pgp_key}"
+  pgp_user = "${var.deployer_pgp_key}"
 }
 
 module "user_deployer_infra" {
   source  = "./modules/user"
   name    = "deployer.infra"
   pgp_key = "${var.deployer_pgp_key}"
+  pgp_user = "${var.deployer_pgp_key}"
 }
 
 module "user_deployer_development" {
   source  = "./modules/user"
   name    = "deployer.development"
   pgp_key = "${var.deployer_pgp_key}"
+  pgp_user = "${var.deployer_pgp_key}"
 }
 
 ############################################################################

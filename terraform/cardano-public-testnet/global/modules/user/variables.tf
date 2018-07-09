@@ -10,3 +10,7 @@ variable "policy" {
 variable "pgp_key" {
   description = "Name of PGP key to use for secret_key encryption, eg. keybase:username"
 }
+
+variable "pgp_user" {
+  description = "Name of PGP key to use for console password, eg. keybase:username"
+}

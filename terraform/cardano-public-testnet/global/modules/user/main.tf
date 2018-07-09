@@ -6,7 +6,7 @@ resource "aws_iam_user" "self" {
 
 resource "aws_iam_user_login_profile" "self" {
   user    = "${aws_iam_user.self.name}"
-  pgp_key = "${var.pgp_key}"
+  pgp_key = "${var.pgp_user}"
 }
 
 resource "aws_iam_access_key" "self" {
