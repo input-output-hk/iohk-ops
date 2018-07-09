@@ -193,7 +193,16 @@ From the directory `testnet@testnet-deployer:iohk-ops`.
 
     io deploy
 
-### 4. Open Genesis Wallet in Daedalus
+### 4. Redeem fake AVVM certificate
+
+1. Copy the contents of one of the generated fake AVVM seeds
+   (`genesis-keys/keys-fakeavvm/fake-*.seed`) to the clipboard.
+2. Create a new wallet in Daedalus (Testnet build).
+3. Click on the _Daedalus_ → _Ada redemption_ menu
+4. Go to the _Regular_ tab
+5. Paste the seed into the _Redemption key_ box.
+
+### 5. Open Genesis Wallet in Daedalus
 
 Copy a genesis "poor" key to a temporary location and use it to create
 a wallet in Daedalus. Daedalus (Testnet build) needs to be running.
@@ -213,13 +222,13 @@ a wallet in Daedalus. Daedalus (Testnet build) needs to be running.
 
     {"Right":{"cwId":"Ae2tdPwUPEZMdfwG6TGDEU24TcBURhubkqy7ExrAefGFyMTCtee5cnrvNSB","cwMeta":{"cwName":"Genesis wallet","cwAssurance":"CWANormal","cwUnit":0},"cwAccountsNumber":1,"cwAmount":{"getCCoin":"9651253048499"},"cwHasPassphrase":false,"cwPassphraseLU":1.529235276571176605e9}}
 
-### 5. Transfer Testnet ADA to faucet
+### 6. Transfer Testnet ADA to faucet
 
 Use nixops to log in to the faucet node. After starting, it creates
 the file `/var/lib/faucet/generated-wallet.json`. Send an amount of
 ADA from the Genesis Wallet to the address in that file.
 
-### 6. Withdraw Testnet ADA from faucet
+### 7. Withdraw Testnet ADA from faucet
 
 In a new Daedalus Testnet wallet, create a new address to receive
 payments. Use that address in the following query:
