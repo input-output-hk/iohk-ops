@@ -851,8 +851,9 @@ scpFromNode o c (fromNodeName -> node) from to = do
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
 
 triggerCommitMonitor :: Options -> NixopsConfig -> NodeName -> IO ()
-triggerCommitMonitor o c m = do
-  ssh' o c "bash" ["-c", "strings $(pgrep -fal cardano-node-simple | cut -d' ' -f2) 2>/dev/null | egrep '^[0-9a-f]{40,40}$' | xargs logger -t cardano-node-commit-monitor"] m empty
+triggerCommitMonitor o c m =
+  ssh' o c "bash" ["-c", "strings $(pgrep -fal cardano-node-simple | cut -d' ' -f2) 2>/dev/null | egrep '^[0-9a-f]{40,40}$' | systemd-cat -t cardano-node-commit-monitor -p info"] m
+  (const $ pure ())
 
 deployedCommit :: Options -> NixopsConfig -> NodeName -> IO ()
 deployedCommit o c m = do
