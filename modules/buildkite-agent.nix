@@ -22,6 +22,13 @@
       # load S3 credentials for artifact upload
       source /var/lib/buildkite-agent/hooks/aws-creds
     '';
+    hooks.pre-command = ''
+      # Clean out the state that gets messed up and makes builds fail.
+      rm -rf ~/.cabal
+    '';
+    extraConfig = ''
+      git-clean-flags="-ffdqx"
+    '';
   };
   users.users.buildkite-agent.extraGroups = [
     "keys"
