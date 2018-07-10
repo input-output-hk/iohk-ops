@@ -49,7 +49,7 @@ let
     "--configuration-file ${cardano-config}/lib/configuration.yaml"
     "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
-    (optionalString (cfg.assetLockFile != null) "--asset-lock-file ${assetLockFile}")
+    (optionalString (cfg.assetLockFile != null) "--asset-lock-file ${cfg.assetLockFile}")
     "--node-id ${params.name}"
     (optionalString cfg.enablePolicies ("--policies " + (if (params.typeIsCore) then "${./../benchmarks/policy_core.yaml}" else "${./../benchmarks/policy_relay.yaml}")))
     (optionalString cfg.enableProfiling "+RTS -p -RTS")
