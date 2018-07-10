@@ -14,8 +14,17 @@
     openssh.publicKeyPath  = "/run/keys/buildkite-ssh-public";
     tokenPath              = "/run/keys/buildkite-token";
     meta-data              = "system=x86_64-linux";
-    hooksPath              = "/var/lib/buildkite-agent/hooks";
     runtimePackages        = with pkgs; [ gnutar gzip bzip2 xz ];
+    extraConfig = ''
+      git-clean-flags="-ffdqx"
+    '';
+    hooks.pre-command = ''
+      # Clean out the state that gets messed up and makes builds fail.
+      rm -rf ~/.cabal
+
+      # load AWS credentials for artifact upload
+      source /var/lib/buildkite-agent/hooks/s3-creds
+    '';
   };
   users.users.buildkite-agent.extraGroups = [
     "keys"
@@ -23,7 +32,7 @@
   ];
 
   deployment.keys = {
-    pre-command = {
+    s3-creds = {
       keyFile = ./. + "/../static/buildkite-hook";
       destDir = "/var/lib/buildkite-agent/hooks";
       user    = "buildkite-agent";
