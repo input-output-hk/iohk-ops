@@ -688,6 +688,12 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check bumpSystemStartHeldB
     ++ [ "--build-only"    | buonly == BuildOnly ]
     ++ [ "--check"         | check  == PassCheck  ]
     ++ nixopsMaybeLimitNodes o
+
+  when (elem Nodes cElements) $ do
+    let cmonNode = head $ nodeNames o c'
+    printf ("Triggering commit monitor on "%s%"\n") $ fromNodeName cmonNode
+    triggerCommitMonitor o c' cmonNode
+
   echo "Done."
 
 destroy :: Options -> NixopsConfig -> IO ()
@@ -843,6 +849,11 @@ scpFromNode o c (fromNodeName -> node) from to = do
   case exitcode of
     ExitSuccess -> return ()
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
+
+triggerCommitMonitor :: Options -> NixopsConfig -> NodeName -> IO ()
+triggerCommitMonitor o c m =
+  ssh' o c "bash" ["-c", "strings $(pgrep -fal cardano-node-simple | cut -d' ' -f2) 2>/dev/null | egrep '^[0-9a-f]{40,40}$' | systemd-cat -t cardano-node-commit-monitor -p info"] m
+  (const $ pure ())
 
 deployedCommit :: Options -> NixopsConfig -> NodeName -> IO ()
 deployedCommit o c m = do
