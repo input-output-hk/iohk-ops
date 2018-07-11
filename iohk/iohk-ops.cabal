@@ -70,8 +70,8 @@ test-suite iohk-ops-test
   main-is:          Spec.hs
   default-language: Haskell2010
   type:             exitcode-stdio-1.0
-  build-depends:    hspec
   build-depends:    base
+                  , hspec
                   , universum
                   , turtle
                   , text
@@ -105,4 +105,53 @@ test-suite iohk-ops-test
                   , hourglass
                   , containers
                   , lens-aeson
+                  , aeson-pretty
+                  , dns
+                  , vector
+                  , optional-args
+                  , utf8-string
+  hs-source-dirs:   test .
+executable iohk-ops-integration-test
+  main-is:          IntegrationTest.hs
+  default-language: Haskell2010
+  build-depends:    base
+                  , hspec
+                  , universum
+                  , turtle
+                  , text
+                  , http-types
+                  , aeson
+                  , http-client-tls
+                  , http-client
+                  , http-conduit
+                  , bytestring
+                  , unordered-containers
+                  , yaml
+                  , cassava
+                  , directory
+                  , lens
+                  , ansi-terminal
+                  , git
+                  , resourcet
+                  , amazonka-s3
+                  , amazonka
+                  , system-filepath
+                  , managed
+                  , safe
+                  , network-uri
+                  , cryptonite
+                  , errors
+                  , exceptions
+                  , memory
+                  , regex-pcre
+                  , time
+                  , foldl
+                  , hourglass
+                  , containers
+                  , lens-aeson
+                  , aeson-pretty
+                  , dns
+                  , vector
+                  , optional-args
+                  , utf8-string
   hs-source-dirs:   test .
