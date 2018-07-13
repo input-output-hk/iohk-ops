@@ -11,7 +11,7 @@ let
     walletListen = "127.0.0.1:${toString (8090 + index)}";
     ekgListen = "127.0.0.1:${toString (8000 + index)}";
     environment = "override";
-    confKey = "bench";
+    confKey = cfg.configKey;
     extraParams = "--system-start ${toString cfg.systemStart}";
   };
   mkService = index: {
@@ -20,7 +20,7 @@ let
       serviceConfig = {
         User = "cardano-node-${toString index}";
         WorkingDirectory = "/home/cardano-node-${toString index}";
-        ExecStart = iohkpkgs.connectScripts.mainnetWallet.override (params index);
+        ExecStart = iohkpkgs.connectScripts.mainnet.wallet.override (params index);
       };
     };
   };
@@ -42,6 +42,9 @@ in {
         type = types.int;
       };
       topologyFile = mkOption {
+        type = types.str;
+      };
+      configKey = mkOption {
         type = types.str;
       };
     };
