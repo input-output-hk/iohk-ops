@@ -653,7 +653,8 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check bumpSystemStartHeldB
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
   _ <- pure $ clusterConfigurationKey c
-  when (dryrun /= DryRun && buonly /= BuildOnly) $ do
+  let notSimulated = dryrun /= DryRun && buonly /= BuildOnly
+  when notSimulated $ do
     deployerIP <- establishDeployerIP o oDeployerIP
     setenv o "SMART_GEN_IP" $ getIP deployerIP
   -- Pre-allocate nix heap to improve performance
@@ -689,7 +690,7 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check bumpSystemStartHeldB
     ++ [ "--check"         | check  == PassCheck  ]
     ++ nixopsMaybeLimitNodes o
 
-  when (elem Nodes cElements) $ do
+  when notSimulated $ do
     let cmonNode = head $ nodeNames o c'
     printf ("Triggering commit monitor on "%s%"\n") $ fromNodeName cmonNode
     triggerCommitMonitor o c' cmonNode
