@@ -61,6 +61,12 @@ in {
       openssh.authorizedKeys.keys = keys;
     }) (csl-developers // devOps);
 
+    environment.systemPackages = let
+      usernames = attrNames (csl-developers // devOps);
+      list-developers = pkgs.writeShellScriptBin "list-developers"
+        (concatMapStringsSep "\n" (u: "echo ${u}") usernames);
+    in [ list-developers ];
+
     deployment.keys.tarsnap = {
       keyFile = ./../static/tarsnap-testnet-deployer.secret;
       destDir = "/var/lib/keys";

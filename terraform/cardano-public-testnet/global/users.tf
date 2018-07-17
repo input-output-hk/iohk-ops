@@ -6,7 +6,7 @@
 #   pgp_user = "${file("${path.module}/../../../lib/gpg-keys/ben.ford.base64")}"
 # }
 
-module "user_rodney_lorrimar" {
+module "user_rodney" {
   source  = "./modules/user"
   name    = "rodney.lorrimar"
   pgp_key  = "${var.deployer_pgp_key}"
@@ -19,12 +19,12 @@ module "user_rodney_lorrimar" {
 # }
 
 resource "aws_iam_user_policy_attachment" "rodney_lorrimar_admin" {
-  user       = "${module.user_rodney_lorrimar.name}"
+  user       = "${module.user_rodney.name}"
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
 resource "aws_iam_user_policy_attachment" "rodney_lorrimar_enforce_mfa" {
-  user       = "${module.user_rodney_lorrimar.name}"
+  user       = "${module.user_rodney.name}"
   policy_arn = "${aws_iam_policy.enforce_mfa.arn}"
 }
 
@@ -60,7 +60,7 @@ module "user_deployer_development" {
 # group memberships
 
 resource "aws_iam_user_group_membership" "rodney_lorrimar_developers" {
-  user = "${module.user_rodney_lorrimar.name}"
+  user = "${module.user_rodney.name}"
   groups = [ "${aws_iam_group.developers.name}" ]
 }
 

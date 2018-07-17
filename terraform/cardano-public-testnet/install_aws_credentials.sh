@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
 top=$(cd "$(dirname "$0")"; pwd)
 keys="$top/global/modules/user/private"
@@ -11,6 +11,19 @@ key_id() {
 
 access_key() {
     base64 --decode "$keys/$1.secret" | gpg --quiet --decrypt
+}
+
+install_password() {
+    user="$1"
+    username="$2"
+    out="/home/$user/$username-console-password.gpg"
+    sudo cp "$keys/$username.password" "$out"
+    sudo chown "$user:" $out
+    sudo chmod 600 $out
+}
+
+iam_username() {
+    terraform state show "module.global.module.user_$1.aws_iam_user_login_profile.self" | awk -F'= *' '/^id/ { print $2; }'
 }
 
 install_key() {
@@ -32,18 +45,21 @@ for user in staging testnet infra; do
     id=$(key_id user_deployer_$user)
     secret=$(access_key deployer.$user)
     install_key "$user" "$id" "$secret"
+    install_password $user deployer.$user
 done
 
-# fixme: install credentials for all developers defined in
-# ../../ssh-keys.nix
+developers_key_id="$(key_id user_deployer_development)"
+developers_access_key="$(access_key deployer.development)"
 
-# dev_id=$(key_id user_deployer_development)
-# dev_secret=$(access_key deployer.development)
+for user in $(list-developers); do
+    username=$(iam_username $user)
 
-# for user in rodney; do
-#     echo "Setting up developers user $user"
-#     install_key $user $dev_id $dev_secret
-# done
-
-echo "Setting up developers user rodney"
-install_key rodney "$(key_id user_rodney_lorrimar)" "$(access_key rodney.lorrimar)"
+    if [ -z "$username" ]; then
+        echo "Setting up developers user $user with shared credentials..."
+        install_key $user "$developers_key_id" "$developers_access_key"
+    else
+        echo "Setting up user $user with credentials for $username..."
+        install_key $user "$(key_id user_$user)" "$(access_key $username)"
+        install_password $user $username
+    fi
+done
