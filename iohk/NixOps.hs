@@ -851,9 +851,10 @@ scpFromNode o c (fromNodeName -> node) from to = do
     ExitSuccess -> return ()
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
 
+-- To check logs for commit ID run `journalctl -n 1 --identifier=cardano-node-commit-monitor`
 triggerCommitMonitor :: Options -> NixopsConfig -> NodeName -> IO ()
 triggerCommitMonitor o c m =
-  ssh' o c "bash" ["-c", "strings $(pgrep -fal cardano-node-simple | cut -d' ' -f2) 2>/dev/null | egrep '^[0-9a-f]{40,40}$' | cut -d: -f4 | xargs printf 'https://github.com/input-output-hk/cardano-sl/commit/%s' | systemd-cat -t cardano-node-commit-monitor -p info"] m
+  ssh' o c "bash" ["-c", "\"strings /proc/$(systemctl show -p MainPID --value cardano-node.service)/exe | egrep '^[0-9a-f]{40,40}$'| xargs printf 'https://github.com/input-output-hk/cardano-sl/commit/%s' | systemd-cat -t cardano-node-commit-monitor -p info\""] m
   (const $ pure ())
 
 deployedCommit :: Options -> NixopsConfig -> NodeName -> IO ()
