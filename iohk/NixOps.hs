@@ -854,7 +854,7 @@ scpFromNode o c (fromNodeName -> node) from to = do
 -- To check logs for commit ID run `journalctl -n 1 --identifier=cardano-node-commit-monitor`
 triggerCommitMonitor :: Options -> NixopsConfig -> NodeName -> IO ()
 triggerCommitMonitor o c m =
-  ssh' o c "bash" ["-c", "\"strings /proc/$(systemctl show -p MainPID --value cardano-node.service)/exe | egrep '^[0-9a-f]{40,40}$'| xargs printf 'https://github.com/input-output-hk/cardano-sl/commit/%s' | systemd-cat -t cardano-node-commit-monitor -p info\""] m
+  ssh' o c "bash" ["-c", "\"/proc/$(systemctl show -p MainPID --value cardano-node.service)/exe --version | sed 's/.* git revision \\([a-z0-9]\\)/\\1/' | xargs printf 'https://github.com/input-output-hk/cardano-sl/commit/%s' | systemd-cat -t cardano-node-commit-monitor -p info\""] m
   (const $ pure ())
 
 deployedCommit :: Options -> NixopsConfig -> NodeName -> IO ()
