@@ -653,7 +653,8 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check bumpSystemStartHeldB
        die "Deploying nodes, but 'keys/key1.sk' is absent."
 
   _ <- pure $ clusterConfigurationKey c
-  when (dryrun /= DryRun && buonly /= BuildOnly) $ do
+  let simulated = dryrun == DryRun || buonly == BuildOnly
+  unless simulated $ do
     deployerIP <- establishDeployerIP o oDeployerIP
     setenv o "SMART_GEN_IP" $ getIP deployerIP
   -- Pre-allocate nix heap to improve performance
@@ -689,7 +690,7 @@ deploy o@Options{..} c@NixopsConfig{..} dryrun buonly check bumpSystemStartHeldB
     ++ [ "--check"         | check  == PassCheck  ]
     ++ nixopsMaybeLimitNodes o
 
-  when (elem Nodes cElements) $ do
+  unless simulated $ do
     let cmonNode = head $ nodeNames o c'
     printf ("Triggering commit monitor on "%s%"\n") $ fromNodeName cmonNode
     triggerCommitMonitor o c' cmonNode
@@ -850,9 +851,10 @@ scpFromNode o c (fromNodeName -> node) from to = do
     ExitSuccess -> return ()
     ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
 
+-- To check logs for commit ID run `journalctl -n 1 --identifier=cardano-node-commit-monitor`
 triggerCommitMonitor :: Options -> NixopsConfig -> NodeName -> IO ()
 triggerCommitMonitor o c m =
-  ssh' o c "bash" ["-c", "strings $(pgrep -fal cardano-node-simple | cut -d' ' -f2) 2>/dev/null | egrep '^[0-9a-f]{40,40}$' | systemd-cat -t cardano-node-commit-monitor -p info"] m
+  ssh' o c "bash" ["-c", "\"/proc/$(systemctl show -p MainPID --value cardano-node.service)/exe --version | sed 's/.* git revision \\([a-z0-9]\\)/\\1/' | xargs printf 'https://github.com/input-output-hk/cardano-sl/commit/%s' | systemd-cat -t cardano-node-commit-monitor -p info\""] m
   (const $ pure ())
 
 deployedCommit :: Options -> NixopsConfig -> NodeName -> IO ()
