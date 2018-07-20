@@ -20,6 +20,10 @@
           <li>Enter the testnet address you want to top up in the field below.</li>
           <li>Click 'Withdraw'.</li>
           <li>Funds will be accessible soon after.</li>
+          <li v-if="returnAddress">
+            When finished with your testnet Ada, please send it back to
+            <csl-address :address="returnAddress"></csl-address>
+          </li>
         </ol>
       </p>
 
@@ -52,23 +56,14 @@
 
       Vue.component('csl-withdrawal', {
         props: ['wd'],
-        computed: {
-          txURL() {
-            return config.explorerURL + 'tx/' + this.wd.txid;
-          },
-          addrURL() {
-            return config.explorerURL + 'address/' + this.wd.address;
-          }
-        },
         template: `<div>
           <div v-if="!wd.status">
              Requesting withdrawal to address {{ wd.address }}.
           </div>
           <div v-if="wd.status === 'success'">
-             Transaction
-             <a :href="txURL">{{ wd.txid }}</a>
+             Transaction <csl-tx :txid="wd.txid"></csl-tx></a>
              withdrawal of {{ wd.amount }} lovelace to
-             <a :href="addrURL">{{ wd.address }}</a>.
+             <csl-address :address="wd.address"></csl-address>.
           </div>
           <div v-if="wd.status === 'failure'">
              Failed to withdraw. The response was:
@@ -80,12 +75,33 @@
         </div>`
       });
 
+      Vue.component('csl-tx', {
+        props: ['txid'],
+        computed: {
+          url() {
+            return config.explorerURL + 'tx/' + this.txid;
+          }
+        },
+        template: `<a :href="url">{{ txid }}</a>`
+      });
+
+      Vue.component('csl-address', {
+        props: ['address'],
+        computed: {
+          url() {
+            return config.explorerURL + 'address/' + this.address;
+          }
+        },
+        template: `<a :href="url">{{ address }}</a>`
+      });
+
       var app = new Vue({
         el: '#app',
         data: {
           withdrawals: [],
           withdrawAddress: '',
           recaptchaToken: null,
+          returnAddress: null,
         },
         methods: {
           withdraw() {
@@ -147,6 +163,12 @@
         mounted() {
           this.isMounted = true;
           this.initRecaptcha();
+        },
+        created() {
+          axios.get('return-address')
+            .then(response => {
+              this.returnAddress = response.data;
+            });
         }
       });
 
