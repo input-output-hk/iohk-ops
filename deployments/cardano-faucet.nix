@@ -2,6 +2,6 @@
 let nodeMap = { inherit (globals.fullMap) faucet; }; in
 
 flip mapAttrs nodeMap
-(name: import ./../modules/cardano.nix
+(name: import ./../modules/cardano-base.nix
        globals
        [./../modules/cardano-faucet.nix])

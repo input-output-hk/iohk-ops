@@ -14,36 +14,9 @@ globals: imports: params:
     cfg                  = config.services.cardano-node;
   in {
     imports = [
-      ./common.nix
-      ./amazon-base.nix
-      ./network-wide.nix
       (import ./cardano-service.nix globals params)
-    ] ++ map (path: import path globals params) imports;
-
-    global.organisation = params.org;
-
-    services.dnsmasq.enable = true;
-    services.dnsmasq.servers = [ "127.0.0.1" ];
-
-    # TODO: DEVOPS-8
-    #deployment.ec2.ami = (import ./amis.nix).${config.deployment.ec2.region};
-    deployment.ec2.region         = mkForce params.region;
-    deployment.ec2.zone           = mkForce params.zone;
-    deployment.ec2.accessKeyId    = params.accessKeyId;
-    deployment.ec2.keyPair        = resources.ec2KeyPairs.${params.keyPairName};
-    deployment.ec2.securityGroups =
-      with params;
-      let sgNames =
-           optionals typeIsExplorer              [ "allow-to-explorer-${params.region}" ]
-        ++ optionals typeIsFaucet                [ "allow-to-faucet-${params.region}" ]
-        ++ optionals typeIsCore                  [ "allow-cardano-static-peers-${params.name}-${params.region}-${params.org}" ]
-        ++ optionals typeIsRelay                 [ "allow-kademlia-public-udp-${params.region}"
-                                                   "allow-cardano-public-tcp-${params.region}" ]
-        ++ optionals config.global.enableEkgWeb  [ "allow-ekg-public-tcp-${params.region}-${params.org}" ];
-      in map (resolveSGName resources)
-             (if config.global.omitDetailedSecurityGroups
-              then [ "allow-all-${params.region}-${params.org}" ]
-              else sgNames);
+      (import ./cardano-base.nix globals imports params)
+    ];
 
     networking.extraHosts =
     let hostList = if config.services.cardano-node.enable == false then []
@@ -59,17 +32,6 @@ globals: imports: params:
     in
     ''
     ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}.cardano") hostList)}
-    '';
-
-    services.dd-agent.processConfig = ''
-    init_config:
-
-    instances:
-    - name:            ${if params.typeIsExplorer then "cardano-explorer" else "cardano-node-simple"}
-      search_string: ['${if params.typeIsExplorer then "cardano-explorer" else "cardano-node-simple"}']
-      exact_match: True
-      thresholds:
-        critical: [1, 1]
     '';
 
     services.cardano-node = {
