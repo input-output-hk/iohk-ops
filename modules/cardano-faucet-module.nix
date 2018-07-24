@@ -37,6 +37,7 @@ let
     logging-config = cfg.loggingConfigFile;
     source-wallet.generate-to = "${cfg.home}/generated-wallet.json";
   } // (optionalAttrs (cfg.recaptcha != null) {
+    # fixme: recaptcha secret in file
     recaptcha-secret = cfg.recaptcha.secretKey;
   }) // (optionalAttrs cfg.statsd.enable {
     statsd = { inherit (cfg.statsd) host port flush-interval; };

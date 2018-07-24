@@ -30,7 +30,7 @@ in {
     inherit recaptcha;
   };
 
-  networking.firewall.allowedTCPPorts = [ 80 ];
+  networking.firewall.allowedTCPPorts = [ 80 443 ];
 
   services.nginx = {
     enable = true;
@@ -39,7 +39,8 @@ in {
         then config.global.dnsDomainname else "iohkdev.io";
      in {
       "cardano-faucet.${vhostDomainName}" = {
-        # TLS provided by cloudfront
+        forceSSL = true;
+        enableACME = true;
         locations = {
           "/" = {
             root = faucetFrontend;
@@ -49,6 +50,12 @@ in {
             proxyPass = "http://127.0.0.1:${toString config.services.cardano-faucet.port}";
           };
         };
+        # Otherwise nginx serves files with timestamps unixtime+1 from /nix/store
+        extraConfig = ''
+          if_modified_since off;
+          add_header Last-Modified "";
+          etag off;
+        '';
       };
     };
   };
