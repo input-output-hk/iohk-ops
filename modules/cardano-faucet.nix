@@ -6,7 +6,7 @@ globals: params:
 let
   recaptcha = {
     siteKey = lib.fileContents ../static/recaptcha_site_key;
-    secretKey = lib.fileContents ../static/recaptcha_secret_key;
+    secretKeyFile = "/var/lib/keys/recaptcha-secret-key";
   };
   explorerURL = "http://cardano-explorer.cardano-testnet.iohkdev.io/";
   faucetFrontend = pkgs.runCommand "faucet-frontend" {} ''
@@ -28,6 +28,12 @@ in {
     statsd.enable = true;
     statsd.port = 8125; # dogstatsd will be listening on this port
     inherit recaptcha;
+  };
+
+  deployment.keys.recaptcha-secret-key = {
+    keyFile = ../static/recaptcha_secret_key;
+    destDir = "/var/lib/keys";
+    user = "cardano-faucet";
   };
 
   networking.firewall.allowedTCPPorts = [ 80 443 ];

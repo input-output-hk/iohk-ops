@@ -15,8 +15,6 @@ let
   tlsDir = "${cfg.home}/tls";
   walletPort = 8090;
   walletUseTLS = true;
-  faucetEkgPort = 8001;  # currently hardcoded in faucet
-  walletEkgPort = 8002;
 
   defaultLoggingCfg = pkgs.writeText "logging.cfg" ''
     termSeveritiesErr: All
@@ -37,8 +35,7 @@ let
     logging-config = cfg.loggingConfigFile;
     source-wallet.generate-to = "${cfg.home}/generated-wallet.json";
   } // (optionalAttrs (cfg.recaptcha != null) {
-    # fixme: recaptcha secret in file
-    recaptcha-secret = cfg.recaptcha.secretKey;
+    recaptcha-secret-file = cfg.recaptcha.secretKeyFile;
   }) // (optionalAttrs cfg.statsd.enable {
     statsd = { inherit (cfg.statsd) host port flush-interval; };
   }) // (optionalAttrs walletUseTLS {
@@ -133,6 +130,40 @@ in {
       };
     };
 
+    ekg = mkOption {
+      description = "EKG remote monitoring of Haskell processes";
+      type = types.submodule {
+        options = {
+          enable = mkOption {
+            description = "Enable serving of EKG metrics.";
+            type = types.bool;
+            default = true;
+          };
+          host = mkOption {
+            description = "Address to listen on.";
+            type = types.str;
+            default = "127.0.0.1";
+          };
+          faucetPort = mkOption {
+            description = "Port to serve EKG metrics for faucet process";
+            type = types.int;
+            default = 8001;
+          };
+          walletPort = mkOption {
+            description = "Port to serve EKG metrics for wallet process";
+            type = types.int;
+            default = 8002;
+          };
+        };
+      };
+      default = {
+        enable = true;
+        host = "127.0.0.1";
+        walletPort = 8001;
+        faucetPort = 8002;
+      };
+    };
+
     loggingConfigFile = mkOption {
       description = "File containing a YAML logging config";
       type = types.path;
@@ -149,11 +180,12 @@ in {
             '';
             type = types.str;
           };
-          secretKey = mkOption {
+          secretKeyFile = mkOption {
             description = ''
-              The private reCAPTCHA key shared with Google during authentication.
+              The path to a file containing the private reCAPTCHA key
+              shared with Google during authentication.
             '';
-            type = types.str;
+            type = types.path;
           };
         };
       });
@@ -225,8 +257,8 @@ in {
           tlsArgs = if walletUseTLS
             then "--tlscert ${tlsDir}/server/server.crt --tlskey ${tlsDir}/server/server.key --tlsca ${tlsDir}/server/ca.crt"
             else "--no-tls";
-          ekgArgs = optionalString (walletEkgPort != null)
-            "--ekg-server 127.0.0.1:${toString walletEkgPort}";
+          ekgArgs = optionalString (cfg.ekg.enable != null)
+            "--ekg-server ${cfg.ekg.host}:${toString cfg.ekg.walletPort}";
           metricsArgs = optionalString cfg.statsd.enable
             "--metrics +RTS -T -RTS --statsd-server ${cfg.statsd.host}:${toString cfg.statsd.port}";
         in ''
@@ -257,10 +289,9 @@ in {
           Group = "cardano-faucet";
           ExecStart = let
             metricsArgs = optionalString cfg.statsd.enable "+RTS -T -RTS";
-            # fixme: faucet ekg currently hardcoded to 127.0.0.1:8001
-          ekgArgs = optionalString (faucetEkgPort != null)
-            "--ekg-server 127.0.0.1:${toString faucetEkgPort}";
-          in "${faucetPackage}/bin/cardano-faucet --config ${cfgFile} ${metricsArgs}";
+            ekgArgs = optionalString (cfg.ekg.enable != null)
+              "--ekg-server ${cfg.ekg.host}:${toString cfg.ekg.faucetPort}";
+          in "${faucetPackage}/bin/cardano-faucet --config ${cfgFile} ${ekgArgs} ${metricsArgs}";
         };
       };
     };
