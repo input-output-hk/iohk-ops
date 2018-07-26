@@ -27,11 +27,8 @@ files:
 - deployments/cardano-explorer-env-testnet.nix
 - deployments/cardano-faucet.nix
 - deployments/cardano-faucet-env-testnet.nix
-- deployments/report-server.nix
-- deployments/report-server-env-testnet.nix
 elements:
 - Nodes
 - Explorer
 - Faucet
-- ReportServer
 target: AWS
