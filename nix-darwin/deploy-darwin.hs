@@ -1,13 +1,15 @@
 #! /usr/bin/env nix-shell
 #! nix-shell -i runhaskell
-{-# LANGUAGE OverloadedStrings, LambdaCase, RecordWildCards #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
-import Prelude hiding (FilePath)
-import Turtle
-import Data.Text (Text)
-import qualified Data.Text as T
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
 import qualified Filesystem.Path.CurrentOS as FP
-import qualified System.Process as P
+import           Prelude                   hiding (FilePath)
+import qualified System.Process            as P
+import           Turtle
 
 main :: IO ()
 main = do

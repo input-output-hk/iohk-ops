@@ -1,18 +1,22 @@
 #! /usr/bin/env nix-shell
 #! nix-shell -i runhaskell
-{-# LANGUAGE OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- Use this script to reset all/most of the nix and nix-darwin
 -- changes. This is just for debugging the deployment script.
 -- Run with sudo.
 
-import Prelude hiding (FilePath)
-import Turtle
-import Data.Text (Text)
-import Control.Monad (forM_)
+module NukeNix where
 
-main :: IO ()
-main = sh $ do
+import           Control.Monad      (forM_)
+import           Data.Text          (Text)
+import           Prelude            hiding (FilePath)
+import           System.Environment
+import           Turtle
+
+nuke :: IO ()
+nuke = sh $ do
   sh $ do
     let pat = star dot *> tab *> star dot *> tab *> begins "org.nixos"
     daemon <- inproc "launchctl" ["list"] empty & grep pat & sed pat
@@ -28,6 +32,7 @@ main = sh $ do
                     , ".nixpkgs"
                     , ".config/nixpkgs"
                     ]
+  homeDir <- liftIO $ getEnv "HOME"
   let dead = [ "/etc/nix"
              , "/etc/bashrc.backup-before-nix-darwin"
              , "/nix"
@@ -41,7 +46,8 @@ main = sh $ do
                , "org.nixos.buildkite-agent.plist"
                , "org.nixos.nix-gc.plist"
                ]) ++
-             (under "/Users/admin" userConfigs) ++
+             (under (fromString homeDir) userConfigs) ++
+             (under "/var/root" userConfigs) ++
              (under "/root" userConfigs)
 
   void $ proc "rm" ("-rf":files dead) empty
