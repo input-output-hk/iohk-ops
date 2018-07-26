@@ -8,13 +8,14 @@ let
     siteKey = lib.fileContents ../static/recaptcha_site_key;
     secretKeyFile = "/var/lib/keys/recaptcha-secret-key";
   };
+  iohkPkgs = import ../default.nix { inherit config pkgs; inherit (pkgs) system; };
+
+  faucetFrontend = iohkPkgs.makeFaucetFrontend {
+    explorerURL = "http://cardano-explorer.cardano-testnet.iohkdev.io/";
+    recaptchaSiteKey = recaptcha.siteKey;
+  };
+
   explorerURL = "http://cardano-explorer.cardano-testnet.iohkdev.io/";
-  faucetFrontend = pkgs.runCommand "faucet-frontend" {} ''
-    mkdir -p $out
-    sed -e 's|recaptchaSiteKey:.*|recaptchaSiteKey: "${recaptcha.siteKey}",|g' \
-        -e 's|explorerURL:.*|explorerURL: "${explorerURL}",|g' \
-        ${../lib/faucet.html} > $out/index.html
-  '';
 
 in {
   global.dnsHostname = mkForce "cardano-faucet";
