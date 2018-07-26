@@ -18,8 +18,8 @@ install_password() {
     username="$2"
     out="/home/$user/$username-console-password.gpg"
     sudo cp "$keys/$username.password" "$out"
-    sudo chown "$user:" $out
-    sudo chmod 600 $out
+    sudo chown "$user:" "$out"
+    sudo chmod 600 "$out"
 }
 
 iam_username() {
@@ -52,14 +52,14 @@ developers_key_id="$(key_id user_deployer_development)"
 developers_access_key="$(access_key deployer.development)"
 
 for user in $(list-developers); do
-    username=$(iam_username $user)
+    username=$(iam_username "$user")
 
     if [ -z "$username" ]; then
         echo "Setting up developers user $user with shared credentials..."
-        install_key $user "$developers_key_id" "$developers_access_key"
+        install_key "$user" "$developers_key_id" "$developers_access_key"
     else
         echo "Setting up user $user with credentials for $username..."
-        install_key $user "$(key_id user_$user)" "$(access_key $username)"
-        install_password $user $username
+        install_key "$user" "$(key_id "user_$user")" "$(access_key "$username")"
+        install_password "$user" "$username"
     fi
 done
