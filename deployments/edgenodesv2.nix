@@ -1,6 +1,7 @@
 { accessKeyId, nodes ? 1 , walletsPerNode ? 1
 , region ? "eu-central-1"
-, topologyFile, systemStart }:
+, topologyFile, systemStart
+, configKey ? "bench" }:
 
 with import ../lib.nix;
 let
@@ -8,7 +9,9 @@ let
     name = "edgenode-${toString index}";
     value = {
       imports = [ ../modules/cardano-benchmark.nix ];
-      services.cardano-benchmark.index = index;
+      services.cardano-benchmark = {
+        inherit configKey index;
+      };
     };
   };
 in {
