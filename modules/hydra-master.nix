@@ -55,6 +55,8 @@ in {
       (mkMac "osx-1.aws.iohkdev.io")
       (mkMac "osx-2.aws.iohkdev.io")
       (mkMac "osx-3.aws.iohkdev.io")
+      (mkMac "osx-4.aws.iohkdev.io")
+      (mkMac "osx-5.aws.iohkdev.io")
     ];
     extraOptions = ''
       auto-optimise-store = true
