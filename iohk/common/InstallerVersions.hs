@@ -112,11 +112,12 @@ appVersionFromConfig key cfg = case (ver Win64, ver Mac64) of
 ----------------------------------------------------------------------------
 
 -- | Cardano cluster which the installer will connect to.
-data InstallerNetwork = InstallerMainnet | InstallerStaging deriving (Eq)
+data InstallerNetwork = InstallerMainnet | InstallerStaging | InstallerTestnet deriving (Eq)
 
 instance Show InstallerNetwork where
   show InstallerMainnet = "Mainnet"
   show InstallerStaging = "Staging"
+  show InstallerTestnet = "Testnet"
 
 -- | Determine which cardano network an installer is for based on its
 -- filename. The inverse of this function is in
@@ -124,5 +125,6 @@ instance Show InstallerNetwork where
 installerNetwork :: FilePath -> Maybe InstallerNetwork
 installerNetwork fpath | "mainnet" `T.isInfixOf` name = Just InstallerMainnet
                        | "staging" `T.isInfixOf` name = Just InstallerStaging
+                       | "testnet" `T.isInfixOf` name = Just InstallerTestnet
                        | otherwise = Nothing
   where name = tt (filename fpath)
