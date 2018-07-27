@@ -1,19 +1,19 @@
-/**
- *  installer_bucket
- * 
- *  Public S3 bucket where deployers group have write access.
- *
- *  TODO: access logging to count downloads
- */
+#
+# installer_bucket
+#
+# Public S3 bucket where deployers group have write access.
+#
+# TODO: access logging to count downloads
+#
 
 resource "aws_s3_bucket" "bucket" {
-  bucket = "${var.bucket_name}"
-  region = "${var.aws_region}"
-  acl    = "public-read"
+  bucket   = "${var.bucket_name}"
+  region   = "${var.aws_region}"
+  acl      = "public-read"
 }
 
 module "s3-full-access" {
-  source       = "../s3-full-access-policy"
+  source       = "../../../../modules/s3-full-access-policy"
   name         = "${var.prefix}-ci-deploy-s3-access"
   bucket_names = ["${aws_s3_bucket.bucket.id}"]
 }

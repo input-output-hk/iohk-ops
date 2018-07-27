@@ -10,7 +10,7 @@ resource "aws_route53_record" "cardano_testnet_ns" {
   zone_id = "${aws_route53_zone.cardano_testnet.zone_id}"
   name    = "cardano-testnet.iohkdev.io"
   type    = "NS"
-  ttl     = "30"
+  ttl     = "300"
 
   records = [
     "${aws_route53_zone.cardano_testnet.name_servers.0}",

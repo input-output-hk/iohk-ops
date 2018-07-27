@@ -17,6 +17,14 @@ provider "aws" {
   }
 }
 
+provider "aws" {
+  alias = "singapore"
+  region = "ap-southeast-1"
+  assume_role {
+    role_arn = "${var.profile_arn}"
+  }
+}
+
 provider "local" {
   version = "~> 1.1"
 }
@@ -34,13 +42,8 @@ provider "local" {
 module "global" {
   source = "./global"
   deployer_pgp_key = "${file("${path.module}/../../lib/gpg-keys/deployer.base64")}"
+  providers = {
+    aws = "aws"
+    aws.singapore = "aws.singapore"
+  }
 }
-
-# module "testnet_installer_bucket" {
-#   source      = "./modules/installer_bucket"
-#   bucket_name = "updates.cardano-testnet.iohkdev.io"
-#   prefix      = "updates-cardano-testnet"
-#   aws_region  = "ap-southeast-1"
-#   group       = "${aws_iam_group.deployers.name}"
-# }
-# fixme: add dns entry for s3 bucket
