@@ -50,3 +50,21 @@ data "aws_iam_policy_document" "s3-grant-public-read" {
     resources = ["arn:aws:s3:::${aws_s3_bucket.bucket.id}/*"]
   }
 }
+
+# HTML index of bucket
+resource "aws_s3_bucket_object" "object" {
+  bucket  = "${aws_s3_bucket.bucket.id}"
+  key     = "index.html"
+  content = "${data.template_file.bucket_index.rendered}"
+  etag    = "${md5(data.template_file.bucket_index.rendered)}"
+  acl     = "public-read"
+  content_type = "text/html"
+}
+
+data "template_file" "bucket_index" {
+  template = "${file("${path.module}/bucket-index.html")}"
+  vars = {
+    bucket_name = "${var.bucket_name}"
+  }
+}
+
