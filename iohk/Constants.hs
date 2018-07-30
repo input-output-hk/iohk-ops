@@ -21,7 +21,7 @@ defaultTarget        = AWS
 defaultNode          = NodeName "c-a-1"
 defaultNodePort      = PortNo 3000
 
-defaultIOPSBranch    = Branch "develop"
+defaultIOPSBranch    = Branch "master"
 
 defaultHold          = 1200 :: Seconds -- 20 minutes
 
