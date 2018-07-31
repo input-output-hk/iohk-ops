@@ -95,7 +95,7 @@ readT = read . T.unpack
 lowerShowT :: Show a => a -> Text
 lowerShowT = T.toLower . T.pack . show
 
-errorT :: Text -> a
+errorT :: HasCallStack => Text -> a
 errorT = error . T.unpack
 
 tt :: FilePath -> Text
