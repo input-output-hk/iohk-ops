@@ -135,7 +135,7 @@ centralCommandParser =
                                 Clone
                                 <$> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
                                 <*> (fromMaybe defaultIOPSBranch
-                                     <$> (optional (parserBranch "'iohk-ops' branch to checkout.  Defaults to 'develop'"))))
+                                     <$> (optional (parserBranch "'iohk-ops' branch to checkout.  Defaults to 'master'"))))
     , ("new",                   "Produce (or update) a checkout of BRANCH with a cluster config YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
                                 New
                                 <$> optional (optPath "config"        'c' "Override the default, environment-dependent config filename")
