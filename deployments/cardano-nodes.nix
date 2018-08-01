@@ -1,7 +1,9 @@
 { globals, ... }: with (import ./../lib.nix);
 let nodeMap = globals.nodeMap; in
 
-flip mapAttrs nodeMap
+(flip mapAttrs nodeMap
 (name: import ./../modules/cardano.nix
        globals
-       [])
+       [])) // {
+  require = [ ./mainnet-noauto-restart.nix ];
+}
