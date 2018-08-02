@@ -1,5 +1,5 @@
-# goes from 3 regions to 4 regions topology and corresponding key index
 #!/bin/sh
+# goes from 3 regions to 4 regions topology and corresponding key index
                                                                                                                                                                                           
 set +x                                                                                                                                                                                   
                                                                                                                                                                                         

@@ -8,7 +8,7 @@ let
   justIo = pkgs.runCommand "shell" {
     buildInputs = with pkgs; [ iohk-ops terraform_0_11 nixops ];
     passthru = {
-      inherit ioSelfBuild withAuxx;
+      inherit ioSelfBuild withAuxx ci;
     };
   } "echo use nix-shell";
   ioSelfBuild = pkgs.lib.overrideDerivation iohk-ops.env (drv: {
@@ -21,6 +21,12 @@ let
       }
     '';
   });
+  ci = pkgs.stdenv.mkDerivation {
+    name = "ci-shell";
+    buildInputs = let
+      ghc = pkgs.haskellPackages.ghcWithPackages (ps: with ps; [turtle aeson yaml universum cassava]);
+    in [ ghc ];
+  };
   withAuxx = pkgs.runCommand "shell" {
     buildInputs = [
       iohk-ops
