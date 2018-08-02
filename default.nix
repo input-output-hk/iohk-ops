@@ -7,6 +7,7 @@ in
 , compiler ? pkgs.haskellPackages
 , enableDebugging ? false
 , enableProfiling ? false
+, cardanoRevOverride ? null
 }:
 
 with pkgs.lib;
@@ -34,11 +35,24 @@ let
     gnupg
   ];
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
-  cardano-sl-src = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
-  cardano-sl-pkgs = import (pkgs.fetchgit cardano-sl-src) {
-    gitrev = cardano-sl-src.rev;
+  cardano-sl-src = let
+    try = builtins.tryEval <cardano-sl>;
+    cfg = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
+    fixedSrc = pkgs.fetchgit cfg;
+  in if try.success then
+    builtins.trace "using search host <cardano-sl>" try.value
+  else fixedSrc;
+  cardano-sl-src-phase2 = let
+    localOverride = {
+      outPath = builtins.fetchTarball "https://github.com/input-output-hk/cardano-sl/archive/${cardanoRevOverride}.tar.gz";
+      rev = cardanoRevOverride;
+    };
+  in if (cardanoRevOverride != null) then localOverride else cardano-sl-src;
+  cardano-sl-pkgs = import cardano-sl-src-phase2 ({
     inherit enableDebugging enableProfiling;
-  };
+  } // optionalAttrs (cardano-sl-src-phase2 ? rev) {
+    gitrev = cardano-sl-src-phase2.rev;
+  });
 
   iohk-ops = pkgs.haskell.lib.overrideCabal
              (compiler.callPackage ./iohk/default.nix {})
