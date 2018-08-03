@@ -29,6 +29,10 @@ let
         ./hydra-nix-prefetch-git.patch
         ./hydra-not-found.patch
         ./hydra-github-pr-filter.patch
+        # These two patches are upstream and related to running external commands
+        # after a build executes
+        ./hydra-arbitrary-commands.patch
+        ./hydra-metrics-float.patch
       ];
     });
   };

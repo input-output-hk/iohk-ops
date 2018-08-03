@@ -1,0 +1,238 @@
+From 6db2cbf09452af164689deef540e00fe5613df63 Mon Sep 17 00:00:00 2001
+From: Eelco Dolstra <edolstra@gmail.com>
+Date: Wed, 1 Aug 2018 19:40:34 +0200
+Subject: [PATCH] Add a plugin to execute arbitrary commands when a build
+ finishes
+
+The plugin can be configured using one or more <runcommand> sections
+in hydra.conf, e.g.
+
+<runcommand>
+  command = echo Build finished
+</runcommand>
+
+Optionally, the command can be executed for specific
+projects/jobsets/jobs:
+
+  job = patchelf:master:tarball
+
+or
+
+  job = patchelf:*:*
+
+The default is *:*:*.
+
+The command is executed with the environment variable $HYDRA_JSON
+pointing to a JSON file containing info about the build, e.g.
+
+  {
+    "build": 3772978,
+    "buildStatus": 0,
+    "drvPath": "/nix/store/9y4h1fyx9pl3ic08i2f09239b90x1lww-patchelf-tarball-0.8pre894_ed92f9f.drv",
+    "event": "buildFinished",
+    "finished": 1,
+    "job": "tarball",
+    "jobset": "master",
+    "metrics": [
+      {
+        "name": "random1",
+        "unit": null,
+        "value": "20282"
+      },
+      {
+        "name": "random2",
+        "unit": "KiB",
+        "value": "6664"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out",
+        "path": "/nix/store/39h5xciz5pnh1aypmr3rpdx0536y5s2w-patchelf-tarball-0.8pre894_ed92f9f"
+      }
+    ],
+    "products": [
+      {
+        "defaultPath": "",
+        "fileSize": 148216,
+        "name": "patchelf-0.8pre894_ed92f9f.tar.gz",
+        "path": "/nix/store/39h5xciz5pnh1aypmr3rpdx0536y5s2w-patchelf-tarball-0.8pre894_ed92f9f/tarballs/patchelf-0.8pre894_ed92f9f.tar.gz",
+        "productNr": 4,
+        "sha1hash": "9f27d18382436a7f743f6c2f6ad66e1b536ab4c8",
+        "sha256hash": "b04faef2916c411f10711b58ea26965df7cb860ca33a87f1e868051b874c44b3",
+        "subtype": "source-dist",
+        "type": "file"
+      },
+      {
+        "defaultPath": "",
+        "fileSize": 121279,
+        "name": "patchelf-0.8pre894_ed92f9f.tar.bz2",
+        "path": "/nix/store/39h5xciz5pnh1aypmr3rpdx0536y5s2w-patchelf-tarball-0.8pre894_ed92f9f/tarballs/patchelf-0.8pre894_ed92f9f.tar.bz2",
+        "productNr": 3,
+        "sha1hash": "7a664841fb779dec19023be6a6121e0398067b7c",
+        "sha256hash": "c81e36099893f541a11480f869fcdebd2fad3309900519065c8745f614dd024a",
+        "subtype": "source-dist",
+        "type": "file"
+      },
+      {
+        "defaultPath": "README",
+        "fileSize": null,
+        "name": "",
+        "path": "/nix/store/39h5xciz5pnh1aypmr3rpdx0536y5s2w-patchelf-tarball-0.8pre894_ed92f9f",
+        "productNr": 2,
+        "sha1hash": null,
+        "sha256hash": null,
+        "subtype": "readme",
+        "type": "doc"
+      },
+      {
+        "defaultPath": "",
+        "fileSize": 6230,
+        "name": "README",
+        "path": "/nix/store/39h5xciz5pnh1aypmr3rpdx0536y5s2w-patchelf-tarball-0.8pre894_ed92f9f/README",
+        "productNr": 1,
+        "sha1hash": "dc6bb09093183ab52d7e6a35b72d179869bd6fbf",
+        "sha256hash": "5371aee9de0216b3ea2d5ea869da9d5ee441b99156a99055e7e11e7a705f7920",
+        "subtype": "readme",
+        "type": "doc"
+      }
+    ],
+    "project": "patchelf",
+    "startTime": 1533137091,
+    "stopTime": 1533137094,
+    "timestamp": 1533136076
+  }
+
+So for example, the following command:
+
+  command = echo Build $(jq -r .build $HYDRA_JSON) \($(jq -r .project $HYDRA_JSON):$(jq -r .jobset $HYDRA_JSON):$(jq -r .job $HYDRA_JSON)\) finished, metrics: $(jq -r '.metrics[].value' $HYDRA_JSON).
+
+will print
+
+  Build 3772978 (patchelf:master:tarball) finished, metrics: 20282 6664.
+---
+ src/lib/Hydra/Plugin/RunCommand.pm | 115 +++++++++++++++++++++++++++++
+ 1 file changed, 115 insertions(+)
+ create mode 100644 src/lib/Hydra/Plugin/RunCommand.pm
+
+diff --git a/src/lib/Hydra/Plugin/RunCommand.pm b/src/lib/Hydra/Plugin/RunCommand.pm
+new file mode 100644
+index 00000000..cbd7c029
+--- /dev/null
++++ b/src/lib/Hydra/Plugin/RunCommand.pm
+@@ -0,0 +1,115 @@
++package Hydra::Plugin::RunCommand;
++
++use strict;
++use parent 'Hydra::Plugin';
++use experimental 'smartmatch';
++use JSON;
++
++sub configSectionMatches {
++    my ($name, $project, $jobset, $job) = @_;
++
++    my @elems = split ':', $name;
++
++    die "invalid section name '$name'\n" if scalar(@elems) > 3;
++
++    my $project2 = $elems[0] // "*";
++    return 0 if $project2 ne "*" && $project ne $project2;
++
++    my $jobset2 = $elems[1] // "*";
++    return 0 if $jobset2 ne "*" && $jobset ne $jobset2;
++
++    my $job2 = $elems[2] // "*";
++    return 0 if $job2 ne "*" && $job ne $job2;
++
++    return 1;
++}
++
++sub eventMatches {
++    my ($cfg, $event) = @_;
++    for my $x (split " ", ($cfg->{events} // "buildFinished")) {
++        return 1 if $x eq $event;
++    }
++    return 0;
++}
++
++sub buildFinished {
++    my ($self, $build, $dependents) = @_;
++    my $event = "buildFinished";
++
++    my $config = $self->{config}->{runcommand} // [];
++
++    my $tmp;
++
++    foreach my $cfg (@$config) {
++        next unless eventMatches($cfg, $event);
++        next unless configSectionMatches(
++            $cfg->{job} // "*:*:*",
++            $build->get_column('project'),
++            $build->get_column('jobset'),
++            $build->get_column('job'));
++
++        my $command = $cfg->{command} // die "<runcommand> section lacks a 'command' option";
++
++        unless (defined $tmp) {
++            $tmp = File::Temp->new(SUFFIX => '.json');
++
++            my $json = {
++                event => $event,
++                build => $build->id,
++                finished => $build->get_column('finished'),
++                timestamp => $build->get_column('timestamp'),
++                project => $build->get_column('project'),
++                jobset => $build->get_column('jobset'),
++                job => $build->get_column('job'),
++                drvPath => $build->get_column('drvpath'),
++                startTime => $build->get_column('starttime'),
++                stopTime => $build->get_column('stoptime'),
++                buildStatus => $build->get_column('buildstatus'),
++                outputs => [],
++                products => [],
++                metrics => [],
++            };
++
++            for my $output ($build->buildoutputs) {
++                my $j = {
++                    name => $output->name,
++                    path => $output->path,
++                };
++                push @{$json->{outputs}}, $j;
++            }
++
++            for my $product ($build->buildproducts) {
++                my $j = {
++                    productNr => $product->productnr,
++                    type => $product->type,
++                    subtype => $product->subtype,
++                    fileSize => $product->filesize,
++                    sha1hash => $product->sha1hash,
++                    sha256hash => $product->sha256hash,
++                    path => $product->path,
++                    name => $product->name,
++                    defaultPath => $product->defaultpath,
++                };
++                push @{$json->{products}}, $j;
++            }
++
++            for my $metric ($build->buildmetrics) {
++                my $j = {
++                    name => $metric->name,
++                    unit => $metric->unit,
++                    value => $metric->value,
++                };
++                push @{$json->{metrics}}, $j;
++            }
++
++            print $tmp encode_json($json) or die;
++        }
++
++        $ENV{"HYDRA_JSON"} = $tmp->filename;
++
++        system("$command") == 0
++            or warn "notification command '$command' failed with exit status $?\n";
++    }
++}
++
++1;

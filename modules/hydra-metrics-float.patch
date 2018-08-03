@@ -1,0 +1,24 @@
+From e122d3bef3a34860588c4b444958feacf34be493 Mon Sep 17 00:00:00 2001
+From: Eelco Dolstra <edolstra@gmail.com>
+Date: Thu, 2 Aug 2018 12:31:28 +0200
+Subject: [PATCH] RunCommand: Return metrics as a float
+
+Apparently, DBIx::Class doesn't handle columns with type 'double
+precision' properly.
+---
+ src/lib/Hydra/Plugin/RunCommand.pm | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lib/Hydra/Plugin/RunCommand.pm b/src/lib/Hydra/Plugin/RunCommand.pm
+index cbd7c029..75ca0826 100644
+--- a/src/lib/Hydra/Plugin/RunCommand.pm
++++ b/src/lib/Hydra/Plugin/RunCommand.pm
+@@ -97,7 +97,7 @@ sub buildFinished {
+                 my $j = {
+                     name => $metric->name,
+                     unit => $metric->unit,
+-                    value => $metric->value,
++                    value => 0 + $metric->value,
+                 };
+                 push @{$json->{metrics}}, $j;
+             }
