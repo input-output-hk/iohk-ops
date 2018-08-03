@@ -2,8 +2,8 @@ terraform {
   required_version = "~> 0.11"
 
   backend "s3" {
-    bucket  = "iohk-ops-tfstate"
-    key     = "remote-tfstate/cardano-deployer/terraform.tfstate"
+    bucket  = "devmantis-jumpstart"
+    key     = "remote-tfstate/deployer/terraform.tfstate"
     region  = "us-west-1"
     encrypt = true  # AWS KMS encryption of S3 files
   }
