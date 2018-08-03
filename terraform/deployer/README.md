@@ -21,7 +21,7 @@ deployers. Use either `testnet` or `mainnet` as the workspace.
 2. Clone `iohk-ops`.
 
        git clone iohk-ops
-       cd iohk-ops/terraform/cardano-deployer
+       cd iohk-ops/terraform/deployer
 
 3. Get a `nix-shell` with terraform.
 
@@ -104,7 +104,7 @@ traceable.
 
 Using the `deployer@testnet-deployer` user:
 
-    cd iohk-ops/terraform/cardano-deployer
+    cd iohk-ops/terraform/deployer
     terraform init
     terraform workspace select testnet
     terraform plan
