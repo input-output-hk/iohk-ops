@@ -9,15 +9,6 @@ let
   env = "${env}";
   username = "${username}";
 
-  src = pkgs.fetchFromGitHub {
-    owner = "input-output-hk";
-    repo = "iohk-ops";
-    rev = "fe0ad900c64e2f769a7ff6a4c86b809cb24ccd93";
-    sha256 = "1c84r3mxa44ywpay94rrbxzc7q08xvhp44d7z5hkkzkmaf429cgh";
-  };
-  iohk-pkgs = import src {};
-  localLib = import (src + "/lib.nix");
-
 in {
     imports = [
       <nixpkgs/nixos/modules/virtualisation/amazon-image.nix>
@@ -28,10 +19,14 @@ in {
       isNormalUser = true;
       description = "Deploy the deployer";
       extraGroups = [ "wheel" ];
-      openssh.authorizedKeys.keys = localLib.devOpsKeys;
+      openssh.authorizedKeys.keys = [
+        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDDwRtXm1TviRRjstPHV6G+to0P7lhN5F4Za5fMxva9MbY3XequPBBU5/HjoyZUTcZYN7bVlh9TFLQW6GrwYtL8g6W7+qj9vjZAT+pdrnpLgN+mGXppzsIbe8SZdLj11+nrL+jr1EBDnu4CmIeGfGCeKmQdYcXHBxDOYUxl80Qqjw4SKzLCWa0NAiJPaO+O1BQ1gjjDSTGumTq/DFtYi0yCjhhgXRKLQFZeOc4eV3uUXzqqwKb8i89sUFNIxPnZgEpMC5IX33r8+9CcibhDvFXxhCbEhwyxAlygzJCdntwRzIigOHxBiZV+KW9nRy/sUUC/82zB6BHZPdYV9Gb3r2740BR5jTac9Qps7MkaGuFANDkjy4ASC9DiL3TGoWjiScF100kbHsBDnEqzsybQrDXxpgTd8PiqZq9I1l1as2UoeuR3IPHO7zBbgbCy4rv9a7ZeITsPT7HcRDGHsVT762KnxVxQnR3m0CpoKGKWOKngMVRCTYsQ7Ng7f/ade9isduccrMeeTjGdkeC8QGS4VnfIEEqfHPJBS8/nree40vpvtWsvKHM346GQRm6A2UI14yBZIr/SoLQEZZP3TGwcOAA4Ze3BNGjPT38gnrPO3M8HiUJCyK3RS8GMOVr2K35aS+YTKOkLRYt4vM+vwSIWLtNgjq5kXh3HHOwFAWFn2m+ZBw== koserge-2017-04"
+      ];
     };
 
-    users.extraUsers.root.openssh.authorizedKeys.keys = localLib.devOpsKeys;
+    users.extraUsers.root.openssh.authorizedKeys.keys = [
+      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDDwRtXm1TviRRjstPHV6G+to0P7lhN5F4Za5fMxva9MbY3XequPBBU5/HjoyZUTcZYN7bVlh9TFLQW6GrwYtL8g6W7+qj9vjZAT+pdrnpLgN+mGXppzsIbe8SZdLj11+nrL+jr1EBDnu4CmIeGfGCeKmQdYcXHBxDOYUxl80Qqjw4SKzLCWa0NAiJPaO+O1BQ1gjjDSTGumTq/DFtYi0yCjhhgXRKLQFZeOc4eV3uUXzqqwKb8i89sUFNIxPnZgEpMC5IX33r8+9CcibhDvFXxhCbEhwyxAlygzJCdntwRzIigOHxBiZV+KW9nRy/sUUC/82zB6BHZPdYV9Gb3r2740BR5jTac9Qps7MkaGuFANDkjy4ASC9DiL3TGoWjiScF100kbHsBDnEqzsybQrDXxpgTd8PiqZq9I1l1as2UoeuR3IPHO7zBbgbCy4rv9a7ZeITsPT7HcRDGHsVT762KnxVxQnR3m0CpoKGKWOKngMVRCTYsQ7Ng7f/ade9isduccrMeeTjGdkeC8QGS4VnfIEEqfHPJBS8/nree40vpvtWsvKHM346GQRm6A2UI14yBZIr/SoLQEZZP3TGwcOAA4Ze3BNGjPT38gnrPO3M8HiUJCyK3RS8GMOVr2K35aS+YTKOkLRYt4vM+vwSIWLtNgjq5kXh3HHOwFAWFn2m+ZBw== koserge-2017-04"
+    ];
 
     security.sudo.enable = true;
     security.sudo.wheelNeedsPassword = false;
@@ -39,6 +34,12 @@ in {
     networking.hostName = "${env}-deployer";
 
     nix = {
+      nixPath = [ "nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/nixos-18.03.tar.gz"
+                ];
+      extraOptions = ''
+        build-cores = 8
+        auto-optimise-store = true
+      '';
       binaryCaches = [
         "https://cache.nixos.org"
         "https://hydra.iohk.io"
@@ -47,6 +48,5 @@ in {
     };
 
     environment.systemPackages =
-      with pkgs; [ tmux git vim ] ++
-      with iohk-pkgs; [ nixops iohk-ops ];
+      with pkgs; [ tmux git vim nixops ];
 }
