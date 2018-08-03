@@ -12,8 +12,8 @@ let
   src = pkgs.fetchFromGitHub {
     owner = "input-output-hk";
     repo = "iohk-ops";
-    rev = "2ecf92b2c105abbcbc72abb90cc89fbcdedf1bd9";
-    sha256 = "19p0722w135l36y64vmn5x1imqxmkx8gzrw2zzkmnh7xd0c1fyay";
+    rev = "fe0ad900c64e2f769a7ff6a4c86b809cb24ccd93";
+    sha256 = "1c84r3mxa44ywpay94rrbxzc7q08xvhp44d7z5hkkzkmaf429cgh";
   };
   iohk-pkgs = import src {};
   localLib = import (src + "/lib.nix");
