@@ -16,6 +16,7 @@ data Settings = Settings
    , sCleanup         :: Bool
    , sStaging         :: Bool
    , sProduction      :: Bool
+   , sInfra           :: Bool
    , sExplorer        :: Bool
    , sReportServer    :: Bool
    }
@@ -25,6 +26,7 @@ settingsParser =
              <*> switch  "cleanup-configs" 'c' "Clean up configs"
              <*> switch  "with-staging" 's' "Build Staging"
              <*> switch  "with-prod" 'p' "Build Production"
+             <*> switch  "with-infra" 'i' "Build Production"
              <*> switch  "with-explorer" 'e' "Enable Explorer"
              <*> switch  "with-report-server" 'r' "Enable Report Server"
 
@@ -35,8 +37,8 @@ main = do
       generateFakeSecrets
       generateEmptyKeys
       print sIohkOps
-      view $ iohkOpsNewCreateDeploy settings "test-staging" "staging" "cardano"
-      view $ iohkOpsNewCreateDeploy settings "test-infra" "production" "infra"
+      when sStaging $ view $ iohkOpsNewCreateDeploy settings "test-staging" "staging" "cardano"
+      when sInfra $ view $ iohkOpsNewCreateDeploy settings "test-infra" "production" "infra"
 
 addDefault :: Settings -> IO Settings
 addDefault s | sIohkOps s == FP.empty = do

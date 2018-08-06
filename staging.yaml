@@ -1,0 +1,33 @@
+args:
+  IOHKroute53accessKeyId:
+    tag: NixStr
+    contents: iohk
+  configurationKey:
+    tag: NixStr
+    contents: testnet_staging_full
+  EmurgoaccessKeyId:
+    tag: NixStr
+    contents: iohk
+  systemStart:
+    tag: NixInt
+    contents: 1533232097
+  CFaccessKeyId:
+    tag: NixStr
+    contents: iohk
+  IOHKaccessKeyId:
+    tag: NixStr
+    contents: iohk
+gen-cmdline: new --config staging.yaml --environment staging --topology topology-min.yaml
+  staging Nodes
+environment: Staging
+installer-bucket: default-bucket
+topology: topology-min.yaml
+name: staging
+files:
+- deployments/security-groups.nix
+- deployments/cardano-nodes-env-staging.nix
+- deployments/keypairs.nix
+- deployments/cardano-nodes.nix
+elements:
+- Nodes
+target: AWS

@@ -1,6 +1,14 @@
 steps:
-  - label: 'iohk-ops'
-    command: 'scripts/ci.hs'
+  - label: 'iohk-ops-ci-staging'
+    command: 'scripts/ci.hs --with-staging --with-explorer --with-report-server'
+    agents:
+      - "system=x86_64-linux"
+    env:
+      NIX_REMOTE: daemon
+    agents:
+      system: x86_64-linux
+  - label: 'iohk-ops-ci-infra'
+    command: 'scripts/ci.hs --with-infra'
     agents:
       - "system=x86_64-linux"
     env:
