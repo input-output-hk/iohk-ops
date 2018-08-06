@@ -226,7 +226,10 @@ printCIResult CIResult{..} = do
   setSGR [ Reset ]
 
 formatCIResults :: [CIResult] -> Text
-formatCIResults rs = T.unlines $ ["CI links:"] ++ ciLinks ++ [""] ++ instLinks InstallerMainnet ++ [""] ++ instLinks InstallerStaging
+formatCIResults rs = T.unlines $ ["CI links:"] ++ ciLinks
+                     ++ [""] ++ instLinks InstallerMainnet
+                     ++ [""] ++ instLinks InstallerStaging
+                     ++ [""] ++ instLinks InstallerTestnet
   where
     ciLinks = nub $ map (("* " <>) . ciResultUrl) rs
     instLinks net = (format (w%" installers:") net:[ fmt res | res <- rs, isNet net res ])
