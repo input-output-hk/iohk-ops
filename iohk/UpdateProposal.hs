@@ -16,6 +16,7 @@ module UpdateProposal
 import Prelude hiding (FilePath)
 import Options.Applicative hiding (action)
 import Turtle hiding (Parser, switch, option, date, o, e, nub)
+import qualified System.Process as P
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (formatTime, iso8601DateFormat, defaultTimeLocale)
 import qualified Data.Text as T
@@ -60,7 +61,7 @@ data UpdateProposalStep
     }
   | UpdateProposalFindInstallers
   | UpdateProposalSignInstallers
-    { updateProposalGPGUserId         :: Text
+    { updateProposalGPGUserId         :: Maybe Text
     }
   | UpdateProposalUploadS3
   | UpdateProposalSetVersionJSON
@@ -80,7 +81,7 @@ parseUpdateProposalCommand = subparser $
        (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalFindInstallers) <**> helper)
          (progDesc "Download installer files from the Daedalus build.") ) )
   <> ( command "sign-installers"
-       (info ((UpdateProposalCommand <$> date <*> (UpdateProposalSignInstallers <$> userId)) <**> helper)
+       (info ((UpdateProposalCommand <$> date <*> (UpdateProposalSignInstallers <$> optional userId)) <**> helper)
          (progDesc "Sign installer files with GPG.") ) )
   <> ( command "upload-s3"
        (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalUploadS3) <**> helper)
@@ -464,13 +465,18 @@ writeWikiRecord opts res = do
 -- | Step 2a. (Optional) Sign installers with GPG. This will leave
 -- .asc files next to the installers which will be picked up in the
 -- upload S3 step.
-updateProposalSignInstallers :: CommandOptions -> Text -> Shell ()
+updateProposalSignInstallers :: CommandOptions -> Maybe Text -> Shell ()
 updateProposalSignInstallers opts@CommandOptions{..} userId = do
   params <- loadParams opts
   void $ doCheckConfig params
   mapM_ signInstaller (map ciResultLocalPath . ciResults . cfgInstallersResults $ params)
   where
-    signInstaller f = procs "gpg2" ["-u", userId, "--detach-sig", "--armor", "--sign", tt f] empty
+    -- using system instead of procs so that tty is available to gpg
+    signInstaller f = system (P.proc "gpg2" $ map T.unpack $ gpgArgs f) empty
+    gpgArgs f = userArg ++ ["--detach-sig", "--armor", "--sign", tt f]
+    userArg = case userId of
+                Just u -> ["--local-user", u]
+                Nothing -> []
 
 ----------------------------------------------------------------------------
 

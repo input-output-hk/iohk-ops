@@ -80,6 +80,7 @@ executable iohk-ops
                      , iohk-ops
                      , optional-args
                      , optparse-applicative
+                     , process
                      , system-filepath
                      , text
                      , time
