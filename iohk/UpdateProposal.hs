@@ -153,17 +153,15 @@ data UpdateProposalConfig1 = UpdateProposalConfig1
 data UpdateProposalConfig2 = UpdateProposalConfig2
   { cfgUpdateProposal1    :: UpdateProposalConfig1
   , cfgInstallersResults  :: InstallersResults
+  , cfgInstallerHashes    :: InstallerHashes
+  , cfgInstallerSHA256    :: InstallerHashes
   } deriving (Show)
 
 data UpdateProposalConfig3 = UpdateProposalConfig3
   { cfgUpdateProposal2    :: UpdateProposalConfig2
-  , cfgInstallerHashes    :: InstallerHashes
   } deriving (Show)
 
-data InstallerHashes = InstallerHashes
-  { cfgInstallerDarwin  :: Text
-  , cfgInstallerWindows :: Text
-  } deriving (Show)
+type InstallerHashes = ArchMap Text
 
 data UpdateProposalConfig4 = UpdateProposalConfig4
   { cfgUpdateProposal3 :: UpdateProposalConfig3
@@ -186,11 +184,14 @@ instance FromJSON GitRevision where
 
 instance FromJSON UpdateProposalConfig2 where
   parseJSON = withObject "UpdateProposalConfig2" $ \o ->
-    UpdateProposalConfig2 <$> parseJSON (Object o) <*> o .: "installersResults"
+    UpdateProposalConfig2 <$> parseJSON (Object o)
+                          <*> o .: "installersResults"
+                          <*> o .: "installerHashes"
+                          <*> o .: "installerSHA256"
 
 instance FromJSON UpdateProposalConfig3 where
   parseJSON = withObject "UpdateProposalConfig3" $ \o ->
-    UpdateProposalConfig3 <$> parseJSON (Object o) <*> o .: "installerHashes"
+    UpdateProposalConfig3 <$> parseJSON (Object o)
 
 instance FromJSON UpdateProposalConfig4 where
   parseJSON = withObject "UpdateProposalConfig4" $ \o ->
@@ -213,12 +214,14 @@ instance ToJSON GitRevision where
   toJSON (GitRevision r) = String r
 
 instance ToJSON UpdateProposalConfig2 where
-  toJSON (UpdateProposalConfig2 p r)
-    = mergeObjects (toJSON p) (object [ "installersResults" .= r ])
+  toJSON (UpdateProposalConfig2 p r b s)
+    = mergeObjects (toJSON p) (object [ "installersResults" .= r
+                                      , "installerHashes"   .= b
+                                      , "installerSHA256"   .= s ])
 
 instance ToJSON UpdateProposalConfig3 where
-  toJSON (UpdateProposalConfig3 p h)
-    = mergeObjects (toJSON p) (object [ "installerHashes" .= h ])
+  toJSON (UpdateProposalConfig3 p)
+    = mergeObjects (toJSON p) (object [ ])
 
 instance ToJSON UpdateProposalConfig4 where
   toJSON (UpdateProposalConfig4 p a)
@@ -270,7 +273,7 @@ instance Checkable UpdateProposalConfig1 where
     | otherwise = Nothing
 
 instance Checkable UpdateProposalConfig2 where
-  checkConfig (UpdateProposalConfig2 p r) = checkConfig p <|> check r
+  checkConfig (UpdateProposalConfig2 p r b s) = checkConfig p <|> check r <|> check b <|> check s
     where
       check InstallersResults{..}
         | grApplicationVersion <= 0 = Just "Application version must be set"
@@ -283,7 +286,7 @@ instance Checkable UpdateProposalConfig2 where
           missingVersion arch = not . any ((== arch) . ciResultArch)
 
 instance Checkable UpdateProposalConfig3 where
-  checkConfig (UpdateProposalConfig3 p h) = checkConfig p <|> checkConfig h
+  checkConfig (UpdateProposalConfig3 p) = checkConfig p
 
 instance Checkable UpdateProposalConfig4 where
   checkConfig (UpdateProposalConfig4 p a) = checkConfig p <|> checkAddr a
@@ -414,9 +417,15 @@ updateProposalFindInstallers opts env = do
   let rev = unGitRevision . cfgDaedalusRevision $ params
       destDir = Just (installersDir opts)
   res <- liftIO $ realFindInstallers (configurationKeys env) (installerForEnv env) rev destDir
+
+  echo "*** Hashing installers with sha256sum"
+  sha256 <- getHashes sha256sum res
+  echo "*** Hashing installers with cardano-auxx"
+  hashes <- getHashes (cardanoHashInstaller opts) res
+
   echo "*** Finished."
   writeWikiRecord opts res
-  storeParams opts (UpdateProposalConfig2 params res)
+  storeParams opts (UpdateProposalConfig2 params res hashes sha256)
 
 -- | Checks if an installer from a CI result matches the environment
 -- that iohk-ops is running under.
@@ -454,18 +463,14 @@ updateProposalUploadS3 :: NixopsConfig -> CommandOptions -> Shell ()
 updateProposalUploadS3 cfg opts@CommandOptions{..} = do
   params@UpdateProposalConfig2{..} <- loadParams opts
   void $ doCheckConfig params
-  echo "*** Hashing installers with sha256sum"
-  sha256 <- getHashes sha256sum cfgInstallersResults
-  echo "*** Hashing installers with cardano-auxx"
-  hashes <- getHashes (cardanoHashInstaller opts) cfgInstallersResults
   printf ("*** Uploading installers to S3 bucket "%s%"\n") cmdUpdateBucket
-  urls <- uploadInstallers cfg cmdUpdateBucket cfgInstallersResults hashes
+  urls <- uploadInstallers cfg cmdUpdateBucket cfgInstallersResults cfgInstallerHashes
   printf ("*** Uploading signatures to same S3 bucket.\n")
   signatures <- uploadSignatures cmdUpdateBucket cfgInstallersResults
   printf ("*** Writing "%fp%"\n") (versionFile opts)
-  let dvis = makeDownloadVersionInfo cfgInstallersResults urls hashes sha256 signatures
+  let dvis = makeDownloadVersionInfo cfgInstallersResults urls cfgInstallerHashes cfgInstallerSHA256 signatures
   liftIO $ writeVersionJSON (versionFile opts) dvis
-  storeParams opts (UpdateProposalConfig3 params hashes)
+  storeParams opts (UpdateProposalConfig3 params)
 
 uploadInstallers :: NixopsConfig -> Text -> InstallersResults -> InstallerHashes -> Shell (Text, Text)
 uploadInstallers cfg bucket res InstallerHashes{..} = runAWS' $ do
@@ -581,9 +586,10 @@ updateProposalSetVersionJSON cfg opts@CommandOptions{..} = do
 updateProposalGenerate :: CommandOptions -> Shell ()
 updateProposalGenerate opts@CommandOptions{..} = do
   params@UpdateProposalConfig3{..} <- loadParams opts
+  let UpdateProposalConfig2{..} = cfgUpdateProposal2
   void $ doCheckConfig cfgInstallerHashes
   echo "*** Copying and checking installers."
-  copyInstallerFiles opts (cfgInstallersResults cfgUpdateProposal2) cfgInstallerHashes
+  copyInstallerFiles opts cfgInstallersResults cfgInstallerHashes
   echo "*** Generating keys and database."
   addrs <- doGenerate opts params
   storeParams opts (UpdateProposalConfig4 params addrs)
