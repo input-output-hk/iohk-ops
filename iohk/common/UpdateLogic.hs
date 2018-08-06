@@ -16,6 +16,7 @@ module UpdateLogic
   , updateVersionJson
   , githubWikiRecord
   , printInstallersResults
+  , CISystem(..)
   , InstallersResults(..)
   , GlobalResults(..)
   , parseStatusContext

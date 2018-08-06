@@ -1,14 +1,21 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, LambdaCase, RecordWildCards, FlexibleInstances #-}
 
 module UpdateProposal
   ( UpdateProposalCommand(..)
   , parseUpdateProposalCommand
   , updateProposal
+  -- * Exported for testing
+  , proposeUpdateCmd
+  , UpdateProposalConfig1(..)
+  , UpdateProposalConfig2(..)
+  , UpdateProposalConfig3(..)
+  , UpdateProposalConfig4(..)
+  , UpdateProposalConfig5(..)
   ) where
 
 import Prelude hiding (FilePath)
 import Options.Applicative hiding (action)
-import Turtle hiding (Parser, switch, option, date, o, e)
+import Turtle hiding (Parser, switch, option, date, o, e, nub)
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (formatTime, iso8601DateFormat, defaultTimeLocale)
 import qualified Data.Text as T
@@ -22,13 +29,15 @@ import qualified Data.HashMap.Strict as HM
 import qualified Control.Foldl as Fold
 import Data.Char (isHexDigit)
 import Data.Bifunctor (first)
-import Data.Maybe (fromMaybe)
-import Data.List (find)
+import Data.Maybe (fromMaybe, isJust)
+import Data.List (find, nub)
 
 import NixOps ( Options, NixopsConfig(..)
               , nixopsConfigurationKey, configurationKeys
               , getCardanoSLConfig )
-import Types ( NixopsDepl(..), Environment(..), Arch(..) )
+import Types ( NixopsDepl(..), Environment(..), Arch(..)
+             , formatArch, ArchMap, archMap, mkArchMap
+             , archMapToList, archMapFromList, lookupArch )
 import UpdateLogic ( InstallersResults(..), CIResult(..)
                    , realFindInstallers, githubWikiRecord
                    , runAWS', uploadHashedInstaller, updateVersionJson
@@ -201,10 +210,6 @@ instance FromJSON UpdateProposalConfig5 where
   parseJSON = withObject "UpdateProposalConfig5" $ \o ->
     UpdateProposalConfig5 <$> parseJSON (Object o) <*> o .: "proposalId"
 
-instance FromJSON InstallerHashes where
-  parseJSON = withObject "InstallerHashes" $ \o ->
-    InstallerHashes <$> o .: "darwin" <*> o .: "windows"
-
 instance ToJSON UpdateProposalConfig1 where
   toJSON (UpdateProposalConfig1 r v p) = object [ "daedalusRevision" .= r
                                                 , "lastKnownBlockVersion" .= v
@@ -230,9 +235,6 @@ instance ToJSON UpdateProposalConfig4 where
 instance ToJSON UpdateProposalConfig5 where
   toJSON (UpdateProposalConfig5 p a)
     = mergeObjects (toJSON p) (object [ "updateProposal" .= a ])
-
-instance ToJSON InstallerHashes where
-  toJSON (InstallerHashes dh wh) = object [ "darwin" .= dh, "windows" .= wh ]
 
 -- | Adds two json objects together.
 mergeObjects :: Value -> Value -> Value
@@ -273,17 +275,22 @@ instance Checkable UpdateProposalConfig1 where
     | otherwise = Nothing
 
 instance Checkable UpdateProposalConfig2 where
-  checkConfig (UpdateProposalConfig2 p r b s) = checkConfig p <|> check r <|> check b <|> check s
+  checkConfig (UpdateProposalConfig2 p r b s) = checkConfig p <|> check r
+                                                <|> checkInstallerHashes b
+                                                <|> checkInstallerHashes s
     where
       check InstallersResults{..}
         | grApplicationVersion <= 0 = Just "Application version must be set"
         | T.null grCardanoCommit = Just "Missing cardano commit"
         | missingVersion Mac64 ciResults = Just "macOS version is missing"
         | missingVersion Win64 ciResults = Just "Windows version is missing"
+        | missingVersion Linux64 ciResults = Just "Linux version is missing"
+        | length (nub as) /= length as = Just "Multiple installers found for an arch"
         | otherwise = Nothing
         where
           GlobalResults{..} = globalResult
           missingVersion arch = not . any ((== arch) . ciResultArch)
+          as = map ciResultArch ciResults
 
 instance Checkable UpdateProposalConfig3 where
   checkConfig (UpdateProposalConfig3 p) = checkConfig p
@@ -294,12 +301,21 @@ instance Checkable UpdateProposalConfig4 where
       checkAddr "" = Just "No addresses stored in config. Has the generate step been run?"
       checkAddr _ = Nothing
 
-instance Checkable InstallerHashes where
-  checkConfig (InstallerHashes dh wh)
-    | T.null dh || T.null wh = Just "Need to set installer hashes"
-    | not (isInstallerHash dh) = Just "Bad hash for darwin installer"
-    | not (isInstallerHash wh) = Just "Bad hash for windows installer"
-    | otherwise = Nothing
+instance Checkable (Maybe Text) where
+  checkConfig ma = ma
+
+checkInstallerHashes :: InstallerHashes -> Maybe Text
+checkInstallerHashes = firstJust . map (uncurry check) . archMapToList
+  where
+    check a hash | T.null hash =
+                     Just ("Need to set installer hash for " <> formatArch a)
+                 | not (isInstallerHash hash) =
+                     Just ("Bad hash for " <> formatArch a <> " installer")
+                 | otherwise = Nothing
+    firstJust xs = case (xs, filter isJust xs) of
+                     ([], _) -> Just "There are no installer hashes"
+                     (_, (Just e:es)) -> Just e
+                     (_, _) -> Nothing
 
 -- | Installer hashes are 64 hex digits.
 isInstallerHash :: Text -> Bool
@@ -472,32 +488,33 @@ updateProposalUploadS3 cfg opts@CommandOptions{..} = do
   liftIO $ writeVersionJSON (versionFile opts) dvis
   storeParams opts (UpdateProposalConfig3 params)
 
-uploadInstallers :: NixopsConfig -> Text -> InstallersResults -> InstallerHashes -> Shell (Text, Text)
-uploadInstallers cfg bucket res InstallerHashes{..} = runAWS' $ do
-  darwin <- needResult Mac64 res $ upload cfgInstallerDarwin
-  windows <- needResult Win64 res $ upload cfgInstallerWindows
-  pure (darwin, windows)
+uploadInstallers :: NixopsConfig -> Text -> InstallersResults -> InstallerHashes -> Shell (ArchMap Text)
+uploadInstallers cfg bucket res hashes = runAWS' $ needResults res upload
   where
-    upload hash ci = do
+    upload arch ci = do
+      let hash = lookupArch arch hashes
       printf ("***   "%s%"  "%fp%"\n") hash (ciResultLocalPath ci)
       uploadHashedInstaller cfg bucket (ciResultLocalPath ci) (globalResult res) hash
 
 -- | Apply a hashing command to all the installer files.
 getHashes :: (FilePath -> Shell Text) -> InstallersResults -> Shell InstallerHashes
 getHashes getHash res = do
-  cfgInstallerDarwin <- check Mac64 =<< needResult Mac64 res resultHash
-  cfgInstallerWindows <- check Win64 =<< needResult Win64 res resultHash
-  pure $ InstallerHashes{..}
+  linux64 <- check Linux64 =<< needResult Linux64 res resultHash
+  mac64 <- check Mac64 =<< needResult Mac64 res resultHash
+  win64 <- check Win64 =<< needResult Win64 res resultHash
+  pure $ mkArchMap linux64 mac64 win64
   where
     resultHash = getHash . ciResultLocalPath
     check arch "" = die $ format ("Hash for "%w%" installer is empty") arch
     check _ h     = pure h
 
 -- | Slurp in previously created signatures.
-uploadSignatures :: Text -> InstallersResults -> Shell [(Arch, Maybe Text)]
-uploadSignatures bucket InstallersResults{..} = forM ciResults $ \res -> do
-  sig <- liftIO $ uploadResultSignature bucket res
-  pure (ciResultArch res, sig)
+uploadSignatures :: Text -> InstallersResults -> Shell (ArchMap (Maybe Text))
+uploadSignatures bucket irs = fmap join . archMapFromList <$> mapM uploadSig (ciResults irs)
+  where
+    uploadSig res = do
+      sig <- liftIO $ uploadResultSignature bucket res
+      pure (ciResultArch res, sig)
 
 uploadResultSignature :: Text -> CIResult -> IO (Maybe Text)
 uploadResultSignature bucket res = liftIO $ maybeReadFile sigFile >>= \case
@@ -514,33 +531,24 @@ uploadResultSignature bucket res = liftIO $ maybeReadFile sigFile >>= \case
       False -> pure Nothing
 
 makeDownloadVersionInfo :: InstallersResults
-                        -> (Text, Text)
-                        -> InstallerHashes -> InstallerHashes
-                        -> [(Arch, Maybe Text)]
-                        -> [DownloadVersionInfo]
-makeDownloadVersionInfo InstallersResults{..} (macosURL, windowsURL) hashes sha256 sigs = [macos, win64]
+                        -> ArchMap Text         -- ^ Download URLS
+                        -> InstallerHashes      -- ^ Blake2b hashes
+                        -> InstallerHashes      -- ^ SHA256 hashes
+                        -> ArchMap (Maybe Text) -- ^ GPG Signatures
+                        -> ArchMap DownloadVersionInfo
+makeDownloadVersionInfo InstallersResults{..} urls hashes sha256 sigs = archMap dvi
   where
-    macos = DownloadVersionInfo
-      { dviPlatform = "macos"
-      , dviVersion = grDaedalusVersion globalResult
-      , dviURL = macosURL
-      , dviHash = cfgInstallerDarwin hashes
-      , dviSHA256 = cfgInstallerDarwin sha256
-      , dviSignature = join (lookup Mac64 sigs)
-      }
-    win64 = DownloadVersionInfo
-      { dviPlatform = "win64"
-      , dviVersion = grDaedalusVersion globalResult
-      , dviURL = windowsURL
-      , dviHash = cfgInstallerWindows hashes
-      , dviSHA256 = cfgInstallerWindows sha256
-      , dviSignature = join (lookup Win64 sigs)
+    dvi a = DownloadVersionInfo
+      { dviVersion = grDaedalusVersion globalResult
+      , dviURL = lookupArch a urls
+      , dviHash = lookupArch a hashes
+      , dviSHA256 = lookupArch a sha256
+      , dviSignature = lookupArch a sigs
       }
 
--- | Intermediate data type for the daeadlus download json file.
+-- | Intermediate data type for the daedalus download json file.
 data DownloadVersionInfo = DownloadVersionInfo
-  { dviPlatform  :: Text
-  , dviVersion   :: Text
+  { dviVersion   :: Text
   , dviURL       :: Text
   , dviHash      :: Text
   , dviSHA256    :: Text
@@ -548,21 +556,24 @@ data DownloadVersionInfo = DownloadVersionInfo
   } deriving (Show)
 
 -- | Splat version info to an aeson object.
-downloadVersionInfoObject :: [DownloadVersionInfo] -> Value
-downloadVersionInfoObject = foldr mergeObjects (Object mempty) . map toObject
+downloadVersionInfoObject :: ArchMap DownloadVersionInfo -> Value
+downloadVersionInfoObject = foldr mergeObjects (Object mempty) . map (uncurry toObject) . archMapToList
   where
-    toObject :: DownloadVersionInfo -> Value
-    toObject DownloadVersionInfo{..} = Object (HM.fromList attrs)
+    toObject :: Arch -> DownloadVersionInfo -> Value
+    toObject arch DownloadVersionInfo{..} = Object (HM.fromList attrs)
       where
-        attrs = [ (dviPlatform <> k, String v) | (k, v) <-
+        attrs = [ (keyPrefix arch <> k, String v) | (k, v) <-
                     [ (""         , dviVersion)
                     , ("URL"      , dviURL)
                     , ("Hash"     , dviHash)
                     , ("SHA256"   , dviSHA256)
                     , ("Signature", fromMaybe "" dviSignature)
                     ] ]
+    keyPrefix Mac64   = "macos"
+    keyPrefix Win64   = "win64"
+    keyPrefix Linux64 = "linux"
 
-writeVersionJSON :: FilePath -> [DownloadVersionInfo] -> IO ()
+writeVersionJSON :: FilePath -> ArchMap DownloadVersionInfo -> IO ()
 writeVersionJSON out dvis = L8.writeFile (encodeString out) (encode v)
   where v = downloadVersionInfoObject dvis
 
@@ -587,7 +598,7 @@ updateProposalGenerate :: CommandOptions -> Shell ()
 updateProposalGenerate opts@CommandOptions{..} = do
   params@UpdateProposalConfig3{..} <- loadParams opts
   let UpdateProposalConfig2{..} = cfgUpdateProposal2
-  void $ doCheckConfig cfgInstallerHashes
+  void $ doCheckConfig $ checkInstallerHashes cfgInstallerHashes
   echo "*** Copying and checking installers."
   copyInstallerFiles opts cfgInstallersResults cfgInstallerHashes
   echo "*** Generating keys and database."
@@ -595,6 +606,13 @@ updateProposalGenerate opts@CommandOptions{..} = do
   storeParams opts (UpdateProposalConfig4 params addrs)
   echo "*** Finished generate step. Next step is to submit."
   echo "*** Carefully check the parameters yaml file."
+
+needResults :: MonadIO io => InstallersResults -> (Arch -> CIResult -> io a) -> io (ArchMap a)
+needResults rs action = do
+  linux64 <- needResult Linux64 rs (action Linux64)
+  mac64 <- needResult Mac64 rs (action Mac64)
+  win64 <- needResult Win64 rs (action Win64)
+  pure $ mkArchMap linux64 mac64 win64
 
 needResult :: MonadIO io => Arch -> InstallersResults -> (CIResult -> io a) -> io a
 needResult arch rs action = case Data.List.find ((== arch) . ciResultArch) (ciResults rs) of
@@ -605,13 +623,13 @@ needResult arch rs action = case Data.List.find ((== arch) . ciResultArch) (ciRe
 -- "file" to verify that installers are of the expected type. Exit the
 -- program otherwise.
 copyInstallerFiles :: CommandOptions -> InstallersResults -> InstallerHashes -> Shell ()
-copyInstallerFiles opts res InstallerHashes{..} = do
-  needResult Mac64 res $ copy "xar" cfgInstallerDarwin
-  needResult Win64 res $ copy "MS Windows" cfgInstallerWindows
-
+copyInstallerFiles opts res hashes = void $ needResults res copy
   where
-    copy :: Text -> Text -> CIResult -> Shell ()
-    copy magic hash res = do
+    copy :: Arch -> CIResult -> Shell ()
+    copy a = copy' (installerMagic a) (lookupArch a hashes)
+
+    copy' :: Text -> Text -> CIResult -> Shell ()
+    copy' magic hash res = do
       let dst = installersPath opts (fromText hash)
       cp (ciResultLocalPath res) dst
       checkMagic magic dst
@@ -624,6 +642,11 @@ copyInstallerFiles opts res InstallerHashes{..} = do
 
     file :: FilePath -> Shell Text
     file dst = snd <$> procStrict "file" [tt dst] empty
+
+    installerMagic :: Arch -> Text
+    installerMagic Linux64 = "POSIX shell script executable"
+    installerMagic Mac64   = "xar"
+    installerMagic Win64   = "MS Windows"
 
 doGenerate :: CommandOptions -> UpdateProposalConfig3 -> Shell Text
 doGenerate opts UpdateProposalConfig3{..} = do
@@ -646,12 +669,27 @@ updateProposalSubmit opts@CommandOptions{..} = do
 doPropose :: CommandOptions -> UpdateProposalConfig4 -> Shell (Maybe Line)
 doPropose opts cfg = fold (runCommands opts [cmd] & grep isUpdateId) Fold.last
   where
-    cmd = format upd cfgVoterIndex cfgLastKnownBlockVersion appVer
-          (inst cfgInstallerWindows) (inst cfgInstallerDarwin)
-    upd = "propose-update "%d%" vote-all:true "%s%" ~software~csl-daedalus:"%d%" (upd-bin \"win64\" "%fp%") (upd-bin \"macos64\" "%fp%")"
+    cmd = proposeUpdateCmd opts cfg
     isUpdateId = count 64 hexDigit
+
+proposeUpdateCmd :: CommandOptions -> UpdateProposalConfig4 -> Text
+proposeUpdateCmd opts cfg = format
+  ("propose-update "%d%" vote-all:true "%s%" ~software~csl-daedalus:"%d%" "%s)
+  cfgVoterIndex cfgLastKnownBlockVersion appVer (T.intercalate " " updateBins)
+  where
     UpdateProposalConfig1{..} = cfgUpdateProposal1
     UpdateProposalConfig2{..} = cfgUpdateProposal2
     UpdateProposalConfig3{..} = cfgUpdateProposal3 cfg
-    inst f = installersPath opts (fromText . f $ cfgInstallerHashes)
-    appVer = grApplicationVersion . globalResult $ cfgInstallersResults
+    InstallersResults{..} = cfgInstallersResults
+    inst a = installersPath opts (fromText . lookupArch a $ cfgInstallerHashes)
+    appVer = grApplicationVersion globalResult
+    updateBins = [ archUpdateBin ciResultArch (inst ciResultArch)
+                 | CIResult{..} <- ciResults ]
+
+archUpdateBin :: Arch -> FilePath -> Text
+archUpdateBin a installer = format ("(upd-bin \""%s%"\" "%fp%")") (systemTag a) installer
+  where
+    -- These correspond to the systemTag values in cardano-sl/lib/configuration.yaml
+    systemTag Linux64 = "linux"
+    systemTag Mac64   = "macos64"
+    systemTag Win64   = "win64"
