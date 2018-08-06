@@ -27,9 +27,9 @@ in {
       # Deploy cardano-sl testnet
       dev = {
         isNormalUser = true;
-        description  = "Mantis Developer NixOps Deployer";
+        description  = "Mantis Developer";
         group        = "deployers";
-        openssh.authorizedKeys.keys = devOpsKeys ++ mantisOpsKeys;
+        openssh.authorizedKeys.keys = devOpsKeys ++ mantisOpsKeys ++ allKeysFrom csl-developers;
       };
     }
     # Normal users who can deploy developer clusters on AWS.
