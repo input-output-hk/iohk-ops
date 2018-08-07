@@ -14,144 +14,101 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
--- library
---   hs-source-dirs:      scripts
---   default-language:    Haskell2010
---   exposed-modules:
+library
+  hs-source-dirs:      common
+  default-language:    Haskell2010
+  exposed-modules:     Appveyor
+                     , Buildkite.API
+                     , Constants
+                     , Github
+                     , InstallerVersions
+                     , NixOps
+                     , RunCardano
+                     , Types
+                     , UpdateLogic
+                     , Utils
+  other-modules:       Cardano
+                     , Nix
+                     , Topology
+  build-depends:       base
+                     , aeson
+                     , aeson-pretty
+                     , amazonka
+                     , amazonka-s3
+                     , ansi-terminal
+                     , bytestring
+                     , cassava
+                     , containers
+                     , cryptonite
+                     , directory
+                     , dns
+                     , errors
+                     , exceptions
+                     , foldl
+                     , hourglass
+                     , http-client
+                     , http-client-tls
+                     , http-conduit
+                     , http-types
+                     , lens
+                     , lens-aeson
+                     , memory
+                     , network-uri
+                     , optional-args
+                     , resourcet
+                     , safe
+                     , system-filepath
+                     , text
+                     , turtle
+                     , unordered-containers
+                     , utf8-string
+                     , vector
+                     , yaml
 
 executable iohk-ops
   main-is:             iohk-ops.hs
   default-language:    Haskell2010
   other-extensions:    DeriveGeneric, GeneralizedNewtypeDeriving, OverloadedStrings, RecordWildCards, TupleSections, ViewPatterns
+  other-modules:       UpdateProposal
 
-  build-depends:       aeson >=0.11
-                     , aeson-pretty
-                     , base >=4.9
-                     , bytestring >=0.10
-                     , cassava >=0.4
-                     , containers >=0.5
-                     , dns
-                     , exceptions
-                     , hourglass
-                     , lens >=4.14
-                     , lens-aeson >=1.0
-                     , mtl >=2.2
-                     , network-uri
-                     , optional-args
-                     , regex-pcre >= 0.94
-                     , safe >=0.3
-                     , system-filepath >=0.4
-                     , text >=1.2
-                     , turtle >=1.3
-                     , unix
-                     , unordered-containers
+  build-depends:       aeson
+                     , base
+                     , bytestring
                      , containers
-                     , utf8-string
-                     , vector >=0.11
-                     , yaml >=0.8
-                     , http-client-tls
-                     , optparse-applicative
-                     , resourcet
-                     , http-client
-                     , http-conduit
-                     , managed
-                     , http-types
-                     , amazonka
-                     , amazonka-s3
-                     , git
-                     , directory
-                     , ansi-terminal
-                     , cryptonite
-                     , errors
-                     , memory
-                     , time
                      , foldl
+                     , hourglass
+                     , iohk-ops
+                     , optional-args
+                     , optparse-applicative
+                     , system-filepath
+                     , text
+                     , time
+                     , turtle
+                     , unordered-containers
+                     , yaml
 test-suite iohk-ops-test
   main-is:          Spec.hs
   default-language: Haskell2010
   type:             exitcode-stdio-1.0
+  other-modules:    AppveyorSpec
+                  , Buildkite.Pipeline
+                  , BuildkiteSpec
+                  , UpdateLogicSpec
   build-depends:    base
-                  , hspec
-                  , universum
-                  , turtle
-                  , text
-                  , http-types
                   , aeson
-                  , http-client-tls
-                  , http-client
-                  , http-conduit
                   , bytestring
+                  , hspec
+                  , iohk-ops
+                  , text
                   , unordered-containers
                   , yaml
-                  , cassava
-                  , directory
-                  , lens
-                  , ansi-terminal
-                  , git
-                  , resourcet
-                  , amazonka-s3
-                  , amazonka
-                  , system-filepath
-                  , managed
-                  , safe
-                  , network-uri
-                  , cryptonite
-                  , errors
-                  , exceptions
-                  , memory
-                  , regex-pcre
-                  , time
-                  , foldl
-                  , hourglass
-                  , containers
-                  , lens-aeson
-                  , aeson-pretty
-                  , dns
-                  , vector
-                  , optional-args
-                  , utf8-string
   hs-source-dirs:   test .
 executable iohk-ops-integration-test
   main-is:          IntegrationTest.hs
   default-language: Haskell2010
   build-depends:    base
                   , hspec
-                  , universum
-                  , turtle
-                  , text
-                  , http-types
-                  , aeson
-                  , http-client-tls
-                  , http-client
-                  , http-conduit
-                  , bytestring
-                  , unordered-containers
-                  , yaml
-                  , cassava
-                  , directory
-                  , lens
-                  , ansi-terminal
-                  , git
-                  , resourcet
-                  , amazonka-s3
-                  , amazonka
-                  , system-filepath
+                  , iohk-ops
                   , managed
-                  , safe
-                  , network-uri
-                  , cryptonite
-                  , errors
-                  , exceptions
-                  , memory
-                  , regex-pcre
-                  , time
-                  , foldl
-                  , hourglass
-                  , containers
-                  , lens-aeson
-                  , aeson-pretty
-                  , dns
-                  , vector
-                  , optional-args
-                  , utf8-string
+                  , turtle
   hs-source-dirs:   test .
