@@ -34,6 +34,18 @@ globals: imports: params:
     ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}.cardano") hostList)}
     '';
 
+    # TODO, merge with the monitor in modules/report-server.nix
+    services.dd-agent.processConfig = ''
+    init_config:
+
+    instances:
+    - name:            ${if params.typeIsExplorer then "cardano-explorer" else "cardano-node-simple"}
+      search_string: ['${if params.typeIsExplorer then "cardano-explorer" else "cardano-node-simple"}']
+      exact_match: True
+      thresholds:
+        critical: [1, 1]
+    '';
+
     services.cardano-node = {
       enable         = true;
       nodeName       = params.name;

@@ -124,7 +124,7 @@ in {
             --logsdir ${cfg.logsdir}
       '';
     };
-    systemd.services.devops-977 = let
+    systemd.services.zendeskTicketTest = let  # DEVOPS-977
       payload = pkgs.writeText "payload.txt" (builtins.toJSON {
         application = "cardano-node";
         version = "0.0.1";
@@ -150,6 +150,18 @@ in {
         jq < /tmp/last-test-reply.json
       '';
     };
+
+    # TODO, merge with the monitor in modules/cardano.nix
+    services.dd-agent.processConfig = ''
+    init_config:
+
+    instances:
+    - name:            cardano-report-server
+      search_string: ['cardano-report-server']
+      exact_match: True
+      thresholds:
+        critical: [1, 1]
+    '';
 
     assertions = [
       { assertion =
