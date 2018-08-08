@@ -147,7 +147,7 @@ in {
           echo FAILURE sending dummy report to report server
         }
         curl -v -F payload="<${payload}" http://${config.deployment.route53.hostName}:8080/report > /tmp/last-test-reply.json || fail
-        jq < /tmp/last-test-reply.json
+        jq . < /tmp/last-test-reply.json
       '';
     };
 
