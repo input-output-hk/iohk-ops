@@ -4,7 +4,7 @@ args:
     contents: cardano-deployer
   IOHKroute53accessKeyId:
     tag: NixStr
-    contents: iohk
+    contents: iohkroot-cardano-deployer
   CFaccessKeyId:
     tag: NixStr
     contents: cardano-deployer
