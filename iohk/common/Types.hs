@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE StandaloneDeriving         #-}
@@ -11,11 +12,15 @@ module Types where
 import qualified Data.Aeson            as AE
 import qualified Data.ByteString.Char8 as BS.C8
 import           Data.Csv              (FromField (..))
+import qualified GHC.Generics          as G
+import qualified Data.Map.Strict       as Map
 import           Data.String
 import           Data.Text
 import           Data.Word             (Word16)
 import           Data.Yaml             (FromJSON (..), ToJSON (..))
 import           GHC.Generics          hiding (from, to)
+import           Prelude               hiding (FilePath)
+import qualified Turtle                        as Turtle
 
 
 -- * Elementary types
@@ -89,7 +94,6 @@ class (Bounded a, Eq a) => Flag a where
   opposite :: a -> a
   opposite = fromBool . not . toBool
 
-
 -- * Topology.hs
 --
 data NodeAddr a =
@@ -110,6 +114,9 @@ instance ToJSON NodeOrg
 
 data NodeType = NodeCore | NodeRelay | NodeEdge
   deriving (Show)
+
+newtype NodeRegion = NodeRegion Text
+    deriving (Show, Ord, Eq, IsString)
 
 instance FromJSON NodeType where
   parseJSON = AE.withText "NodeType" $ \typ -> do
@@ -145,3 +152,83 @@ data Target
   | AWS
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Target
+
+-- * Nix
+
+data SourceKind = Git | Github
+
+data NixSource (a :: SourceKind) where
+  -- | The output of 'nix-prefetch-git'
+  GitSource ::
+    { gUrl             :: URL
+    , gRev             :: Commit
+    , gSha256          :: NixHash
+    , gFetchSubmodules :: Bool
+    } -> NixSource 'Git
+  GithubSource ::
+    { ghOwner           :: Text
+    , ghRepo            :: Text
+    , ghRev             :: Commit
+    , ghSha256          :: NixHash
+    } -> NixSource 'Github
+
+data NixValue
+  = NixBool Bool
+  | NixInt  Integer
+  | NixStr  Text
+  | NixAttrSet (Map.Map Text NixValue)
+  | NixImport NixValue NixValue
+  | NixFile Turtle.FilePath
+  | NixNull
+  deriving (Generic, Show)
+
+-- * Nixops
+--
+type DeplArgs = Map.Map NixParam NixValue
+
+-- | Before adding a field here, consider, whether the value in question
+--   ought to be passed to Nix.
+--   If so, the way to do it is to add a deployment argument (see DeplArgs),
+--   which are smuggled across Nix border via --arg/--argstr.
+data NixopsConfig = NixopsConfig
+  { cName             :: NixopsDepl
+  , cGenCmdline       :: Text
+  , cTopology         :: Turtle.FilePath
+  , cEnvironment      :: Environment
+  , cTarget           :: Target
+  , cUpdateBucket     :: Text
+  , cInstallerURLBase :: Text
+  , cElements         :: [Deployment]
+  , cFiles            :: [Text]
+  , cDeplArgs         :: DeplArgs
+  -- this isn't stored in the config file, but is, instead filled in during initialisation
+  , topology          :: SimpleTopo
+  , nixpkgs           :: Turtle.FilePath
+  } deriving (Generic, Show)
+
+newtype SimpleTopo
+  =  SimpleTopo { fromSimpleTopo :: (Map.Map NodeName SimpleNode) }
+  deriving (Generic, Show)
+
+data SimpleNode
+  =  SimpleNode
+     { snType     :: NodeType
+     , snRegion   :: NodeRegion
+     , snZone     :: NodeZone
+     , snOrg      :: NodeOrg
+     , snFQDN     :: FQDN
+     , snPort     :: PortNo
+     , snInPeers  :: [NodeName]                  -- ^ Incoming connection edges
+     , snKademlia :: RunKademlia
+     , snPublic   :: Bool
+     } deriving (Generic, Show)
+
+-- * Topology
+--
+type RunKademlia = Bool
+
+newtype NodeRoutes = NodeRoutes [[NodeName]]
+    deriving (Show)
+
+newtype NodeZone = NodeZone Text
+    deriving (Show, Ord, Eq, G.Generic, IsString)

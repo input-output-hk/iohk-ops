@@ -28,6 +28,8 @@ import           Network.AWS               (Region)
 import           Network.AWS.S3            (BucketName(..), ObjectKey(..))
 import qualified Network.AWS.Data          as AWS
 
+import           Types                     (Environment(..))
+
 fetchCachedUrl :: HasCallStack => T.Text -> FilePath -> FilePath -> IO ()
 fetchCachedUrl url name outPath = fetchCachedUrl' url name outPath Nothing
 

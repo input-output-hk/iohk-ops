@@ -22,7 +22,6 @@ import           Data.Typeable                    (Typeable)
 import           Data.Yaml                        (FromJSON(..), ToJSON(..))
 import           Filesystem.Path                  (FilePath)
 import qualified Filesystem.Path.CurrentOS     as FP
-import           GHC.Generics              hiding (from, to)
 import           Turtle                    hiding (env, err, fold, prefix, procs, e, f, o, x)
 import qualified Turtle.Bytes                  as B
 
@@ -33,22 +32,6 @@ import Utils
 
 -- * A bit of Nix types
 --
-data SourceKind = Git | Github
-
-data NixSource (a :: SourceKind) where
-  -- | The output of 'nix-prefetch-git'
-  GitSource ::
-    { gUrl             :: URL
-    , gRev             :: Commit
-    , gSha256          :: NixHash
-    , gFetchSubmodules :: Bool
-    } -> NixSource 'Git
-  GithubSource ::
-    { ghOwner           :: Text
-    , ghRepo            :: Text
-    , ghRev             :: Commit
-    , ghSha256          :: NixHash
-    } -> NixSource 'Github
 deriving instance Show (NixSource a)
 instance ToJSON (NixSource 'Git) where
   toJSON GitSource{..} = AE.object
@@ -85,15 +68,6 @@ instance FromJSON FilePath where parseJSON = AE.withText "filepath" $ \v -> pure
 instance ToJSON   FilePath where toJSON    = AE.String . format fp
 
 -- | The set of first-class types present in Nix
-data NixValue
-  = NixBool Bool
-  | NixInt  Integer
-  | NixStr  Text
-  | NixAttrSet (Map.Map Text NixValue)
-  | NixImport NixValue NixValue
-  | NixFile FilePath
-  | NixNull
-  deriving (Generic, Show)
 instance FromJSON NixValue
 instance ToJSON NixValue
 

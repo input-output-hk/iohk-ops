@@ -18,7 +18,8 @@ gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /ni
   --here staging nodes reportserver explorer
 environment: Staging
 topology: topology-staging.yaml
-installer-bucket: update-awstest.iohkdev.io
+installer-bucket:   update-awstest.iohkdev.io
+installer-url-base: update-awstest.iohkdev.io
 name: rc-staging
 files:
 - deployments/keypairs.nix

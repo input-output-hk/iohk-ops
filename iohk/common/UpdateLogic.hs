@@ -55,6 +55,7 @@ import           Data.Text                    (Text)
 import qualified Data.Text.IO                 as T
 import qualified Filesystem.Path.CurrentOS    as FP
 import           GHC.Generics                 (Generic)
+import           GHC.Stack                    (HasCallStack)
 import           Github                       (Status, context,
                                                fetchGithubStatus, statuses,
                                                targetUrl, Rev)
@@ -82,9 +83,8 @@ import           Turtle.Prelude               (mktempdir, proc)
 import           Filesystem.Path              (FilePath, (</>), filename)
 
 import           InstallerVersions
-import           Types                        (ApplicationVersion, ApplicationVersionKey,
-                                               Arch (Linux64, Mac64, Win64), formatArch)
-import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1, s3Link)
+import           Types                 hiding (Region)
+import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1)
 
 data CIResult = CIResult
   { ciResultSystem      :: CISystem
@@ -129,6 +129,9 @@ loadBuildkiteToken = try (T.readFile buildkiteTokenFile) >>= \case
              "https://buildkite.com/user/api-access-tokens\n" <>
              "Exiting!" :: Text
     st = makeFormat T.pack
+
+cdnLink :: HasCallStack => NixopsConfig -> ObjectKey -> Text
+cdnLink NixopsConfig{..} (ObjectKey key) = mconcat [ "https://", cInstallerURLBase, "/", key ]
 
 buildkiteTokenFile = "static/buildkite_token" :: String
 
@@ -295,10 +298,10 @@ githubWikiRecord InstallersResults{..} = T.intercalate " | " cols <> "\n"
 
     mdLink = format ("["%s%"]("%s%")")
 
-updateVersionJson :: Text -> LBS.ByteString -> IO Text
-updateVersionJson bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
+updateVersionJson :: NixopsConfig -> Text -> LBS.ByteString -> IO Text
+updateVersionJson cfg bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
   uploadFile json key
-  pure $ s3Link region bucketName key
+  pure $ cdnLink cfg key
   where
     key = ObjectKey "daedalus-latest-version.json"
     bucketName = BucketName bucket
@@ -323,12 +326,12 @@ withinBucketRegion bucketName action = do
 
 type AWSMeta = HashMap.HashMap Text Text
 
-uploadHashedInstaller :: Text -> FilePath -> GlobalResults -> Text -> AWS Text
-uploadHashedInstaller bucketName localPath GlobalResults{..} hash =
+uploadHashedInstaller :: NixopsConfig -> Text -> FilePath -> GlobalResults -> Text -> AWS Text
+uploadHashedInstaller cfg bucketName localPath GlobalResults{..} hash =
   withinBucketRegion bucketName' $ \region -> do
     uploadOneFile bucketName' localPath (ObjectKey hash) meta
     copyObject' hashedPath key
-    pure $ s3Link region bucketName' key
+    pure $ cdnLink cfg key
 
   where
     key = simpleKey localPath
