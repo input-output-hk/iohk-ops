@@ -82,9 +82,9 @@ import           Turtle.Prelude               (mktempdir, proc)
 import           Filesystem.Path              (FilePath, (</>), filename)
 
 import           InstallerVersions
-import           Types                        (ApplicationVersion, ApplicationVersionKey,
+import           Types                        (ApplicationVersion, ApplicationVersionKey, Environment(..),
                                                Arch (Linux64, Mac64, Win64), formatArch)
-import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1, s3Link)
+import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1, cdnLink)
 
 data CIResult = CIResult
   { ciResultSystem      :: CISystem
@@ -295,10 +295,10 @@ githubWikiRecord InstallersResults{..} = T.intercalate " | " cols <> "\n"
 
     mdLink = format ("["%s%"]("%s%")")
 
-updateVersionJson :: Text -> LBS.ByteString -> IO Text
-updateVersionJson bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
+updateVersionJson :: Environment -> Text -> LBS.ByteString -> IO Text
+updateVersionJson env bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
   uploadFile json key
-  pure $ s3Link region bucketName key
+  pure $ cdnLink env key
   where
     key = ObjectKey "daedalus-latest-version.json"
     bucketName = BucketName bucket
@@ -323,12 +323,12 @@ withinBucketRegion bucketName action = do
 
 type AWSMeta = HashMap.HashMap Text Text
 
-uploadHashedInstaller :: Text -> FilePath -> GlobalResults -> Text -> AWS Text
-uploadHashedInstaller bucketName localPath GlobalResults{..} hash =
+uploadHashedInstaller :: Environment -> Text -> FilePath -> GlobalResults -> Text -> AWS Text
+uploadHashedInstaller env bucketName localPath GlobalResults{..} hash =
   withinBucketRegion bucketName' $ \region -> do
     uploadOneFile bucketName' localPath (ObjectKey hash) meta
     copyObject' hashedPath key
-    pure $ s3Link region bucketName' key
+    pure $ cdnLink env key
 
   where
     key = simpleKey localPath

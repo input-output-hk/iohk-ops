@@ -28,6 +28,8 @@ import           Network.AWS               (Region)
 import           Network.AWS.S3            (BucketName(..), ObjectKey(..))
 import qualified Network.AWS.Data          as AWS
 
+import           Types                     (Environment(..))
+
 fetchCachedUrl :: HasCallStack => T.Text -> FilePath -> FilePath -> IO ()
 fetchCachedUrl url name outPath = fetchCachedUrl' url name outPath Nothing
 
@@ -112,3 +114,8 @@ jsonLowerStrip n = AE.genericToJSON $ AE.defaultOptions { AE.fieldLabelModifier 
 s3Link :: Region -> BucketName -> ObjectKey -> Text
 s3Link region (BucketName bucket) (ObjectKey key) =
   mconcat [ "https://s3-", AWS.toText region, ".amazonaws.com/" , bucket, "/", key ]
+
+cdnLink :: HasCallStack => Environment -> ObjectKey -> Text
+cdnLink Production (ObjectKey key) = mconcat [ "https://update-cardano-mainnet.iohk.io/", key ]
+cdnLink Staging    (ObjectKey key) = mconcat [ "https://update-awstest.iohkdev.io/",      key ]
+cdnLink env _ = error $ "No CDN URL for environment " <> show env
