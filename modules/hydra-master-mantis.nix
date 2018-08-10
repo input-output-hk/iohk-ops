@@ -3,6 +3,7 @@
 with lib;
 
 let
+  hydraDnsName = "mantis-hydra.aws.iohkdev.io";
 in {
 
   nix = {
@@ -21,13 +22,13 @@ in {
   virtualisation.docker.enable = true;
 
   services.hydra = {
-    hydraURL = "https://hydra-mantis.iohk.io";
+    hydraURL = "https://${hydraDnsName}";
     # max output is 4GB because of amis
     # auth token needs `repo:status`
     extraConfig = ''
       max_output_size = 4294967296
-      store-uri = file:///nix/store?secret-key=/etc/nix/hydra.iohk.io-1/secret
-      binary_cache_secret_key_file = /etc/nix/hydra.iohk.io-1/secret
+      store-uri = file:///nix/store?secret-key=/etc/nix/${hydraDnsName}-1/secret
+      binary_cache_secret_key_file = /etc/nix/${hydraDnsName}-1/secret
       <github_authorization>
         input-output-hk = ${builtins.readFile ../static/github_token}
       </github_authorization>
@@ -36,7 +37,7 @@ in {
 
   services.nginx = {
     virtualHosts = {
-      "hydra-mantis.iohk.io" = {
+      "${hydraDnsName}" = {
         forceSSL = true;
         enableACME = true;
         locations."/".extraConfig = ''
