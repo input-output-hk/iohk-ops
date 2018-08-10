@@ -54,14 +54,6 @@ data AllStaticallyKnownPeers = AllStaticallyKnownPeers {
   }
   deriving (Show)
 
-newtype NodeRegion = NodeRegion Text
-    deriving (Show, Ord, Eq, IsString)
-
-newtype NodeRoutes = NodeRoutes [[NodeName]]
-    deriving (Show)
-
-newtype NodeZone = NodeZone Text
-    deriving (Show, Ord, Eq, G.Generic, IsString)
 instance FromJSON NodeZone
 instance ToJSON NodeZone
 
@@ -91,8 +83,6 @@ data NodeMetadata = NodeMetadata
     , nmZone :: !NodeZone
     }
     deriving (Show)
-
-type RunKademlia = Bool
 
 -- | Parameters for Kademlia, in case P2P or traditional topology are used.
 data KademliaParams = KademliaParams

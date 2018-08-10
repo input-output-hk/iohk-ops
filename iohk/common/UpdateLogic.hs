@@ -82,9 +82,8 @@ import           Turtle.Prelude               (mktempdir, proc)
 import           Filesystem.Path              (FilePath, (</>), filename)
 
 import           InstallerVersions
-import           Types                        (ApplicationVersion, ApplicationVersionKey, Environment(..),
-                                               Arch (Linux64, Mac64, Win64), formatArch)
-import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1, cdnLink)
+import           Types                 hiding (Region)
+import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1)
 
 data CIResult = CIResult
   { ciResultSystem      :: CISystem

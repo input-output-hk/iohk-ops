@@ -168,6 +168,7 @@ import           GHC.Stack                 (HasCallStack)
 --
 deriving instance Generic Seconds; instance FromJSON Seconds; instance ToJSON Seconds
 deriving instance Generic Elapsed; instance FromJSON Elapsed; instance ToJSON Elapsed
+instance ToJSON SimpleTopo
 
 
 establishDeployerIP :: Options -> Maybe IP -> IO IP
@@ -209,23 +210,6 @@ readTopology file = do
     Right (topology :: Topology) -> pure topology
     Left err -> errorT $ format ("Failed to parse topology file: "%fp%": "%w) file err
 
-newtype SimpleTopo
-  =  SimpleTopo { fromSimpleTopo :: (Map.Map NodeName SimpleNode) }
-  deriving (Generic, Show)
-instance ToJSON SimpleTopo
-
-data SimpleNode
-  =  SimpleNode
-     { snType     :: NodeType
-     , snRegion   :: NodeRegion
-     , snZone     :: NodeZone
-     , snOrg      :: NodeOrg
-     , snFQDN     :: FQDN
-     , snPort     :: PortNo
-     , snInPeers  :: [NodeName]                  -- ^ Incoming connection edges
-     , snKademlia :: RunKademlia
-     , snPublic   :: Bool
-     } deriving (Generic, Show)
 instance ToJSON SimpleNode where
   toJSON SimpleNode{..} = AE.object
    [ "type"        .= (lowerShowT snType & T.stripPrefix "node"
@@ -384,25 +368,6 @@ nixopsCmdOptions Options{..} NixopsConfig{..} =
   ] <> (["-I", format ("nixpkgs="%fp) nixpkgs])
 
 
--- | Before adding a field here, consider, whether the value in question
---   ought to be passed to Nix.
---   If so, the way to do it is to add a deployment argument (see DeplArgs),
---   which are smuggled across Nix border via --arg/--argstr.
-data NixopsConfig = NixopsConfig
-  { cName             :: NixopsDepl
-  , cGenCmdline       :: Text
-  , cTopology         :: FilePath
-  , cEnvironment      :: Environment
-  , cTarget           :: Target
-  , cUpdateBucket     :: Text
-  , cElements         :: [Deployment]
-  , cFiles            :: [Text]
-  , cDeplArgs         :: DeplArgs
-  -- this isn't stored in the config file, but is, instead filled in during initialisation
-  , topology          :: SimpleTopo
-  , nixpkgs           :: FilePath
-  } deriving (Generic, Show)
-
 instance ToJSON BucketName
 instance FromJSON NixopsConfig where
     parseJSON = AE.withObject "NixopsConfig" $ \v -> NixopsConfig
@@ -438,8 +403,6 @@ instance ToJSON NixopsConfig where
 deploymentFiles :: Environment -> Target -> [Deployment] -> [Text]
 deploymentFiles cEnvironment cTarget cElements =
   nub $ concat (elementDeploymentFiles cEnvironment cTarget <$> cElements)
-
-type DeplArgs = Map.Map NixParam NixValue
 
 selectInitialConfigDeploymentArgs :: Options -> FilePath -> Environment -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO DeplArgs
 selectInitialConfigDeploymentArgs _ _ env delts (Elapsed systemStart) mConfigurationKey = do
