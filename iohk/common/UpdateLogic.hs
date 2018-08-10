@@ -55,6 +55,7 @@ import           Data.Text                    (Text)
 import qualified Data.Text.IO                 as T
 import qualified Filesystem.Path.CurrentOS    as FP
 import           GHC.Generics                 (Generic)
+import           GHC.Stack                    (HasCallStack)
 import           Github                       (Status, context,
                                                fetchGithubStatus, statuses,
                                                targetUrl, Rev)
@@ -128,6 +129,9 @@ loadBuildkiteToken = try (T.readFile buildkiteTokenFile) >>= \case
              "https://buildkite.com/user/api-access-tokens\n" <>
              "Exiting!" :: Text
     st = makeFormat T.pack
+
+cdnLink :: HasCallStack => NixopsConfig -> ObjectKey -> Text
+cdnLink NixopsConfig{..} (ObjectKey key) = mconcat [ cInstallerURLBase, key ]
 
 buildkiteTokenFile = "static/buildkite_token" :: String
 
@@ -294,10 +298,10 @@ githubWikiRecord InstallersResults{..} = T.intercalate " | " cols <> "\n"
 
     mdLink = format ("["%s%"]("%s%")")
 
-updateVersionJson :: Environment -> Text -> LBS.ByteString -> IO Text
-updateVersionJson env bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
+updateVersionJson :: NixopsConfig -> Text -> LBS.ByteString -> IO Text
+updateVersionJson cfg bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
   uploadFile json key
-  pure $ cdnLink env key
+  pure $ cdnLink cfg key
   where
     key = ObjectKey "daedalus-latest-version.json"
     bucketName = BucketName bucket
@@ -322,12 +326,12 @@ withinBucketRegion bucketName action = do
 
 type AWSMeta = HashMap.HashMap Text Text
 
-uploadHashedInstaller :: Environment -> Text -> FilePath -> GlobalResults -> Text -> AWS Text
-uploadHashedInstaller env bucketName localPath GlobalResults{..} hash =
+uploadHashedInstaller :: NixopsConfig -> Text -> FilePath -> GlobalResults -> Text -> AWS Text
+uploadHashedInstaller cfg bucketName localPath GlobalResults{..} hash =
   withinBucketRegion bucketName' $ \region -> do
     uploadOneFile bucketName' localPath (ObjectKey hash) meta
     copyObject' hashedPath key
-    pure $ cdnLink env key
+    pure $ cdnLink cfg key
 
   where
     key = simpleKey localPath

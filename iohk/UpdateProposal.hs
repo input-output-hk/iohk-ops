@@ -133,8 +133,8 @@ updateProposal o cfg UpdateProposalCommand{..} = do
     UpdateProposalInit initial -> updateProposalInit top uid (first (UpdateID (cName cfg)) initial)
     UpdateProposalFindInstallers -> updateProposalFindInstallers opts (cEnvironment cfg)
     UpdateProposalSignInstallers userId -> updateProposalSignInstallers opts userId
-    UpdateProposalUploadS3 -> updateProposalUploadS3 (cEnvironment cfg) opts
-    UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON (cEnvironment cfg) opts
+    UpdateProposalUploadS3 -> updateProposalUploadS3 cfg opts
+    UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON cfg opts
     UpdateProposalGenerate -> updateProposalGenerate opts
     UpdateProposalSubmit relay dryRun ->
       let opts' = opts { cmdRelayIP = Just relay, cmdDryRun = dryRun }
@@ -450,8 +450,8 @@ updateProposalSignInstallers opts@CommandOptions{..} userId = do
 ----------------------------------------------------------------------------
 
 -- | Step 3. Hash installers and upload to S3
-updateProposalUploadS3 :: Environment -> CommandOptions -> Shell ()
-updateProposalUploadS3 env opts@CommandOptions{..} = do
+updateProposalUploadS3 :: NixopsConfig -> CommandOptions -> Shell ()
+updateProposalUploadS3 cfg opts@CommandOptions{..} = do
   params@UpdateProposalConfig2{..} <- loadParams opts
   void $ doCheckConfig params
   echo "*** Hashing installers with sha256sum"
@@ -459,7 +459,7 @@ updateProposalUploadS3 env opts@CommandOptions{..} = do
   echo "*** Hashing installers with cardano-auxx"
   hashes <- getHashes (cardanoHashInstaller opts) cfgInstallersResults
   printf ("*** Uploading installers to S3 bucket "%s%"\n") cmdUpdateBucket
-  urls <- uploadInstallers env cmdUpdateBucket cfgInstallersResults hashes
+  urls <- uploadInstallers cfg cmdUpdateBucket cfgInstallersResults hashes
   printf ("*** Uploading signatures to same S3 bucket.\n")
   signatures <- uploadSignatures cmdUpdateBucket cfgInstallersResults
   printf ("*** Writing "%fp%"\n") (versionFile opts)
@@ -467,15 +467,15 @@ updateProposalUploadS3 env opts@CommandOptions{..} = do
   liftIO $ writeVersionJSON (versionFile opts) dvis
   storeParams opts (UpdateProposalConfig3 params hashes)
 
-uploadInstallers :: Environment -> Text -> InstallersResults -> InstallerHashes -> Shell (Text, Text)
-uploadInstallers env bucket res InstallerHashes{..} = runAWS' $ do
+uploadInstallers :: NixopsConfig -> Text -> InstallersResults -> InstallerHashes -> Shell (Text, Text)
+uploadInstallers cfg bucket res InstallerHashes{..} = runAWS' $ do
   darwin <- needResult Mac64 res $ upload cfgInstallerDarwin
   windows <- needResult Win64 res $ upload cfgInstallerWindows
   pure (darwin, windows)
   where
     upload hash ci = do
       printf ("***   "%s%"  "%fp%"\n") hash (ciResultLocalPath ci)
-      uploadHashedInstaller env bucket (ciResultLocalPath ci) (globalResult res) hash
+      uploadHashedInstaller cfg bucket (ciResultLocalPath ci) (globalResult res) hash
 
 -- | Apply a hashing command to all the installer files.
 getHashes :: (FilePath -> Shell Text) -> InstallersResults -> Shell InstallerHashes
@@ -566,13 +566,13 @@ writeVersionJSON out dvis = L8.writeFile (encodeString out) (encode v)
 -- | Step 3a. Update version JSON file in S3.
 -- Doesn't do anything except upload the file which was previously
 -- written into the work dir.
-updateProposalSetVersionJSON :: Environment -> CommandOptions -> Shell ()
-updateProposalSetVersionJSON env opts@CommandOptions{..} = do
+updateProposalSetVersionJSON :: NixopsConfig -> CommandOptions -> Shell ()
+updateProposalSetVersionJSON cfg opts@CommandOptions{..} = do
   params <- loadParams opts :: Shell UpdateProposalConfig3
   void $ doCheckConfig params
   printf ("*** Uploading version JSON from "%fp%"\n") (versionFile opts)
   contents <- liftIO $ L8.readFile (encodeString $ versionFile opts)
-  url <- liftIO $ updateVersionJson env cmdUpdateBucket contents
+  url <- liftIO $ updateVersionJson cfg cmdUpdateBucket contents
   printf ("*** Uploaded to "%s%"\n") url
 
 ----------------------------------------------------------------------------

@@ -377,6 +377,7 @@ instance FromJSON NixopsConfig where
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "installer-bucket"
+        <*> v .: "installer-url-base" .!= "--unspecified--"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
@@ -390,15 +391,16 @@ instance ToJSON Target
 instance ToJSON Deployment
 instance ToJSON NixopsConfig where
   toJSON NixopsConfig{..} = AE.object
-   [ "name"         .= fromNixopsDepl cName
-   , "gen-cmdline"  .= cGenCmdline
-   , "topology"     .= cTopology
-   , "environment"  .= showT cEnvironment
-   , "target"       .= showT cTarget
-   , "installer-bucket" .= cUpdateBucket
-   , "elements"     .= cElements
-   , "files"        .= cFiles
-   , "args"         .= cDeplArgs ]
+   [ "name"               .= fromNixopsDepl cName
+   , "gen-cmdline"        .= cGenCmdline
+   , "topology"           .= cTopology
+   , "environment"        .= showT cEnvironment
+   , "target"             .= showT cTarget
+   , "installer-bucket"   .= cUpdateBucket
+   , "installer-url-base" .= cInstallerURLBase
+   , "elements"           .= cElements
+   , "files"              .= cFiles
+   , "args"               .= cDeplArgs ]
 
 deploymentFiles :: Environment -> Target -> [Deployment] -> [Text]
 deploymentFiles cEnvironment cTarget cElements =
@@ -440,6 +442,7 @@ mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTa
       cFiles          = deploymentFiles                         cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
       cUpdateBucket   = "default-bucket"
+      cInstallerURLBase = "--undefined--"
   cDeplArgs <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology  <- getSimpleTopo cElements cTopology
   nixpkgs   <- Path.fromText <$> incmdStrip o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"]
