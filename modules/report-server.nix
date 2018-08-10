@@ -142,6 +142,7 @@ in {
       });
     in {
       startAt = [ "hourly" ];
+      path = with pkgs; [ curl jq ];
       script = ''
         fail() {
           echo FAILURE sending dummy report to report server
