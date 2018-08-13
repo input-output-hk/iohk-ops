@@ -75,6 +75,10 @@ mkArchMap :: a -- ^ Linux value
           -> ArchMap a
 mkArchMap l m w = ArchMap l m w
 
+-- | Construct an arch map using the same value for each arch.
+straightArchMap :: a -> ArchMap a
+straightArchMap a = ArchMap a a a
+
 -- | Construct an arch map with a lookup function.
 archMap :: (Arch -> a) -> ArchMap a
 archMap get = ArchMap (get Linux64) (get Mac64) (get Win64)
@@ -96,7 +100,7 @@ archMapToList' am = [(a, v) | (a, Just v) <- archMapToList am]
 
 -- | Construct an arch map from a list of pairs.
 archMapFromList :: [(Arch, a)] -> ArchMap (Maybe a)
-archMapFromList = build (ArchMap Nothing Nothing Nothing)
+archMapFromList = build (straightArchMap Nothing)
   where
     build am [] = am
     build am (e:es) = build (add e am) es

@@ -15,9 +15,14 @@ spec :: Spec
 spec = do
   describe "Update proposal command" $ do
     it "Generates the correct command" $ do
-      proposeUpdateCmd testCommandOptions testConfig `shouldBe`
+      proposeUpdateCmd testCommandOptions testConfig allSystems `shouldBe`
         ("propose-update 99 vote-all:true 1.2.3 ~software~csl-daedalus:42 " <>
-         "(upd-bin \"linux64\" /workdir/installers/hash-linux) " <>
+         "(upd-bin \"linux\" /workdir/installers/hash-linux) " <>
+         "(upd-bin \"macos64\" /workdir/installers/hash-macos) " <>
+         "(upd-bin \"win64\" /workdir/installers/hash-win)")
+    it "Skips linux update if --with-linux option is disabled" $ do
+      proposeUpdateCmd testCommandOptions testConfig notLinux `shouldBe`
+        ("propose-update 99 vote-all:true 1.2.3 ~software~csl-daedalus:42 " <>
          "(upd-bin \"macos64\" /workdir/installers/hash-macos) " <>
          "(upd-bin \"win64\" /workdir/installers/hash-win)")
 
@@ -59,3 +64,9 @@ testInstallersResults = InstallersResults ci gr
                        , grCardanoVersion = "cardano-version"
                        , grDaedalusVersion = "daedalus-version"
                        }
+
+allSystems :: ArchMap Bool
+allSystems = straightArchMap True
+
+notLinux :: ArchMap Bool
+notLinux = mkArchMap False True True

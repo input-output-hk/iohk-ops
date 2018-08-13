@@ -69,6 +69,7 @@ data UpdateProposalStep
   | UpdateProposalSubmit
     { updateProposalRelayIP           :: Text
     , updateProposalDryRun            :: Bool
+    , updateProposalWithSystems       :: ArchMap Bool
     }
   deriving Show
 
@@ -93,7 +94,7 @@ parseUpdateProposalCommand = subparser $
        (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalGenerate) <**> helper)
          (progDesc "Create a voting transaction") ) )
   <> ( command "submit"
-       (info (UpdateProposalCommand <$> date <*> (UpdateProposalSubmit <$> relayIP <*> dryRun))
+       (info (UpdateProposalCommand <$> date <*> (UpdateProposalSubmit <$> relayIP <*> dryRun <*> withSystems))
          (progDesc "Send update proposal transaction to the network") ) )
   where
     date :: Parser (Maybe Text)
@@ -132,6 +133,11 @@ parseUpdateProposalCommand = subparser $
     dryRun :: Parser Bool
     dryRun = switch ( long "dry-run" <> short 'n' <> help "Don't actually do anything" )
 
+    withSystems :: Parser (ArchMap Bool)
+    withSystems = mkArchMap <$> withLinux <*> pure True <*> pure True
+      where withLinux = switch ( long "with-linux" <>
+                                 help "Also propose a Linux installer" )
+
 updateProposal :: Options -> NixopsConfig -> UpdateProposalCommand -> IO ()
 updateProposal o cfg UpdateProposalCommand{..} = do
   configKey <- maybe (fail "configurationKey not found") pure (nixopsConfigurationKey cfg)
@@ -146,9 +152,9 @@ updateProposal o cfg UpdateProposalCommand{..} = do
     UpdateProposalUploadS3 -> updateProposalUploadS3 cfg opts
     UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON cfg opts
     UpdateProposalGenerate -> updateProposalGenerate opts
-    UpdateProposalSubmit relay dryRun ->
+    UpdateProposalSubmit relay dryRun systems ->
       let opts' = opts { cmdRelayIP = Just relay, cmdDryRun = dryRun }
-      in updateProposalSubmit opts'
+      in updateProposalSubmit opts' systems
 
 ----------------------------------------------------------------------------
 -- Parameters files. These are loaded/saved to yaml in the work dir.
@@ -662,24 +668,24 @@ doGenerate opts UpdateProposalConfig3{..} = do
 ----------------------------------------------------------------------------
 
 -- | Step 5. Submit update proposal.
-updateProposalSubmit :: CommandOptions -> Shell ()
-updateProposalSubmit opts@CommandOptions{..} = do
+updateProposalSubmit :: CommandOptions -> ArchMap Bool -> Shell ()
+updateProposalSubmit opts@CommandOptions{..} systems = do
   echo "*** Submitting update proposal"
   params <- loadParams opts
-  fmap (format l) <$> doPropose opts params >>= \case
+  fmap (format l) <$> doPropose opts params systems >>= \case
     Just updateId -> do
       storeParams opts (UpdateProposalConfig5 params updateId)
       echo "*** Update proposal submitted!"
     Nothing -> echo "*** Submission of update proposal failed."
 
-doPropose :: CommandOptions -> UpdateProposalConfig4 -> Shell (Maybe Line)
-doPropose opts cfg = fold (runCommands opts [cmd] & grep isUpdateId) Fold.last
+doPropose :: CommandOptions -> UpdateProposalConfig4 -> ArchMap Bool -> Shell (Maybe Line)
+doPropose opts cfg systems = fold (runCommands opts [cmd] & grep isUpdateId) Fold.last
   where
-    cmd = proposeUpdateCmd opts cfg
+    cmd = proposeUpdateCmd opts cfg systems
     isUpdateId = count 64 hexDigit
 
-proposeUpdateCmd :: CommandOptions -> UpdateProposalConfig4 -> Text
-proposeUpdateCmd opts cfg = format
+proposeUpdateCmd :: CommandOptions -> UpdateProposalConfig4 -> ArchMap Bool -> Text
+proposeUpdateCmd opts cfg systems = format
   ("propose-update "%d%" vote-all:true "%s%" ~software~csl-daedalus:"%d%" "%s)
   cfgVoterIndex cfgLastKnownBlockVersion appVer (T.intercalate " " updateBins)
   where
@@ -690,7 +696,8 @@ proposeUpdateCmd opts cfg = format
     inst a = installersPath opts (fromText . lookupArch a $ cfgInstallerHashes)
     appVer = grApplicationVersion globalResult
     updateBins = [ archUpdateBin ciResultArch (inst ciResultArch)
-                 | CIResult{..} <- ciResults ]
+                 | CIResult{..} <- ciResults
+                 , lookupArch ciResultArch systems ]
 
 archUpdateBin :: Arch -> FilePath -> Text
 archUpdateBin a installer = format ("(upd-bin \""%s%"\" "%fp%")") (systemTag a) installer
