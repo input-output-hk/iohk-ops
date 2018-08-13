@@ -69,7 +69,6 @@ data UpdateProposalStep
     }
   | UpdateProposalUploadS3
   | UpdateProposalSetVersionJSON
-  | UpdateProposalGenerate
   | UpdateProposalSubmit
     { updateProposalRelayIP           :: Text
     , updateProposalDryRun            :: Bool
@@ -94,12 +93,9 @@ parseUpdateProposalCommand = subparser $
   <> ( command "set-version-json"
        (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalSetVersionJSON) <**> helper)
          (progDesc "Update the version info file in the the S3 bucket.") ) )
-  <> ( command "generate"
-       (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalGenerate) <**> helper)
-         (progDesc "Create a voting transaction") ) )
   <> ( command "submit"
        (info (UpdateProposalCommand <$> date <*> (UpdateProposalSubmit <$> relayIP <*> dryRun <*> withSystems))
-         (progDesc "Send update proposal transaction to the network") ) )
+         (progDesc "Send update proposal voting transaction to the network.") ) )
   where
     mdate :: Parser (Maybe Text)
     mdate = fmap (fmap fromString) . optional . argument str $
@@ -156,10 +152,10 @@ updateProposal o cfg cmd = do
         UpdateProposalSignInstallers userId -> updateProposalSignInstallers opts userId
         UpdateProposalUploadS3 -> updateProposalUploadS3 cfg opts
         UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON cfg opts
-        UpdateProposalGenerate -> updateProposalGenerate opts
-        UpdateProposalSubmit relay dryRun systems ->
+        UpdateProposalSubmit relay dryRun systems -> do
+          updateProposalGenerate opts
           let opts' = opts { cmdRelayIP = Just relay, cmdDryRun = dryRun }
-          in updateProposalSubmit opts' systems
+          updateProposalSubmit opts' systems
 
 ----------------------------------------------------------------------------
 -- Parameters files. These are loaded/saved to yaml in the work dir.
@@ -602,7 +598,8 @@ updateProposalSetVersionJSON cfg opts@CommandOptions{..} = do
 
 ----------------------------------------------------------------------------
 
--- | Step 4. Generate database with keys, download installers.
+-- | Step 4a. Check installer file types, copy into place, generate
+-- database with keys.
 updateProposalGenerate :: CommandOptions -> Shell ()
 updateProposalGenerate opts@CommandOptions{..} = do
   params@UpdateProposalConfig3{..} <- loadParams opts
@@ -614,7 +611,6 @@ updateProposalGenerate opts@CommandOptions{..} = do
   addrs <- doGenerate opts params
   storeParams opts (UpdateProposalConfig4 params addrs)
   echo "*** Finished generate step. Next step is to submit."
-  echo "*** Carefully check the parameters yaml file."
 
 -- | Partition CI results by arch.
 groupResults :: InstallersResults -> ArchMap [CIResult]
@@ -668,7 +664,7 @@ doGenerate opts UpdateProposalConfig3{..} = do
 
 ----------------------------------------------------------------------------
 
--- | Step 5. Submit update proposal.
+-- | Step 4b. Submit update proposal.
 updateProposalSubmit :: CommandOptions -> ArchMap Bool -> Shell ()
 updateProposalSubmit opts@CommandOptions{..} systems = do
   echo "*** Submitting update proposal"
