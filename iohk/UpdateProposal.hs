@@ -52,16 +52,18 @@ import Utils (tt)
 ----------------------------------------------------------------------------
 -- Command-line arguments
 
-data UpdateProposalCommand = UpdateProposalCommand
-    { updateProposalDate :: Maybe Text
+data UpdateProposalCommand
+  = UpdateProposalInit
+    { updateProposalInitDate   :: Maybe Text
+    , updateProposalInitConfig :: UpdateProposalConfig1
+    }
+  | UpdateProposalCommand
+    { updateProposalDate :: Text
     , updateProposalStep :: UpdateProposalStep
     } deriving Show
 
 data UpdateProposalStep
-  = UpdateProposalInit
-    { updateProposalInitialConfig     :: Either Text UpdateProposalConfig1
-    }
-  | UpdateProposalFindInstallers
+  = UpdateProposalFindInstallers
   | UpdateProposalSignInstallers
     { updateProposalGPGUserId         :: Maybe Text
     }
@@ -78,7 +80,7 @@ data UpdateProposalStep
 parseUpdateProposalCommand :: Parser UpdateProposalCommand
 parseUpdateProposalCommand = subparser $
      ( command "init"
-       (info ((UpdateProposalCommand <$> date <*> (UpdateProposalInit <$> initialInfo)) <**> helper)
+       (info ((UpdateProposalInit <$> mdate <*> updateProposalConfig) <**> helper)
          (progDesc "Create template config file and working directory.") ) )
   <> ( command "find-installers"
        (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalFindInstallers) <**> helper)
@@ -99,13 +101,15 @@ parseUpdateProposalCommand = subparser $
        (info (UpdateProposalCommand <$> date <*> (UpdateProposalSubmit <$> relayIP <*> dryRun <*> withSystems))
          (progDesc "Send update proposal transaction to the network") ) )
   where
-    date :: Parser (Maybe Text)
-    date = fmap (fmap fromString) . optional . argument str $
+    mdate :: Parser (Maybe Text)
+    mdate = fmap (fmap fromString) . optional . argument str $
               metavar "DATE"
               <> help "Date string to identify the update proposal (default: today)"
 
-    initialInfo :: Parser (Either Text UpdateProposalConfig1)
-    initialInfo = (Left <$> fromDate) <|> (Right <$> updateProposalConfig)
+    date :: Parser Text
+    date = fmap fromString . argument str $
+              metavar "DATE"
+              <> help "Date string identifying the update proposal"
 
     updateProposalConfig :: Parser UpdateProposalConfig1
     updateProposalConfig = UpdateProposalConfig1
@@ -116,11 +120,6 @@ parseUpdateProposalCommand = subparser $
            <> help "Last known block version. Check the wiki for more info.") )
       <*> ( option auto (long "voter-index" <> short 'V' <> metavar "INTEGER"
            <> help "A number representing you, the vote proposer. Check the wiki for more info.") )
-
-    fromDate :: Parser Text
-    fromDate = fmap T.pack $ strOption $
-               long "from" <> short 'f' <> metavar "DATE"
-               <> help "Copy the previous config from date"
 
     userId :: Parser Text
     userId = fmap T.pack $ strOption $
@@ -141,22 +140,26 @@ parseUpdateProposalCommand = subparser $
                                  help "Also propose a Linux installer" )
 
 updateProposal :: Options -> NixopsConfig -> UpdateProposalCommand -> IO ()
-updateProposal o cfg UpdateProposalCommand{..} = do
+updateProposal o cfg cmd = do
   configKey <- maybe (fail "configurationKey not found") pure (nixopsConfigurationKey cfg)
   top <- pwd
-  uid <- makeUpdateId (cName cfg) updateProposalDate
-  cslPath <- getCardanoSLConfig o
-  let opts = commandOptions (workPath top uid) cslPath configKey (cUpdateBucket cfg)
-  sh $ case updateProposalStep of
-    UpdateProposalInit initial -> updateProposalInit top uid (first (UpdateID (cName cfg)) initial)
-    UpdateProposalFindInstallers -> updateProposalFindInstallers opts (cEnvironment cfg)
-    UpdateProposalSignInstallers userId -> updateProposalSignInstallers opts userId
-    UpdateProposalUploadS3 -> updateProposalUploadS3 cfg opts
-    UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON cfg opts
-    UpdateProposalGenerate -> updateProposalGenerate opts
-    UpdateProposalSubmit relay dryRun systems ->
-      let opts' = opts { cmdRelayIP = Just relay, cmdDryRun = dryRun }
-      in updateProposalSubmit opts' systems
+  case cmd of
+    UpdateProposalInit date cfgInitial -> do
+      uid <- makeUpdateId (cName cfg) date
+      sh $ updateProposalInit top uid cfgInitial
+    UpdateProposalCommand date step -> do
+      cslPath <- getCardanoSLConfig o
+      let opts = commandOptions (workPath top (UpdateID (cName cfg) date))
+                 cslPath configKey (cUpdateBucket cfg)
+      sh $ case step of
+        UpdateProposalFindInstallers -> updateProposalFindInstallers opts (cEnvironment cfg)
+        UpdateProposalSignInstallers userId -> updateProposalSignInstallers opts userId
+        UpdateProposalUploadS3 -> updateProposalUploadS3 cfg opts
+        UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON cfg opts
+        UpdateProposalGenerate -> updateProposalGenerate opts
+        UpdateProposalSubmit relay dryRun systems ->
+          let opts' = opts { cmdRelayIP = Just relay, cmdDryRun = dryRun }
+          in updateProposalSubmit opts' systems
 
 ----------------------------------------------------------------------------
 -- Parameters files. These are loaded/saved to yaml in the work dir.
@@ -401,8 +404,8 @@ versionFile opts = cmdWorkPath opts </> "daedalus-latest-version.json"
 ----------------------------------------------------------------------------
 
 -- | Step 1. Init a new work directory
-updateProposalInit :: FilePath -> UpdateID -> Either UpdateID UpdateProposalConfig1 -> Shell ()
-updateProposalInit top uid initial = do
+updateProposalInit :: FilePath -> UpdateID -> UpdateProposalConfig1 -> Shell ()
+updateProposalInit top uid@(UpdateID _ date) cfg = do
   let dir = workPath top uid
       yaml = paramsFile dir
       keysDir = top </> "keys"
@@ -411,17 +414,12 @@ updateProposalInit top uid initial = do
   testfile yaml >>= \case
     True -> die "Config file already exists, stopping."
     False -> pure ()
-  case initial of
-    Left fromUid -> do
-      let src = paramsFile (workPath top fromUid)
-      printf ("Copying from "%fp%"\n") src
-      cp src yaml
-    Right cfg -> do
-      printf "Creating blank template\n"
-      liftIO $ encodeFile (encodeString yaml) cfg
+  printf ("*** Creating blank template for date "%s%"\n") date
+  liftIO $ encodeFile (encodeString yaml) cfg
   liftIO . sh $ copyKeys keysDir (dir </> "keys")
   mktree (dir </> "installers")
   printf ("*** Now check that "%fp%" is correct.\n") yaml
+  printf ("*** Next command is update-proposal find-installers "%s%"\n") date
 
 -- | Copy secret keys out of top-level keys directory into the work directory.
 copyKeys :: FilePath -> FilePath -> Shell ()
