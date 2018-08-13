@@ -679,7 +679,7 @@ doPropose :: CommandOptions -> UpdateProposalConfig4 -> ArchMap Bool -> Shell (M
 doPropose opts cfg systems = fold (runCommands opts [cmd] & grep isUpdateId) Fold.last
   where
     cmd = proposeUpdateCmd opts cfg systems
-    isUpdateId = count 64 hexDigit
+    isUpdateId = has (text "upId: " *> hash256Hex)
 
 proposeUpdateCmd :: CommandOptions -> UpdateProposalConfig4 -> ArchMap Bool -> Text
 proposeUpdateCmd opts cfg systems = format
