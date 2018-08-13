@@ -140,7 +140,7 @@ rec {
   cardano_report_process_monitor = {
     name = "cardano-report-server process is down";
     type = "service check";
-    query = config: "\"process.up\".over(\"depl:${config.deployment.name}\",\"process:report-server\").by(\"host\",\"process\").last(6).count_by_status()";
+    query = config: "\"process.up\".over(\"depl:${config.deployment.name}\",\"process:cardano-report-server\").by(\"host\",\"process\").last(6).count_by_status()";
     monitorOptions = {
       notify_no_data = true;
       no_data_timeframe = 10;
