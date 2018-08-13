@@ -106,7 +106,7 @@ in {
         excludeBuildFromContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = serokell:plutus.*:tests\..*
+        jobs = serokell:plutus.*
         inputs = plutus
         excludeBuildFromContext = 1
       </githubstatus>
