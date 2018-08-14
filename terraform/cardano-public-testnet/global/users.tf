@@ -28,6 +28,21 @@ resource "aws_iam_user_policy_attachment" "rodney_lorrimar_enforce_mfa" {
   policy_arn = "${aws_iam_policy.enforce_mfa.arn}"
 }
 
+module "user_amc" {
+  source  = "./modules/user"
+  name    = "alan.mcnicholas"
+  pgp_key  = "${var.deployer_pgp_key}"
+  pgp_user = "${file("${path.module}/../../../lib/gpg-keys/alan.mcnicholas.base64")}"
+}
+
+resource "aws_iam_user_policy_attachment" "alan_mcnicholas_enforce_mfa" {
+  user       = "${module.user_amc.name}"
+  policy_arn = "${aws_iam_policy.enforce_mfa.arn}"
+}
+
+
+########################################################################
+
 module "user_deployer_staging" {
   source   = "./modules/user"
   name     = "deployer.staging"
@@ -61,6 +76,11 @@ module "user_deployer_development" {
 
 resource "aws_iam_user_group_membership" "rodney_lorrimar_developers" {
   user = "${module.user_rodney.name}"
+  groups = [ "${aws_iam_group.developers.name}" ]
+}
+
+resource "aws_iam_user_group_membership" "alan_mcnicholas_developers" {
+  user = "${module.user_amc.name}"
   groups = [ "${aws_iam_group.developers.name}" ]
 }
 
