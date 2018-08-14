@@ -1,6 +1,6 @@
 steps:
   - label: 'iohk-ops-ci-staging'
-    command: ' nix-shell -A ci --run "runhaskell -iiohk scripts/ci.hs --with-staging --with-explorer --with-report-server --cleanup"'
+    command: ' nix-shell -A ci --run "runhaskell -iiohk scripts/ci.hs --with-staging --with-explorer --with-report-server --cleanup-configs"'
     agents:
       - "system=x86_64-linux"
     env:
@@ -8,7 +8,7 @@ steps:
     agents:
       system: x86_64-linux
   - label: 'iohk-ops-ci-infra'
-    command: 'nix-shell -A ci --run "runhaskell -iiohk scripts/ci.hs --with-infra --cleanup'
+    command: 'nix-shell -A ci --run "runhaskell -iiohk scripts/ci.hs --with-infra --cleanup-configs'
     agents:
       - "system=x86_64-linux"
     env:
