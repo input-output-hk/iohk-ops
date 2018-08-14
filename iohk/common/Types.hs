@@ -132,6 +132,7 @@ instance FromJSON NodeType where
 data Deployment
   = Every
   | Explorer
+  | Faucet
   | Infra
   | Nodes
   | ReportServer
@@ -143,6 +144,7 @@ data Environment
   | Benchmark
   | Production
   | Staging
+  | Testnet
   | Development
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Environment

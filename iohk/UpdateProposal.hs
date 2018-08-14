@@ -425,6 +425,7 @@ installerForEnv env = matchNet . installerNetwork . ciResultLocalPath
   where matchNet n = case env of
           Production  -> n == Just InstallerMainnet
           Staging     -> n == Just InstallerStaging
+          Testnet     -> n == Just InstallerTestnet
           Development -> True
           Any         -> False
 

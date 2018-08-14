@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <title>Cardano SL Testnet Installers</title>
+
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js" integrity="sha384-3ceskX3iaEnIogmQchP8opvBy3Mi7Ce34nWjpBIwVTHfGYWQS9jwHDVRnpKKHJg7" crossorigin="anonymous"></script>
+  </head>
+
+  <body>
+    <main role="main" class="container" id="app">
+      <h1 class="mt-5">Cardano SL Testnet Installers</h1>
+      <p class="lead">
+        These are the released Daedalus installers for Cardano
+        SL <em>Testnet</em>.
+      </p>
+
+      <p class="lead">
+        For mainnet releases, visit
+        the <a href="https://daedaluswallet.io/#download">Daedalus
+        Wallet downloads page</a>.
+      </p>
+
+      <div id="listing"></div>      
+    </main>
+
+    <!-- the JS variables for the listing -->
+    <script type="text/javascript">
+       var S3BL_IGNORE_PATH = true;
+       var BUCKET_NAME = '${bucket_name}';
+       var EXCLUDE_FILE = 'index.html';
+    </script>
+
+    <!-- the JS to do the listing -->
+    <script type="text/javascript" src="https://rawgit.com/rufuspollock/s3-bucket-listing/3d0774ea03d810d85099ef516ff5eeddbdd9cf5e/list.js"></script>
+  </body>
+</html>

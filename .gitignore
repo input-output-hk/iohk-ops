@@ -21,6 +21,8 @@ static/*.secret
 static/github_token
 static/buildkite_token
 static/id_buildfarm
+static/recaptcha_secret_key
+static/recaptcha_site_key
 github_token
 
 image

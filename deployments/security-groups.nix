@@ -106,6 +106,7 @@ with import ../lib.nix;
           };
         centralRegionSGNames = centralRegion:
             [ "allow-to-explorer-${centralRegion}"
+              "allow-to-faucet-${centralRegion}"
               "allow-to-report-server-${centralRegion}" ];
         centralRegionSGs = centralRegion:
           let region = centralRegion;
@@ -116,6 +117,19 @@ with import ../lib.nix;
               rules = [{
                 protocol = "tcp";
                 fromPort = 80; toPort = 80;
+                sourceIp = "0.0.0.0/0";
+              }];
+            };
+            "allow-to-faucet-${region}" = {
+              inherit region accessKeyId;
+              description = "Access Cardano Faucet";
+              rules = [{
+                protocol = "tcp";
+                fromPort = 80; toPort = 80;
+                sourceIp = "0.0.0.0/0";
+              } {
+                protocol = "tcp";
+                fromPort = 443; toPort = 443;
                 sourceIp = "0.0.0.0/0";
               }];
             };

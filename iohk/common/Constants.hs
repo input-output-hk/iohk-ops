@@ -82,6 +82,7 @@ envSettings env =
   let deplAgnosticFiles      = [ (Every,          All, "deployments/keypairs.nix")
                                , (Explorer,       All, "deployments/cardano-explorer.nix")
                                , (ReportServer,   All, "deployments/report-server.nix")
+                               , (Faucet,         All, "deployments/cardano-faucet.nix")
                                , (Nodes,          All, "deployments/cardano-nodes.nix")
                                , (Infra,          All, "deployments/infrastructure.nix")
                                , (Infra,          AWS, "deployments/infrastructure-target-aws.nix") ]
@@ -112,13 +113,26 @@ envSettings env =
                                , (ReportServer,   All, "deployments/report-server-env-production.nix")
                                , (Infra,          All, "deployments/infrastructure-env-production.nix")
                                ] <> deplAgnosticFiles}
-    Development  -> EnvSettings
+    Testnet  -> EnvSettings
+      { envDeployerUser      = "testnet"
+      , envDefaultConfigurationKey = "testnet_full"
+      , envDefaultConfig     = "testnet.yaml"
+      , envDefaultTopology   = "topology-testnet.yaml"
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
+                               , (Explorer,       All, "deployments/security-groups.nix")
+                               , (Faucet,         All, "deployments/security-groups.nix")
+                               , (Nodes,          All, "deployments/cardano-nodes-env-testnet.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer-env-testnet.nix")
+                               , (Faucet,         All, "deployments/cardano-faucet-env-testnet.nix")
+                               ] <> deplAgnosticFiles}
+    Development -> EnvSettings
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "devnet"
       , envDefaultConfig     = "config.yaml"
       , envDefaultTopology   = "topology-development.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
+                               , (Faucet,         All, "deployments/cardano-faucet-env-development.nix")
                                , (ReportServer,   All, "deployments/report-server-env-development.nix")
                                ] <> deplAgnosticFiles}
     Benchmark -> EnvSettings
@@ -133,6 +147,7 @@ envSettings env =
     Any -> error "envSettings called with 'Any'"
 
 selectDeployer :: Environment -> [Deployment] -> NodeName
-selectDeployer Staging delts | elem Nodes delts = "iohk"
-                             | otherwise        = "cardano-deployer"
-selectDeployer _ _                              = "cardano-deployer"
+selectDeployer Staging   delts | elem Nodes delts = "iohk"
+                               | otherwise        = "cardano-deployer"
+selectDeployer Testnet _                          = "testnet-deployer"
+selectDeployer _ _                                = "cardano-deployer"
