@@ -124,7 +124,7 @@ let
     cardano-sl-master = mkCardano "master";
     cardano-sl-1-0 = mkCardano "release/1.0.x";
     cardano-sl-1-2 = mkCardano "release/1.2.0";
-    cardano-sl-1-3 = mkCardano "release/1.3.0";
+    cardano-sl-1-3 = mkCardano "release/1.3.1";
     daedalus = mkDaedalus "develop";
     plutus = mkPlutus "master";
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
