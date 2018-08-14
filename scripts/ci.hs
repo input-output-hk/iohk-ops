@@ -1,6 +1,3 @@
-#!/usr/bin/env nix-shell
-#!nix-shell ../shell.nix -A ci --run "runhaskell -iiohk scripts/ci.hs"
-
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 
 import           Turtle
