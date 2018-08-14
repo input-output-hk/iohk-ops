@@ -3,7 +3,7 @@
     "hidden": false,
     "description": "Jobsets",
     "nixexprinput": "src",
-    "nixexprpath": "jobsets/default.nix",
+    "nixexprpath": "jobsets/default-mantis.nix",
     "checkinterval": 300,
     "schedulingshares": 20,
     "enableemail": true,
