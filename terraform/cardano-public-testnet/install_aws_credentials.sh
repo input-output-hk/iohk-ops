@@ -6,7 +6,7 @@ top=$(cd "$(dirname "$0")"; pwd)
 keys="$top/global/modules/user/private"
 
 key_id() {
-    terraform state show "module.global.module.$1.aws_iam_access_key.self" | awk -F= '/^id/ { print $2; }'
+    terraform state show "module.global.module.$1.aws_iam_access_key.self" | awk -F'= *' '/^id/ { print $2; }'
 }
 
 access_key() {
@@ -27,9 +27,9 @@ iam_username() {
 }
 
 install_key() {
-    user=$1
-    id=$2
-    secret=$3
+    user="$1"
+    id="$2"
+    secret="$3"
     aws="/home/$user/.aws"
     sudo mkdir -p "$aws"
     sudo dd status=none "of=$aws/credentials" <<EOF
