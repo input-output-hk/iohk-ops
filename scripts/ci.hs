@@ -19,14 +19,14 @@ data Settings = Settings
    , sInfra           :: Bool
    , sExplorer        :: Bool
    , sReportServer    :: Bool
-   }
+  } deriving Show
 settingsParser :: Parser Settings
 settingsParser =
     Settings <$> (optPath "iohk-ops" 'o' "Path to `iohk-ops` binary" <|> pure FP.empty)
              <*> switch  "cleanup-configs" 'c' "Clean up configs"
              <*> switch  "with-staging" 's' "Build Staging"
              <*> switch  "with-prod" 'p' "Build Production"
-             <*> switch  "with-infra" 'i' "Build Production"
+             <*> switch  "with-infra" 'i' "Build Infra"
              <*> switch  "with-explorer" 'e' "Enable Explorer"
              <*> switch  "with-report-server" 'r' "Enable Report Server"
 
@@ -36,7 +36,7 @@ main = do
       Just home <- need "HOME"
       generateFakeSecrets
       generateEmptyKeys
-      print sIohkOps
+      print settings
       when sStaging $ view $ iohkOpsNewCreateDeploy settings "test-staging" "staging" "cardano"
       when sInfra $ view $ iohkOpsNewCreateDeploy settings "test-infra" "production" "infra"
 
