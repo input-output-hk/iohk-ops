@@ -29,7 +29,7 @@ import Data.Yaml (decodeFileEither, encodeFile)
 import Data.Aeson hiding (Options)
 import qualified Data.HashMap.Strict as HM
 import qualified Control.Foldl as Fold
-import Data.Char (isHexDigit)
+import Data.Char (isHexDigit, toLower)
 import Data.Bifunctor (first)
 import Data.Maybe (fromMaybe, isJust, fromJust)
 import Data.List (find, nub)
@@ -42,7 +42,9 @@ import Types ( NixopsDepl(..), Environment(..), Arch(..)
              , archMapToList, archMapFromList, lookupArch
              , idArchMap, archMapEach)
 import UpdateLogic ( InstallersResults(..), CIResult(..)
-                   , getInstallersResults, githubWikiRecord
+                   , CISystem(..), githubWikiRecord
+                   , getInstallersResults, selectBuildNumberPredicate
+                   , installerPredicates
                    , runAWS', uploadHashedInstaller, updateVersionJson
                    , uploadSignature )
 import RunCardano
@@ -64,6 +66,9 @@ data UpdateProposalCommand
 
 data UpdateProposalStep
   = UpdateProposalFindInstallers
+    { updateProposalBuildkiteBuildNum :: Maybe Int
+    , updateProposalAppVeyorBuildNum  :: Maybe Int
+    }
   | UpdateProposalSignInstallers
     { updateProposalGPGUserId         :: Maybe Text
     }
@@ -82,7 +87,7 @@ parseUpdateProposalCommand = subparser $
        (info ((UpdateProposalInit <$> mdate <*> updateProposalConfig) <**> helper)
          (progDesc "Create template config file and working directory.") ) )
   <> ( command "find-installers"
-       (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalFindInstallers) <**> helper)
+       (info ((UpdateProposalCommand <$> date <*> (UpdateProposalFindInstallers <$> buildNum Buildkite <*> buildNum AppVeyor)) <**> helper)
          (progDesc "Download installer files from the Daedalus build.") ) )
   <> ( command "sign-installers"
        (info ((UpdateProposalCommand <$> date <*> (UpdateProposalSignInstallers <$> optional userId)) <**> helper)
@@ -117,6 +122,13 @@ parseUpdateProposalCommand = subparser $
       <*> ( option auto (long "voter-index" <> short 'V' <> metavar "INTEGER"
            <> help "A number representing you, the vote proposer. Check the wiki for more info.") )
 
+    buildNum :: CISystem -> Parser (Maybe Int)
+    buildNum ci = optional (option auto arg)
+      where
+        arg = long name <> metavar "NUMBER"
+              <> help ("Select build number for " <> show ci)
+        name = map toLower (show ci) <> "-build-num"
+
     userId :: Parser Text
     userId = fmap T.pack $ strOption $
              long "local-user" <> short 'u' <> metavar "USER-ID"
@@ -148,7 +160,7 @@ updateProposal o cfg cmd = do
       let opts = commandOptions (workPath top (UpdateID (cName cfg) date))
                  cslPath configKey (cUpdateBucket cfg)
       sh $ case step of
-        UpdateProposalFindInstallers -> updateProposalFindInstallers opts (cEnvironment cfg)
+        UpdateProposalFindInstallers bk av -> updateProposalFindInstallers opts (cEnvironment cfg) bk av
         UpdateProposalSignInstallers userId -> updateProposalSignInstallers opts userId
         UpdateProposalUploadS3 -> updateProposalUploadS3 cfg opts
         UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON cfg opts
@@ -428,14 +440,21 @@ copyKeys src dst = mkdir dst >> findKeys src >>= copy
 ----------------------------------------------------------------------------
 
 -- | Step 2. Find installers and download them.
-updateProposalFindInstallers :: CommandOptions -> Environment -> Shell ()
-updateProposalFindInstallers opts env = do
+updateProposalFindInstallers :: CommandOptions
+                             -> Environment
+                             -> Maybe Int -- ^ Buildkite build number
+                             -> Maybe Int -- ^ AppVeyor build number
+                             -> Shell ()
+updateProposalFindInstallers opts env bkNum avNum = do
   params <- loadParams opts
   void $ doCheckConfig params
-  echo "*** Finding installers"
   let rev = unGitRevision . cfgDaedalusRevision $ params
       destDir = Just (installersDir opts)
-  res <- liftIO $ getInstallersResults (configurationKeys env) (installerForEnv env) rev destDir
+      instP = installerPredicates (installerForEnv env)
+              (selectBuildNumberPredicate bkNum avNum)
+
+  logFindInstallers env bkNum avNum
+  res <- liftIO $ getInstallersResults (configurationKeys env) instP  rev destDir
 
   echo "*** Hashing installers with sha256sum"
   sha256 <- getHashes sha256sum res
@@ -445,6 +464,15 @@ updateProposalFindInstallers opts env = do
   echo "*** Finished."
   writeWikiRecord opts res
   storeParams opts (UpdateProposalConfig2 params res hashes sha256)
+
+logFindInstallers :: Environment -> Maybe Int -> Maybe Int -> Shell ()
+logFindInstallers env bk av = do
+  printf ("*** Finding "%w%" installers\n") env
+  buildNum Buildkite bk
+  buildNum AppVeyor av
+  where
+    buildNum _ Nothing = pure ()
+    buildNum ci (Just num) = printf ("    "%w%" build #"%d%"\n") ci num
 
 -- | Checks if an installer from a CI result matches the environment
 -- that iohk-ops is running under.

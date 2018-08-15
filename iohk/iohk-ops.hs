@@ -15,10 +15,10 @@ import           Data.Optional                    (Optional)
 import qualified Data.Text                     as T
 import qualified Filesystem.Path.CurrentOS     as Path
 import qualified System.Environment            as Sys
-import           Turtle                    hiding (env, err, fold, inproc, procs, shells, e, f, o, x)
+import           Turtle                    hiding (env, err, fold, inproc, procs, shells, option, e, f, o, x)
 import           Time.Types
 import           Time.System
-import           Options.Applicative.Builder (strOption, long, short, metavar)
+import           Options.Applicative              (option, str, auto, long, short, metavar)
 
 import           Constants
 import           NixOps
@@ -124,7 +124,7 @@ data Command where
   GetJournals           :: JournaldTimeSpec -> Maybe JournaldTimeSpec -> Command
   CWipeNodeDBs          :: Confirmation -> Command
   PrintDate             :: Command
-  FindInstallers        :: Text -> Maybe FilePath -> Command
+  FindInstallers        :: Text -> Maybe FilePath -> Maybe Int -> Maybe Int -> Command
   UpdateProposal        :: UpdateProposalCommand -> Command
 deriving instance Show Command
 
@@ -207,7 +207,7 @@ centralCommandParser =
                                 <$> parserConfirmation "Wipe node DBs on the entire cluster?")
    , ("date",                   "Print date/time",                                                  pure PrintDate)
    , ("update-proposal",        "Subcommands for updating wallet installers. Apply commands in the order listed.", UpdateProposal <$> parseUpdateProposalCommand)
-   , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (T.pack <$> strOption (long "daedalus-rev" <> short 'r' <> metavar "SHA1")) <*> optional (optPath "download" 'd' "Download the found installers to the given directory."))
+   , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (option str (long "daedalus-rev" <> short 'r' <> metavar "SHA1")) <*> optional (optPath "download" 'd' "Download the found installers to the given directory.") <*> optional (option auto (long "buildkite-build-num"  <> metavar "NUMBER")) <*> optional (option auto (long "appveyor-build-num" <> metavar "NUMBER")))
    ]
 
    <|> subcommandGroup "Other:"
@@ -274,7 +274,7 @@ runTop o@Options{..} args topcmd = do
             GetJournals since until  -> Ops.getJournals               o c since until
             CWipeNodeDBs confirm     -> Ops.wipeNodeDBs               o c confirm
             PrintDate                -> Ops.date                      o c
-            FindInstallers rev dl    -> Ops.findInstallers            c rev dl
+            FindInstallers rev dl bk av -> Ops.findInstallers         c rev dl bk av
             UpdateProposal up        -> updateProposal                o c up
             Clone{..}                -> error "impossible"
             New{..}                  -> error "impossible"
