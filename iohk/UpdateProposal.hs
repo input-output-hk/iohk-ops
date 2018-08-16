@@ -11,6 +11,7 @@ module UpdateProposal
   , UpdateProposalConfig3(..)
   , UpdateProposalConfig4(..)
   , UpdateProposalConfig5(..)
+  , forResults
   ) where
 
 import Prelude hiding (FilePath)
@@ -30,7 +31,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Control.Foldl as Fold
 import Data.Char (isHexDigit)
 import Data.Bifunctor (first)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, fromJust)
 import Data.List (find, nub)
 
 import NixOps ( Options, NixopsConfig(..)
@@ -38,7 +39,8 @@ import NixOps ( Options, NixopsConfig(..)
               , getCardanoSLConfig )
 import Types ( NixopsDepl(..), Environment(..), Arch(..)
              , formatArch, ArchMap, archMap, mkArchMap
-             , archMapToList, archMapFromList, lookupArch )
+             , archMapToList, archMapFromList, lookupArch
+             , idArchMap, archMapEach)
 import UpdateLogic ( InstallersResults(..), CIResult(..)
                    , realFindInstallers, githubWikiRecord
                    , runAWS', uploadHashedInstaller, updateVersionJson
@@ -501,7 +503,7 @@ updateProposalUploadS3 cfg opts@CommandOptions{..} = do
   storeParams opts (UpdateProposalConfig3 params)
 
 uploadInstallers :: NixopsConfig -> Text -> InstallersResults -> InstallerHashes -> Shell (ArchMap Text)
-uploadInstallers cfg bucket res hashes = runAWS' $ needResults res upload
+uploadInstallers cfg bucket res hashes = runAWS' $ forResults res upload
   where
     upload arch ci = do
       let hash = lookupArch arch hashes
@@ -510,13 +512,9 @@ uploadInstallers cfg bucket res hashes = runAWS' $ needResults res upload
 
 -- | Apply a hashing command to all the installer files.
 getHashes :: (FilePath -> Shell Text) -> InstallersResults -> Shell InstallerHashes
-getHashes getHash res = do
-  linux64 <- check Linux64 =<< needResult Linux64 res resultHash
-  mac64 <- check Mac64 =<< needResult Mac64 res resultHash
-  win64 <- check Win64 =<< needResult Win64 res resultHash
-  pure $ mkArchMap linux64 mac64 win64
+getHashes getHash res = forResults res resultHash
   where
-    resultHash = getHash . ciResultLocalPath
+    resultHash arch r = getHash (ciResultLocalPath r) >>= check arch
     check arch "" = die $ format ("Hash for "%w%" installer is empty") arch
     check _ h     = pure h
 
@@ -619,23 +617,27 @@ updateProposalGenerate opts@CommandOptions{..} = do
   echo "*** Finished generate step. Next step is to submit."
   echo "*** Carefully check the parameters yaml file."
 
-needResults :: MonadIO io => InstallersResults -> (Arch -> CIResult -> io a) -> io (ArchMap a)
-needResults rs action = do
-  linux64 <- needResult Linux64 rs (action Linux64)
-  mac64 <- needResult Mac64 rs (action Mac64)
-  win64 <- needResult Win64 rs (action Win64)
-  pure $ mkArchMap linux64 mac64 win64
+-- | Partition CI results by arch.
+groupResults :: InstallersResults -> ArchMap [CIResult]
+groupResults rs = filt <$> idArchMap
+  where filt arch = filter ((== arch) . ciResultArch) (ciResults rs)
 
-needResult :: MonadIO io => Arch -> InstallersResults -> (CIResult -> io a) -> io a
-needResult arch rs action = case Data.List.find ((== arch) . ciResultArch) (ciResults rs) of
-  Just r -> action r
-  Nothing -> die $ format ("The CI result for "%w%" is required but was not found.") arch
+-- | Perform an action on the CI result of each arch.
+forResults :: MonadIO io => InstallersResults -> (Arch -> CIResult -> io b) -> io (ArchMap b)
+forResults rs action = needCIResult rs >>= archMapEach action
+
+-- | Get a single CI result for each arch and crash if not found.
+needCIResult :: MonadIO io => InstallersResults -> io (ArchMap CIResult)
+needCIResult = archMapEach need . groupResults
+  where
+    need arch [] = die $ format ("The CI result for "%w%" is required but was not found.") arch
+    need arch (r:_) = pure r
 
 -- | Copy installers to a filename which is their hash and then use
 -- "file" to verify that installers are of the expected type. Exit the
 -- program otherwise.
 copyInstallerFiles :: CommandOptions -> InstallersResults -> InstallerHashes -> Shell ()
-copyInstallerFiles opts res hashes = void $ needResults res copy
+copyInstallerFiles opts res hashes = void $ forResults res copy
   where
     copy :: Arch -> CIResult -> Shell ()
     copy a = copy' (installerMagic a) (lookupArch a hashes)
