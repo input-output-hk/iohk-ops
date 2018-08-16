@@ -24,7 +24,7 @@ in {
       };
       executable = mkOption {
         type = types.package;
-        default = (import ./../default.nix {}).cardano-report-server-static;
+        default = (import ../default.nix {}).cardano-report-server-static;
       };
       zendesk = {
         email = mkOption {

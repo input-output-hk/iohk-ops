@@ -1,13 +1,13 @@
-with (import ./../lib.nix);
+with import ../lib.nix;
 
-globals: params:
 { config, pkgs, lib, ... }:
 
 let
-  cardanoPackages = import ./../default.nix {};
+  cardanoPackages = import ../default.nix {};
   explorer-drv = cardanoPackages.cardano-sl-explorer-static;
 in
 {
+  imports = [ ./cardano.nix ];
   global.dnsHostname   = mkForce   "cardano-explorer";
 
   services.cardano-node.executable = "${explorer-drv}/bin/cardano-explorer";
