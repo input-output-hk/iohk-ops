@@ -9,7 +9,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module UpdateLogic
-  ( realFindInstallers
+  ( getInstallersResults
+  , realFindInstallers
   , CIResult(..)
   , uploadHashedInstaller
   , uploadSignature
@@ -136,13 +137,18 @@ cdnLink NixopsConfig{..} (ObjectKey key) = mconcat [ "https://", cInstallerURLBa
 
 buildkiteTokenFile = "static/buildkite_token" :: String
 
-realFindInstallers :: ApplicationVersionKey -> InstallerPredicate -> Rev -> Maybe FilePath -> IO InstallersResults
-realFindInstallers keys instP daedalusRev destDir = do
+realFindInstallers :: InstallerPredicate -> Rev -> Maybe FilePath -> IO [CIResult]
+realFindInstallers instP daedalusRev destDir = do
   buildkiteToken <- liftIO $ loadBuildkiteToken
-  globalResult <- liftIO $ findVersionInfo keys daedalusRev
   st <- liftIO $ statuses <$> fetchGithubStatus "input-output-hk" "daedalus" daedalusRev
-  results <- mapM (handleCIResults instP destDir <=< findInstallersFromStatus buildkiteToken destDir) st
-  pure $ InstallersResults (concat results) globalResult
+  let find = handleCIResults instP destDir <=< findInstallersFromStatus buildkiteToken destDir
+  concat <$> mapM find st
+
+getInstallersResults :: ApplicationVersionKey -> InstallerPredicate -> Rev -> Maybe FilePath -> IO InstallersResults
+getInstallersResults keys instP daedalusRev destDir = do
+  ciResults <- realFindInstallers instP daedalusRev destDir
+  globalResult <- findVersionInfo keys daedalusRev
+  pure $ InstallersResults ciResults globalResult
 
 handleCIResults :: InstallerPredicate -> Maybe FilePath -> Either Text [CIResult] -> IO [CIResult]
 handleCIResults instP destDir (Right rs) = do

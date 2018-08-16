@@ -42,7 +42,7 @@ import Types ( NixopsDepl(..), Environment(..), Arch(..)
              , archMapToList, archMapFromList, lookupArch
              , idArchMap, archMapEach)
 import UpdateLogic ( InstallersResults(..), CIResult(..)
-                   , realFindInstallers, githubWikiRecord
+                   , getInstallersResults, githubWikiRecord
                    , runAWS', uploadHashedInstaller, updateVersionJson
                    , uploadSignature )
 import RunCardano
@@ -441,7 +441,7 @@ updateProposalFindInstallers opts env = do
   echo "*** Finding installers"
   let rev = unGitRevision . cfgDaedalusRevision $ params
       destDir = Just (installersDir opts)
-  res <- liftIO $ realFindInstallers (configurationKeys env) (installerForEnv env) rev destDir
+  res <- liftIO $ getInstallersResults (configurationKeys env) (installerForEnv env) rev destDir
 
   echo "*** Hashing installers with sha256sum"
   sha256 <- getHashes sha256sum res
