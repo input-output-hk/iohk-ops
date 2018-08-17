@@ -3,7 +3,7 @@
 {
   defaults = {
     global = {
-      inherit (globals) environment systemStart topologyYaml nodeMap nRelays;
+      inherit (globals) environment systemStart topologyYaml nodeMap nRelays relays;
     };
   };
 }
