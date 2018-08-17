@@ -11,7 +11,7 @@ let nodeMap = { inherit (globals.fullMap) report-server; }; in
     ];
 
     services.report-server.zendesk = {
-      accountName = "iohktrial2";  # NB. expires on 2018-09-08
+      accountName = "iohk1534436789";  # the sandbox on the main IOHK acct
       email = "staging-report-server@iohk.io";
       tokenFile = "/var/lib/keys/zendesk-token";
     };
