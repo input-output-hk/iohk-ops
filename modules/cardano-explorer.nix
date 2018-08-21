@@ -13,7 +13,7 @@ in
   services.cardano-node.executable = "${explorer-drv}/bin/cardano-explorer";
 
   networking.firewall.allowedTCPPorts = [
-    80 # nginx
+    80 443 # nginx
   ];
 
   services.nginx = {
@@ -23,7 +23,8 @@ in
                            then config.global.dnsDomainname else "iohkdev.io";
      in {
       "cardano-explorer.${vhostDomainName}" = {
-        # TLS provided by cloudfront
+        enableACME = true;
+        addSSL = true;
         locations = {
           "/" = {
             root = cardanoPackages.cardano-sl-explorer-frontend;
