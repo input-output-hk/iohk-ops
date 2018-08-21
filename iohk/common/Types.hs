@@ -193,7 +193,7 @@ data NixopsConfig = NixopsConfig
   , cEnvironment      :: Environment
   , cTarget           :: Target
   , cUpdateBucket     :: Text
-  , cInstallerURLBase :: Text
+  , cInstallerURLBase :: Maybe Text
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
   , cDeplArgs         :: DeplArgs

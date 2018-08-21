@@ -377,7 +377,7 @@ instance FromJSON NixopsConfig where
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "installer-bucket"
-        <*> v .: "installer-url-base" .!= "--unspecified--"
+        <*> v .: "installer-url-base"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
@@ -442,7 +442,7 @@ mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTa
       cFiles          = deploymentFiles                         cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
       cUpdateBucket   = "default-bucket"
-      cInstallerURLBase = "--undefined--"
+      cInstallerURLBase = Nothing
   cDeplArgs <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology  <- getSimpleTopo cElements cTopology
   nixpkgs   <- Path.fromText <$> incmdStrip o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"]
