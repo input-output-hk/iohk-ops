@@ -90,7 +90,7 @@ parseUpdateProposalCommand = subparser $
        (info ((UpdateProposalCommand <$> date <*> (UpdateProposalFindInstallers <$> buildNum Buildkite <*> buildNum AppVeyor)) <**> helper)
          (progDesc "Download installer files from the Daedalus build.") ) )
   <> ( command "sign-installers"
-       (info ((UpdateProposalCommand <$> date <*> (UpdateProposalSignInstallers <$> optional userId)) <**> helper)
+       (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalSignInstallers) <**> helper)
          (progDesc "Sign installer files with GPG.") ) )
   <> ( command "upload-s3"
        (info ((UpdateProposalCommand <$> date <*> pure UpdateProposalUploadS3) <**> helper)
