@@ -26,6 +26,8 @@ in rec {
 
   hydra-build-slave-1 = hydra;
   hydra-build-slave-2 = hydra;
+  hydra-build-slave-3 = hydra;
+  hydra-build-slave-4 = hydra;
 
   buildkite-agent-1   = hydra;
   buildkite-agent-2   = hydra;
