@@ -52,6 +52,8 @@ in {
     buildMachines = [
       (mkLinux (cleanIp "hydra-build-slave-1"))
       (mkLinux (cleanIp "hydra-build-slave-2"))
+      (mkLinux (cleanIp "hydra-build-slave-3"))
+      (mkLinux (cleanIp "hydra-build-slave-4"))
       (mkMac "osx-1.aws.iohkdev.io")
       (mkMac "osx-2.aws.iohkdev.io")
       (mkMac "osx-3.aws.iohkdev.io")

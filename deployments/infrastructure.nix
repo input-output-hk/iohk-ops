@@ -31,6 +31,8 @@ in {
 
   hydra-build-slave-1 = mkHydraBuildSlave;
   hydra-build-slave-2 = mkHydraBuildSlave;
+  hydra-build-slave-3 = mkHydraBuildSlave;
+  hydra-build-slave-4 = mkHydraBuildSlave;
 
   buildkite-agent-1   = mkBuildkiteAgent;
   buildkite-agent-2   = mkBuildkiteAgent;
