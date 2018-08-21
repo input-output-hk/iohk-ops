@@ -5,7 +5,7 @@ This document describes the IOHK ops tool (`iohk-ops`).
 `iohk-ops` is primarily a convenient wrapper for NixOps, but it also
 performs other ops tasks.
 
-The script entry point is [`iohk/iohk-ops.hs`](https://github.com/input-output-hk/iohk-ops/blob/develop/iohk/iohk-ops.hs)
+The script entry point is [`iohk/iohk-ops.hs`](https://github.com/input-output-hk/iohk-ops/blob/master/iohk/iohk-ops.hs)
 and all of the sources are in the [iohk-ops](https://github.com/input-output-hk/iohk-ops)
 repo.
 
@@ -93,7 +93,7 @@ You need to ensure the following files are present (they can just be empty):
 ### Lack of memory
 
 If you don't have enough memory to build, then set the `iohk-ops --initial-heap-size` option (value is in gibibytes), and trim
-[`topology-production.yaml`](https://github.com/input-output-hk/iohk-ops/blob/develop/topology-production.yaml).
+[`topology-production.yaml`](https://github.com/input-output-hk/iohk-ops/blob/master/topology-production.yaml).
 
 To trim the topology file:
 1. delete all entries except `c-a-1`, `r-a-1`, `p-b-1`.
@@ -110,8 +110,8 @@ The following subcommands have been rolled into a single
  - `s3upload`
  - `set-version-json`
  
-See [Daedalus Installer Update
-Procedure](Daedalus-Installer-Update-Procedure) for instructions.
+See [Daedalus Installer Update Procedure](./Daedalus-Installer-Update-Procedure.md)
+for instructions.
 
 ## find-installers
 

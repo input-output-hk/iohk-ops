@@ -35,6 +35,8 @@ After cloning this repo, start a `nix-shell`.
     % nix-shell
     [nix-shell:~/iohk/iohk-ops]$ io --help
 
+For more documentation, see [`doc/iohk-ops-reference.md`](./doc/iohk-ops-reference.md).
+
 ### Development
 
 To hack on the `iohk-ops` tool, use
