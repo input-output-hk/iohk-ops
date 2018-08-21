@@ -133,7 +133,8 @@ loadBuildkiteToken = try (T.readFile buildkiteTokenFile) >>= \case
     st = makeFormat T.pack
 
 cdnLink :: HasCallStack => NixopsConfig -> ObjectKey -> Text
-cdnLink NixopsConfig{..} (ObjectKey key) = mconcat [ "https://", cInstallerURLBase, "/", key ]
+cdnLink NixopsConfig{cInstallerURLBase=Nothing, ..} _ = error "installer-url-base is required in the configuration YAML file, but was not specified"
+cdnLink NixopsConfig{cInstallerURLBase=Just cInstallerURLBase, ..} (ObjectKey key) = mconcat [ "https://", cInstallerURLBase, "/", key ]
 
 buildkiteTokenFile = "static/buildkite_token" :: String
 
