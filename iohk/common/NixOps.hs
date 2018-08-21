@@ -899,7 +899,7 @@ configurationKeys env _ = error $ "Application versions not used in '" <> show e
 
 findInstallers :: NixopsConfig -> T.Text -> Maybe FilePath -> IO ()
 findInstallers c daedalusRev destDir = do
-  installers <- realFindInstallers (configurationKeys $ cEnvironment c) (const True) daedalusRev destDir
+  installers <- getInstallersResults (configurationKeys $ cEnvironment c) (const True) daedalusRev destDir
   printInstallersResults installers
   case destDir of
     Just dir -> void $ proc "ls" [ "-ltrha", tt dir ] mempty
