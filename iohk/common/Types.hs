@@ -195,7 +195,7 @@ data NixopsConfig = NixopsConfig
   , cTarget           :: Target
   , cUpdateBucket     :: Text
   , cInstallerURLBase :: Maybe Text
-  , cSigningFinger    :: GPGFinger
+  , cSigningFinger    :: Maybe GPGFinger
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
   , cDeplArgs         :: DeplArgs

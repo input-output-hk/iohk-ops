@@ -161,7 +161,8 @@ updateProposal o cfg cmd = do
                  cslPath configKey (cUpdateBucket cfg)
       sh $ case step of
         UpdateProposalFindInstallers bk av -> updateProposalFindInstallers opts (cEnvironment cfg) bk av
-        UpdateProposalSignInstallers -> updateProposalSignInstallers opts (cSigningFinger cfg)
+        UpdateProposalSignInstallers -> updateProposalSignInstallers opts $ cSigningFinger cfg &
+                                        fromMaybe (error "The 'signing-fingerprint' option is missing from the configuration YAML file.")
         UpdateProposalUploadS3 -> updateProposalUploadS3 cfg opts
         UpdateProposalSetVersionJSON -> updateProposalSetVersionJSON cfg opts
         UpdateProposalSubmit relay dryRun systems -> do
