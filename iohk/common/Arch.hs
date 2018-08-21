@@ -37,7 +37,6 @@ formatArch Mac64 = "macOS"
 formatArch Win64 = "Windows"
 
 -- | A map of values indexed by Arch.
--- Maybe "type ArchMap a = Arch -> a" would be better but this works.
 data ArchMap a = ArchMap { linux64 :: !a, mac64 :: !a, win64 :: !a }
   deriving (Show, Read, Eq, Generic, Functor, Foldable, Traversable)
 
