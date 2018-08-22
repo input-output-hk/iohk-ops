@@ -897,9 +897,11 @@ configurationKeys Testnet    Mac64   = "testnet_wallet_macos64"
 configurationKeys Testnet    Linux64 = "testnet_wallet_linux64"
 configurationKeys env _ = error $ "Application versions not used in '" <> show env <> "' environment"
 
-findInstallers :: NixopsConfig -> T.Text -> Maybe FilePath -> IO ()
-findInstallers c daedalusRev destDir = do
-  installers <- getInstallersResults (configurationKeys $ cEnvironment c) (const True) daedalusRev destDir
+findInstallers :: NixopsConfig -> T.Text -> Maybe FilePath
+               -> Maybe Int -> Maybe Int -> IO ()
+findInstallers c daedalusRev destDir bkNum avNum = do
+  let instP = selectBuildNumberPredicate bkNum avNum
+  installers <- getInstallersResults (configurationKeys $ cEnvironment c) instP daedalusRev destDir
   printInstallersResults installers
   case destDir of
     Just dir -> void $ proc "ls" [ "-ltrha", tt dir ] mempty

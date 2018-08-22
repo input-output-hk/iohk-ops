@@ -16,6 +16,7 @@ image/
 logs/
 logs-analyze/
 /nixops
+/update-proposals/
 
 static/*.secret
 static/github_token
