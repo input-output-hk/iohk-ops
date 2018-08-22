@@ -1,12 +1,13 @@
+# Daedalus Installer Update Procedure
+
 After the installers are built in CI, they need to be copied to the
 installer updates S3 bucket, and an update proposal needs to be
 submitted to the cardano-sl network.
 
 This is how wallet clients will self-update.
 
-**New!** These instructions have been updated for the `iohk-ops`
-update proposal automation implemented in [DEVOPS-656][],
-[DEVOPS-709][], and [DEVOPS-710][].
+**New!** There have recently been some changes and improvements to
+these commands from [DEVOPS-868][].
 
 ## Running the scripts
 
@@ -29,7 +30,6 @@ accessible with the `--help` option.
 | sign-installers     | Sign downloaded installer files with GPG.           |
 | upload-s3           | Upload installer files to the S3 bucket.            |
 | set-version-json    | Update the version info file in the the S3 bucket.  |
-| generate            | Create a voting transaction (misnomer [DEVOPS-868][]). |
 | submit              | Send update proposal transaction to the network.    |
 
 The commands are run in order with manual checks between each step.
@@ -41,17 +41,18 @@ The commands are run in order with manual checks between each step.
 2. You need to know the following things:
 
    * Daedalus revision to propose.
-   * The `lastKnownBlockVersion`, seems to be always `'0.1.0'`.
-   * The `voterIndex`, according to table below.
-   * IP address of a privileged relay.
+   * The `lastKnownBlockVersion`, according to the table below.
+   * The `voterIndex`, according to the table below.
+   * Signing key passphrase (optional).
+   * IP address of a privileged relay (use `io info`).
 
 ## 1. Initialise params
 
     io -c NETWORK.yaml update-proposal init [DATE] --revision REVISION --block-version VER --voter-index N
 
-Where *DATE* is a string which identifies the update proposal (will be
-today's date in `YYYY-MM-DD` format by default). The other values
-should be set as required.
+Where *DATE* is a string which identifies the update proposal. By
+default it will be today's date in `YYYY-MM-DD` format. The other
+values should be set as required.
 
 This command will create a template config file like
 `update-proposals/mainnet-2018-04-03/params.yaml`.
@@ -70,7 +71,10 @@ correct values. The contents will look similar to this:
 
 ## 2. Download installer files from CI
 
-    io -c NETWORK.yaml update-proposal find-installers [DATE]
+    io -c NETWORK.yaml update-proposal find-installers DATE
+
+The *DATE* parameter should be the same as what was used for the
+`init` step.
 
 This will locate the CI builds for the previously configured revision
 and download their installer artifacts to the `installers`
@@ -106,10 +110,13 @@ user manually intervenes by manually installing an update.
 
 ## 3. (Optional) Sign installer files with GPG
 
-The GPG key set up is yet to be finalised in [DEVOPS-710][]. This step
-requires a signing key available on the deployer host.
+This step requires a signing key available on the deployer host.
 
-    io -c NETWORK.yaml update-proposal sign-installers -u signing.authority@iohk.io [DATE]
+    io -c NETWORK.yaml update-proposal sign-installers [-u signing.authority@iohk.io] DATE
+
+Without any key ID specified (`-u` option), it will sign with the
+default key in the default GPG keyring. If the signing key is
+protected with a passphrase, you will be prompted to enter it.
 
 This will place detached signatures in `.asc` files within the work
 dir. These will be uploaded to S3 at the same time as the installer
@@ -118,7 +125,7 @@ files.
 
 ## 4. Upload installer files to the S3 update bucket
 
-    io -c NETWORK.yaml update-proposal upload-s3 [DATE]
+    io -c NETWORK.yaml update-proposal upload-s3 DATE
 
 This will hash the installer files with both `cardano-auxx` and
 `sha256sum`, then upload the hashed installers to S3.
@@ -142,35 +149,34 @@ cardano-sl version used by Daedalus.
 
 ## 5. Update version JSON
 
-    io -c NETWORK.yaml update-proposal set-version-json [DATE]
+    io -c NETWORK.yaml update-proposal set-version-json DATE
 
 This will drop the previously created `daedalus-latest-version.json`
 into the S3 bucket. If done with the mainnet settings, it will have
 the effect of immediately updating the download links on
 [The Daedalus Wallet download page](https://daedaluswallet.io/#download).
 
-## 6. Generate node db
-
-    io -c NETWORK.yaml update-proposal generate [DATE]
-
-This will generate a new node db, copy keys from the top-level `keys`
-directory, then "rearrange" the copied keys.
-
-The help text for this subcommand is misnamed -- see [DEVOPS-868][].
-
-
-## 7. Propose the update and vote in favor using majority stake
+## 6. Propose the update and vote in favor using majority stake
 
 Find the IP address of a *privileged relay* with `io info`. This is
 normally private info so don't leak it.
 
-    io -c NETWORK.yaml update-proposal submit [DATE] --relay-ip 1.2.3.4
+    io -c NETWORK.yaml update-proposal submit DATE --relay-ip 1.2.3.4 [--with-linux]
+
+By default, installers will be proposed for Windows and macOS, but not
+Linux. Use the `--with-linux` flag to include these installers in the
+update proposal.
+
+This will generate a new node db, copy keys from the top-level `keys`
+directory, then "rearrange" the copied keys.
+
+It will then send a transaction to the given relay.
 
 Note the proposal ID which is printed at the end of the output.
 
 If the update proposal was successful, the ratified proposal will take effect in 12 hours. See [Alex Vieth's](https://input-output-rnd.slack.com/archives/C2VJ41WDP/p1522951431000512) analysis of the code to corroborate the expected 12 hour delay.
 
-## 8. Testing proposal acceptance
+## 7. Testing proposal acceptance
 
 *Useful generic search:* [keywords](https://papertrailapp.com/groups/6487901/events?q=UpdateProposal%20OR%20UpdateVote%20OR%20Processing%20of%20proposal%20OR%20New%20vote%20OR%20Stakes%20of%20proposal%20OR%20Verifying%20stake%20for%20proposal%20OR%20Proposal%20is%20confirmed)
 
@@ -188,19 +194,32 @@ If the update proposal was successful, the ratified proposal will take effect in
 Search papertrail for `Proposal 6e2f23c1 is confirmed` on a core node, using the first 8 characters of the proposal ID from the previous step.
 
 
-## 9. Testing the update
+## 8. Testing the update
 
 Work in progress: [DEVOPS-651](https://iohk.myjetbrains.com/youtrack/issue/DEVOPS-651).
 
 This is also covered in [how-to/test-update-system.md](https://github.com/input-output-hk/cardano-sl/blob/develop/docs/how-to/test-update-system.md#check-update-taken-by-wallet), section *Check update taken by wallet*.
 
 
-## 10. Update the wiki
+## 9. Update the wiki
 
 Copy the contents of `wiki.md` from the work dir and paste into
-[Daedalus Installer History](Daedalus-installer-history).
+[Daedalus Installer History](https://github.com/input-output-hk/internal-documentation/wiki/Daedalus-installer-history).
 
 Also update any other documentation which is missing or out of date.
+
+
+## Block version table
+
+The block version reflects the soft forks which have occurred on the
+network. Use the following values depending on the network where the
+update will be proposed.
+
+| Network | `lastKnownBlockVersion` |
+|:--------| -----------------------:|
+| mainnet |                 `0.1.0` |
+| staging |                 `0.1.0` |
+| testnet |                 `0.0.0` |
 
 
 ## Voter index table
@@ -235,7 +254,8 @@ will receive the error `Prelude.!!: index too large`.
 ## Future automation
 
 1. The `lastKnownBlockVersion` parameter should be investigated to
-   determine whether it is really needed.
+   determine whether it is really needed to be configured, or can be
+   determined from the configuration.
 
 2. When printing paths to *work dir*, show them as relative to the
    `iohk-ops` checkout, rather than as absolute paths.
