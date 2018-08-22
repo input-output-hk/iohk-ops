@@ -1,3 +1,5 @@
+# Developer Clusters HOWTO
+
 This document describes how to launch a Cardano cluster on AWS from scratch.
 
 ## Intended audience
@@ -27,9 +29,9 @@ you enter the `nix-shell`.
 1. `io new [--dont-generate-keys] [--configuration-key CONFIGURATION-KEY] ISSUE-ID Nodes [Explorer] [ReportServer]`
    - the `CONFIGURATION-KEY` defaults to `devnet`
    - this will generate stake keys using `cardano-keygen`, unless `--dont-generate-keys` was passed
-   - the elements after `ISSUE-ID` name cluster components, for the CSL nodes, explorer and report server, correspondingly -- which all are, strictly speaking, optional, with the caveat that having a `Nodes`-free cluster doesn't make a lot of sense 
+   - the elements after `ISSUE-ID` name cluster components, for the CSL nodes, explorer and report server, correspondingly -- which all are, strictly speaking, optional, with the caveat that having a `Nodes`-free cluster doesn't make a lot of sense
 1. `io deploy`, with following optional arguments:
-   - `--bump-system-start-held-by 15` -- bump `--system-start` by N minutes _from *now*_, where _*now*_ is the moment when the `deploy` subcommand starts to execute (which might be later than the invocation of the `io` command itself, due to command pipelining) 
+   - `--bump-system-start-held-by 15` -- bump `--system-start` by N minutes _from *now*_, where _*now*_ is the moment when the `deploy` subcommand starts to execute (which might be later than the invocation of the `io` command itself, due to command pipelining)
 1. Make sure to use `io destroy --confirm delete` after you are done with the cluster to destroy the _Nixops deployment_ -- all the local files remain intact.
 
 ## Obtaining journals
@@ -44,7 +46,7 @@ Notably:
 - `--since JOURNALD-TIME-SPEC`, defaults to `6 hours ago`
 - `--until JOURNALD-TIME-SPEC`, defaults to unspecified (essentially `now`)
 
-## Restarting cluster faster, without full machine redeployment 
+## Restarting cluster faster, without full machine redeployment
 
 When one wants to redeploy a cluster, it's not necessary to destroy the machines and redeploy them from scratch: typically the following will suffice:
 
@@ -54,6 +56,48 @@ When one wants to redeploy a cluster, it's not necessary to destroy the machines
 ## Operating a cluster with directly-specified, non-generated genesis
 
 1. The genesis JSON file must be referred to from the `configuration.yaml` for the `cardano-sl` commit specified in `cardano-sl-src.json`.
-1. Secret keys need to be placed at `keys/keyN.sk`, where `N` ranges in `0..k-1`, where k is the number of nodes. 
+1. Secret keys need to be placed at `keys/keyN.sk`, where `N` ranges in `0..k-1`, where k is the number of nodes.
 1. `io new` needs be passed `--dont-generate-keys`
 1. `io deploy` needs _NOT_ be passed `--bump-system-start-held-by`
+
+## Connect a wallet to the developer cluster
+
+This uses the customizable wallet connect script generator in cardano-sl
+(see [Exchange Onboarding](https://github.com/input-output-hk/cardano-sl/blob/develop/docs/exchange-onboarding.md#generate-custom-configuration)).
+
+The `io set-rev` command will have already cloned cardano-sl, so
+change to that directory. **Important**: make sure you are in the
+`cardano-sl` directory not `iohk-ops` -- otherwise the parameters
+won't take effect.
+
+Create a file called `custom-wallet-config.nix` with the following
+contents:
+
+    {
+      walletListen = "127.0.0.1:8090";
+
+      ## Directory for the wallet's local state.
+      ## must be enclosed in double quotes.
+      stateDir = "./state-wallet-fragment";
+
+      ## Set this to the DNS name of the relay in the dev cluster.
+      relays = "r1-ISSUE-ID.aws.iohkdev.io";
+
+      # Selects the "devnet" configuration,
+      environment = "override";
+      confFile = ./lib/configuration.yaml;
+      confKey = "devnet";
+
+       # A dummy value is required or the wallet will fail.
+       additionalNodeArgs = "--system-start 1";
+    }
+
+That file contains the parameters for building the connect script. If
+the parameters change, then the connect script needs to be built
+again. To build the connect script:
+
+    nix-build -A connectScripts.demoWallet -o ./connect-devnet.sh
+
+Run the wallet and it will connect to the developer cluster.
+
+    ./connect-devnet.sh
