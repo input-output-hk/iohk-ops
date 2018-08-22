@@ -119,6 +119,7 @@ data Command where
   CheckStatus           :: Command
   StartForeground       :: Command
   Stop                  :: Command
+  Start                 :: Command
   DumpLogs              :: { depl :: Deployment, withProf :: Bool } -> Command
   CWipeJournals         :: Command
   GetJournals           :: JournaldTimeSpec -> Maybe JournaldTimeSpec -> Command
@@ -191,6 +192,7 @@ centralCommandParser =
    , ("start-foreground",       "Start cardano (or explorer) on the specified node (--on), in foreground",
                                  pure StartForeground)
    , ("stop",                   "Stop cardano-node service",                                        pure Stop)
+   , ("start",                  "Start cardano-node service",                                       pure Start)
    , ("dumplogs",               "Dump logs",
                                 DumpLogs
                                 <$> parserDeployment
@@ -267,6 +269,7 @@ runTop o@Options{..} args topcmd = do
                                         flip fromMaybe oOnlyOn $ error "'start-foreground' requires a global value for --on/-o"
             Ssh exec args            -> Ops.parallelSSH               o c exec args
             Stop                     -> Ops.stop                      o c
+            Start                    -> Ops.start                     o c
             DumpLogs{..}
               | Nodes        <- depl -> Ops.dumpLogs              o c withProf >> pure ()
               | x            <- depl -> die $ "DumpLogs undefined for deployment " <> showT x
