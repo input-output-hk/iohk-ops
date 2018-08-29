@@ -96,8 +96,10 @@ If you don't have enough memory to build, then set the `iohk-ops --initial-heap-
 [`topology-production.yaml`](https://github.com/input-output-hk/iohk-ops/blob/master/topology-production.yaml).
 
 To trim the topology file:
-1. delete all entries except `c-a-1`, `r-a-1`, `p-b-1`.
-2. in the `static-routes` attributes, delete all list elements for
+1. Delete all entries except `c-a-1`, `r-a-1`, `p-b-1`. That will
+   leave just one core node, one relay node, and one public relay
+   node.
+2. In the `static-routes` attributes, delete all list elements for
    routes to nodes which no longer exist.
 
 

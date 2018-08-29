@@ -6,8 +6,16 @@ submitted to the cardano-sl network.
 
 This is how wallet clients will self-update.
 
-**New!** There have recently been some changes and improvements to
-these commands from [DEVOPS-868][].
+**21/08/2018 New!** There have recently been some changes and
+improvements to these commands from [DEVOPS-868][].
+
+## Intended Audience
+
+This document is mainly intended for use by IOHK DevOps working from
+the mainnet, staging mainnet, or testnet deployers.
+
+It can also be used for testing the update system against a [developer
+cluster](./Developer-clusters-HOWTO.md).
 
 ## Running the scripts
 
@@ -73,8 +81,8 @@ correct values. The contents will look similar to this:
 
     io -c NETWORK.yaml update-proposal find-installers DATE
 
-The *DATE* parameter should be the same as what was used for the
-`init` step.
+The *DATE* parameter is required to be specified and should be the
+same as what was reported after running the `init` step.
 
 This will locate the CI builds for the previously configured revision
 and download their installer artifacts to the `installers`
@@ -104,8 +112,8 @@ These values will also be summarised in the file `wiki.md` within the
 work dir.
 
 **Important**: If an update proposal is made with the wrong
-`applicationVersion`, the update mechanism will be useless until each
-user manually intervenes by manually installing an update.
+`applicationVersion`, the update mechanism may fail and users will be
+required to intervene by manually installing an update.
 
 
 ## 3. (Optional) Sign installer files with GPG
@@ -165,7 +173,8 @@ normally private info so don't leak it.
 
 By default, installers will be proposed for Windows and macOS, but not
 Linux. Use the `--with-linux` flag to include these installers in the
-update proposal.
+update proposal. While the Linux installer is in beta, it will not be
+proposed on the mainnet blockchain.
 
 This will generate a new node db, copy keys from the top-level `keys`
 directory, then "rearrange" the copied keys.
@@ -174,7 +183,10 @@ It will then send a transaction to the given relay.
 
 Note the proposal ID which is printed at the end of the output.
 
-If the update proposal was successful, the ratified proposal will take effect in 12 hours. See [Alex Vieth's](https://input-output-rnd.slack.com/archives/C2VJ41WDP/p1522951431000512) analysis of the code to corroborate the expected 12 hour delay.
+If the update proposal was successful, the ratified proposal will take
+effect in _k_ slots time, where _k_ is the security parameter. On
+mainnet/staging/testnet with _k=2160_ and 20 second slot duration,
+this will be 12 hours.
 
 ## 7. Testing proposal acceptance
 
