@@ -4,8 +4,6 @@ let
   opsLib = import ../../lib.nix;
 
 in {
-  imports = [ ./builder-gc.nix ];
-
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
   environment.systemPackages = with pkgs; [
@@ -38,6 +36,12 @@ in {
   nix.extraOptions = ''
     gc-keep-derivations = true
     gc-keep-outputs = true
+
+    # Try to ensure between 1000M and 25000M of free space by
+    # automatically triggering a garbage collection if free
+    # disk space drops below a certain level during a build.
+    min-free = 1048576000
+    max-free = 26214400000
   '';
 
   nix.binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
@@ -49,13 +53,6 @@ in {
   ];
 
   ########################################################################
-
-  # Try to ensure between 1G and 26G of free space
-  nix.builder-gc = {
-    enable = true;
-    maxFreedMB = 25000;
-    minFreeMB = 1000;
-  };
 
   environment.etc."per-user/admin/ssh/authorized_keys".text
     = lib.concatStringsSep "\n" opsLib.devOpsKeys + "\n";
