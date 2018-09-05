@@ -20,11 +20,8 @@ pkgs.stdenv.mkDerivation {
 
   patches = [ ./solidity.patch ];
 
-  configurePhase = ''
+  preConfigure = ''
     export NIX_CFLAGS_COMPILE="-Wno-error=maybe-uninitialized $NIX_CFLAGS_COMPILE"
-    mkdir build
-    cd build
-    cmake ..
   '';
 
   installPhase = ''

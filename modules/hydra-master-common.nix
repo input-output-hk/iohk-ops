@@ -16,8 +16,6 @@ let
     });
   };
 in {
-  environment.systemPackages = [ iohk-pkgs.iohk-ops ];
-
   nix = {
     extraOptions = ''
       auto-optimise-store = true

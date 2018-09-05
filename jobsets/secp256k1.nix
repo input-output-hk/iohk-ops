@@ -10,12 +10,9 @@ stdenv.mkDerivation {
 
   src = secp256k1Src;
 
-  buildInputs = [ autoconf automake libtool ];
+  buildInputs = [ autoreconfHook libtool ];
 
-  configurePhase = ''
-    ./autogen.sh
-    ./configure --enable-module-recovery --enable-module-ecdh --enable-experimental --prefix $lib
-  '';
+  configureFlags = [ "--enable-module-recovery" "--enable-module-ecdh" "--enable-experimental" "--prefix" "$lib" ];
 
   doCheck = true;
   checkPhase = "./tests";
