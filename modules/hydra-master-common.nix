@@ -12,6 +12,7 @@ let
         ./hydra-nix-prefetch-git.patch
         ./hydra-not-found.patch
         ./hydra-github-pr-filter.patch
+        ./hydra-lowest.patch
       ] ++ (lib.optional hydraExtraDebug ./hydra-extra-debug.patch);
     });
   };
