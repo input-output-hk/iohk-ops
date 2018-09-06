@@ -124,6 +124,20 @@ in {
     package = pkgs.postgresql96;
     dataDir = "/var/db/postgresql-${config.services.postgresql.package.psqlSchema}";
   };
+  services.influxdb = {
+    enable = true;
+  };
+  services.grafana = {
+    enable = true;
+    users.allowSignUp = true;
+    domain = "hydra.iohk.io";
+    rootUrl = "%(protocol)s://%(domain)s/grafana/";
+    extraOptions = {
+      AUTH_GOOGLE_ENABLED = "true";
+      AUTH_GOOGLE_CLIENT_ID = "778964826061-5v0m922g1qcbc1mdtpaf8ffevlso2v7p.apps.googleusercontent.com";
+      AUTH_GOOGLE_CLIENT_SECRET = builtins.readFile ../static/google_oauth_hydra_grafana.secret;
+    };
+  };
 
   systemd.services.hydra-evaluator.path = [ pkgs.gawk ];
   systemd.services.hydra-manual-setup = {
@@ -153,57 +167,37 @@ in {
 
   networking.firewall.allowedTCPPorts = [ 80 443 ];
 
-  security.acme.certs = {
-    "hydra.iohk.io" = {
-      email = "info@iohk.io";
-      user = "nginx";
-      group = "nginx";
-      webroot = config.security.acme.directory + "/acme-challenge";
-      postRun = "systemctl reload nginx.service";
-    };
-  };
-
   services.nginx = {
     enable = true;
-    httpConfig = ''
-      server_names_hash_bucket_size 64;
-
-      keepalive_timeout   70;
-      gzip            on;
-      gzip_min_length 1000;
-      gzip_proxied    expired no-cache no-store private auth;
-      gzip_types      text/plain application/xml application/javascript application/x-javascript text/javascript text/xml text/css;
-
-      server {
-        server_name _;
-        listen 80;
-        listen [::]:80;
-        location /.well-known/acme-challenge {
-          root ${config.security.acme.certs."hydra.iohk.io".webroot};
-        }
-        location / {
-          return 301 https://$host$request_uri;
-        }
-      }
-
-      server {
-        listen 443 ssl spdy;
-        server_name hydra.iohk.io;
-
-        ssl_certificate /var/lib/acme/hydra.iohk.io/fullchain.pem;
-        ssl_certificate_key /var/lib/acme/hydra.iohk.io/key.pem;
-
-        location / {
+    virtualHosts = {
+      "hydra.iohk.io" = {
+        forceSSL = true;
+        enableACME = true;
+        locations."/".extraConfig = ''
           proxy_pass http://127.0.0.1:8080;
           proxy_set_header Host $http_host;
           proxy_set_header REMOTE_ADDR $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto https;
-        }
-        location ~ /(nix-cache-info|.*\.narinfo|nar/*) {
+        '';
+        locations."~ /(nix-cache-info|.*\\.narinfo|nar/*)".extraConfig = ''
           return 301 https://iohk-nix-cache.s3-eu-central-1.amazonaws.com$request_uri;
-        }
-      }
+        '';
+        locations."/graph/".extraConfig = ''
+          proxy_pass http://127.0.0.1:8081/;
+        '';
+        locations."/grafana/".extraConfig = ''
+          proxy_pass http://localhost:3000/;
+        '';
+      };
+    };
+    commonHttpConfig = ''
+      server_names_hash_bucket_size 64;
+      keepalive_timeout   70;
+      gzip            on;
+      gzip_min_length 1000;
+      gzip_proxied    expired no-cache no-store private auth;
+      gzip_types      text/plain application/xml application/javascript application/x-javascript text/javascript text/xml text/css;
     '';
   };
 }
