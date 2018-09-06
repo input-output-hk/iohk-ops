@@ -22,6 +22,7 @@ let
     sshUser = "builder";
     supportedFeatures = [];
   };
+  hydraExtraDebug = true;
   hydraOverlay = self: super: {
     hydra = super.hydra.overrideDerivation (drv: {
       patches = [
@@ -29,7 +30,7 @@ let
         ./hydra-nix-prefetch-git.patch
         ./hydra-not-found.patch
         ./hydra-github-pr-filter.patch
-      ];
+      ] ++ (lib.optional hydraExtraDebug ./hydra-extra-debug.patch);
     });
   };
   cleanIp = host: let
@@ -140,6 +141,10 @@ in {
   };
 
   systemd.services.hydra-evaluator.path = [ pkgs.gawk ];
+  systemd.services.hydra-queue-runner.serviceConfig = mkIf hydraExtraDebug {
+    ExecStart = mkForce "@${config.services.hydra.package}/bin/hydra-queue-runner hydra-queue-runner -vvvvvv";
+  };
+
   systemd.services.hydra-manual-setup = {
     description = "Create Keys for Hydra";
     serviceConfig = {
