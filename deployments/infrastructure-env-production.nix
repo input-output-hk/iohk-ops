@@ -1,6 +1,6 @@
 { IOHKaccessKeyId, IOHKroute53accessKeyId, ... }:
 
-with (import ./../lib.nix);
+with (import ../lib.nix);
 let region = "eu-central-1";
     accessKeyId = IOHKaccessKeyId;
     route53accessKeyId = IOHKroute53accessKeyId;
@@ -10,8 +10,8 @@ in {
   hydra = { config, pkgs, resources, ... }: {
 
     imports = [
-      ./../modules/papertrail.nix
-      ./../modules/datadog.nix
+      ../modules/papertrail.nix
+      ../modules/datadog.nix
     ];
 
     services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
@@ -27,8 +27,8 @@ in {
     # 1. builds are not sandboxed
     # 2. hydra builds things without slaves
     imports = [
-      ./../modules/papertrail.nix
-      ./../modules/datadog.nix
+      ../modules/papertrail.nix
+      ../modules/datadog.nix
     ];
 
     services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
@@ -41,15 +41,15 @@ in {
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ./../modules/datadog.nix
-      ./../modules/papertrail.nix
+      ../modules/datadog.nix
+      ../modules/papertrail.nix
       ../modules/deployer.nix
     ];
 
     services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
 
     deployment.keys.tarsnap = {
-      keyFile = ./../static/tarsnap-cardano-deployer.secret;
+      keyFile = ../static/tarsnap-cardano-deployer.secret;
       destDir = "/var/lib/keys";
     };
 

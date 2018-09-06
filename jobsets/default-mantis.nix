@@ -108,7 +108,7 @@ let pkgs = import nixpkgs {};
           info: mkMantisJob {
             name = "mantis-PR-${num}";
             description = info.title;
-            mantisBranch = info.head.sha;
+            mantisBranch = "pull/${num}/head";
           }
         )
         (pkgs.lib.filterAttrs (num: info: info.base.ref == "phase/iele_testnet") mantisPrs)
@@ -120,7 +120,7 @@ let pkgs = import nixpkgs {};
           info: mkMantisJob {
             name = "solidity-service-PR-${num}";
             description = info.title;
-            solidityServiceBranch = info.head.sha;
+            solidityServiceBranch = "pull/${num}/head";
           }
         )
         solidityServicePrs

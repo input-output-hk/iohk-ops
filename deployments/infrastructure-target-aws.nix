@@ -1,13 +1,13 @@
 { deployerIP, IOHKaccessKeyId, ... }:
 
-with (import ./../lib.nix);
+with (import ../lib.nix);
 let org = "IOHK";
     region = "eu-central-1";
     accessKeyId = IOHKaccessKeyId;
 in rec {
   hydra = { config, pkgs, resources, ... }: {
     imports = [
-      ./../modules/amazon-base.nix
+      ../modules/amazon-base.nix
     ];
 
     deployment.ec2 = {
@@ -26,7 +26,7 @@ in rec {
   mantis-hydra = { config, pkgs, resources, ... }: {
     # See infrastructure-env-production.nix for description.
     imports = [
-      ./../modules/amazon-base.nix
+      ../modules/amazon-base.nix
     ];
 
     deployment.ec2 = {
@@ -55,7 +55,7 @@ in rec {
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ./../modules/amazon-base.nix
+      ../modules/amazon-base.nix
     ];
 
     deployment.ec2 = {
@@ -122,7 +122,7 @@ in rec {
       mantis-hydra-ip = { inherit region accessKeyId; };
       cardanod-ip     = { inherit region accessKeyId; };
     };
-    datadogMonitors = (with (import ./../modules/datadog-monitors.nix); {
+    datadogMonitors = (with (import ../modules/datadog-monitors.nix); {
       disk       = mkMonitor (disk_monitor "!group:hydra-and-slaves" "0.8"  "0.9");
       disk_hydra = mkMonitor (disk_monitor  "group:hydra-and-slaves" "0.95" "0.951");
       ntp  = mkMonitor ntp_monitor;
