@@ -96,7 +96,7 @@ in {
     enable = true;
     users.allowSignUp = true;
     domain = "hydra.iohk.io";
-    rootUrl = "%(protocol)s://%(domain)s/grafana/";
+    rootUrl = "%(protocol)ss://%(domain)s/grafana/";
     extraOptions = {
       AUTH_GOOGLE_ENABLED = "true";
       AUTH_GOOGLE_CLIENT_ID = "778964826061-5v0m922g1qcbc1mdtpaf8ffevlso2v7p.apps.googleusercontent.com";
@@ -121,7 +121,7 @@ in {
           return 301 https://iohk-nix-cache.s3-eu-central-1.amazonaws.com$request_uri;
         '';
         locations."/graph/".extraConfig = ''
-          proxy_pass http://127.0.0.1:8081/;
+          proxy_pass http://127.0.0.1:8081;
         '';
         locations."/grafana/".extraConfig = ''
           proxy_pass http://localhost:3000/;

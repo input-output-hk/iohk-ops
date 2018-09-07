@@ -49,7 +49,7 @@ in {
 
   systemd.services.hydra-evaluator.path = [ pkgs.gawk ];
   systemd.services.hydra-queue-runner.serviceConfig = mkIf hydraExtraDebug {
-    ExecStart = mkForce "@${config.services.hydra.package}/bin/hydra-queue-runner hydra-queue-runner -vvvvvv";
+    ExecStart = mkForce "@${config.services.hydra.package}/bin/hydra-queue-runner hydra-queue-runner -v";
   };
   systemd.services.hydra-manual-setup = {
     description = "Create Keys for Hydra";
