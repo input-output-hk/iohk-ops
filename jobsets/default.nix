@@ -119,7 +119,7 @@ let
   PRExcludedLabels = import ./pr-excluded-labels.nix;
   exclusionFilter = lib.filterAttrs (_: prInfo: builtins.length (builtins.filter (prLabel: (builtins.elem prLabel.name PRExcludedLabels))
                                                                                  prInfo.labels)
-                                                != 0)
+                                                != 0);
   nixopsPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeNixopsPR   (exclusionFilter nixopsPrs));
   cardanoPrJobsets  = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeCardanoPR  (exclusionFilter cardanoPrs));
   daedalusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeDaedalusPR (exclusionFilter daedalusPrs));
