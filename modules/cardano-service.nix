@@ -14,7 +14,7 @@ let
 
   command = toString [
     cfg.executable
-    (optionalString (cfg.publicIP != null && params.name != "explorer")
+    (optionalString (cfg.publicIP != null && config.params.name != "explorer")
      "--address ${cfg.publicIP}:${toString cfg.port}")
     (optionalString (config.params.name != "explorer")
      "--listen ${cfg.privateIP}:${toString cfg.port}")

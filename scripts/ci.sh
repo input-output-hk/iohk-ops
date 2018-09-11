@@ -10,6 +10,7 @@ source ./scripts/set_nixpath.sh
 CLEANUP_CONFIGS=true
 WITH_STAGING=true
 WITH_PRODUCTION=true
+WITH_TESTNET=true
 WITH_DEVELOPMENT=true
 WITH_EXPLORER=true
 WITH_REPORT_SERVER=true
@@ -17,13 +18,14 @@ WITH_INFRA_PRODUCTION=true
 WITH_INFRA_STAGING=true
 WITH_BENCHMARK=true
 
-while getopts o:c:s:p:d:e:r:i:j:b: option
+while getopts o:c:s:p:t:d:e:r:i:j:b: option
 do
   case "${option}" in
     o) IOHK_OPS=${OPTARG};;
     c) CLEANUP_CONFIGS=${OPTARG};;
     s) WITH_STAGING=${OPTARG};;
     p) WITH_PRODUCTION=${OPTARG};;
+    t) WITH_TESTNET=${OPTARG};;
     d) WITH_DEVELOPMENT=${OPTARG};;
     e) WITH_EXPLORER=${OPTARG};;
     r) WITH_REPORT_SERVER=${OPTARG};;
@@ -110,6 +112,13 @@ CLEANUP_DEPLS="${CLEANUP_DEPLS} test-prod"
 ${IOHK_OPS}               new  --config 'test-prod.yaml'   --environment production "${COMMON_OPTIONS[@]}" 'test-prod'    "${CARDANO_COMPONENTS[@]}"
 ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-prod.yaml'   create deploy --dry-run --initial-heap-size 4
 banner 'Production env evaluated'
+fi
+
+if [[ ${WITH_TESTNET} == true ]]; then
+CLEANUP_DEPLS="${CLEANUP_DEPLS} test-stag"
+${IOHK_OPS}               new  --config 'test-stag.yaml'   --environment testnet    "${COMMON_OPTIONS[@]}" 'test-stag'    "${CARDANO_COMPONENTS[@]}"
+${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-stag.yaml'   create deploy --dry-run --initial-heap-size 4
+banner 'Testnet env evaluated'
 fi
 
 if [[ ${WITH_DEVELOPMENT} == true ]]; then
