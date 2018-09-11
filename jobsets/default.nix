@@ -74,7 +74,7 @@ let
       nixexprpath = "release.nix";
       inputs = {
         cardano = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
-        fasterBuild = true; # Disables optimization only for PR builds
+        fasterBuild = { type = "boolean"; emailoverride = false; value = "true"; }; # Disables optimization only for PR builds
       };
     };
   };
