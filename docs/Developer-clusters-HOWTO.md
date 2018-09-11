@@ -21,6 +21,9 @@ This document is to support developers in their need to deploy ad hoc clusters.
 Note that `io` is an alias to `iohk-ops` which becomes available when
 you enter the `nix-shell`.
 
+Replace `ISSUE-ID` with your issue ID, or any name to identify the cluster.
+This should all be _in lowercase_ to avoid problems when updating DNS entries.
+
 1. SSH to the `staging` jumpserver.
 1. `iohk-ops clone ISSUE-ID [IOHK-OPS-BRANCH]` -- the branch defaults to `master`.
 1. `cd ISSUE-ID`
