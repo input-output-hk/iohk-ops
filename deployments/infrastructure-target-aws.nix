@@ -69,6 +69,22 @@ in rec {
     };
   };
 
+  bors-ng = { config, pkgs, resources, ... }: {
+    imports = [ ../modules/amazon-base.nix ];
+
+    deployment.ec2 = {
+      inherit accessKeyId;
+      instanceType = mkForce "t2.micro";
+      ebsInitialRootDiskSize = mkForce 30;
+      associatePublicIpAddress = true;
+      securityGroups = [
+        resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
+        resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
+        resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
+      ];
+    };
+  };
+
   resources = {
     ec2SecurityGroups = {
       "allow-deployer-ssh-${region}-${org}" = {
@@ -121,6 +137,7 @@ in rec {
       hydra-ip        = { inherit region accessKeyId; };
       mantis-hydra-ip = { inherit region accessKeyId; };
       cardanod-ip     = { inherit region accessKeyId; };
+      bors-ng-ip      = { inherit region accessKeyId; };
     };
     datadogMonitors = (with (import ../modules/datadog-monitors.nix); {
       disk       = mkMonitor (disk_monitor "!group:hydra-and-slaves" "0.8"  "0.9");

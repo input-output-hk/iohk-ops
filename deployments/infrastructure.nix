@@ -61,4 +61,11 @@ in {
       { from = 24962; to = 25062; }
     ];
   };
+
+  bors-ng = { config, pkgs, ...}: {
+    imports = [
+      ../modules/common.nix
+      ./bors-ng.nix
+    ];
+  };
 }

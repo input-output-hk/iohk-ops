@@ -64,4 +64,17 @@ in {
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.cardanod-ip;
   };
+
+  bors-ng = { config, pkgs, resources, ... }: {
+    imports = [
+      ../modules/datadog.nix
+      ../modules/papertrail.nix
+    ];
+
+    services.dd-agent.tags = ["env:staging" "depl:${config.deployment.name}"];
+
+    deployment.ec2.elasticIPv4 = resources.elasticIPs.bors-ng-ip;
+    deployment.route53.accessKeyId = route53accessKeyId;
+    deployment.route53.hostName = "bors-ng.awstest2.iohkdev.io";
+  };
 }
