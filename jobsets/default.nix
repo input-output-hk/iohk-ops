@@ -133,7 +133,6 @@ let
     daedalus = mkDaedalus "develop";
     plutus = mkPlutus "master";
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
-    iohk-nixops-staging = mkNixops "staging" nixpkgs-src.rev;
   });
   jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);

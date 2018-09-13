@@ -26,6 +26,7 @@ let
     in
       if ip1 == null then "0.0.0.0" else ip1;
 in {
+  imports = [ ./github-webhook-util.nix ];
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
     source = ../static/id_buildfarm;
@@ -88,9 +89,16 @@ in {
       </githubstatus>
     '';
   };
+  deployment.keys."github-webhook-util".text = builtins.readFile ../static/github-webhook-util.secret;
+  systemd.services."github-webhook-util" = {
+    after = [ "github-webhook-util-key.service" ];
+    wants = [ "github-webhook-util-key.service" ];
+  };
 
-  services.influxdb = {
+  services.github-webhook-util = {
     enable = true;
+    domain = "hydra.iohk.io";
+    secrets = "/run/keys/github-webhook-util";
   };
   services.grafana = {
     enable = true;

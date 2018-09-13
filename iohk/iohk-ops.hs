@@ -1,33 +1,41 @@
 #!/usr/bin/env runhaskell
-{-# LANGUAGE DeriveGeneric, GADTs, LambdaCase, OverloadedStrings, RecordWildCards, StandaloneDeriving, TupleSections, ViewPatterns #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections      #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 
 module Main where
 
-import           Prelude                   hiding (FilePath)
-import           Control.Monad                    (forM_)
-import           Data.Char                        (toLower)
+import           Control.Monad             (forM_)
+import           Data.Char                 (toLower)
 import           Data.List
-import qualified Data.Map                      as Map
+import qualified Data.Map                  as Map
 import           Data.Maybe
-import           Data.Monoid                      ((<>))
-import           Data.Optional                    (Optional)
-import qualified Data.Text                     as T
-import qualified Filesystem.Path.CurrentOS     as Path
-import qualified System.Environment            as Sys
-import           Turtle                    hiding (env, err, fold, inproc, procs, shells, option, e, f, o, x)
-import           Time.Types
+import           Data.Monoid               ((<>))
+import           Data.Optional             (Optional)
+import qualified Data.Text                 as T
+import qualified Filesystem.Path.CurrentOS as Path
+import           Options.Applicative       (auto, long, metavar, option, short,
+                                            str)
+import           Prelude                   hiding (FilePath)
+import qualified System.Environment        as Sys
 import           Time.System
-import           Options.Applicative              (option, str, auto, long, short, metavar)
+import           Time.Types
+import           Turtle                    hiding (e, env, err, f, fold, inproc,
+                                            o, option, procs, shells, x)
 
 import           Constants
 import           NixOps
-import qualified NixOps                        as Ops
+import qualified NixOps                    as Ops
 import           Types
-import           Utils
 import           UpdateProposal
+import           Utils
 
-
+
 -- * Elementary parsers
 --
 -- | Given a string, either return a constructor that being 'show'n case-insensitively matches the string,
@@ -77,7 +85,7 @@ parserConfirmation question =
          True  -> Confirm)
   <$> switch "confirm" 'y' "Confirm this particular action, don't ask questions."
 
-
+
 -- * Central command
 --
 data Command where
@@ -213,7 +221,7 @@ centralCommandParser =
    <|> subcommandGroup "Other:"
     [ ])
 
-
+
 main :: IO ()
 main = do
   args <- (Arg . T.pack <$>) <$> Sys.getArgs
@@ -280,7 +288,7 @@ runTop o@Options{..} args topcmd = do
             New{..}                  -> error "impossible"
             SetRev   _ _ _           -> error "impossible"
 
-
+
 runClone :: Options -> NixopsDepl -> Branch -> IO ()
 runClone o@Options{..} depl branch = do
   let bname     = fromBranch branch
@@ -315,6 +323,7 @@ runNew o@Options{..} New{..} args = do
                   , "static/id_buildfarm"
                   , "static/datadog-api.secret"
                   , "static/google_oauth_hydra_grafana.secret"
+                  , "static/github-webhook-util.secret"
                   , "static/datadog-application.secret"
                   , "static/zendesk-token.secret" ]
     forM_ secrets touch
