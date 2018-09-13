@@ -4,18 +4,19 @@ with lib;
 
 let
   iohk-pkgs = import ../default.nix {};
-  hydraExtraDebug = true;
-  hydraOverlay = self: super: {
-    hydra = super.hydra.overrideDerivation (drv: {
-      patches = [
-        ./chomp.patch
-        ./hydra-nix-prefetch-git.patch
-        ./hydra-not-found.patch
-        ./hydra-github-pr-filter.patch
-        ./hydra-lowest.patch
-      ] ++ (lib.optional hydraExtraDebug ./hydra-extra-debug.patch);
-    });
+  hydraRev = "a4469f8b0fedbac6764778c4c3426656b44c29a1";
+  hydraSrc = pkgs.fetchFromGitHub {
+    owner = "cleverca22";
+    repo = "hydra";
+    sha256 = "0zx19macxah6b69nzgqc34fm9vl8md4sbp07p0pnqniallnmf6gg";
+    rev = hydraRev;
   };
+  hydraSrc' = {
+    outPath = hydraSrc;
+    rev = builtins.substring 0 6 hydraRev;
+    revCount = 1234;
+  };
+  hydra-fork = (import (hydraSrc + "/release.nix") { nixpkgs = pkgs.path; hydraSrc = hydraSrc'; }).build.x86_64-linux;
 in {
   nix = {
     extraOptions = ''
@@ -33,6 +34,7 @@ in {
   services.hydra = {
     enable = true;
     port = 8080;
+    package = hydra-fork;
     useSubstitutes = true;
     notificationSender = "hi@iohk.io";
     logo = (pkgs.fetchurl {
@@ -40,7 +42,6 @@ in {
       sha256 = "0pg2igski35wf1y4gn8dxw6444kx1107mg4ns5xj29ays2c1j5sl";
     });
   };
-  nixpkgs.overlays = [ hydraOverlay ];
 
   services.postgresql = {
     package = pkgs.postgresql96;
@@ -48,7 +49,7 @@ in {
   };
 
   systemd.services.hydra-evaluator.path = [ pkgs.gawk ];
-  systemd.services.hydra-queue-runner.serviceConfig = mkIf hydraExtraDebug {
+  systemd.services.hydra-queue-runner.serviceConfig = {
     ExecStart = mkForce "@${config.services.hydra.package}/bin/hydra-queue-runner hydra-queue-runner -v";
   };
   systemd.services.hydra-manual-setup = {
