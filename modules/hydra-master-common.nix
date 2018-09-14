@@ -4,11 +4,11 @@ with lib;
 
 let
   iohk-pkgs = import ../default.nix {};
-  hydraRev = "a4469f8b0fedbac6764778c4c3426656b44c29a1";
+  hydraRev = "82b8997da6b5edc6cbdd5511aa1636a1c46ea50c";
   hydraSrc = pkgs.fetchFromGitHub {
     owner = "cleverca22";
     repo = "hydra";
-    sha256 = "0zx19macxah6b69nzgqc34fm9vl8md4sbp07p0pnqniallnmf6gg";
+    sha256 = "0wnhlq5vi6hkcizicflgcf75a5qw84a5950kkvay0an2g7zb8n42";
     rev = hydraRev;
   };
   hydraSrc' = {

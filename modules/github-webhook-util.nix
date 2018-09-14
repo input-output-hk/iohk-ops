@@ -21,14 +21,13 @@ in {
     services.influxdb.enable = true;
     services.nginx.virtualHosts."${cfg.domain}" = {
       locations."/github-webhooks" = {
-        proxyPass = "http://127.0.0.1:8082/";
+        proxyPass = "http://127.0.0.1:8082";
       };
     };
     systemd.services."github-webhook-util" = {
       wantedBy = [ "multi-user.target" ];
-      path = [ iohkPkgs.github-webhook-util ];
       serviceConfig = {
-        ExecStart = "github-webhook-util";
+        ExecStart = "${iohkPkgs.github-webhook-util}/bin/github-webhook-util";
         EnvironmentFile = cfg.secrets;
       };
     };

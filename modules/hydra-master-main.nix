@@ -71,21 +71,25 @@ in {
         jobs = serokell:iohk-nixops.*
         inputs = jobsets
         excludeBuildFromContext = 1
+        useShortContext = 1
       </githubstatus>
       <githubstatus>
         jobs = serokell:cardano.*
         inputs = cardano
         excludeBuildFromContext = 1
+        useShortContext = 1
       </githubstatus>
       <githubstatus>
         jobs = serokell:daedalus.*:tests\..*
         inputs = daedalus
         excludeBuildFromContext = 1
+        useShortContext = 1
       </githubstatus>
       <githubstatus>
         jobs = serokell:plutus.*
         inputs = plutus
         excludeBuildFromContext = 1
+        useShortContext = 1
       </githubstatus>
     '';
   };
