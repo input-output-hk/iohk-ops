@@ -141,8 +141,8 @@ checkStatusCompleted owner repo commit = do
 getStatuses :: HasGHAuth => GH.Name GH.Owner -> GH.Name GH.Repo -> GH.Commit -> IO (Vector GH.Status)
 getStatuses owner repo commit = do
   statusCompleted <- checkStatusCompleted owner repo commit
-  possibleStatuses <- runExceptT $ runMonad $ githubRequestRW $ GH.statusesForR owner repo (GH.commitSha commit) GH.FetchAll
-  if not statusCompleted then pure V.empty else
+  if not statusCompleted then pure V.empty else do
+    possibleStatuses <- runExceptT $ runMonad $ githubRequestRW $ GH.statusesForR owner repo (GH.commitSha commit) GH.FetchAll
     case possibleStatuses of
       (Right statuses) -> pure statuses
       _                -> pure V.empty
@@ -205,7 +205,9 @@ influxImportCommit owner repo commitSha = do
       Left _       -> putStrLn "An error occurred loading the commit"
       Right commit -> do
         acc <- foldCommitsToStatuses owner repo (Accumulator HM.empty) commit
-        putStrLn "Importing commit"
+        let
+            statusCount = HM.size $ ghStatusMap acc
+        putStrLn $ "Importing commit " <> show commitSha <> " with " <> show statusCount <> " statuses"
         mapM_ processStatuses $ HM.toList $ ghStatusMap acc
 
 main :: IO ()
@@ -216,7 +218,7 @@ main = do
       go "github-webhook-util" = servantMain
       go "import-prs"          = manualInfluxImport
       go _                     = servantMain
-  putStrLn $ "running " ++ self
+  putStrLn $ "running " <> self
   go self
 
 
@@ -247,12 +249,17 @@ server :: HasGHAuth => S.Server API
 server = anyEvent
 
 anyEvent :: HasGHAuth => S.RepoWebhookEvent -> ((), AE.Object) -> S.Handler ()
-anyEvent _ (_, value) = liftIO $ do
+anyEvent event (_, value) = liftIO $ do
   let
-      gh_event :: StatusEvent
-      gh_event = case AE.fromJSON $ AE.Object value of
-        AE.Error err  -> error err
-        AE.Success op -> op
+      parse_gh_event :: IO StatusEvent
+      parse_gh_event = case AE.fromJSON $ AE.Object value of
+        AE.Error err  -> do
+          print event
+          print value
+          error err
+        AE.Success op -> pure op
+  gh_event <- parse_gh_event
+  let
       commitSha = GH.mkCommitName $ evStatusCommitSha gh_event
       repoObject = evStatusRepo gh_event
       userObject = whRepoOwner repoObject
