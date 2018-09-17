@@ -160,16 +160,24 @@ processStatuses (nameCommit, AccumulatorValue _commit statuses firstCreatedAt) =
           ("commit", Key $ GH.untagName nameCommit)
         --, ("pr", Key $ tshow prnum)
         ]
+      filteredStatuses = V.filter statusIsSuccessOrFail statuses
       fields :: [ ( Key, LineField ) ]
-      fields = V.toList $ V.map (statusToField time) statuses
+      fields = V.toList $ V.map (statusToField time) filteredStatuses
       entry = Line measurement
              (Map.fromList tags)
              (Map.fromList fields)
              time
-  if V.length statuses > 0 then
+  if V.length filteredStatuses > 0 then
     write (writeParams database) entry
   else
     pure ()
+
+statusIsSuccessOrFail :: GH.Status -> Bool
+statusIsSuccessOrFail status =
+  case GH.statusState status of
+    GH.StatusSuccess -> True
+    GH.StatusFailure -> True
+    _                -> False
 
 statusToField :: Maybe UTCTime -> GH.Status -> (Key, LineField)
 statusToField createdAt status = statusField
