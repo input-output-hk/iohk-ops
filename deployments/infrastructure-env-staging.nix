@@ -65,7 +65,9 @@ in {
     deployment.ec2.elasticIPv4 = resources.elasticIPs.cardanod-ip;
   };
 
-  bors-ng = { config, pkgs, resources, ... }: {
+  bors-ng = { config, pkgs, resources, ... }: let
+    hostName = "bors-ng.awstest2.iohkdev.io";
+  in {
     imports = [
       ../modules/datadog.nix
       ../modules/papertrail.nix
@@ -74,7 +76,21 @@ in {
     services.dd-agent.tags = ["env:staging" "depl:${config.deployment.name}"];
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.bors-ng-ip;
-    deployment.route53.accessKeyId = route53accessKeyId;
-    deployment.route53.hostName = "bors-ng.awstest2.iohkdev.io";
+    deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
+    deployment.route53.hostName = hostName;
+
+    services.bors-ng = let
+      placeholder = pkgs.writeText "placeholder" "staging";
+    in {
+      publicHost = hostName;
+      secretKeyBaseFile = placeholder;
+      github = {
+        clientID = "staging";
+        clientSecretFile = placeholder;
+        integrationID = 0;
+        integrationPEMFile = placeholder;
+        webhookSecretFile = placeholder;
+      };
+    };
   };
 }
