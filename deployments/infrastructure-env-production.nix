@@ -87,4 +87,56 @@ in {
 
     deployment.ec2.elasticIPv4 = resources.elasticIPs.cardanod-ip;
   };
+
+  bors-ng = { config, pkgs, resources, ... }: let
+    hostName = "bors-ng.aws.iohkdev.io";
+    keysDir = "/var/lib/keys";
+  in {
+    imports = [
+      ../modules/datadog.nix
+      ../modules/papertrail.nix
+    ];
+
+    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
+
+    deployment.ec2.elasticIPv4 = resources.elasticIPs.bors-ng-ip;
+    deployment.route53.accessKeyId = route53accessKeyId;
+    deployment.route53.hostName = hostName;
+
+    services.bors-ng = {
+      publicHost = hostName;
+      secretKeyBaseFile = "${keysDir}/bors-ng-secret-key-base";
+      github = {
+        clientID = "Iv1.17382ed95b58d1a8";
+        clientSecretFile = "${keysDir}/bors-ng-github-client-secret";
+        integrationID = 17473;
+        integrationPEMFile = "${keysDir}/bors-ng-github-integration.pem";
+        webhookSecretFile = "${keysDir}/bors-ng-github-webhook-secret";
+      };
+    };
+    systemd.services.bors-ng.after = [ "keys.target" ];
+    systemd.services.bors-ng.requires = [ "keys.target" ];
+    users.users.bors-ng.extraGroups = [ "keys" ];
+
+    deployment.keys.bors-ng-secret-key-base = {
+      keyFile = ../static/bors-ng-secret-key-base;
+      destDir = "/var/lib/keys";
+      user = "bors-ng";
+    };
+    deployment.keys.bors-ng-github-client-secret = {
+      keyFile = ../static/bors-ng-github-client-secret;
+      destDir = "/var/lib/keys";
+      user = "bors-ng";
+    };
+    deployment.keys."bors-ng-github-integration.pem" = {
+      keyFile = ../static/bors-ng-github-integration.pem;
+      destDir = "/var/lib/keys";
+      user = "bors-ng";
+    };
+    deployment.keys.bors-ng-github-webhook-secret = {
+      keyFile = ../static/bors-ng-github-webhook-secret;
+      destDir = "/var/lib/keys";
+      user = "bors-ng";
+    };
+  };
 }

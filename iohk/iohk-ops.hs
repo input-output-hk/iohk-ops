@@ -319,13 +319,19 @@ runNew o@Options{..} New{..} args = do
 
   -- generate dev-keys & ensure secrets exist:
   when (tEnvironment == Development || tEnvironment == Benchmark) $ do
-    let secrets = [ "static/github_token"
-                  , "static/id_buildfarm"
-                  , "static/datadog-api.secret"
-                  , "static/google_oauth_hydra_grafana.secret"
-                  , "static/github-webhook-util.secret"
-                  , "static/datadog-application.secret"
-                  , "static/zendesk-token.secret" ]
+    let secrets = map ("static" </>)
+                  [ "github_token"
+                  , "id_buildfarm"
+                  , "datadog-api.secret"
+                  , "google_oauth_hydra_grafana.secret"
+                  , "github-webhook-util.secret"
+                  , "datadog-application.secret"
+                  , "zendesk-token.secret"
+                  , "bors-ng-secret-key-base"
+                  , "bors-ng-github-client-secret"
+                  , "bors-ng-github-integration.pem"
+                  , "bors-ng-github-webhook-secret"
+                  ]
     forM_ secrets touch
     echo "Ensured secrets exist"
 
