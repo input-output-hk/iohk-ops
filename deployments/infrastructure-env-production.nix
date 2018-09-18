@@ -116,22 +116,27 @@ in {
     };
     systemd.services.bors-ng.after = [ "keys.target" ];
     systemd.services.bors-ng.requires = [ "keys.target" ];
+    users.users.bors-ng.extraGroups = [ "keys" ];
 
     deployment.keys.bors-ng-secret-key-base = {
       keyFile = ../static/bors-ng-secret-key-base;
       destDir = "/var/lib/keys";
+      user = "bors-ng";
     };
     deployment.keys.bors-ng-github-client-secret = {
       keyFile = ../static/bors-ng-github-client-secret;
       destDir = "/var/lib/keys";
+      user = "bors-ng";
     };
-    deployment.keys.bors-ng-github-integration-pem = {
+    deployment.keys."bors-ng-github-integration.pem" = {
       keyFile = ../static/bors-ng-github-integration.pem;
       destDir = "/var/lib/keys";
+      user = "bors-ng";
     };
     deployment.keys.bors-ng-github-webhook-secret = {
       keyFile = ../static/bors-ng-github-webhook-secret;
       destDir = "/var/lib/keys";
+      user = "bors-ng";
     };
   };
 }

@@ -127,7 +127,6 @@ in {
         RestartSec = "2s";
         TimeoutStartSec = "0";
         ExecStop = "${pkgs.docker}/bin/docker stop bors-ng";
-        ExecStopPost = "${pkgs.docker}/bin/docker rm -f bors-ng";
         ExecReload = "${pkgs.docker}/bin/docker restart bors-ng";
       };
       preStart = ''
