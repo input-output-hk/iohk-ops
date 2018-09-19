@@ -7,12 +7,15 @@
 {-# LANGUAGE TypeOperators     #-}
 {-# OPTIONS -Weverything -Wno-implicit-prelude #-}
 
-module Main (main) where
+module Main (main, processStatusesFromRepoPullRequests) where
 
+import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Operational    (Program,
                                                ProgramViewT ((:>>=), Return),
                                                singleton, view)
 import           Control.Monad.Trans.Except   (ExceptT (ExceptT), runExceptT)
+import qualified Data.Aeson                   as AE
+import qualified Data.ByteString.Char8        as C8
 import qualified Data.HashMap.Strict          as HM
 import           Data.Int                     (Int64)
 import qualified Data.Map                     as Map
@@ -21,6 +24,7 @@ import           Data.Monoid                  ((<>))
 import           Data.Reflection              (Given, give, given)
 import           Data.String                  (fromString)
 import           Data.String.Encode           (encodeString)
+import qualified Data.Text                    as T
 import           Data.Time                    (UTCTime, diffUTCTime)
 import           Data.Vector                  (Vector)
 import qualified Data.Vector                  as V
@@ -38,15 +42,11 @@ import           GitHub.Data.Webhooks.Payload (HookSimpleUser (HookSimpleUser),
                                                whUserLogin)
 import           Network.HTTP.Client          (Manager, newManager)
 import           Network.HTTP.Client.TLS      (tlsManagerSettings)
-import           System.Environment           (getProgName, lookupEnv)
-
-import           Control.Monad.IO.Class       (liftIO)
-import qualified Data.Aeson                   as AE
-import qualified Data.ByteString.Char8        as C8
 import           Network.Wai.Handler.Warp     (run)
 import           Servant                      ((:>), Context ((:.)))
 import qualified Servant                      as S
 import qualified Servant.GitHub.Webhook       as S
+import           System.Environment           (getProgName, lookupEnv)
 
 type GithubMonad a (k :: GH.RW) = Program (GH.Request k) a
 type HasGHAuth = Given (Manager, GH.Auth)
@@ -200,8 +200,25 @@ manualInfluxImport = do
       repo :: GH.Name GH.Repo
       repo = "cardano-sl"
   case auth' of
-    Nothing -> return ()
+    Nothing -> do
+      putStrLn "An error occurred with auth, did you set GH token?"
+      return ()
     Just auth -> withGHAuth (manager, auth) $ do
+      stdin <- getContents
+      let
+          commits :: [ GH.Name GH.Commit ]
+          commits = map (GH.mkCommitName . T.pack) $ lines stdin
+      if null commits
+        then putStrLn "No input received"
+        else do
+          putStrLn "Importing commits from stdin"
+          mapM_ (influxImportCommit owner repo) commits
+          putStrLn "Done importing commits"
+
+-- currently not used, but want to preserve old functionality if we
+-- need to manually import from all pull requests on repo
+processStatusesFromRepoPullRequests :: HasGHAuth => GH.Name GH.Owner -> GH.Name GH.Repo -> IO ()
+processStatusesFromRepoPullRequests owner repo = do
       pullRequests <- getPullRequests owner repo
       acc <- V.foldM' (foldRequestsToStatuses owner repo) (Accumulator HM.empty) (V.take 2 pullRequests)
       mapM_ processStatuses $ HM.toList $ ghStatusMap acc
@@ -210,11 +227,13 @@ influxImportCommit :: HasGHAuth => GH.Name GH.Owner -> GH.Name GH.Repo -> GH.Nam
 influxImportCommit owner repo commitSha = do
     possibleCommit <- getCommit owner repo commitSha
     case possibleCommit of
-      Left _       -> putStrLn "An error occurred loading the commit"
+      Left _       -> putStrLn $ "An error occurred loading the commit" <> show commitSha
       Right commit -> do
         acc <- foldCommitsToStatuses owner repo (Accumulator HM.empty) commit
         let
-            statusCount = HM.size $ ghStatusMap acc
+            (_, accV) = head $ HM.toList $ ghStatusMap acc
+            statuses = avStatuses accV
+            statusCount = V.length statuses
         putStrLn $ "Importing commit " <> show commitSha <> " with " <> show statusCount <> " statuses"
         mapM_ processStatuses $ HM.toList $ ghStatusMap acc
 
