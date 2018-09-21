@@ -35,9 +35,6 @@ fname3 <- paste(bp, '/bench-settings', sep='')
 fname4 <- paste(bp, '/times.csv', sep='')
 
 DESC=''                    # Add custom text to titles
-k <- 6 #12 #24             # Protocol parameters determining
-SLOTLENGTH <- 20           # the length of an epoch
-EPOCHLENGTH <- 10*k*SLOTLENGTH
 
 # general constants which should correspond to the recording script
 # these are defaults to which we fall back if they cannot be extracted from the log
@@ -79,6 +76,18 @@ if (params[maxparam,1]=="systemstart") {
   params[maxparam+1,1] <- "time UTC"
   params[maxparam+1,2] <- paste("", anytime(as.numeric(params[maxparam,2]), tz="UTC"), sep='')
 }
+
+k <- 6              # Protocol parameters determining
+SLOTLENGTH <- 20    # the length of an epoch
+# extract k parameter
+i <- 1
+while (i <= maxparam) {
+  if ("k" == params[i,1]) {
+    k <- as.numeric(params[i,2])
+  }
+  i=i+1;
+}
+EPOCHLENGTH <- 10*k*SLOTLENGTH
 
 # read the report of the benchmark run
 readReport <- function(filename, run=RUN) {
@@ -374,7 +383,7 @@ plotMessages <- function(d, run=RUN, desc=DESC) {
   rollbackwait_by_node <- {}
   try({
       rollbackwait_by_node <- aggregate(txCount ~ node, data %>% filter(txType %in% c("wait rollback")), sum)
-      colnames(rollbackwait_by_node) <- c("node", "wait rollback") },
+      colnames(rollbackwait_by_node) <- c("node", "wait rollback (mcs)") },
     TRUE
   )
   rollbacksize_by_node <- {}
