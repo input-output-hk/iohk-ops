@@ -10,32 +10,41 @@
 
 module Main where
 
-import           Control.Monad             (forM_)
-import           Data.Char                 (toLower)
-import           Data.List
-import qualified Data.Map                  as Map
-import           Data.Maybe
-import           Data.Monoid               ((<>))
-import           Data.Optional             (Optional)
-import qualified Data.Text                 as T
-import qualified Filesystem.Path.CurrentOS as Path
-import           Options.Applicative       (auto, long, metavar, option, short,
-                                            str)
-import           Prelude                   hiding (FilePath)
-import qualified System.Environment        as Sys
-import           Time.System
-import           Time.Types
-import           Turtle                    hiding (e, env, err, f, fold, inproc,
-                                            o, option, procs, shells, x)
-
 import           Constants
-import           NixOps
-import qualified NixOps                    as Ops
+import           Control.Applicative              (optional, many, (<|>))
+import           Control.Monad                    (forM_)
+import           Data.Char                        (toLower)
+import           Data.List                        (intercalate, intersperse)
+import qualified Data.Map                         as Map
+import           Data.Maybe                       (maybe, fromMaybe, maybeToList)
+import           Data.Monoid                      ((<>))
+import           Data.Optional                    (Optional)
+import           Data.Text                        (Text)
+import qualified Data.Text                        as T
+import qualified Filesystem.Path.CurrentOS        as Path
+import qualified System.Environment               as Sys
+import           NixOps                           (Options(..), cmd, getCardanoSLConfig
+                                                  , clusterConfigurationKey, parserCommit)
+import qualified NixOps                           as Ops
+import           Options.Applicative              (Parser, subparser, progDesc, info, command
+                                                  , commandGroup, flag, option, str, auto, long
+                                                  , short, metavar, value, help, strOption
+                                                  , showDefault, argument, OptionFields, Mod, switch)
+import           Prelude                          hiding (FilePath)
+import           Time.Types
+import           Time.System
+import qualified Turtle
+import           Turtle                           (FilePath, HelpMessage, ArgName, ShortName
+                                                  , sh, prefix, suffix, echo, format, cp, touch
+                                                  , when, unsafeTextToLine, die, cd, fromText
+                                                  , fp, testpath, w, s, printf, options, optPath
+                                                  , optText, argText, optInteger, arg, opt
+                                                  , (</>), (%))
 import           Types
-import           UpdateProposal
-import           Utils
+import           Utils                            (Confirmation(..), every, showT, lowerShowT, errorT)
+import           UpdateProposal                   (UpdateProposalCommand, updateProposal, parseUpdateProposalCommand)
 
-
+
 -- * Elementary parsers
 --
 -- | Given a string, either return a constructor that being 'show'n case-insensitively matches the string,
@@ -43,9 +52,10 @@ import           Utils
 diagReadCaseInsensitive :: (Bounded a, Enum a, Read a, Show a) => String -> Maybe a
 diagReadCaseInsensitive str = diagRead $ toLower <$> str
   where mapping    = Map.fromList [ (toLower <$> show x, x) | x <- every ]
-        diagRead x = Just $ flip fromMaybe (Map.lookup x mapping)
+        diagRead x = Just $ fromMaybe
                      (errorT $ format ("Couldn't parse '"%s%"' as one of: "%s%"\n")
                                         (T.pack str) (T.pack $ intercalate ", " $ Map.keys mapping))
+                     (Map.lookup x mapping)
 
 optReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> ShortName -> Optional HelpMessage -> Parser a
 optReadLower = opt (diagReadCaseInsensitive . T.unpack)
@@ -53,7 +63,7 @@ argReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> Optional HelpM
 argReadLower = arg (diagReadCaseInsensitive . T.unpack)
 
 parserConfigurationKey :: Parser ConfigurationKey
-parserConfigurationKey = ConfigurationKey <$> (optText "configuration-key" 'k' "Configuration key.  Default: env-specific.")
+parserConfigurationKey = ConfigurationKey <$> optText "configuration-key" 'k' "Configuration key.  Default: env-specific."
 
 parserEnvironment :: Parser Environment
 parserEnvironment = fromMaybe Ops.defaultEnvironment <$> optional (optReadLower "environment" 'e' $ pure $
@@ -67,8 +77,7 @@ parserProject     :: Parser Project
 parserProject     = argReadLower "project" $ pure $ Turtle.HelpMessage ("Project to set version of: " <> T.intercalate ", " (lowerShowT <$> (every :: [Project])))
 
 parserNodeName    :: Parser NodeName
-parserNodeName    = NodeName <$> (argText "NODE" $ pure $
-                                   Turtle.HelpMessage $ "Node to operate on. Defaults to '" <> (fromNodeName $ Ops.defaultNode) <> "'")
+parserNodeName    = NodeName <$> argText "NODE" (pure $ Turtle.HelpMessage $ "Node to operate on. Defaults to '" <> fromNodeName Ops.defaultNode <> "'")
 
 parserDeployment  :: Parser Deployment
 parserDeployment  = argReadLower "DEPL" (pure $
@@ -77,15 +86,15 @@ parserDeployment  = argReadLower "DEPL" (pure $
 parserDeployments :: Parser [Deployment]
 parserDeployments = (\(a, b, c, d) -> concat $ maybeToList <$> [a, b, c, d])
                     <$> ((,,,)
-                         <$> (optional parserDeployment) <*> (optional parserDeployment) <*> (optional parserDeployment) <*> (optional parserDeployment))
+                         <$> optional parserDeployment <*> optional parserDeployment <*> optional parserDeployment <*> optional parserDeployment)
 
 parserConfirmation :: Text -> Parser Confirmation
 parserConfirmation question =
   (\case False -> Ask question
          True  -> Confirm)
-  <$> switch "confirm" 'y' "Confirm this particular action, don't ask questions."
+  <$> switch (long "confirm" <> short 'y' <> help "Confirm this particular action, don't ask questions.")
 
-
+
 -- * Central command
 --
 data Command where
@@ -136,91 +145,108 @@ data Command where
   UpdateProposal        :: UpdateProposalCommand -> Command
 deriving instance Show Command
 
+pathOption :: Mod OptionFields FilePath -> Parser FilePath
+pathOption = option (Path.decodeString <$> str)
+
 centralCommandParser :: Parser Command
 centralCommandParser =
-  (    subcommandGroup "General:"
-    [ ("clone",                 "Clone an 'iohk-ops' repository branch",
-                                Clone
-                                <$> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
-                                <*> (fromMaybe defaultIOPSBranch
-                                     <$> (optional (parserBranch "'iohk-ops' branch to checkout.  Defaults to 'master'"))))
-    , ("new",                   "Produce (or update) a checkout of BRANCH with a cluster config YAML file (whose default name depends on the ENVIRONMENT), primed for future operations.",
-                                New
-                                <$> optional (optPath "config"        'c' "Override the default, environment-dependent config filename")
-                                <*> optional (optPath "topology"      't' "Cluster configuration.  Defaults to 'topology.yaml'")
-                                <*> optional parserConfigurationKey
-                                <*> flag DontGenerateKeys "dont-generate-keys" 'd' "Don't generate development keys"
-                                <*> parserEnvironment
-                                <*> parserTarget
-                                <*> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
-                                <*> parserDeployments)
-    , ("set-rev",               "Set commit of PROJECT dependency to COMMIT, and commit the resulting changes",
-                                SetRev
-                                <$> parserProject
-                                <*> parserCommit "Commit to set PROJECT's version to"
-                                <*> flag DontCommit "dont-commit" 'n' "Don't commit the *-src.json")
-    ]
-
-   <|> subcommandGroup "Build-related:"
-    [ ("build",                 "Build the application specified by DEPLOYMENT",                    Build <$> parserDeployment)
-    , ("ami",                   "Build ami",                                                        pure AMI) ]
-
-   -- * cluster lifecycle
-
-   <|> subcommandGroup "Cluster lifecycle:"
-   [
-     -- ("nixops",                "Call 'nixops' with current configuration",
-     --                           (Nixops
-     --                            <$> (NixopsCmd <$> argText "CMD" "Nixops command to invoke")
-     --                            <*> ???)) -- should we switch to optparse-applicative?
-     ("modify",                 "Update cluster state with the nix expression changes",             pure Modify)
-   , ("create",                 "Same as modify",                                                   pure Modify)
-   , ("deploy",                 "Deploy the whole cluster",
-                                Deploy
-                                <$> flag BuildOnly         "build-only"          'b' "Pass --build-only to 'nixops deploy'"
-                                <*> flag DryRun            "dry-run"             'd' "Pass --dry-run to 'nixops deploy'"
-                                <*> flag PassCheck         "check"               'c' "Pass --check to 'nixops build'"
-                                <*> ((Seconds . (* 60) . fromIntegral <$>)
-                                      <$> optional (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay")))
-   , ("destroy",                "Destroy the whole cluster",                                        pure Destroy)
-   , ("delete",                 "Unregistr the cluster from NixOps",                                pure Delete)
-   , ("fromscratch",            "Destroy, Delete, Create, Deploy",                                  pure FromScratch)
-   , ("reallocate-core-ips",    "Destroy elastic IPs corresponding to the nodes listed and redeploy cluster",
-                                                                                                    pure ReallocateCoreIPs)
-   , ("info",                   "Invoke 'nixops info'",                                             pure Info)]
-
-   <|> subcommandGroup "Live cluster ops:"
-   [ ("deployed-commit",        "Print commit id of 'cardano-node' running on MACHINE of current cluster.",
-                                DeployedCommit
-                                <$> parserNodeName)
-   , ("ssh",                    "Execute a command on cluster nodes.  Use --on to limit",
-                                Ssh <$> (Exec <$> (argText "CMD" "")) <*> many (Arg <$> (argText "ARG" "")))
-   , ("checkstatus",            "Check if nodes are accessible via ssh and reboot if they timeout", pure CheckStatus)
-   , ("start-foreground",       "Start cardano (or explorer) on the specified node (--on), in foreground",
-                                 pure StartForeground)
-   , ("stop",                   "Stop cardano-node service",                                        pure Stop)
-   , ("dumplogs",               "Dump logs",
-                                DumpLogs
-                                <$> parserDeployment
-                                <*> switch "prof"         'p' "Dump profiling data as well (requires service stop)")
-   , ("wipe-journals",          "Wipe *all* journald logs on cluster",                              pure CWipeJournals)
-   , ("get-journals",           "Obtain cardano-node journald logs from cluster",
-                                GetJournals
-                                <$> ((fromMaybe Constants.defaultJournaldTimeSpec . (Types.JournaldTimeSpec <$>))
-                                      <$> optional (optText "since" 's' "Get logs since this journald time spec.  Defaults to '6 hours ago'"))
-                                <*> ((Types.JournaldTimeSpec <$>) <$>
-                                     optional (optText "until" 'u' "Get logs until this journald time spec.  Defaults to 'now'")))
-   , ("wipe-node-dbs",          "Wipe *all* node databases on cluster (--on limits the scope, though)",
-                                CWipeNodeDBs
-                                <$> parserConfirmation "Wipe node DBs on the entire cluster?")
-   , ("date",                   "Print date/time",                                                  pure PrintDate)
-   , ("update-proposal",        "Subcommands for updating wallet installers. Apply commands in the order listed.", UpdateProposal <$> parseUpdateProposalCommand)
-   , ("find-installers",        "find installers from CI",                                          FindInstallers <$> (option str (long "daedalus-rev" <> short 'r' <> metavar "SHA1")) <*> optional (optPath "download" 'd' "Download the found installers to the given directory.") <*> optional (option auto (long "buildkite-build-num"  <> metavar "NUMBER")) <*> optional (option auto (long "appveyor-build-num" <> metavar "NUMBER")))
-   ]
-
-   <|> subcommandGroup "Other:"
-    [ ])
-
+  subparser (mconcat
+             [ commandGroup "General:"
+             , command "clone"
+               (info
+                (Clone
+                 <$> (NixopsDepl <$> argument str (metavar "NAME" <> help "Nixops deployment name"))
+                 <*> (Branch <$> strOption (long "branch" <> value "master" <> help "'iohk-ops' branch to checkout" <> showDefault)))
+                (progDesc "Clone an 'iohk-ops' repository branch"))
+             , command "new"
+               (info
+                (New
+                 <$> optional (pathOption (long "config" <> short 'c' <> help "Override the default, environment-dependent config filename"))
+                 <*> optional (pathOption (long "topology" <> short 't' <> help "Cluster configuration.  Defaults to 'topology.yaml'"))
+                 <*> optional parserConfigurationKey
+                 <*> flag GenerateKeys DontGenerateKeys (long "dont-generate-keys" <> short 'd' <> help "Don't generate development keys")
+                 <*> parserEnvironment
+                 <*> parserTarget
+                 <*> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
+                 <*> parserDeployments)
+                (progDesc "Produce (or update) a checkout of BRANCH with a cluster config YAML file (whose default name depends on the ENVIRONMENT), primed for future operations."))
+             , command "set-rev"
+               (info
+                (SetRev
+                 <$> parserProject
+                 <*> parserCommit "Commit to set PROJECT's version to"
+                 <*> flag DoCommit DontCommit (long "dont-commit" <> short 'n' <> help "Don't commit the *-src.json"))
+                (progDesc "Set commit of PROJECT dependency to COMMIT, and commit the resulting changes"))
+             ])
+  <|> subparser (mconcat
+                 [ commandGroup "Build-related:"
+                 , command "build" (info (Build <$> parserDeployment) (progDesc "Build the application specified by DEPLOYMENT"))
+                 , command "ami" (info (pure AMI) (progDesc "Build ami"))
+                 ])
+  <|> subparser (mconcat
+                 [ commandGroup "Cluster lifecycle:"
+                 , command "modify" (info (pure Modify) (progDesc "Update cluster state with the nix expression changes"))
+                 , command "create" (info (pure Modify) (progDesc "Same as modify"))
+                 , command "deploy"
+                   (info
+                    (Deploy
+                     <$> flag NoBuildOnly BuildOnly (long "build-only" <> short 'b' <> help "Pass --build-only to 'nixops deploy'")
+                     <*> flag NoDryRun DryRun (long "dry-run" <> short 'd' <> help "Pass --dry-run to 'nixops deploy'")
+                     <*> flag DontPassCheck PassCheck (long "check" <> short 'c' <> help "Pass --check to 'nixops build'")
+                     <*> ((Seconds . (* 60) . fromIntegral <$>)
+                          <$> optional (optInteger "bump-system-start-held-by" 't' "Bump cluster --system-start time, and add this many minutes to delay"))) (progDesc "Deploy the whole cluster"))
+                 , command "destroy" (info (pure Destroy) (progDesc "Destroy the whole cluster"))
+                 , command "delete" (info (pure Delete) (progDesc "Unregistr the cluster from NixOps"))
+                 , command "fromscratch" (info (pure FromScratch) (progDesc "Destroy, Delete, Create, Deploy"))
+                 , command "reallocate-core-ips"
+                   (info
+                    (pure ReallocateCoreIPs)
+                    (progDesc "Destroy elastic IPs corresponding to the nodes listed and redeploy cluster"))
+                 , command "info" (info (pure Info) (progDesc "Invoke 'nixops info'"))])
+  <|> subparser (mconcat
+                 [ commandGroup "Live cluster ops:"
+                 , command "deployed-commit"
+                   (info
+                    (DeployedCommit
+                     <$> parserNodeName)
+                    (progDesc "Print commit id of 'cardano-node' running on MACHINE of current cluster."))
+                 , command "ssh" (info (Ssh <$> (Exec <$> argText "CMD" "") <*> many (Arg <$> argText "ARG" "")) (progDesc "Execute a command on cluster nodes.  Use --on to limit"))
+                 , command "checkstatus" (info (pure CheckStatus) (progDesc "Check if nodes are accessible via ssh and reboot if they timeout"))
+                 , command "start-foreground" (info (pure StartForeground) (progDesc  "Start cardano (or explorer) on the specified node (--on), in foreground"))
+                 , command "stop" (info (pure Stop) (progDesc "Stop cardano-node service"))
+                 , command "dumplogs"
+                   (info
+                    (DumpLogs
+                     <$> parserDeployment
+                     <*> switch (long "prof" <> short 'p' <> help "Dump profiling data as well (requires service stop)"))
+                    (progDesc "Dump logs"))
+                 , command "wipe-journals" (info (pure CWipeJournals) (progDesc "Wipe *all* journald logs on cluster"))
+                 , command "get-journals"
+                   (info
+                    (GetJournals
+                     <$> (maybe Constants.defaultJournaldTimeSpec JournaldTimeSpec
+                          <$> optional (optText "since" 's' "Get logs since this journald time spec.  Defaults to '6 hours ago'"))
+                     <*> ((JournaldTimeSpec <$>) <$>
+                          optional (optText "until" 'u' "Get logs until this journald time spec.  Defaults to 'now'")))
+                    (progDesc "Obtain cardano-node journald logs from cluster"))
+   , command "wipe-node-dbs"
+     (info
+       (CWipeNodeDBs <$> parserConfirmation "Wipe node DBs on the entire cluster?")
+       (progDesc "Wipe *all* node databases on cluster (--on limits the scope, though)"))
+   , command "date" (info (pure PrintDate) (progDesc "Print date/time"))
+   , command "update-proposal"
+     (info (UpdateProposal <$> parseUpdateProposalCommand) (progDesc "Subcommands for updating wallet installers. Apply commands in the order listed."))
+   , command "find-installers"
+     (info
+       (FindInstallers
+        <$> option str (long "daedalus-rev" <> short 'r' <> metavar "SHA1")
+        <*> optional (optPath "download" 'd' "Download the found installers to the given directory.")
+        <*> optional (option auto (long "buildkite-build-num"  <> metavar "NUMBER"))
+        <*> optional (option auto (long "appveyor-build-num" <> metavar "NUMBER")))
+       (progDesc "find installers from CI"))
+   ])
+  <|> subparser (mconcat
+                 [ commandGroup "Other:" ])
 
 main :: IO ()
 main = do
@@ -234,7 +260,7 @@ main = do
   forM_ topcmds $ runTop (opts { oChdir = Nothing }) args
 
 runTop :: Options -> [Arg] -> Command -> IO ()
-runTop o@Options{..} args topcmd = do
+runTop o@Options{..} args topcmd =
   case topcmd of
     Clone{..}                   -> runClone           o cName cBranch
     New{..}                     -> runNew             o topcmd  args
@@ -253,7 +279,7 @@ runTop o@Options{..} args topcmd = do
       doCommand o c topcmd
     where
         doCommand :: Options -> Ops.NixopsConfig -> Command -> IO ()
-        doCommand o@Options{..} c@Ops.NixopsConfig{..} cmd = do
+        doCommand o@Options{..} c@Ops.NixopsConfig{..} cmd =
           case cmd of
             -- * building
             Build depl               -> Ops.build                     o c depl
@@ -286,20 +312,20 @@ runTop o@Options{..} args topcmd = do
             UpdateProposal up        -> updateProposal                o c up
             Clone{..}                -> error "impossible"
             New{..}                  -> error "impossible"
-            SetRev   _ _ _           -> error "impossible"
+            SetRev{}                 -> error "impossible"
 
-
+
 runClone :: Options -> NixopsDepl -> Branch -> IO ()
 runClone o@Options{..} depl branch = do
   let bname     = fromBranch branch
       branchDir = fromText $ fromNixopsDepl depl
   exists <- testpath branchDir
   if exists
-  then  echo $ "Using existing git clone ..."
+  then  echo "Using existing git clone ..."
   else cmd o "git" ["clone", Ops.fromURL $ Ops.projectURL IOHKOps, "-b", bname, fromNixopsDepl depl]
 
   cd branchDir
-  cmd o "git" (["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"])
+  cmd o "git" ["config", "--replace-all", "receive.denyCurrentBranch", "updateInstead"]
 
 runNew :: Options -> Command -> [Arg] -> IO ()
 runNew o@Options{..} New{..} args = do
@@ -314,7 +340,7 @@ runNew o@Options{..} New{..} args = do
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""
-  echo $ "-- " <> (unsafeTextToLine $ configFilename) <> " is:"
+  echo $ "-- " <> unsafeTextToLine configFilename <> " is:"
   cmd o "cat" [configFilename]
 
   -- generate dev-keys & ensure secrets exist:
@@ -335,12 +361,12 @@ runNew o@Options{..} New{..} args = do
     forM_ secrets touch
     echo "Ensured secrets exist"
 
-    if (tGenerateKeys /= GenerateKeys)
+    if tGenerateKeys /= GenerateKeys
     then echo "Skipping key generation, due to user request"
     else do
       generateStakeKeys o (clusterConfigurationKey config) "keys"
       sh $ do
-        k <- Turtle.find ((prefix "keys/generated-keys/rich/key") <> (suffix ".sk"))
+        k <- Turtle.find (prefix "keys/generated-keys/rich/key" <> suffix ".sk")
           "keys/generated-keys/rich"
         cp k $ "keys" </> Path.filename k
   echo "Cluster deployment has been prepared."
