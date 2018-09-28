@@ -91,7 +91,7 @@ let
     nixexprinput = "plutus";
     description = "Plutus Language";
     inputs = {
-      plutus = mkFetchGithub "https://github.com/input-output-hk/plutus-prototype.git ${plutusBranch}";
+      plutus = mkFetchGithub "https://github.com/input-output-hk/plutus.git ${plutusBranch}";
     };
   };
   makeDaedalusPR = num: info: {
