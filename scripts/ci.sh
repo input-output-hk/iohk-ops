@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-set -xeu
+set -xeuo pipefail
 
 # https://github.com/NixOS/nixops/issues/693
 export BOTO_CONFIG=/dev/null
 
 # shellcheck disable=SC1091
-source ./scripts/set_nixpath.sh
 CLEANUP_CONFIGS=true
 WITH_STAGING=true
 WITH_PRODUCTION=true
@@ -35,6 +34,10 @@ do
     *) echo "Invalid flag passed, exiting" || exit 1
   esac
 done
+
+# Set NIX_PATH to the pinned version in nixpkgs-src.json
+scriptDir=$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")
+export NIX_PATH="nixpkgs=$(nix eval --raw -f fetch-nixpkgs.nix '')"
 
 if [[ ! -v IOHK_OPS ]]
 then

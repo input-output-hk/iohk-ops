@@ -1,8 +1,7 @@
+
 let
-  # temporary hack until scripts/nix-shell.sh ceases to use -p
-  pkgs_path = import ./fetchNixpkgs.nix;
-  pkgs = import pkgs_path { config = {}; overlays = []; };
-  wrapped = pkgs.runCommand "nixpkgs" {} ''
-    ln -sv ${pkgs_path} $out
-  '';
-in wrapped
+  spec = builtins.fromJSON (builtins.readFile ./nixpkgs-src.json);
+in builtins.fetchTarball {
+  url = "https://github.com/${spec.owner}/${spec.repo}/archive/${spec.rev}.tar.gz";
+  inherit (spec) sha256;
+}
