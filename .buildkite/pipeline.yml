@@ -6,7 +6,7 @@ steps:
     agents:
       system: x86_64-linux
   - label: 'iohk-ops-shellcheck'
-    command: 'scripts/shellcheck.sh'
+    command: "nix-build -A tests.shellcheck --no-out-link"
     agents:
       - "system=x86_64-linux"
     agents:
