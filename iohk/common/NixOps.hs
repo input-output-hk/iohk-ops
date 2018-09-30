@@ -445,7 +445,7 @@ mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTa
       cInstallerURLBase = Nothing
   cDeplArgs <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology  <- getSimpleTopo cElements cTopology
-  nixpkgs   <- Path.fromText <$> incmdStrip o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"]
+  nixpkgs   <- getNixPackagesSource
   pure NixopsConfig{..}
 
 -- | Write the config file
@@ -474,7 +474,7 @@ readConfig o@Options{..} cf = do
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.
   topo <- liftIO $ getSimpleTopo cElements cTopology
-  nixpkgs' <- Path.fromText <$> (liftIO $ incmdStrip o "nix-build" ["--no-out-link", "fetch-nixpkgs.nix"])
+  nixpkgs' <- liftIO getNixPackagesSource
   pure c { topology = topo, nixpkgs = nixpkgs' }
 
 clusterConfigurationKey :: NixopsConfig -> ConfigurationKey
