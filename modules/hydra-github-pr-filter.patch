@@ -6,7 +6,7 @@ index 08ba25bb..5fa8c3fe 100644
              next if !$finished && $b->finished == 1;
  
              my $contextTrailer = $conf->{excludeBuildFromContext} ? "" : (":" . $b->id);
-+            my $github_job_name = $jobName =~ s/-pr-\d+//r;
++            my $github_job_name = $jobName =~ s/-(pr-\d+|bors-(staging|trying))//r;
              my $body = encode_json(
                  {
                      state => $finished ? toGithubState($b->buildstatus) : "pending",
