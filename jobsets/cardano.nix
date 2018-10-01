@@ -19,5 +19,6 @@ let
   cardanoSrc = pkgs.fetchgit cardano-sl-src;
 in rec {
   inherit (jobs) iohk-ops iohk-ops-integration-test nixops;
+  inherit (iohkpkgs) checks;
   tests          = import ./../tests     { inherit pkgs; supportedSystems = [ "x86_64-linux" ]; };
 } // (import "${cardanoSrc}/release.nix" { cardano = { outPath = cardanoSrc; rev = cardano-sl-src.rev; }; })

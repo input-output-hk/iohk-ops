@@ -87,7 +87,7 @@ in {
   terraform = pkgs.callPackage ./terraform/terraform.nix {};
   mfa = pkgs.callPackage ./terraform/mfa.nix {};
 
-  tests = {
+  checks = {
     shellcheck = pkgs.callPackage ./scripts/shellcheck.nix { src = builtins.fetchGit ./.; };
   };
 } // cardano-sl-pkgs

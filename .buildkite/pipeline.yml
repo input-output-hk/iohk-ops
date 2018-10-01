@@ -5,9 +5,3 @@ steps:
       - "system=x86_64-linux"
     agents:
       system: x86_64-linux
-  - label: 'iohk-ops-shellcheck'
-    command: "nix-build -A tests.shellcheck --no-out-link"
-    agents:
-      - "system=x86_64-linux"
-    agents:
-      system: x86_64-linux
