@@ -47,7 +47,7 @@ let
     };
   };
   makeNixopsPR = num: info: {
-    name = "iohk-nixops-${num}";
+    name = "iohk-nixops-pr-${num}";
     value = defaultSettings // {
       description = "PR ${num}: ${info.title}";
       nixexprpath = "jobsets/cardano.nix";
@@ -133,6 +133,8 @@ let
     daedalus = mkDaedalus "develop";
     plutus = mkPlutus "master";
     iohk-nixops = mkNixops "master" nixpkgs-src.rev;
+    iohk-nixops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
+    iohk-nixops-bors-trying = mkNixops "bors-trying" nixpkgs-src.rev;
   });
   jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);
