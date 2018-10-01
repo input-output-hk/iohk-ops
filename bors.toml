@@ -1,8 +1,8 @@
 status = [
   "buildkite/iohk-ops",
-  "ci/hydra:serokell:iohk-nixops:iohk-ops.x86_64-linux",
-  "ci/hydra:serokell:iohk-nixops:iohk-ops-integration-test.x86_64-linux",
-  "ci/hydra:serokell:iohk-nixops:checks.shellcheck",
+  "ci/hydra:serokell:iohk-ops:iohk-ops.x86_64-linux",
+  "ci/hydra:serokell:iohk-ops:iohk-ops-integration-test.x86_64-linux",
+  "ci/hydra:serokell:iohk-ops:checks.shellcheck",
 ]
 timeout_sec = 7200
 required_approvals = 1
