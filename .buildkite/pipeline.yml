@@ -1,17 +1,7 @@
 steps:
   - label: 'iohk-ops'
-    command: 'scripts/nix-shell.sh --run "scripts/ci.sh -b false"'
+    command: 'scripts/ci.sh -b false'
     agents:
       - "system=x86_64-linux"
-    env:
-      NIX_REMOTE: daemon
-    agents:
-      system: x86_64-linux
-  - label: 'iohk-ops-shellcheck'
-    command: 'scripts/nix-shell.sh --run scripts/shellcheck.sh'
-    agents:
-      - "system=x86_64-linux"
-    env:
-      NIX_REMOTE: daemon
     agents:
       system: x86_64-linux

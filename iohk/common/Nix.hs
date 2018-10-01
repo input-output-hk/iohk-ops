@@ -92,7 +92,7 @@ fromNixStr :: NixValue -> Text
 fromNixStr (NixStr s) = s
 fromNixStr x = error $ "fromNixStr, got a non-NixStr: " <> show x
 
--- | Evaluate a nix expression, returning its value in nix syntax.
+-- | Evaluate a nix expression, returning its value as JSON.
 nixEvalExpr :: Text -> IO Value
 nixEvalExpr expr = eval >>= parseNixOutput
   where eval = procNix "nix-instantiate" [ "--json", "--read-write-mode" , "--eval" , "--expr", expr ]
@@ -101,6 +101,15 @@ nixEvalExpr expr = eval >>= parseNixOutput
 nixBuildExpr :: Text -> IO FilePath
 nixBuildExpr expr = fp <$> procNix "nix-build" ["--no-out-link", "--expr", expr]
   where fp = FP.fromText . T.decodeUtf8 . S8.takeWhile (/= '\n')
+
+-- | Evaluate a nix expression, returning its value.
+nixEvalFile :: FromJSON a => FilePath -> IO a
+nixEvalFile nixFile = eval >>= parseNixOutput
+  where eval = procNix "nix-instantiate" [ "--json", "--read-write-mode" , "--eval" , format fp nixFile ]
+
+-- | Fetches the pinned nixpkgs source and returns its store path.
+getNixPackagesSource :: IO FilePath
+getNixPackagesSource = nixEvalFile "fetch-nixpkgs.nix"
 
 data NixError = NixError { nixErrorStatus :: Int, nixErrorMessage :: Text } deriving (Show, Typeable)
 instance Exception NixError
