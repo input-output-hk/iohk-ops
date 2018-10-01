@@ -50,6 +50,30 @@ in lib // (rec {
   # mod 11 10 == 1
   # mod 1 10 == 1
   mod = base: int: base - (int * (builtins.div base int));
+
+  # Removes files within a Haskell source tree which won't change the
+  # result of building the package.
+  # This is so that cached build products can be used whenever possible.
+  # It also applies the lib.cleanSource filter from nixpkgs which
+  # removes VCS directories, emacs backup files, etc.
+  cleanSourceTree = src:
+    if lib.canCleanSource src
+      then lib.cleanSourceWith {
+        filter = with pkgs.stdenv;
+          name: type: let baseName = baseNameOf (toString name); in ! (
+            # Filter out cabal build products.
+            baseName == "dist" || baseName == "dist-newstyle" ||
+            baseName == "cabal.project.local" ||
+            lib.hasPrefix ".ghc.environment" baseName ||
+            # Filter out stack build products.
+            lib.hasPrefix ".stack-work" baseName ||
+            # Filter out files which are commonly edited but don't
+            # affect the cabal build.
+            lib.hasSuffix ".nix" baseName
+          );
+        src = lib.cleanSource src;
+      } else src;
+
 } // (with (import ./lib/ssh-keys.nix { inherit lib; }); rec {
   #
   # Access
