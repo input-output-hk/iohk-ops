@@ -15,7 +15,7 @@ let
   daedalusPrs = builtins.fromJSON (builtins.readFile daedalusPrsJSON);
   plutusPrs = builtins.fromJSON (builtins.readFile plutusPrsJSON);
 
-  iohkNixopsUri = "https://github.com/input-output-hk/iohk-nixops.git";
+  iohkOpsURI = "https://github.com/input-output-hk/iohk-ops.git";
   mkFetchGithub = value: {
     inherit value;
     type = "git";
@@ -32,22 +32,22 @@ let
     checkinterval = 60;
     inputs = {
       nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
-      jobsets = mkFetchGithub "${iohkNixopsUri} master";
+      jobsets = mkFetchGithub "${iohkOpsURI} master";
     };
     enableemail = false;
     emailoverride = "";
   };
   mkNixops = nixopsBranch: nixpkgsRev: {
     nixexprpath = "jobsets/cardano.nix";
-    description = "IOHK-nixops";
+    description = "IOHK-Ops";
     inputs = {
       nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgsRev}";
-      jobsets = mkFetchGithub "${iohkNixopsUri} ${nixopsBranch}";
+      jobsets = mkFetchGithub "${iohkOpsURI} ${nixopsBranch}";
       nixops = mkFetchGithub "https://github.com/NixOS/NixOps.git tags/v1.5";
     };
   };
   makeNixopsPR = num: info: {
-    name = "iohk-nixops-pr-${num}";
+    name = "iohk-ops-pr-${num}";
     value = defaultSettings // {
       description = "PR ${num}: ${info.title}";
       nixexprpath = "jobsets/cardano.nix";
@@ -132,9 +132,9 @@ let
     cardano-sl-1-3 = mkCardano "release/1.3.1";
     daedalus = mkDaedalus "develop";
     plutus = mkPlutus "master";
-    iohk-nixops = mkNixops "master" nixpkgs-src.rev;
-    iohk-nixops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
-    iohk-nixops-bors-trying = mkNixops "bors-trying" nixpkgs-src.rev;
+    iohk-ops = mkNixops "master" nixpkgs-src.rev;
+    iohk-ops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
+    iohk-ops-bors-trying = mkNixops "bors-trying" nixpkgs-src.rev;
   });
   jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);

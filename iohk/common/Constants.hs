@@ -51,7 +51,7 @@ data Project
 
 projectURL     :: Project -> URL
 projectURL     CardanoSL       = "https://github.com/input-output-hk/cardano-sl"
-projectURL     IOHKOps         = "https://github.com/input-output-hk/iohk-nixops"
+projectURL     IOHKOps         = "https://github.com/input-output-hk/iohk-ops"
 projectURL     Nixpkgs         = "https://github.com/nixos/nixpkgs"
 projectURL     Stack2nix       = "https://github.com/input-output-hk/stack2nix"
 projectURL     Nixops          = "https://github.com/input-output-hk/nixops"
