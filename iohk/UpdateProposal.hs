@@ -441,8 +441,8 @@ updateProposalInit top uid@(UpdateID _ date) cfg = do
   printf ("*** Creating blank template for date "%s%"\n") date
   cfg' <- case (cfgReleaseNotes cfg) of
     Just path -> do
-      releaseNotes <- readFile (cfgReleaseNotes cfg)
-      pure $ cfg { cfgReleaseNotes = Just releaseNotes }
+      releaseNotes <- liftIO $ readFile $ T.unpack path
+      pure $ cfg { cfgReleaseNotes = Just $ T.pack releaseNotes }
     Nothing -> pure cfg
   liftIO $ encodeFile (encodeString yaml) cfg'
   liftIO . sh $ copyKeys keysDir (dir </> "keys")
