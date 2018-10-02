@@ -18,7 +18,7 @@ let
     let
       # nixopsUnstable = /path/to/local/src
       nixopsUnstable = pkgs.fetchFromGitHub {
-        owner = "rvl";
+        owner = "input-output-hk";
         repo = "nixops";
         rev = "ab86e522373f133e2412bd28a864989eb48f58ec";
         sha256 = "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv";
