@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings, LambdaCase, RecordWildCards, FlexibleInstances #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module UpdateProposal
   ( UpdateProposalCommand(..)
@@ -50,6 +51,7 @@ import UpdateLogic ( InstallersResults(..), CIResult(..)
 import RunCardano
 import InstallerVersions (GlobalResults(..), InstallerNetwork(..), installerNetwork)
 import Utils (tt)
+import           GHC.Generics
 
 ----------------------------------------------------------------------------
 -- Command-line arguments
@@ -113,14 +115,22 @@ parseUpdateProposalCommand = subparser $
               <> help "Date string identifying the update proposal"
 
     updateProposalConfig :: Parser UpdateProposalConfig1
-    updateProposalConfig = UpdateProposalConfig1
-      <$> ( option (eitherReader (gitRevision . T.pack))
-            (long "revision" <> short 'r' <> metavar "SHA1"
-              <> help "Daedalus revision to fetch") )
-      <*> ( fmap T.pack $ strOption (long "block-version" <> short 'B' <> metavar "VERSION"
-           <> help "Last known block version. Check the wiki for more info.") )
-      <*> ( option auto (long "voter-index" <> short 'V' <> metavar "INTEGER"
-           <> help "A number representing you, the vote proposer. Check the wiki for more info.") )
+    updateProposalConfig = UpdateProposalConfig1 <$> revisionP <*> blockVersionP <*> voterIndexP <*> releaseNotes1P
+
+    revisionP :: Parser GitRevision
+    revisionP = option (eitherReader (gitRevision . T.pack)) (long "revision" <> short 'r' <> metavar "SHA1" <> help "Daedalus revision to fetch")
+
+    blockVersionP :: Parser Text
+    blockVersionP = fmap T.pack $ strOption (long "block-version" <> short 'B' <> metavar "VERSION" <> help "Last known block version. Check the wiki for more info.")
+
+    voterIndexP :: Parser Int
+    voterIndexP = option auto (long "voter-index" <> short 'V' <> metavar "INTEGER" <> help "A number representing you, the vote proposer. Check the wiki for more info.")
+
+    releaseNotes1P :: Parser (Maybe Text)
+    releaseNotes1P = (Just . T.pack <$> strOption ( long "release-notes" <> metavar "RELEASE_NOTES" <> help "Path to release notes (html)" ))
+
+    releaseNotes2P :: Parser (Maybe Text)
+    releaseNotes2P = (optional $ strOption ( long "release-notes" <> metavar "RELEASE_NOTES" <> help "Path to release notes (html)" ))
 
     buildNum :: CISystem -> Parser (Maybe Int)
     buildNum ci = optional (option auto arg)
@@ -177,6 +187,7 @@ data UpdateProposalConfig1 = UpdateProposalConfig1
   { cfgDaedalusRevision      :: GitRevision
   , cfgLastKnownBlockVersion :: Text
   , cfgVoterIndex            :: Int
+  , cfgReleaseNotes          :: Maybe Text
   } deriving (Show)
 
 data UpdateProposalConfig2 = UpdateProposalConfig2
@@ -207,6 +218,7 @@ instance FromJSON UpdateProposalConfig1 where
     UpdateProposalConfig1 <$> o .: "daedalusRevision"
                           <*> o .: "lastKnownBlockVersion"
                           <*> o .: "voterIndex"
+                          <*> o .: "releaseNotes"
 
 instance FromJSON GitRevision where
   parseJSON = withText "SHA1" parseGitRevision
@@ -231,9 +243,11 @@ instance FromJSON UpdateProposalConfig5 where
     UpdateProposalConfig5 <$> parseJSON (Object o) <*> o .: "proposalId"
 
 instance ToJSON UpdateProposalConfig1 where
-  toJSON (UpdateProposalConfig1 r v p) = object [ "daedalusRevision" .= r
+  toJSON (UpdateProposalConfig1 r v p rn) = object [ "daedalusRevision" .= r
                                                 , "lastKnownBlockVersion" .= v
-                                                , "voterIndex" .= p ]
+                                                , "voterIndex" .= p
+                                                , "releaseNotes" .= rn
+                                                ]
 
 instance ToJSON GitRevision where
   toJSON (GitRevision r) = String r
@@ -242,7 +256,8 @@ instance ToJSON UpdateProposalConfig2 where
   toJSON (UpdateProposalConfig2 p r b s)
     = mergeObjects (toJSON p) (object [ "installersResults" .= r
                                       , "installerHashes"   .= b
-                                      , "installerSHA256"   .= s ])
+                                      , "installerSHA256"   .= s
+                                      ])
 
 instance ToJSON UpdateProposalConfig3 where
   toJSON (UpdateProposalConfig3 p)
@@ -414,6 +429,7 @@ versionFile opts = cmdWorkPath opts </> "daedalus-latest-version.json"
 -- | Step 1. Init a new work directory
 updateProposalInit :: FilePath -> UpdateID -> UpdateProposalConfig1 -> Shell ()
 updateProposalInit top uid@(UpdateID _ date) cfg = do
+  liftIO $ print cfg
   let dir = workPath top uid
       yaml = paramsFile dir
       keysDir = top </> "keys"
@@ -423,7 +439,12 @@ updateProposalInit top uid@(UpdateID _ date) cfg = do
     True -> die "Config file already exists, stopping."
     False -> pure ()
   printf ("*** Creating blank template for date "%s%"\n") date
-  liftIO $ encodeFile (encodeString yaml) cfg
+  cfg' <- case (cfgReleaseNotes cfg) of
+    Just path -> do
+      releaseNotes <- readFile (cfgReleaseNotes cfg)
+      pure $ cfg { cfgReleaseNotes = Just releaseNotes }
+    Nothing -> pure cfg
+  liftIO $ encodeFile (encodeString yaml) cfg'
   liftIO . sh $ copyKeys keysDir (dir </> "keys")
   mktree (dir </> "installers")
   printf ("*** Now check that "%fp%" is correct.\n") yaml
@@ -522,7 +543,7 @@ updateProposalUploadS3 cfg opts@CommandOptions{..} = do
   signatures <- uploadSignatures cmdUpdateBucket cfgInstallersResults
   printf ("*** Writing "%fp%"\n") (versionFile opts)
   let dvis = makeDownloadVersionInfo cfgInstallersResults urls cfgInstallerHashes cfgInstallerSHA256 signatures
-  liftIO $ writeVersionJSON (versionFile opts) dvis
+  liftIO $ writeVersionJSON (versionFile opts) dvis (cfgReleaseNotes cfgUpdateProposal1)
   storeParams opts (UpdateProposalConfig3 params)
 
 uploadInstallers :: NixopsConfig -> Text -> InstallersResults -> InstallerHashes -> Shell (ArchMap Text)
@@ -586,14 +607,35 @@ data DownloadVersionInfo = DownloadVersionInfo
   , dviHash      :: Text
   , dviSHA256    :: Text
   , dviSignature :: Maybe Text
-  } deriving (Show)
+  } deriving (Show, Generic)
+
+instance ToJSON DownloadVersionInfo where
+  toJSON dvi = object
+    [ "version"   .= dviVersion dvi
+    , "URL"       .= dviURL dvi
+    , "hash"      .= dviHash dvi
+    , "SHA256"    .= dviSHA256 dvi
+    , "signature" .= dviSignature dvi
+    ]
+
+data DownloadVersionJson = DownloadVersionJson
+  { dvjDvis :: ArchMap DownloadVersionInfo
+  , dvjReleaseNotes :: Maybe Text
+  } deriving (Show, Generic)
+
+instance ToJSON DownloadVersionJson where
+  toJSON (DownloadVersionJson dvis releaseNotes) = object [ "platforms" .= dvis, "release_notes" .= releaseNotes ]
 
 -- | Splat version info to an aeson object.
-downloadVersionInfoObject :: ArchMap DownloadVersionInfo -> Value
-downloadVersionInfoObject = foldr mergeObjects (Object mempty) . map (uncurry toObject) . archMapToList
+downloadVersionInfoObject :: ArchMap DownloadVersionInfo  -> Maybe Text -> Value
+downloadVersionInfoObject dvis releaseNotes = mergeObjects legacy newFormat
   where
-    toObject :: Arch -> DownloadVersionInfo -> Value
-    toObject arch DownloadVersionInfo{..} = Object (HM.fromList attrs)
+    legacy :: Value
+    legacy = (Object . HM.fromList . concat . map (uncurry toObject) . archMapToList) dvis
+    newFormat :: Value
+    newFormat = toJSON (DownloadVersionJson dvis releaseNotes)
+    toObject :: Arch -> DownloadVersionInfo -> [ (Text, Value) ]
+    toObject arch DownloadVersionInfo{..} = attrs
       where
         attrs = [ (keyPrefix arch <> k, String v) | (k, v) <-
                     [ (""         , dviVersion)
@@ -606,9 +648,9 @@ downloadVersionInfoObject = foldr mergeObjects (Object mempty) . map (uncurry to
     keyPrefix Win64   = "win64"
     keyPrefix Linux64 = "linux"
 
-writeVersionJSON :: FilePath -> ArchMap DownloadVersionInfo -> IO ()
-writeVersionJSON out dvis = L8.writeFile (encodeString out) (encode v)
-  where v = downloadVersionInfoObject dvis
+writeVersionJSON :: FilePath -> ArchMap DownloadVersionInfo -> Maybe Text -> IO ()
+writeVersionJSON out dvis releaseNotes = L8.writeFile (encodeString out) (encode v)
+  where v = downloadVersionInfoObject dvis releaseNotes
 
 ----------------------------------------------------------------------------
 
