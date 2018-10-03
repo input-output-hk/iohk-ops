@@ -30,11 +30,11 @@ in {
     '';
     hooks.environment = ''
       export NIX_REMOTE=daemon
-      export NIX_BUILD_SHELL="/nix/var/nix/profiles/default/bin/bash"
+      export NIX_BUILD_SHELL="/run/current-system/sw/bin/bash"
       # /usr/bin and /usr/sbin are added For iconutil, security, pkgutil, etc.
       # Required for daedalus installer build,
       # or any build which expects to have apple tools.
-      export PATH="/nix/var/nix/profiles/default/bin:$PATH:/usr/bin:/usr/sbin"
+      export PATH="$PATH:/usr/bin:/usr/sbin"
     '';
     extraConfig = ''
       no-pty=true
