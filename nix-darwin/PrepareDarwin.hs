@@ -1,16 +1,17 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i runhaskell
-{-# LANGUAGE OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-import Prelude hiding (FilePath)
-import Turtle
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import System.IO (hFlush)
-import System.Environment (getExecutablePath)
-import Filesystem.Path.CurrentOS (decodeString)
-import Control.Monad (forM_)
+module PrepareDarwin where
+
+import           Control.Monad             (forM_)
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
+import qualified Data.Text.IO              as T
+import           Filesystem.Path.CurrentOS (decodeString)
+import           Prelude                   hiding (FilePath)
+import           System.Environment        (getEnv, getExecutablePath)
+import           System.IO                 (hFlush)
+import           Turtle
 
 data Deployment = DeployBuildkite | DeployHydra deriving (Show, Eq)
 
@@ -18,8 +19,9 @@ parser :: Parser Deployment
 parser = subcommand "buildkite" "Deploy as Buildkite agent" (pure DeployBuildkite)
          <|> subcommand "hydra" "Deploy as Hydra build slave" (pure DeployHydra)
 
-main :: IO ()
-main = do
+
+prepare :: IO ()
+prepare = do
   deployment <- options "Prepare for nix-darwin." parser
   sh $ do
     installNixDarwin
@@ -31,8 +33,11 @@ installNixDarwin = do
   checkNix
   setupSSLCert
   prepareConfigs
-  nixCopyClosureHack
+  liftIO setupUserBashrc
   createRunDir
+  restartDaemon
+  sleep 2.0
+  cleanupEtc
 
 -- | Update configuration and rebuild nix-darwin
 doSetup :: Deployment -> Shell ()
@@ -40,14 +45,14 @@ doSetup depl = do
   bkDir <- (</> "buildkite") <$> home
 
   -- set up private buildkite keys directory and nix-darwin module
-  when (depl == DeployBuildkite) $ do
+  when (depl == DeployBuildkite) $
     setupBuildkiteDir bkDir
 
   -- tell user to fix the buildkite token
   printf "\nSetup is complete.\n"
   printf "Remember to import an Apple developer signing certificate.\n"
 
-  when (depl == DeployBuildkite) $ do
+  when (depl == DeployBuildkite) $
     printf ("Put the token into " % fp % "\n") (bkDir </> "buildkite_token")
 
 -- | If built with nix, datapath is above bin.
@@ -57,13 +62,17 @@ getDataPath = choose . decodeString <$> getExecutablePath
   where choose exe | filename exe == "ghc" = "." -- runhaskell
                    | otherwise = parent (directory exe) -- nix-build
 
+
 checkNix :: Shell ()
 checkNix = sh $ which "nix-build" >>= \case
   Just nb -> procs (tt nb) ["--version"] empty
   Nothing -> do
-    -- this is never going to happen duh
     echo "nix-build was not found. Installing nix"
-    empty & inproc "curl" ["https://nixos.org/nix/install"] & inproc "sh" [] & void
+    -- Nix fails to install if these backup files exist
+    mapM_ restoreFile ["/etc/bashrc", "/etc/zshrc"]
+    empty & inproc "curl" ["https://nixos.org/nix/install", "-o", "install-nix"] & stdout
+    chmod executable  "install-nix"
+    empty & inproc "./install-nix" ["--daemon"] & stdout
 
 -- | This is a workaround for nix curl on Darwin.
 setupSSLCert :: Shell ()
@@ -76,10 +85,16 @@ setupSSLCert = unlessM (testfile cert) $ mapM_ sudo setup
 
 -- | Prepare /etc for use with nix-darwin instead of nix.
 prepareConfigs :: Shell ()
-prepareConfigs = do
+prepareConfigs =
   -- prepare configs for nix darwin
-  mapM_ moveAway ["/etc/bashrc", "/etc/nix/nix.conf"]
-  chopProfile "/etc/profile"
+  need "USER" >>= \case
+    Just user -> do
+      mapM_ moveAway ["/etc/nix/nix.conf"]
+      let contents = "trusted-users = " <> user
+      liftIO $ writeTextFile "./nix.conf" contents
+      sudo [ "cp", "./nix.conf", "/etc/nix/nix.conf" ]
+      chopProfile "/etc/profile"
+    Nothing -> echo "USER not set"
 
 moveAway :: FilePath -> Shell ()
 moveAway cfg = do
@@ -91,6 +106,16 @@ moveAway cfg = do
     when (isRegularFile st || isDirectory st) $
       sudo ["mv", tt cfg, tt backup]
 
+restoreFile :: FilePath -> Shell ()
+restoreFile cfg = do
+  let backup = cfg <.> "backup-before-nix"
+  exists <- testpath cfg
+  backupExists <- testpath backup
+  when backupExists $ do
+    when exists $
+      sudo ["rm", tt cfg]
+    sudo ["mv", tt backup, tt cfg]
+
 -- | Delete everything after the # Nix line
 chopProfile :: FilePath -> Shell ()
 chopProfile p = do
@@ -101,9 +126,10 @@ chopProfile p = do
   sudo ["cp", tt temp, tt p]
 
 -- | This is needed so that nix-copy-closure to this host will work
-nixCopyClosureHack :: Shell ()
-nixCopyClosureHack = unlessM (testpath "/usr/bin/nix-store") $
-  sudo ["ln", "-sf", "/nix/var/nix/profiles/default/bin/nix-store", "/usr/bin"]
+setupUserBashrc :: IO ()
+setupUserBashrc = do
+  homeDir <- getEnv "HOME"
+  writeTextFile (fromString homeDir </> ".bashrc") "source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
 
 -- | nixpkgs things need /run and normally the nix-darwin installer creates it
 createRunDir :: Shell ()
@@ -116,7 +142,17 @@ setupDotNixpkgs = do
   unlessM (testdir dotNixpkgs) $ mkdir dotNixpkgs
   pure dotNixpkgs
 
--- | Create a directory for secret files which shouldn't go in nix store.
+restartDaemon :: Shell ()
+restartDaemon = do
+  sudo [ "launchctl", "stop", "org.nixos.nix-daemon" ]
+  sudo [ "launchctl", "start", "org.nixos.nix-daemon" ]
+
+cleanupEtc :: Shell ()
+cleanupEtc = do
+  sudo [ "rm", "-f", "/etc/nix/nix.conf" ]
+  sudo [ "rm", "-f", "/etc/bashrc" ]
+  sudo [ "rm", "-f", "/etc/zshrc" ]
+
 setupBuildkiteDir :: FilePath -> Shell ()
 setupBuildkiteDir bk = do
   unlessM (testpath bk) (mkdir bk)
