@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module Main where
 
 import           Data.Monoid
@@ -6,11 +7,7 @@ import           PrepareDarwin
 import           System.Environment
 
 main :: IO ()
-main = do
-  let
-    --decide "process" = process
-    decide "prepare"  = prepare
-    decide "nuke-nix" = nuke
-    decide cmd        = putStrLn $ "command not found: " <> cmd
-  progName <- getProgName
-  decide progName
+main = getProgName >>= \case
+  "prepare" -> prepare
+  "nuke-nix" -> nuke
+  _ -> putStrLn "invalid command ran"

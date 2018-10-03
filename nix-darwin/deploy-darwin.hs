@@ -1,6 +1,3 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i runhaskell
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
@@ -16,7 +13,7 @@ main = do
   (roleFile, hosts, force) <- options "Set up nix-darwin with a configuration." parser
   sh $ deployHosts force roleFile hosts
 
-data Force = Force { forceActivateSame :: Bool } deriving Show
+newtype Force = Force { forceActivateSame :: Bool } deriving Show
 
 parser :: Parser (FilePath, [Text], Force)
 parser = (,,) <$> role <*> hosts <*> force

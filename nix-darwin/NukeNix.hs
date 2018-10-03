@@ -1,5 +1,3 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i runhaskell
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -32,7 +30,7 @@ nuke = sh $ do
                     , ".nixpkgs"
                     , ".config/nixpkgs"
                     ]
-  homeDir <- liftIO $ getEnv "HOME"
+  homeDir <- Turtle.home
   let dead = [ "/etc/nix"
              , "/etc/bashrc.backup-before-nix-darwin"
              , "/nix"
@@ -40,15 +38,15 @@ nuke = sh $ do
              , "/run"
              , "/usr/bin/nix-store"
              ] ++
-             (under "/Library/LaunchDaemons"
-               [ "org.nixos.nix-daemon.plist"
-               , "org.nixos.activate-system.plist"
-               , "org.nixos.buildkite-agent.plist"
-               , "org.nixos.nix-gc.plist"
-               ]) ++
-             (under (fromString homeDir) userConfigs) ++
-             (under "/var/root" userConfigs) ++
-             (under "/root" userConfigs)
+             under "/Library/LaunchDaemons"
+             [ "org.nixos.nix-daemon.plist"
+             , "org.nixos.activate-system.plist"
+             , "org.nixos.buildkite-agent.plist"
+             , "org.nixos.nix-gc.plist"
+             ] ++
+             under homeDir userConfigs ++
+             under "/var/root" userConfigs ++
+             under "/root" userConfigs
 
   void $ proc "rm" ("-rf":files dead) empty
 

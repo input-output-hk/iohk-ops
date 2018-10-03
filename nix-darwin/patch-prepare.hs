@@ -1,5 +1,3 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i runhaskell
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Data.Monoid               ((<>))

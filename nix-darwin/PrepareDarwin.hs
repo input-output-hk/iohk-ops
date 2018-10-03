@@ -1,5 +1,3 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i runhaskell
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -47,14 +45,14 @@ doSetup depl = do
   bkDir <- (</> "buildkite") <$> home
 
   -- set up private buildkite keys directory and nix-darwin module
-  when (depl == DeployBuildkite) $ do
+  when (depl == DeployBuildkite) $
     setupBuildkiteDir bkDir
 
   -- tell user to fix the buildkite token
   printf "\nSetup is complete.\n"
   printf "Remember to import an Apple developer signing certificate.\n"
 
-  when (depl == DeployBuildkite) $ do
+  when (depl == DeployBuildkite) $
     printf ("Put the token into " % fp % "\n") (bkDir </> "buildkite_token")
 
 -- | If built with nix, datapath is above bin.
@@ -72,7 +70,9 @@ checkNix = sh $ which "nix-build" >>= \case
     echo "nix-build was not found. Installing nix"
     -- Nix fails to install if these backup files exist
     mapM_ restoreFile ["/etc/bashrc", "/etc/zshrc"]
-    empty & inproc "curl" ["https://nixos.org/nix/install"] & inproc "sh" [] & stdout
+    empty & inproc "curl" ["https://nixos.org/nix/install", "-o", "install-nix"] & stdout
+    chmod executable  "install-nix"
+    empty & inproc "./install-nix" ["--daemon"] & stdout
 
 -- | This is a workaround for nix curl on Darwin.
 setupSSLCert :: Shell ()
@@ -85,14 +85,16 @@ setupSSLCert = unlessM (testfile cert) $ mapM_ sudo setup
 
 -- | Prepare /etc for use with nix-darwin instead of nix.
 prepareConfigs :: Shell ()
-prepareConfigs = do
+prepareConfigs =
   -- prepare configs for nix darwin
-  user <- liftIO $ getEnv "USER"
-  mapM_ moveAway ["/etc/nix/nix.conf"]
-  let contents = fromString $ "trusted-users = " <> user
-  liftIO $ writeTextFile "./nix.conf" contents
-  sudo [ "cp", "./nix.conf", "/etc/nix/nix.conf" ]
-  chopProfile "/etc/profile"
+  need "USER" >>= \case
+    Just user -> do
+      mapM_ moveAway ["/etc/nix/nix.conf"]
+      let contents = "trusted-users = " <> user
+      liftIO $ writeTextFile "./nix.conf" contents
+      sudo [ "cp", "./nix.conf", "/etc/nix/nix.conf" ]
+      chopProfile "/etc/profile"
+    Nothing -> echo "USER not set"
 
 moveAway :: FilePath -> Shell ()
 moveAway cfg = do
@@ -151,7 +153,6 @@ cleanupEtc = do
   sudo [ "rm", "-f", "/etc/bashrc" ]
   sudo [ "rm", "-f", "/etc/zshrc" ]
 
--- | Create a directory for secret files which shouldn't go in nix store.
 setupBuildkiteDir :: FilePath -> Shell ()
 setupBuildkiteDir bk = do
   unlessM (testpath bk) (mkdir bk)
@@ -170,8 +171,6 @@ setupBuildkiteDir bk = do
     printf ("Placeholder token file: " % fp % "\n") token
     liftIO $ writeTextFile token ""
 
-
--- | Create a directory for secret files which shouldn't go in nix store.
 sudo :: [Text] -> Shell ()
 sudo cmd = do
   liftIO . T.putStrLn . T.unwords $ ("sudo":cmd)

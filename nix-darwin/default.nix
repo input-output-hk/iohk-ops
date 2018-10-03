@@ -25,7 +25,7 @@ in rec {
     ssh -t $1 "chmod -R +w darwin-tools; rm -rf darwin-tools" || true
     scp -r ${darwin-tools}/bin $1:darwin-tools
     ssh -t $1 "sudo darwin-tools/nuke-nix"
-    ssh -t $1 "darwin-tools/prepare"
+    ssh -t $1 "darwin-tools/prepare $2"
   '';
   deploy-darwin = let
     ghc = pkgs_native.haskellPackages.ghcWithPackages (ps: [ ps.turtle ps.universum ps.megaparsec ]);
