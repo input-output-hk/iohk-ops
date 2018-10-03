@@ -733,8 +733,12 @@ dumpLogs o c withProf = do
     parallelIO o c $ dump workDir
     return dt
   where
-    dump workDir node =
+    dump workDir node = do
+        let targetDir = workDir <> "/" <> (fromNodeName node) <> "/"
+        cmd o "mkdir" ["-p", targetDir]
         forM_ logs $ \(rpath, fname) -> do
+          scpAllFromNode o c node "/var/lib/cardano-node/node.log-*" targetDir
+          scpAllFromNode o c node "/var/lib/cardano-node/node.json-*" targetDir
           scpFromNode o c node rpath (workDir <> "/" <> fname (fromNodeName node))
     logs = mconcat
              [ if withProf
@@ -815,6 +819,14 @@ parallelSSH o c@NixopsConfig{..} ex as = do
   parallelIO o c $
     ssh o c ex as
 
+scpAllFromNode :: Options -> NixopsConfig -> NodeName -> Text -> Text -> IO ()
+scpAllFromNode o c (fromNodeName -> node) from to = do
+  (exitcode, _) <- nixops' o c "scp" $ Arg <$> ["--from", node, from, to]
+  case exitcode of
+    ExitSuccess -> return ()
+    ExitFailure code -> TIO.putStrLn $ "scp from " <> node <> " failed with " <> showT code
+
+
 scpFromNode :: Options -> NixopsConfig -> NodeName -> Text -> Text -> IO ()
 scpFromNode o c (fromNodeName -> node) from to = do
   (exitcode, _) <- nixops' o c "scp" $ Arg <$> ["--from", node, from, to]
@@ -862,8 +874,7 @@ stop o c = echo (unsafeTextToLine $ "Stopping " <> (fst $ scopeNameDesc o c))
 
 defLogs, profLogs :: [(Text, Text -> Text)]
 defLogs =
-    [ ("/var/lib/cardano-node/node.log", (<> ".log"))
-    , ("/var/lib/cardano-node/jsonLog.json", (<> ".json"))
+    [ ("/var/lib/cardano-node/jsonLog.json", (<> ".json"))
     , ("/var/lib/cardano-node/time-slave.log", (<> "-ts.log"))
     , ("/var/log/saALL", (<> ".sar"))
     ]
