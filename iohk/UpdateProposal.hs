@@ -115,7 +115,7 @@ parseUpdateProposalCommand = subparser $
               <> help "Date string identifying the update proposal"
 
     updateProposalConfig :: Parser UpdateProposalConfig1
-    updateProposalConfig = UpdateProposalConfig1 <$> revisionP <*> blockVersionP <*> voterIndexP <*> releaseNotes1P
+    updateProposalConfig = UpdateProposalConfig1 <$> revisionP <*> blockVersionP <*> voterIndexP <*> releaseNotesP
 
     revisionP :: Parser GitRevision
     revisionP = option (eitherReader (gitRevision . T.pack)) (long "revision" <> short 'r' <> metavar "SHA1" <> help "Daedalus revision to fetch")
@@ -126,11 +126,8 @@ parseUpdateProposalCommand = subparser $
     voterIndexP :: Parser Int
     voterIndexP = option auto (long "voter-index" <> short 'V' <> metavar "INTEGER" <> help "A number representing you, the vote proposer. Check the wiki for more info.")
 
-    releaseNotes1P :: Parser (Maybe Text)
-    releaseNotes1P = (Just . T.pack <$> strOption ( long "release-notes" <> metavar "RELEASE_NOTES" <> help "Path to release notes (html)" ))
-
-    releaseNotes2P :: Parser (Maybe Text)
-    releaseNotes2P = (optional $ strOption ( long "release-notes" <> metavar "RELEASE_NOTES" <> help "Path to release notes (html)" ))
+    releaseNotesP :: Parser (Maybe Text)
+    releaseNotesP = (Just . T.pack <$> strOption ( long "release-notes" <> metavar "RELEASE_NOTES" <> (help "Path to release notes (html)") <> (completer (bashCompleter "file") )))
 
     buildNum :: CISystem -> Parser (Maybe Int)
     buildNum ci = optional (option auto arg)

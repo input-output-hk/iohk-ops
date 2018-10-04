@@ -29,6 +29,8 @@ let
       iohk-ops
       iohkpkgs.cardano-sl-auxx
       iohkpkgs.cardano-sl-tools
+      # todo, switch run nix-shell to nix run
+      pkgs.bashInteractive
     ];
     shellHook = ''
       ${ioShellHook}
