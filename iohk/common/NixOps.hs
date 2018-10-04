@@ -114,7 +114,8 @@ module NixOps (
   )
 where
 
-import           Control.Arrow                   ((***))
+import           CommandLineUtils                 (filePathOption, directoryOption)
+import           Control.Arrow                    ((***))
 import           Control.Exception                (throwIO)
 import           Control.Lens                     ((<&>))
 import           Control.Monad                    (forM_, mapM_)
@@ -143,7 +144,7 @@ import           Data.Yaml                        (FromJSON(..), ToJSON(..))
 import           Debug.Trace                      (trace)
 import qualified Filesystem.Path.CurrentOS     as Path
 import           GHC.Generics              hiding (from, to)
-import           Options.Applicative              (flag, help, long, short)
+import           Options.Applicative              (bashCompleter, completer, flag, help, long, short)
 import           Prelude                   hiding (FilePath)
 import           Safe                             (headMay)
 import qualified System.IO                     as Sys
@@ -330,8 +331,8 @@ parserNodeLimit = optional $ NodeName <$> (optText "just-node" 'n' "Limit operat
 
 parserOptions :: Parser Options
 parserOptions = Options
-                <$> optional (optPath "chdir"     'C' "Run as if 'iohk-ops' was started in <path> instead of the current working directory.")
-                <*> optional (optPath "config"    'c' "Configuration file")
+                <$> optional chdirP
+                <*> optional configP
                 <*> (optional $ NodeName
                      <$>     (optText "on"        'o' "Limit operation to the specified node"))
                 <*> (optional $ IP
@@ -342,6 +343,13 @@ parserOptions = Options
                 <*> flag NotVerbose Verbose (long "verbose" <> short 'v' <> help "Print all commands that are being run")
                 <*> flag ComponentCheck NoComponentCheck (long "no-component-check" <> short 'p' <> help "Disable deployment/*.nix component check")
                 <*> initialHeapSizeFlag
+  where
+    chdirP = directoryOption (long "chdir" <> short 'C'
+                             <> help "Run as if 'iohk-ops' was started in <path> instead of the current working directory."
+                             <> completer (bashCompleter "directory"))
+    configP = filePathOption (long "config" <> short 'c'
+                              <> help "Configuration file"
+                              <> completer (bashCompleter "file"))
 
 -- Nix initial heap size -- default 12GiB, specify 0 to disable.
 -- For 100 nodes it eats 12GB of ram *and* needs a bigger heap.
