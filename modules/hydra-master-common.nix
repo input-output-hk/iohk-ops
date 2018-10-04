@@ -4,19 +4,6 @@ with lib;
 
 let
   iohk-pkgs = import ../default.nix {};
-  hydraRev = "82b8997da6b5edc6cbdd5511aa1636a1c46ea50c";
-  hydraSrc = pkgs.fetchFromGitHub {
-    owner = "cleverca22";
-    repo = "hydra";
-    sha256 = "0wnhlq5vi6hkcizicflgcf75a5qw84a5950kkvay0an2g7zb8n42";
-    rev = hydraRev;
-  };
-  hydraSrc' = {
-    outPath = hydraSrc;
-    rev = builtins.substring 0 6 hydraRev;
-    revCount = 1234;
-  };
-  hydra-fork = (import (hydraSrc + "/release.nix") { nixpkgs = pkgs.path; hydraSrc = hydraSrc'; }).build.x86_64-linux;
 in {
   nix = {
     extraOptions = ''
@@ -34,7 +21,7 @@ in {
   services.hydra = {
     enable = true;
     port = 8080;
-    package = hydra-fork;
+    package = pkgs.callPackage ./hydra-fork.nix { nixpkgsPath = pkgs.path; };
     useSubstitutes = true;
     notificationSender = "hi@iohk.io";
     logo = (pkgs.fetchurl {
