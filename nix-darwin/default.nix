@@ -8,7 +8,7 @@ in rec {
     ghc = pkgs_mac.haskellPackages.ghcWithPackages (ps: [ ps.turtle ps.universum ps.megaparsec ]);
   in pkgs_mac.stdenv.mkDerivation {
     name = "deploy-nix-darwin";
-    buildInputs = [ ghc pkgs.nixStable ];
+    buildInputs = [ ghc pkgs_mac.nixStable ];
     shellHook = "eval $(egrep ^export ${ghc}/bin/ghc)";
     src = ./.;
     installPhase = ''
