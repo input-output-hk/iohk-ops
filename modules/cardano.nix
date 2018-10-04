@@ -35,9 +35,6 @@ with import ../lib.nix;
     ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}.cardano") hostList)}
     '';
 
-    # TODO, merge with the monitor in modules/report-server.nix
-    services.dd-agent.processMonitor = if config.params.typeIsExplorer then "cardano-explorer" else "cardano-node-simple";
-
     services.cardano-node = {
       enable         = true;
       nodeName       = config.params.name;
