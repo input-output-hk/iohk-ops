@@ -4,8 +4,8 @@ let
   src = fetchFromGitHub {
     owner = "input-output-hk";
     repo = "hydra";
-    sha256 = "0wnhlq5vi6hkcizicflgcf75a5qw84a5950kkvay0an2g7zb8n42";
     rev = "b57e864168651db9f5982a3ae31a91b0affbe40d";
+    sha256 = "0j445iidw32ddgyk4mmjncwwh5mmfbycsr87x6havpwijb3jgjrr";
   };
 
   hydraRelease = (import (src + "/release.nix") {
