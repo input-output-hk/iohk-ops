@@ -426,7 +426,6 @@ versionFile opts = cmdWorkPath opts </> "daedalus-latest-version.json"
 -- | Step 1. Init a new work directory
 updateProposalInit :: FilePath -> UpdateID -> UpdateProposalConfig1 -> Shell ()
 updateProposalInit top uid@(UpdateID _ date) cfg = do
-  liftIO $ print cfg
   let dir = workPath top uid
       yaml = paramsFile dir
       keysDir = top </> "keys"
