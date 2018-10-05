@@ -11,7 +11,7 @@ in
               ./nix_nsswitch.nix
             ];
   services = {
-    dd-agent.tags = ["group:hydra-and-slaves"];
+    dd-agent.tags = ["group:slaves" "group:hydra-and-slaves" ];
   };
 
   nix = {

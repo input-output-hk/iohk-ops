@@ -8,6 +8,8 @@
     ./docker-builder.nix
   ];
 
+  services.dd-agent.tags = ["group:buildkite-agents"];
+
   services.buildkite-agent = {
     enable = true;
     name   = name;

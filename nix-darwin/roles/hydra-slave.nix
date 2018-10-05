@@ -8,6 +8,6 @@
   ];
 
   services = {
-   dd-agent.tags = ["group:hydra-and-slaves" "group:macos"];
+   dd-agent.tags = ["group:slaves" "group:hydra-and-slaves" "group:macos"];
   };
 }
