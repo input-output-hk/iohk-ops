@@ -38,6 +38,10 @@ in {
   nix = {
     distributedBuilds = true;
     buildMachines = [
+      (mkLinux "builder-packet-c1-small-x86.aws.iohkdev.io")
+      (mkLinux "builder-packet-c1-small-x86-2.aws.iohkdev.io")
+      (mkLinux "builder-packet-c1-small-x86-3.aws.iohkdev.io")
+      (mkLinux "builder-packet-c1-small-x86-4.aws.iohkdev.io")
       (mkLinux (cleanIp "hydra-build-slave-1"))
       (mkLinux (cleanIp "hydra-build-slave-2"))
       (mkLinux (cleanIp "hydra-build-slave-3"))
