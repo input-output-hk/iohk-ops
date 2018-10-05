@@ -4,54 +4,34 @@ with (import ../lib.nix);
 let org = "IOHK";
     region = "eu-central-1";
     accessKeyId = IOHKaccessKeyId;
+    mkHydra = itype: ddtags: { config, pkgs, resources, ... }: {
+      imports = [
+        ../modules/amazon-base.nix
+      ];
+
+      services.dd-agent.tags = ["group:linux"] ++ ddtags;
+
+      deployment.ec2 = {
+        inherit accessKeyId;
+        instanceType = mkForce itype;
+        ebsInitialRootDiskSize = mkForce 200;
+        associatePublicIpAddress = true;
+        securityGroups = [
+          resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
+          resources.ec2SecurityGroups."allow-hydra-ssh-${region}-${org}"
+          resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
+          resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
+        ];
+      };
+    };
 in rec {
-  hydra = { config, pkgs, resources, ... }: {
-    imports = [
-      ../modules/amazon-base.nix
-    ];
+  hydra               = mkHydra "r3.2xlarge" ["role:hydra"];
+  mantis-hydra        = mkHydra "r3.2xlarge" ["role:hydra"];
 
-    deployment.ec2 = {
-      inherit accessKeyId;
-      instanceType = mkForce "r3.2xlarge";
-      ebsInitialRootDiskSize = mkForce 200;
-      associatePublicIpAddress = true;
-      securityGroups = [
-        resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
-        resources.ec2SecurityGroups."allow-hydra-ssh-${region}-${org}"
-        resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
-        resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
-      ];
-    };
-  };
-  mantis-hydra = { config, pkgs, resources, ... }: {
-    # See infrastructure-env-production.nix for description.
-    imports = [
-      ../modules/amazon-base.nix
-    ];
-
-    deployment.ec2 = {
-      inherit accessKeyId;
-      instanceType = mkForce "r3.2xlarge";
-      ebsInitialRootDiskSize = mkForce 200;
-      associatePublicIpAddress = true;
-      securityGroups = [
-        resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
-        resources.ec2SecurityGroups."allow-hydra-ssh-${region}-${org}"
-        resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
-        resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
-      ];
-    };
-  };
-
-  hydra-build-slave-1 = hydra;
-  hydra-build-slave-2 = hydra;
-  hydra-build-slave-3 = hydra;
-  hydra-build-slave-4 = hydra;
-
-  buildkite-agent-1   = hydra;
-  buildkite-agent-2   = hydra;
-  buildkite-agent-3   = hydra;
-  buildkite-agent-4   = hydra;
+  buildkite-agent-1   = mkHydra "r3.2xlarge" [];
+  buildkite-agent-2   = buildkite-agent-1;
+  buildkite-agent-3   = buildkite-agent-1;
+  buildkite-agent-4   = buildkite-agent-1;
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [

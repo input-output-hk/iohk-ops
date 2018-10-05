@@ -4,40 +4,25 @@ with (import ../lib.nix);
 let region = "eu-central-1";
     accessKeyId = IOHKaccessKeyId;
     route53accessKeyId = IOHKroute53accessKeyId;
+    mkHydra = hostname: { config, pkgs, resources, ... }: {
+
+      imports = [
+        ../modules/papertrail.nix
+        ../modules/datadog.nix
+      ];
+
+      services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
+
+      deployment.ec2.elasticIPv4 = resources.elasticIPs."${hostname}-ip";
+
+      deployment.route53.accessKeyId = route53accessKeyId;
+      deployment.route53.hostName = "${hostname}.aws.iohkdev.io";
+    };
 in {
   network.description = "IOHK infrastructure production";
 
-  hydra = { config, pkgs, resources, ... }: {
-
-    imports = [
-      ../modules/papertrail.nix
-      ../modules/datadog.nix
-    ];
-
-    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
-
-    deployment.ec2.elasticIPv4 = resources.elasticIPs.hydra-ip;
-
-    deployment.route53.accessKeyId = route53accessKeyId;
-    deployment.route53.hostName = "hydra.aws.iohkdev.io";
-  };
-
-  mantis-hydra = { config, pkgs, resources, ... }: {
-    # Differences from the main Hydra:
-    # 1. builds are not sandboxed
-    # 2. hydra builds things without slaves
-    imports = [
-      ../modules/papertrail.nix
-      ../modules/datadog.nix
-    ];
-
-    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
-
-    deployment.ec2.elasticIPv4 = resources.elasticIPs.mantis-hydra-ip;
-
-    deployment.route53.accessKeyId = route53accessKeyId;
-    deployment.route53.hostName = "mantis-hydra.aws.iohkdev.io";
-  };
+  hydra        = mkHydra "hydra";
+  mantis-hydra = mkHydra "mantis-hydra";
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [

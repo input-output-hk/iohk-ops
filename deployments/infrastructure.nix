@@ -9,14 +9,7 @@ let
       ../modules/hydra-slave.nix
     ];
   };
-  mkBuildkiteAgent = { ... }: {
-    imports = [
-      ../modules/common.nix
-      ../modules/buildkite-agent.nix
-    ];
-  };
-in {
-  hydra = { config, pkgs, ... }: {
+  mkHydra = extraImport: { config, pkgs, ... }: {
     # On first setup:
 
     # Locally: $ ssh-keygen -C "hydra@hydra.example.org" -N "" -f static/id_buildfarm
@@ -26,19 +19,24 @@ in {
       ../modules/common.nix
       ../modules/hydra-slave.nix
       ../modules/hydra-master-common.nix
-      ../modules/hydra-master-main.nix
+      extraImport
     ];
   };
-  mantis-hydra = { config, pkgs, ... }: {
-    # See infrastructure-env-production.nix for description.
-
+  mkHydraBuildSlave = { config, name, pkgs, ... }: {
     imports = [
       ../modules/common.nix
       ../modules/hydra-slave.nix
-      ../modules/hydra-master-common.nix
-      ../modules/hydra-master-mantis.nix
     ];
   };
+  mkBuildkiteAgent = { ... }: {
+    imports = [
+      ../modules/common.nix
+      ../modules/buildkite-agent.nix
+    ];
+  };
+in {
+  hydra        = mkHydra ../modules/hydra-master-main.nix;
+  mantis-hydra = mkHydra ../modules/hydra-master-mantis.nix;
 
   hydra-build-slave-1 = mkHydraBuildSlave;
   hydra-build-slave-2 = mkHydraBuildSlave;
