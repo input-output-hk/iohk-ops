@@ -27,6 +27,7 @@ let org = "IOHK";
 in rec {
   hydra               = mkHydra "r3.2xlarge" ["role:hydra"];
   mantis-hydra        = mkHydra "r3.2xlarge" ["role:hydra"];
+  faster-hydra        = mkHydra "c5.4xlarge" ["role:hydra"];
 
   buildkite-agent-1   = mkHydra "r3.2xlarge" [];
   buildkite-agent-2   = buildkite-agent-1;
@@ -115,6 +116,7 @@ in rec {
     };
     elasticIPs = {
       hydra-ip        = { inherit region accessKeyId; };
+      faster-hydra-ip = { inherit region accessKeyId; };
       mantis-hydra-ip = { inherit region accessKeyId; };
       cardanod-ip     = { inherit region accessKeyId; };
       bors-ng-ip      = { inherit region accessKeyId; };

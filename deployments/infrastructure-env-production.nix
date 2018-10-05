@@ -22,6 +22,7 @@ in {
   network.description = "IOHK infrastructure production";
 
   hydra        = mkHydra "hydra";
+  faster-hydra = mkHydra "faster-hydra";
   mantis-hydra = mkHydra "mantis-hydra";
 
   cardano-deployer = { config, pkgs, resources, ... }: {
