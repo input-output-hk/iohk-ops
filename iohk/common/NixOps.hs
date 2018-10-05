@@ -380,7 +380,7 @@ instance FromJSON NixopsConfig where
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "installer-bucket"
-        <*> v .: "installer-url-base"
+        <*> v .:? "installer-url-base"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
