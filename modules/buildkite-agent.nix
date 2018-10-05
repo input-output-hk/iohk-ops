@@ -4,6 +4,7 @@
   imports = [
     ./auto-gc.nix
     ./nix_nsswitch.nix
+    ./datadog.nix
     ./docker-builder.nix
   ];
 
