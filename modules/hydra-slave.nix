@@ -6,7 +6,10 @@ let
   localLib = import ../lib.nix;
 in
 {
-  imports = [ ./auto-gc.nix ./nix_nsswitch.nix ];
+  imports = [ ./auto-gc.nix
+              ./datadog.nix
+              ./nix_nsswitch.nix
+            ];
   services = {
     dd-agent.tags = ["group:hydra-and-slaves"];
   };
