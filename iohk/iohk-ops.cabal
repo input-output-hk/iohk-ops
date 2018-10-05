@@ -21,6 +21,7 @@ library
   exposed-modules:     Appveyor
                      , Arch
                      , Buildkite.API
+                     , CommandLineUtils
                      , Constants
                      , Github
                      , InstallerVersions

@@ -29,7 +29,8 @@ import qualified NixOps                           as Ops
 import           Options.Applicative              (Parser, subparser, progDesc, info, command
                                                   , commandGroup, flag, option, str, auto, long
                                                   , short, metavar, value, help, strOption
-                                                  , showDefault, argument, OptionFields, Mod, switch)
+                                                  , showDefault, argument, switch
+                                                  , completer, bashCompleter)
 import           Prelude                          hiding (FilePath)
 import           Time.Types
 import           Time.System
@@ -37,9 +38,10 @@ import qualified Turtle
 import           Turtle                           (FilePath, HelpMessage, ArgName, ShortName
                                                   , sh, prefix, suffix, echo, format, cp, touch
                                                   , when, unsafeTextToLine, die, cd, fromText
-                                                  , fp, testpath, w, s, printf, options, optPath
+                                                  , fp, testpath, w, s, printf, options
                                                   , optText, argText, optInteger, arg, opt
                                                   , (</>), (%))
+import           CommandLineUtils                 (filePathOption)
 import           Types
 import           Utils                            (Confirmation(..), every, showT, lowerShowT, errorT)
 import           UpdateProposal                   (UpdateProposalCommand, updateProposal, parseUpdateProposalCommand)
@@ -145,9 +147,6 @@ data Command where
   UpdateProposal        :: UpdateProposalCommand -> Command
 deriving instance Show Command
 
-pathOption :: Mod OptionFields FilePath -> Parser FilePath
-pathOption = option (Path.decodeString <$> str)
-
 centralCommandParser :: Parser Command
 centralCommandParser =
   subparser (mconcat
@@ -161,8 +160,8 @@ centralCommandParser =
              , command "new"
                (info
                 (New
-                 <$> optional (pathOption (long "config" <> short 'c' <> help "Override the default, environment-dependent config filename"))
-                 <*> optional (pathOption (long "topology" <> short 't' <> help "Cluster configuration.  Defaults to 'topology.yaml'"))
+                 <$> optional (filePathOption (long "config" <> short 'c' <> help "Override the default, environment-dependent config filename"))
+                 <*> optional (filePathOption (long "topology" <> short 't' <> help "Cluster configuration.  Defaults to 'topology.yaml'"))
                  <*> optional parserConfigurationKey
                  <*> flag GenerateKeys DontGenerateKeys (long "dont-generate-keys" <> short 'd' <> help "Don't generate development keys")
                  <*> parserEnvironment
@@ -240,8 +239,11 @@ centralCommandParser =
      (info
        (FindInstallers
         <$> option str (long "daedalus-rev" <> short 'r' <> metavar "SHA1")
-        <*> optional (optPath "download" 'd' "Download the found installers to the given directory.")
-        <*> optional (option auto (long "buildkite-build-num"  <> metavar "NUMBER"))
+        <*> optional (fromText <$> option auto
+                       (long "download" <> short 'r' <> metavar "DIRECTORY"
+                        <> help "Download the found installers to the given directory."
+                        <> completer (bashCompleter "directory")))
+        <*> optional (option auto (long "buildkite-build-num" <> metavar "NUMBER"))
         <*> optional (option auto (long "appveyor-build-num" <> metavar "NUMBER")))
        (progDesc "find installers from CI"))
    ])
