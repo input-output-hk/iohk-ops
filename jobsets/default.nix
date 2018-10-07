@@ -23,6 +23,7 @@ let
   };
   nixpkgs-src = builtins.fromJSON (builtins.readFile ./../nixpkgs-src.json);
   pkgs = import nixpkgs {};
+
   defaultSettings = {
     enabled = 1;
     hidden = false;
@@ -37,6 +38,14 @@ let
     enableemail = false;
     emailoverride = "";
   };
+
+  # Adds an arg which disables optimization for cardano-sl builds
+  withFasterBuild = jobset: jobset // {
+    inputs = (jobset.inputs or { }) // {
+      fasterBuild = { type = "boolean"; emailresponsible = false; value = "true"; };
+    };
+  };
+
   mkNixops = nixopsBranch: nixpkgsRev: {
     nixexprpath = "jobsets/cardano.nix";
     description = "IOHK-Ops";
@@ -68,13 +77,12 @@ let
   };
   makeCardanoPR = num: info: {
     name = "cardano-sl-pr-${num}";
-    value = defaultSettings // {
+    value = defaultSettings // withFasterBuild {
       description = "PR ${num}: ${info.title}";
       nixexprinput = "cardano";
       nixexprpath = "release.nix";
       inputs = {
         cardano = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
-        fasterBuild = { type = "boolean"; emailresponsible = false; value = "true"; }; # Disables optimization only for PR builds
       };
     };
   };
@@ -130,8 +138,14 @@ let
     cardano-sl-1-0 = mkCardano "release/1.0.x";
     cardano-sl-1-2 = mkCardano "release/1.2.0";
     cardano-sl-1-3 = mkCardano "release/1.3.1";
+
+    # Provides cached build projects for PR builds with -O0
+    no-opt-cardano-sl = withFasterBuild (mkCardano "develop");
+
     daedalus = mkDaedalus "develop";
+
     plutus = mkPlutus "master";
+
     iohk-ops = mkNixops "master" nixpkgs-src.rev;
     iohk-ops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
     iohk-ops-bors-trying = mkNixops "bors-trying" nixpkgs-src.rev;
