@@ -87,7 +87,8 @@ same as what was reported after running the `init` step.
 This will locate the CI builds for the previously configured revision
 and download their installer artifacts to the `installers`
 subdirectory of the work dir. It will then use the `file` program to
-check that they are actually installers for the correct platform.
+check that they are actually installers for the correct platform, and
+calculate their hashes using both `cardano-auxx` and `sha256sum`.
 
 After it has finished, inspect the following values in `params.yaml`:
 
@@ -98,7 +99,7 @@ After it has finished, inspect the following values in `params.yaml`:
 2. The `grApplicationVersion` found should match what you have set in
    `cardano-sl`.
 
-3. The `bkVersion` and `avVersion` values should be from the correct
+3. The `ciResultBuildNumber` for all `ciResults` should be the correct
    build.
    
 4. The `grCardanoCommit` value should match `cardano-sl-src.json` in
@@ -108,12 +109,24 @@ After it has finished, inspect the following values in `params.yaml`:
    and versions, and correspond to the same build as was approved for
    release by QA (if updating mainnet installers).
 
+6. The `installerHashes` and `installerSHA256` values should be
+   present.
+
 These values will also be summarised in the file `wiki.md` within the
 work dir.
 
 **Important**: If an update proposal is made with the wrong
 `applicationVersion`, the update mechanism may fail and users will be
 required to intervene by manually installing an update.
+
+### When there is more than one build for the chosen revision
+
+Sometimes there can be multiple builds corresponding to a given
+Daedalus revision.
+
+In this case, `find-installers` will list the builds and then exit
+without downloading anything. You need to re-run the command with
+`--buildkite-build-num` or `--appveyor-build-num` arguments added.
 
 
 ## 3. (Optional) Sign installer files with GPG
@@ -135,11 +148,8 @@ files.
 
     io -c NETWORK.yaml update-proposal upload-s3 DATE
 
-This will hash the installer files with both `cardano-auxx` and
-`sha256sum`, then upload the hashed installers to S3.
-
-After this has run, inspect the `installerHashes` values in
-`params.yaml`.
+This will upload the hashed installers to S3, under their original
+filename, as well as by their hash.
 
 There will also be a file `daedalus-latest-version.json` added to the
 work dir with download links and SHA-256 hashes.
