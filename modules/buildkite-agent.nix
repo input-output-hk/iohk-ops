@@ -51,7 +51,7 @@
       user    = "buildkite-agent";
     };
     buildkite-token = {
-      keyFile = ./. + "/../static/buildkite-token";
+      keyFile = ./. + "/../static/buildkite_token";
       user    = "buildkite-agent";
     };
   };
