@@ -54,7 +54,7 @@ mkdir -p cardano-sl/explorer/frontend/dist
 
 touch static/buildkite_token
 touch static/github_token
-touch static/id_buildfarm static/id_buildfarm.pub
+touch static/id_buildfarm{,2} static/id_buildfarm{,2}.pub
 touch static/datadog-api.secret static/datadog-application.secret
 
 test -f static/tarsnap-cardano-deployer.secret ||
