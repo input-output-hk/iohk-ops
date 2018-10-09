@@ -35,4 +35,6 @@ in
   builder-packet-c1-small-x86-4 = mkPacketNet "builder-packet-c1-small-x86-4" ../modules/hydra-slave.nix;
 
   buildkite-packet-1            = mkPacketNet "buildkite-packet-1"            ../modules/buildkite-agent.nix;
+  buildkite-packet-2            = mkPacketNet "buildkite-packet-2"            ../modules/buildkite-agent.nix;
+  buildkite-packet-3            = mkPacketNet "buildkite-packet-3"            ../modules/buildkite-agent.nix;
 }

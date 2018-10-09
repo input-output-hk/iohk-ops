@@ -38,6 +38,8 @@ in {
   buildkite-agent-3   = mkBuildkiteAgent;
   buildkite-agent-4   = mkBuildkiteAgent;
   buildkite-packet-1  = mkBuildkiteAgent;
+  buildkite-packet-2  = mkBuildkiteAgent;
+  buildkite-packet-3  = mkBuildkiteAgent;
 
   cardano-deployer = { config, pkgs, ... }: {
     imports = [
