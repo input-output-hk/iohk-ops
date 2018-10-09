@@ -33,6 +33,7 @@ in
   builder-packet-c1-small-x86-2 = mkPacketNet "builder-packet-c1-small-x86-2" ../modules/hydra-slave.nix;
   builder-packet-c1-small-x86-3 = mkPacketNet "builder-packet-c1-small-x86-3" ../modules/hydra-slave.nix;
   builder-packet-c1-small-x86-4 = mkPacketNet "builder-packet-c1-small-x86-4" ../modules/hydra-slave.nix;
+  builder-packet-c1-small-x86-5 = mkPacketNet "builder-packet-c1-small-x86-5" ../modules/hydra-slave.nix;
 
   buildkite-packet-1            = mkPacketNet "buildkite-packet-1"            ../modules/buildkite-agent.nix;
   buildkite-packet-2            = mkPacketNet "buildkite-packet-2"            ../modules/buildkite-agent.nix;

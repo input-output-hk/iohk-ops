@@ -42,6 +42,7 @@ in {
       (mkLinux "builder-packet-c1-small-x86-2.aws.iohkdev.io")
       (mkLinux "builder-packet-c1-small-x86-3.aws.iohkdev.io")
       (mkLinux "builder-packet-c1-small-x86-4.aws.iohkdev.io")
+      (mkLinux "builder-packet-c1-small-x86-5.aws.iohkdev.io")
       (mkMac "osx-1.aws.iohkdev.io")
       (mkMac "osx-2.aws.iohkdev.io")
       (mkMac "osx-3.aws.iohkdev.io")
