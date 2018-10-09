@@ -2,7 +2,7 @@
 
 let
   maxFreedMB = 25000;
-  minFreeMB = 2000;
+  minFreeMB = 6000;
 
 in {
   imports = [ ../services/builder-gc.nix ];
