@@ -52,7 +52,7 @@ export HOME="${homestate}"
 # PREPARE
 mkdir -p cardano-sl/explorer/frontend/dist
 
-touch static/buildkite-token
+touch static/buildkite_token
 touch static/github_token
 touch static/id_buildfarm static/id_buildfarm.pub
 touch static/datadog-api.secret static/datadog-application.secret

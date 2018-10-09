@@ -335,7 +335,7 @@ githubWikiRecord InstallersResults{..} = T.intercalate " | " cols <> "\n"
            , githubLink grCardanoCommit "cardano-sl"
            , ciLink Mac64
            , ciLink Win64
-           , "DATE" ]
+           , "DATE TIME" ]
 
     githubLink rev project = githubLink' (rev globalResult) project
     githubLink' rev project = mdLink (T.take 6 rev) (format ("https://github.com/input-output-hk/"%s%"/commit/"%s) project rev)

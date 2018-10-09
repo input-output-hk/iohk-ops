@@ -121,7 +121,10 @@ The script to check CI for installers of a particular revision can be
 run stand-alone. It won't download anything, unless a destination
 directory is given.
 
-    io -c mainnet.yaml find-installers -r REV [--download DIRECTORY]
+    io -c mainnet.yaml find-installers -r REV
+        [--download DIRECTORY]
+        [--buildkite-build-number NUMBER]
+        [--appveyor-build-number NUMBER]
 
 Example output:
 
@@ -148,6 +151,15 @@ Example output:
     Windows - https://ci.appveyor.com/api/buildjobs/kdx370l6and39iou/artifacts/installers/daedalus-0.10.0-cardano-sl-1.2.0.6339.0-staging-windows.exe
 
     ============================================================
+
+### Overriding build numbers
+
+Sometimes there can be multiple builds corresponding to a given
+Daedalus revision. In this case, `find-installers` will list the
+builds and then exit.
+
+Add the `--buildkite-build-num` or `--appveyor-build-num` arguments to
+select one of the builds.
 
 
 # Configuration
