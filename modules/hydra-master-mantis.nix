@@ -4,18 +4,36 @@ with lib;
 
 let
   hydraDnsName = "mantis-hydra.aws.iohkdev.io";
+  commonBuildMachineOpt = {
+    speedFactor = 1;
+    sshKey = "/etc/nix/id_buildfarm";
+    sshUser = "root";
+    system = "x86_64-linux";
+    supportedFeatures = [ "kvm" "nixos-test" ];
+  };
+  mkLinux = hostName: commonBuildMachineOpt // {
+    inherit hostName;
+    maxJobs = 4;
+  };
 in {
+  environment.etc = lib.singleton {
+    target = "nix/id_buildfarm";
+    source = ../static/id_buildfarm2;
+    uid = config.ids.uids.hydra;
+    gid = config.ids.gids.hydra;
+    mode = "0440";
+  };
 
   nix = {
     buildMachines = [
-      { hostName = "localhost";
-        system = "x86_64-linux,builtin";
-        maxJobs = 8;
-        supportedFeatures = ["kvm" "nixos-test"];
-      }
+      (mkLinux "mantis-slave-packet-1.aws.iohkdev.io")
+      (mkLinux "mantis-slave-packet-2.aws.iohkdev.io")
     ];
     gc.automatic = true;
     useSandbox = mkForce false;
+
+    distributedBuilds = true;
+    binaryCaches = mkForce [ "https://cache.nixos.org" ];
   };
 
   services.fail2ban.enable = true;
