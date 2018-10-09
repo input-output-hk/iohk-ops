@@ -55,4 +55,11 @@
       user    = "buildkite-agent";
     };
   };
+
+  # Globally enable stack's nix integration so that stack builds have
+  # the necessary dependencies available.
+  environment.etc."stack/config.yaml".text = ''
+    nix:
+      enable: true
+  '';
 }
