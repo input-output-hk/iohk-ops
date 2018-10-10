@@ -30,7 +30,6 @@ in {
       (mkLinux "mantis-slave-packet-2.aws.iohkdev.io")
     ];
     gc.automatic = true;
-    useSandbox = mkForce false;
 
     distributedBuilds = true;
     binaryCaches = mkForce [ "https://cache.nixos.org" ];
