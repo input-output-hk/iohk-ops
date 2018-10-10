@@ -42,7 +42,7 @@ in {
   services.hydra = {
     hydraURL = "https://${hydraDnsName}";
     # max output is 4GB because of amis
-    # auth token needs `repo:status`
+    # auth token needs `repo`
     extraConfig = ''
       max_output_size = 4294967296
       store-uri = file:///nix/store?secret-key=/etc/nix/${hydraDnsName}-1/secret
