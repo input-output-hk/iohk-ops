@@ -33,10 +33,6 @@ in {
   faster-hydra = mkHydra ../modules/hydra-master-main.nix;
   mantis-hydra = mkHydra ../modules/hydra-master-mantis.nix;
 
-  buildkite-agent-1   = mkBuildkiteAgent;
-  buildkite-agent-2   = mkBuildkiteAgent;
-  buildkite-agent-3   = mkBuildkiteAgent;
-  buildkite-agent-4   = mkBuildkiteAgent;
   buildkite-packet-1  = mkBuildkiteAgent;
   buildkite-packet-2  = mkBuildkiteAgent;
   buildkite-packet-3  = mkBuildkiteAgent;

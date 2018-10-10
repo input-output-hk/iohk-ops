@@ -29,11 +29,6 @@ in rec {
   mantis-hydra        = mkHydra "r3.2xlarge" ["role:hydra"];
   faster-hydra        = mkHydra "c5.4xlarge" ["role:hydra"];
 
-  buildkite-agent-1   = mkHydra "r3.2xlarge" [];
-  buildkite-agent-2   = buildkite-agent-1;
-  buildkite-agent-3   = buildkite-agent-1;
-  buildkite-agent-4   = buildkite-agent-1;
-
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
       ../modules/amazon-base.nix
