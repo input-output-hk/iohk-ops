@@ -48,7 +48,7 @@ in {
       store-uri = file:///nix/store?secret-key=/etc/nix/${hydraDnsName}-1/secret
       binary_cache_secret_key_file = /etc/nix/${hydraDnsName}-1/secret
       <github_authorization>
-        input-output-hk = ${builtins.readFile ../static/github_token}
+        input-output-hk = ${builtins.readFile ../static/github_token_mantis_hydra}
       </github_authorization>
     '';
   };
