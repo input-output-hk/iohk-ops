@@ -54,6 +54,14 @@ in {
 
   services.hydra = {
     hydraURL = "https://hydra.iohk.io";
+    package = pkgs.callPackage ./hydra-fork.nix { nixpkgsPath = pkgs.path;
+      src = pkgs.fetchFromGitHub {
+        owner = "input-output-hk";
+        repo = "hydra";
+        rev = "b57e864168651db9f5982a3ae31a91b0affbe40d";
+        sha256 = "0j445iidw32ddgyk4mmjncwwh5mmfbycsr87x6havpwijb3jgjrr";
+      };
+    };
     # max output is 4GB because of amis
     # auth token needs `repo:status`
     extraConfig = ''

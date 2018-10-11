@@ -21,7 +21,6 @@ in {
   services.hydra = {
     enable = true;
     port = 8080;
-    package = pkgs.callPackage ./hydra-fork.nix { nixpkgsPath = pkgs.path; };
     useSubstitutes = true;
     notificationSender = "hi@iohk.io";
     logo = (pkgs.fetchurl {
