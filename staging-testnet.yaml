@@ -20,7 +20,6 @@ environment: Staging
 topology: topology-staging.yaml
 installer-bucket:   update-awstest.iohkdev.io
 installer-url-base: update-awstest.iohkdev.io
-signing-fingerprint: 99EFF9F439F8C027E3C842E3B825E3763D09560C
 name: rc-staging
 files:
 - deployments/keypairs.nix

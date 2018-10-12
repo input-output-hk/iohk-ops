@@ -381,7 +381,6 @@ instance FromJSON NixopsConfig where
         <*> v .: "target"
         <*> v .: "installer-bucket"
         <*> v .:? "installer-url-base"
-        <*> v .:? "signing-fingerprint" .!= Just "1234567890123456789012345678901234567890"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
@@ -447,7 +446,6 @@ mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTa
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
       cUpdateBucket   = "default-bucket"
       cInstallerURLBase = Nothing
-      cSigningFinger  = Just "1234567890123456789012345678901234567890"
   cDeplArgs <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology  <- getSimpleTopo cElements cTopology
   nixpkgs   <- getNixPackagesSource
