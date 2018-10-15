@@ -129,15 +129,13 @@ without downloading anything. You need to re-run the command with
 `--buildkite-build-num` or `--appveyor-build-num` arguments added.
 
 
-## 3. (Optional) Sign installer files with GPG
+## 3. Sign installer files with GPG
 
 This step requires a signing key available on the deployer host.
 
-    io -c NETWORK.yaml update-proposal sign-installers [-u signing.authority@iohk.io] DATE
+    io -c NETWORK.yaml update-proposal sign-installers -u signing.authority@iohk.io DATE
 
-Without any key ID specified (`-u` option), it will sign with the
-default key in the default GPG keyring. If the signing key is
-protected with a passphrase, you will be prompted to enter it.
+If the signing key is protected with a passphrase, you will be prompted to enter it.
 
 This will place detached signatures in `.asc` files within the work
 dir. These will be uploaded to S3 at the same time as the installer
