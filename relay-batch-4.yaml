@@ -16,6 +16,7 @@ environment: Production
 topology: topology-bulk4.yaml
 name: relays4
 installer-bucket: none
+installer-url-base: none
 files:
 - deployments/keypairs.nix
 - deployments/security-groups.nix
