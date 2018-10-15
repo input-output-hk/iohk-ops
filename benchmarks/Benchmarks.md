@@ -21,9 +21,9 @@ The scripts that are used are the following:
 
 1. `cd ISSUE-ID`
 
-1. `cd benchmarks`
-
 1. `nix-shell -A withAuxx`
+
+1. `cd benchmarks`
 
 1. Change the revision (commit) of `cardano-sl` repo that is used:
     ```
@@ -34,9 +34,10 @@ The scripts that are used are the following:
 
 1. ctrl-d
 
-1. `nix-shell`
+1. `nix-shell -A withAuxx`
 
-1. Choose a name for the cluster:
+1. Choose a name for the cluster (name should be in lowercase as referred into
+https://github.com/input-output-hk/iohk-ops/blob/master/docs/Developer-clusters-HOWTO.md#steps):
     ```
     $(nix-build scripts/set-cluster.nix    \
     --argstr clusterName benchmarksCluster \

@@ -1,16 +1,3 @@
-severity: Info
-file: txgen.log
-smart-gen:
-    severity: Info
-    comm:
-        severity: Info
-    dht:
-        severity: Info
-time-slave:
-    severity: Info
-    comm:
-        severity: Info
-    dht:
-        severity: Info
-kademlia:
-    severity: Info
+loggerTree:
+     severity: Info
+     file: txgen.log

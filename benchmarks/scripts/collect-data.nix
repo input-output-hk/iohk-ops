@@ -44,10 +44,10 @@ writeScriptBin "collect-data.sh" ''
   IO=$(nix-build -A iohk-ops)/bin/iohk-ops
 
   # build needed tools
-  nix-build -A cardano-sl-tools -o post-mortem # for cardano-post-mortem
+  nix-build -A cardano-sl-tools-post-mortem -o post-mortem # for cardano-post-mortem
 
   TOPOLOGY=`grep topology: ../config.yaml | awk '{print $2}'`
-  CONFIGURATIONYAML=`nix-instantiate -E '(import ./. {}).cardano-sl.src + "/configuration.yaml"' --eval`
+  CONFIGURATIONYAML=${(import ../. {}).cardano-sl.src }/configuration.yaml
 
   K=`awk -v p1=bench ' $0 ~ p1 {found = 1} found && /k: [0-9]+/ { print $0; exit }' $CONFIGURATIONYAML | awk '{print $2}'`
   SLOT_DURATION=`awk -v p1=bench ' $0 ~ p1 {found = 1} found && /slotDuration:[ ]+[0-9]+/ { print $0; exit }' $CONFIGURATIONYAML | awk '{print $2}'`
@@ -138,7 +138,8 @@ writeScriptBin "collect-data.sh" ''
 
   # move files
   mv $TPSFILE $LOGDIR
-  mv experiments/txgen $LOGDIR
+  mv conf $LOGDIR
+  mv logs $LOGDIR
   mv report_$LAST.txt $LOGDIR
   mv times.csv $LOGDIR/times.csv
   mv times.svg $LOGDIR/times.svg

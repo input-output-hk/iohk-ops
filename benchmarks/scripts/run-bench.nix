@@ -54,7 +54,7 @@ writeScriptBin "run-bench.sh" ''
   IO=$(nix-build -A iohk-ops)/bin/iohk-ops
 
   TOPOLOGY=`grep topology: ../config.yaml | awk '{print $2}'`
-  CONFIGURATIONYAML=`nix-instantiate -E '(import ./. {}).cardano-sl.src + "/configuration.yaml"' --eval`
+  CONFIGURATIONYAML=${(import ../. {}).cardano-sl.src }/configuration.yaml
 
   # build needed tools
   nix-build -A cardano-sl-auxx -o auxx         # transaction generator
@@ -103,13 +103,24 @@ writeScriptBin "run-bench.sh" ''
     export GENESIS_TXS_PER_THREAD=$((50000 / CONC / (ADDGENERATORS + 1)))
   fi
 
+  if [ ! -d logs ]; then
+     mkdir logs
+  fi
+
+  if [ ! -d conf ]; then
+     mkdir conf
+  fi
+
   for n in $(seq 1 $ADDGENERATORS); do
 
       export AUXX_START_AT=$((GENESIS_TXS_PER_THREAD * CONC * n))
 
+      echo -e "loggerTree:\n   severity: Info\n   file: txgen-''${n}.log" > conf/log_config_auxx_''${n}.yaml
+
       ./auxx/bin/cardano-auxx \
           --db-path wdb''${n} \
-          --log-config ../static/txgen-logging.yaml --logs-prefix experiments/txgen/txgen-''${n}  \
+          --log-config conf/log_config_auxx_''${n}.yaml \
+          --logs-prefix ./logs \
           --configuration-file ''${CONFIGURATIONYAML} \
           --configuration-key bench \
           ''${TRX2RELAYS} \
@@ -126,9 +137,12 @@ writeScriptBin "run-bench.sh" ''
 
   export AUXX_START_AT=0
 
+  echo -e "loggerTree:\n   severity: Info\n   file: txgen.log" > conf/log_config_auxx.yaml
+
   ./auxx/bin/cardano-auxx \
       --db-path wdb \
-      --log-config ../static/txgen-logging.yaml --logs-prefix experiments/txgen/txgen  \
+      --log-config conf/log_config_auxx.yaml \
+      --logs-prefix ./logs  \
       --configuration-file ''${CONFIGURATIONYAML} \
       --configuration-key bench \
       ''${TRX2RELAYS} \
