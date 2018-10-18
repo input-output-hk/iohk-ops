@@ -50,6 +50,13 @@ let
     };
   };
 
+  withoutPackages = packageNames: jobset: jobset // {
+    inputs = (jobset.inputs or { }) // {
+      let ppName = x: ''"${x}" '';
+      in skipPackages = { type = "list"; emailresponsible = false; value = "[ ${builtins.concatStringsSep " " (map ppName packageNames)} ]"; };
+    };
+  };
+
   mkNixops = nixopsBranch: nixpkgsRev: {
     nixexprpath = "jobsets/cardano.nix";
     description = "IOHK-Ops";
@@ -167,9 +174,14 @@ let
     };
   };
   PRExcludedLabels = import ./pr-excluded-labels.nix;
+  prSkipPackageSpec = import ./pr-package-skips.nix;
+  prInfoLabelNames = prInfo: map (x: x.name) (prInfo.labels or [])
+  prInfoHasLabel = prInfo: label: builtins.elem label (prInfoLabelNames prInfo);
+  prPackageSkips = prInfo: builtins.concatLists (pkgs.lib.attrValues (pkgs.lib.filterAttrs (name: _: builtins.elem name (prInfoLabelNames prInfo)) prSkipPackageSpec));
   exclusionFilter = pkgs.lib.filterAttrs (_: prInfo: builtins.length (builtins.filter (prLabel: (builtins.elem prLabel.name PRExcludedLabels))
                                                                                       (prInfo.labels or []))
                                                      == 0);
+  processSkips    = pkgs.lib.mapAttrs (name: val: val);
   nixopsPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeNixopsPR   (exclusionFilter nixopsPrs));
   cardanoPrJobsets  = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeCardanoPR  (exclusionFilter cardanoPrs));
   daedalusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeDaedalusPR (exclusionFilter daedalusPrs));
