@@ -94,7 +94,7 @@ After it has finished, inspect the following values in `params.yaml`:
 
 1. The `grApplicationVersion` value must be a value greater than all
    previous update proposals on the target cluster. This is recorded
-   in [Daedalus Installer History](Daedalus-installer-history).
+   in [Daedalus Installer History](https://github.com/input-output-hk/internal-documentation/wiki/Daedalus-installer-history).
 
 2. The `grApplicationVersion` found should match what you have set in
    `cardano-sl`.
@@ -261,7 +261,7 @@ will receive the error `Prelude.!!: index too large`.
 
 * [Cardano SL Updater](https://cardanodocs.com/technical/updater/)
 
-* [Previously released versions](Daedalus-installer-history)
+* [Previously released versions](https://github.com/input-output-hk/internal-documentation/wiki/Daedalus-installer-history)
 
 * [cardano-sl/how-to/test-update-system.md](https://github.com/input-output-hk/cardano-sl/blob/develop/docs/how-to/test-update-system.md#propose-update--vote-for-it)
 
