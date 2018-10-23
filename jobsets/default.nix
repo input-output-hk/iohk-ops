@@ -72,7 +72,7 @@ let
     nixexprinput = "cardano";
     description = "Cardano SL";
     inputs = {
-      cardano = mkFetchGithub "https://github.com/input-output-hk/cardano-sl.git ${cardanoBranch}";
+      cardano = mkFetchGithub "https://github.com/input-output-hk/cardano-sl.git ${cardanoBranch} deepClone";
     };
   };
   makeCardanoPR = num: info: {
@@ -82,7 +82,7 @@ let
       nixexprinput = "cardano";
       nixexprpath = "release.nix";
       inputs = {
-        cardano = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+        cardano = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head deepClone";
       };
     };
   };
