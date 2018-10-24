@@ -1,10 +1,12 @@
-{ IOHKaccessKeyId, ... }:
+{ ... }:
 
 with (import ./../lib.nix);
-let region = "eu-central-1";
-    accessKeyId = IOHKaccessKeyId;
-in {
+{
   network.description = "IOHK infrastructure staging";
+
+  defaults = {
+    services.dd-agent.tags = ["env:staging" ];
+  };
 
   hydra = { config, pkgs, resources, ... }: {
 
@@ -13,16 +15,10 @@ in {
       ./../modules/datadog.nix
     ];
 
-    ## 
+    ##
     security.acme.certs = mkForce {};
     services.nginx.enable = mkForce false;
 
-    services.dd-agent.tags = ["env:staging" "depl:${config.deployment.name}"];
-
-    deployment.ec2.elasticIPv4 = resources.elasticIPs.hydra-ip;
-
-    deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
-    deployment.route53.hostName = "hydra.awstest2.iohkdev.io";
   };
 
   cardano-deployer = { config, pkgs, resources, ... }: {
@@ -30,8 +26,6 @@ in {
       ./../modules/datadog.nix
       ./../modules/papertrail.nix
     ];
-
-    services.dd-agent.tags = ["env:staging" "depl:${config.deployment.name}"];
 
     deployment.keys.tarsnap = {
       keyFile = ./../static/tarsnap-cardano-deployer.secret;
@@ -62,7 +56,6 @@ in {
       };
     };
 
-    deployment.ec2.elasticIPv4 = resources.elasticIPs.cardanod-ip;
   };
 
   bors-ng = { config, pkgs, resources, ... }: let
@@ -72,12 +65,6 @@ in {
       ../modules/datadog.nix
       ../modules/papertrail.nix
     ];
-
-    services.dd-agent.tags = ["env:staging" "depl:${config.deployment.name}"];
-
-    deployment.ec2.elasticIPv4 = resources.elasticIPs.bors-ng-ip;
-    deployment.route53.accessKeyId = config.deployment.ec2.accessKeyId;
-    deployment.route53.hostName = hostName;
 
     services.bors-ng = let
       placeholder = pkgs.writeText "placeholder" "staging";

@@ -8,6 +8,7 @@ with import ../lib.nix;
       enable = true;
       api_key = fileContents ../static/datadog-api.secret;
       hostname = config.networking.hostName;
+      tags = [ "depl:${config.deployment.name}" ];
     };
   };
 }
