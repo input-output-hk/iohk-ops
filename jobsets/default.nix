@@ -138,6 +138,7 @@ let
     cardano-sl-1-0 = mkCardano "release/1.0.x";
     cardano-sl-1-2 = mkCardano "release/1.2.0";
     cardano-sl-1-3 = mkCardano "release/1.3.1";
+    cardano-sl-2-0 = mkCardano "release/2.0.0";
 
     # Provides cached build projects for PR builds with -O0
     no-opt-cardano-sl = withFasterBuild (mkCardano "develop");
