@@ -70,7 +70,7 @@ getArtifactUrl (JobId jobid) filename = "https://ci.appveyor.com/api/buildjobs/"
 -- /projects/{accountName}/{projectSlug}/build/{buildVersion}:
 -- from: https://github.com/kevinoid/appveyor-swagger/blob/master/swagger.yaml
 fetchAppveyorBuild :: Username -> Project -> ApplicationVersion -> IO ProjectBuildResults
-fetchAppveyorBuild user project version' = fetchJson $ "https://ci.appveyor.com/api/projects/" <> T.intercalate "/" [ usernameToText user, projectToText project, "build", getApplicationVersion version' ]
+fetchAppveyorBuild user project version' = fetchJson $ "https://ci.appveyor.com/api/projects/" <> T.intercalate "/" [ usernameToText user, projectToText project, "builds", getApplicationVersion version' ]
 
 fetchAppveyorArtifacts :: JobId -> IO [AppveyorArtifact]
 fetchAppveyorArtifacts (JobId jobid) = fetchJson $ "https://ci.appveyor.com/api/buildjobs/" <> jobid <> "/artifacts"
@@ -79,5 +79,5 @@ fetchAppveyorArtifacts (JobId jobid) = fetchJson $ "https://ci.appveyor.com/api/
 -- output:
 parseCiUrl :: T.Text -> (Username, Project, ApplicationVersion)
 parseCiUrl input = case T.splitOn "/" input of
-  ["https:", "", "ci.appveyor.com", "project", username, project, "build", version'] -> (Username username, Project project, ApplicationVersion version')
+  ["https:", "", "ci.appveyor.com", "project", username, project, "builds", version'] -> (Username username, Project project, ApplicationVersion version')
   other -> error $ show other
