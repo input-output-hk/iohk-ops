@@ -23,6 +23,7 @@ files:
 - deployments/infrastructure.nix
 - deployments/infrastructure-env-production.nix
 - deployments/infrastructure-target-aws.nix
+- deployments/packet-net.nix
 elements:
 - Infra
 target: AWS

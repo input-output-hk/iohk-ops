@@ -85,6 +85,7 @@ envSettings env =
                                , (Faucet,         All, "deployments/cardano-faucet.nix")
                                , (Nodes,          All, "deployments/cardano-nodes.nix")
                                , (Infra,          All, "deployments/infrastructure.nix")
+                               , (Infra,          All, "deployments/packet-net.nix")
                                , (Infra,          AWS, "deployments/infrastructure-target-aws.nix") ]
   in case env of
     Staging      -> EnvSettings

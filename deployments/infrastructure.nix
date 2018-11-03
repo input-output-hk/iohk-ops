@@ -3,6 +3,19 @@
 with (import ../lib.nix);
 let
   iohk-pkgs = import ../default.nix {};
+  mkHydra = extraImport: { config, pkgs, ... }: {
+    # On first setup:
+
+    # Locally: $ ssh-keygen -C "hydra@hydra.example.org" -N "" -f static/id_buildfarm
+    # On Hydra: $ /run/current-system/sw/bin/hydra-create-user alice --full-name 'Alice Q. User' --email-address 'alice@example.org' --password foobar --role admin
+
+    imports = [
+      ../modules/common.nix
+      ../modules/hydra-slave.nix
+      ../modules/hydra-master-common.nix
+      extraImport
+    ];
+  };
   mkHydraBuildSlave = { config, name, pkgs, ... }: {
     imports = [
       ../modules/common.nix
@@ -16,39 +29,13 @@ let
     ];
   };
 in {
-  hydra = { config, pkgs, ... }: {
-    # On first setup:
+  hydra        = mkHydra ../modules/hydra-master-main.nix;
+  faster-hydra = mkHydra ../modules/hydra-master-main.nix;
+  mantis-hydra = mkHydra ../modules/hydra-master-mantis.nix;
 
-    # Locally: $ ssh-keygen -C "hydra@hydra.example.org" -N "" -f static/id_buildfarm
-    # On Hydra: $ /run/current-system/sw/bin/hydra-create-user alice --full-name 'Alice Q. User' --email-address 'alice@example.org' --password foobar --role admin
-
-    imports = [
-      ../modules/common.nix
-      ../modules/hydra-slave.nix
-      ../modules/hydra-master-common.nix
-      ../modules/hydra-master-main.nix
-    ];
-  };
-  mantis-hydra = { config, pkgs, ... }: {
-    # See infrastructure-env-production.nix for description.
-
-    imports = [
-      ../modules/common.nix
-      ../modules/hydra-slave.nix
-      ../modules/hydra-master-common.nix
-      ../modules/hydra-master-mantis.nix
-    ];
-  };
-
-  hydra-build-slave-1 = mkHydraBuildSlave;
-  hydra-build-slave-2 = mkHydraBuildSlave;
-  hydra-build-slave-3 = mkHydraBuildSlave;
-  hydra-build-slave-4 = mkHydraBuildSlave;
-
-  buildkite-agent-1   = mkBuildkiteAgent;
-  buildkite-agent-2   = mkBuildkiteAgent;
-  buildkite-agent-3   = mkBuildkiteAgent;
-  buildkite-agent-4   = mkBuildkiteAgent;
+  buildkite-packet-1  = mkBuildkiteAgent;
+  buildkite-packet-2  = mkBuildkiteAgent;
+  buildkite-packet-3  = mkBuildkiteAgent;
 
   cardano-deployer = { config, pkgs, ... }: {
     imports = [

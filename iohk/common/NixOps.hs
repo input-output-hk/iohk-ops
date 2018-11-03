@@ -380,7 +380,7 @@ instance FromJSON NixopsConfig where
         <*> v .: "environment"
         <*> v .: "target"
         <*> v .: "installer-bucket"
-        <*> v .: "installer-url-base"
+        <*> v .:? "installer-url-base"
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
@@ -472,7 +472,7 @@ readConfig o@Options{..} cf = do
       deducedFiles   = deploymentFiles cEnvironment cTarget cElements
       deducedFileSet = Set.fromList $ deducedFiles
 
-  unless (storedFileSet == deducedFileSet || oNoComponentCheck == NoComponentCheck) $
+  unless (deducedFileSet `Set.isSubsetOf` storedFileSet || oNoComponentCheck == NoComponentCheck) $
     die $ format ("Config file '"%fp%"' is incoherent with respect to elements "%w%":\n  - stored files:  "%w%"\n  - implied files: "%w%"\n")
           cf cElements (sort cFiles) (sort deducedFiles)
   -- Can't read topology file without knowing its name, hence this phasing.

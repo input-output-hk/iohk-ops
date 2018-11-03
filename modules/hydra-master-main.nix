@@ -38,10 +38,11 @@ in {
   nix = {
     distributedBuilds = true;
     buildMachines = [
-      (mkLinux (cleanIp "hydra-build-slave-1"))
-      (mkLinux (cleanIp "hydra-build-slave-2"))
-      (mkLinux (cleanIp "hydra-build-slave-3"))
-      (mkLinux (cleanIp "hydra-build-slave-4"))
+      (mkLinux "builder-packet-c1-small-x86.aws.iohkdev.io")
+      (mkLinux "builder-packet-c1-small-x86-2.aws.iohkdev.io")
+      (mkLinux "builder-packet-c1-small-x86-3.aws.iohkdev.io")
+      (mkLinux "builder-packet-c1-small-x86-4.aws.iohkdev.io")
+      (mkLinux "builder-packet-c1-small-x86-5.aws.iohkdev.io")
       (mkMac "osx-1.aws.iohkdev.io")
       (mkMac "osx-2.aws.iohkdev.io")
       (mkMac "osx-3.aws.iohkdev.io")
@@ -53,10 +54,20 @@ in {
 
   services.hydra = {
     hydraURL = "https://hydra.iohk.io";
+    package = pkgs.callPackage ./hydra-fork.nix { nixpkgsPath = pkgs.path;
+      src = pkgs.fetchFromGitHub {
+        owner = "input-output-hk";
+        repo = "hydra";
+        rev = "b57e864168651db9f5982a3ae31a91b0affbe40d";
+        sha256 = "0j445iidw32ddgyk4mmjncwwh5mmfbycsr87x6havpwijb3jgjrr";
+      };
+    };
     # max output is 4GB because of amis
     # auth token needs `repo:status`
     extraConfig = ''
       max_output_size = 4294967296
+
+      max_concurrent_evals = 8
 
       store_uri = s3://iohk-nix-cache?secret-key=/etc/nix/hydra.iohk.io-1/secret&log-compression=br&region=eu-central-1
       server_store_uri = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/
