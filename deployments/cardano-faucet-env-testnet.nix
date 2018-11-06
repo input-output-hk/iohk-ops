@@ -14,6 +14,18 @@ let nodeMap = { inherit (globals.fullMap) faucet; }; in
           ok = 1;
         };
       });
+
+      cardano_faucet_balance_monitor = let
+        critical = "10000000000"; # amounts in lovelace, average withdrawal is 1000 ada
+      in mkMonitor {
+        name = "Testnet faucet wallet balance is low";
+        type = "metric alert";
+        query = config: "max(last_5m):avg:faucet.wallet_balance{depl:${config.deployment.name}} by {host} <= ${critical}";
+        monitorOptions.thresholds = {
+          warning = "100000000000";
+          inherit critical;
+        };
+      };
     };
   };
 }
