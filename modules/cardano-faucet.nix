@@ -9,7 +9,7 @@ let
   };
   iohkPkgs = import ../default.nix { inherit config pkgs; inherit (pkgs) system; };
 
-  faucetFrontend = iohkPkgs.makeFaucetFrontend {
+  faucetFrontend = iohkPkgs.cardano-sl-faucet-frontend.override {
     explorerURL = "http://cardano-explorer.cardano-testnet.iohkdev.io/";
     recaptchaSiteKey = recaptcha.siteKey;
   };
