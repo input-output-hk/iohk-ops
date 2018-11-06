@@ -15,7 +15,11 @@ in {
   in {
     enable = true;
     package = unstablePkgs.buildkite-agent3;
-    runtimePackages = with pkgs; [ bash nix git ];
+    runtimePackages = with pkgs; [
+      bash gnutar gzip bzip2 xz
+      git git-lfs
+      nix
+    ];
     meta-data = "system=x86_64-darwin";
     tokenPath = "${keys}/buildkite_token";
     openssh.privateKeyPath = "${keys}/id_buildkite";
@@ -29,8 +33,9 @@ in {
       fi
     '';
     hooks.environment = ''
-      export NIX_REMOTE=daemon
+      # Provide a minimal build environment
       export NIX_BUILD_SHELL="/run/current-system/sw/bin/bash"
+      export NIX_PATH="nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos"
       # /usr/bin and /usr/sbin are added For iconutil, security, pkgutil, etc.
       # Required for daedalus installer build,
       # or any build which expects to have apple tools.
