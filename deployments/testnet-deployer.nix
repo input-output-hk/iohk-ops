@@ -16,7 +16,7 @@ in {
       ../modules/deployer-base.nix
     ];
 
-    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}" "role:deployer"];
+    services.dd-agent.tags = [ "env:production" "role:deployer" ];
     networking.hostName = "testnet-deployer";
 
     users.groups.developers = {};
