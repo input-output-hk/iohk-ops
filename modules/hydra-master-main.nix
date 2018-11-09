@@ -79,13 +79,13 @@ in {
         input-output-hk = ${builtins.readFile ../static/github_token}
       </github_authorization>
       <githubstatus>
-        jobs = serokell:iohk-ops.*
+        jobs = serokell:iohk-ops.:required
         inputs = jobsets
         excludeBuildFromContext = 1
         useShortContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = serokell:cardano.*
+        jobs = serokell:cardano.*:required
         inputs = cardano
         excludeBuildFromContext = 1
         useShortContext = 1
@@ -97,7 +97,7 @@ in {
         useShortContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = serokell:plutus.*
+        jobs = serokell:plutus.*:required
         inputs = plutus
         excludeBuildFromContext = 1
         useShortContext = 1

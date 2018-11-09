@@ -15,10 +15,32 @@ let
     iohk-ops-integration-test = [ "x86_64-linux" ];
     nixops = [ "x86_64-linux" ];
   });
-  cardano-sl-src = builtins.fromJSON (builtins.readFile ./../cardano-sl-src.json);
   cardanoSrc = pkgs.fetchgit cardano-sl-src;
-in rec {
+  cardano-sl-src = builtins.fromJSON (builtins.readFile ./../cardano-sl-src.json);
+  cardanoRelease = import "${cardanoSrc}/release.nix" {
+    cardano = {
+      outPath = cardanoSrc;
+      rev = cardano-sl-src.rev;
+    };
+  };
+  tests = import ../tests {
+    inherit pkgs;
+    supportedSystems = [ "x86_64-linux" ];
+  };
+in pkgs.lib.fix (jobsets: {
   inherit (jobs) iohk-ops iohk-ops-integration-test nixops;
   inherit (iohkpkgs) checks;
-  tests          = import ./../tests     { inherit pkgs; supportedSystems = [ "x86_64-linux" ]; };
-} // (import "${cardanoSrc}/release.nix" { cardano = { outPath = cardanoSrc; rev = cardano-sl-src.rev; }; })
+  inherit tests cardanoRelease;
+  required = pkgs.lib.hydraJob (pkgs.releaseTools.aggregate {
+    name = "iohk-ops-required-checks";
+    constituents =
+      let
+        all = x: map (system: x.${system}) supportedSystems;
+    in [
+      jobsets.iohk-ops.x86_64-linux
+      (pkgs.lib.collect (x : x ? outPath) jobsets.cardanoRelease)
+      (builtins.attrValues jobsets.tests)
+      (builtins.attrValues jobsets.checks)
+    ];
+  });
+})
