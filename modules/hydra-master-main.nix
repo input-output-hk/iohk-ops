@@ -58,8 +58,8 @@ in {
       src = pkgs.fetchFromGitHub {
         owner = "input-output-hk";
         repo = "hydra";
-        rev = "f066351174e993eaa604007c667e7ef950328eb7";
-        sha256 = "0mav4pna2lqzry43vy0qz4xrca4ks83pkifl2wj0kjffna5h8lih";
+        rev = "1d613d05814f6074048933fe6c422ea059ce4130";
+        sha256 = "1wwy9llp10i1c793dlba2iryr54yahqxqfdsl3m1zq698v92ssw3";
       };
     };
     # max output is 4GB because of amis
