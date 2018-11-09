@@ -100,6 +100,27 @@ in rec {
     deployment.route53.hostName = hostName;
   };
 
+  bazel-cache = { config, pkgs, resources, ... }: let
+    hostName = "bazel-cache.aws.iohkdev.io";
+  in {
+    imports = [ ../modules/amazon-base.nix ];
+
+    deployment.ec2 = {
+      inherit accessKeyId;
+      instanceType = mkForce "t2.micro";
+      ebsInitialRootDiskSize = mkForce 30;
+      associatePublicIpAddress = true;
+      elasticIPv4 = resources.elasticIPs.bazel-cache-ip;
+      securityGroups = [
+        resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
+        resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
+        resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
+      ];
+    };
+    deployment.route53.accessKeyId = route53accessKeyId;
+    deployment.route53.hostName = hostName;
+  };
+
   resources = {
     ec2SecurityGroups = {
       "allow-deployer-ssh-${region}-${org}" = {
@@ -154,6 +175,7 @@ in rec {
       mantis-hydra-ip = { inherit region accessKeyId; };
       cardanod-ip     = { inherit region accessKeyId; };
       bors-ng-ip      = { inherit region accessKeyId; };
+      bazel-cache-ip  = { inherit region accessKeyId; };
       log-classifier-ip      = { inherit region accessKeyId; };
     };
     datadogMonitors = (with (import ../modules/datadog-monitors.nix); {
