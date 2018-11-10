@@ -4,7 +4,7 @@ args:
     contents: testnet_full
   systemStart:
     tag: NixInt
-    contents: 1527160000
+    contents: 1537941600
   IOHKaccessKeyId:
     tag: NixStr
     contents: default
