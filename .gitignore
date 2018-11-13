@@ -28,7 +28,7 @@ static/recaptcha_site_key
 github_token
 
 image
-result
+result*
 scripts/iohk-nixpkgs
 smart-gen.log
 smart-gen-*
