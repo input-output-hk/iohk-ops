@@ -4,7 +4,7 @@ args:
     contents: testnet_full
   systemStart:
     tag: NixInt
-    contents: 1527160000
+    contents: 1537941600
   IOHKaccessKeyId:
     tag: NixStr
     contents: default
@@ -17,7 +17,7 @@ args:
 environment: Testnet
 topology: topology-testnet.yaml
 installer-bucket: updates-cardano-testnet
-installer-url-base: updates-cardano-testnet
+installer-url-base: updates-cardano-testnet.s3.amazonaws.com
 name: csl-testnet
 files:
 - deployments/keypairs.nix
