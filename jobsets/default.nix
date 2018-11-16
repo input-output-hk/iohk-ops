@@ -2,6 +2,7 @@
 , cardanoPrsJSON ? ./simple-pr-dummy.json
 , daedalusPrsJSON ? ./simple-pr-dummy.json
 , plutusPrsJSON ? ./simple-pr-dummy.json
+, logClassifierPrsJSON ? ./simple-pr-dummy.json
 , nixpkgs ? <nixpkgs>
 , declInput ? {}
 , handleCardanoPRs ? true
@@ -14,6 +15,7 @@ let
   cardanoPrs = builtins.fromJSON (builtins.readFile cardanoPrsJSON);
   daedalusPrs = builtins.fromJSON (builtins.readFile daedalusPrsJSON);
   plutusPrs = builtins.fromJSON (builtins.readFile plutusPrsJSON);
+  logClassifierPrs = builtins.fromJSON (builtins.readFile logClassifierPrsJSON);
 
   iohkOpsURI = "https://github.com/input-output-hk/iohk-ops.git";
   mkFetchGithub = value: {
@@ -102,6 +104,14 @@ let
       plutus = mkFetchGithub "https://github.com/input-output-hk/plutus.git ${plutusBranch}";
     };
   };
+  mkLogClassifier = logClassifierBranch: {
+    nixexprpath = "release.nix";
+    nixexprinput = "logClassifier";
+    description = "Log Classifier";
+    inputs = {
+      logClassifier = mkFetchGithub "https://github.com/input-output-hk/log-classifier.git ${logClassifierBranch}";
+    };
+  };
   makeDaedalusPR = num: info: {
     name = "daedalus-pr-${num}";
     value = defaultSettings // {
@@ -124,6 +134,17 @@ let
       };
     };
   };
+  makeLogClassifierPR = num: info: {
+    name = "log-classifier-pr-${num}";
+    value = defaultSettings // {
+      description = "PR ${num}: ${info.title}";
+      nixexprinput = "logClassifier";
+      nixexprpath = "release.nix";
+      inputs = {
+        logClassifier = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+      };
+    };
+  };
   PRExcludedLabels = import ./pr-excluded-labels.nix;
   exclusionFilter = pkgs.lib.filterAttrs (_: prInfo: builtins.length (builtins.filter (prLabel: (builtins.elem prLabel.name PRExcludedLabels))
                                                                                       (prInfo.labels or []))
@@ -132,6 +153,7 @@ let
   cardanoPrJobsets  = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeCardanoPR  (exclusionFilter cardanoPrs));
   daedalusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeDaedalusPR (exclusionFilter daedalusPrs));
   plutusPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makePlutusPR   (exclusionFilter plutusPrs));
+  logClassifierPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeLogClassifierPR   (exclusionFilter logClassifierPrs));
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
     cardano-sl = mkCardano "develop";
     cardano-sl-master = mkCardano "master";
@@ -147,11 +169,13 @@ let
 
     plutus = mkPlutus "master";
 
+    logClassifier = mkLogClassifier "master";
+
     iohk-ops = mkNixops "master" nixpkgs-src.rev;
     iohk-ops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
     iohk-ops-bors-trying = mkNixops "bors-trying" nixpkgs-src.rev;
   });
-  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
+  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // logClassifierPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);
 in {
   jobsets = with pkgs.lib; pkgs.runCommand "spec.json" {} ''
