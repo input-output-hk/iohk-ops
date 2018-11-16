@@ -5,3 +5,10 @@ steps:
       - "system=x86_64-linux"
     agents:
       system: x86_64-linux
+
+  - label: 'jobsets'
+    command: 'nix-build jobsets'
+    agents:
+      - "system=x86_64-linux"
+    agents:
+      system: x86_64-linux
