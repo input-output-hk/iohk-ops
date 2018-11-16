@@ -3,6 +3,7 @@
 , daedalusPrsJSON ? ./simple-pr-dummy.json
 , plutusPrsJSON ? ./simple-pr-dummy.json
 , logClassifierPrsJSON ? ./simple-pr-dummy.json
+, ouroborosNetworkPrsJSON ? ./simple-pr-dummy.json
 , nixpkgs ? <nixpkgs>
 , declInput ? {}
 , handleCardanoPRs ? true
@@ -16,6 +17,7 @@ let
   daedalusPrs = builtins.fromJSON (builtins.readFile daedalusPrsJSON);
   plutusPrs = builtins.fromJSON (builtins.readFile plutusPrsJSON);
   logClassifierPrs = builtins.fromJSON (builtins.readFile logClassifierPrsJSON);
+  ouroborosNetworkPrs = builtins.fromJSON (builtins.readFile ouroborosNetworkPrsJSON);
 
   iohkOpsURI = "https://github.com/input-output-hk/iohk-ops.git";
   mkFetchGithub = value: {
@@ -112,6 +114,14 @@ let
       log-classifier = mkFetchGithub "https://github.com/input-output-hk/log-classifier.git ${logClassifierBranch}";
     };
   };
+  mkOuroborosNetwork = ouroborosNetworkBranch: {
+    nixexprpath = "release.nix";
+    nixexprinput = "ouroboros-network";
+    description = "Ouroboros Network";
+    inputs = {
+      ouroboros-network = mkFetchGithub "https://github.com/input-output-hk/ouroboros-network.git ${ouroborosNetworkBranch}";
+    };
+  };
   makeDaedalusPR = num: info: {
     name = "daedalus-pr-${num}";
     value = defaultSettings // {
@@ -145,6 +155,17 @@ let
       };
     };
   };
+  makeOuroborosNetworkPR = num: info: {
+    name = "ouroboros-network-pr-${num}";
+    value = defaultSettings // {
+      description = "PR ${num}: ${info.title}";
+      nixexprinput = "ouroboros-network";
+      nixexprpath = "release.nix";
+      inputs = {
+        ouroboros-network = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+      };
+    };
+  };
   PRExcludedLabels = import ./pr-excluded-labels.nix;
   exclusionFilter = pkgs.lib.filterAttrs (_: prInfo: builtins.length (builtins.filter (prLabel: (builtins.elem prLabel.name PRExcludedLabels))
                                                                                       (prInfo.labels or []))
@@ -154,6 +175,7 @@ let
   daedalusPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeDaedalusPR (exclusionFilter daedalusPrs));
   plutusPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makePlutusPR   (exclusionFilter plutusPrs));
   logClassifierPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeLogClassifierPR   (exclusionFilter logClassifierPrs));
+  ouroborosNetworkPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeOuroborosNetworkPR   (exclusionFilter ouroborosNetworkPrs));
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
     cardano-sl = mkCardano "develop";
     cardano-sl-master = mkCardano "master";
@@ -175,11 +197,15 @@ let
     log-classifier-bors-staging = mkLogClassifier "bors/staging";
     log-classifier-bors-trying = mkLogClassifier "bors/trying";
 
+    ouroboros-network = mkLogClassifier "master";
+    ouroboros-network-bors-staging = mkLogClassifier "bors/staging";
+    ouroboros-network-bors-trying = mkLogClassifier "bors/trying";
+
     iohk-ops = mkNixops "master" nixpkgs-src.rev;
     iohk-ops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
     iohk-ops-bors-trying = mkNixops "bors-trying" nixpkgs-src.rev;
   });
-  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // logClassifierPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
+  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // logClassifierPrJobsets // ouroborosNetworkPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);
 in {
   jobsets = with pkgs.lib; pkgs.runCommand "spec.json" {} ''

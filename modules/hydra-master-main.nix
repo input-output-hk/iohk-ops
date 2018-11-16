@@ -108,6 +108,12 @@ in {
         excludeBuildFromContext = 1
         useShortContext = 1
       </githubstatus>
+      <githubstatus>
+        jobs = serokell:ouroboros-network.*:required
+        inputs = ouroboros-network
+        excludeBuildFromContext = 1
+        useShortContext = 1
+      </githubstatus>
     '';
   };
   deployment.keys."github-webhook-util".text = builtins.readFile ../static/github-webhook-util.secret;
