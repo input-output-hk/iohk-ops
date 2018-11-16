@@ -109,7 +109,7 @@ let
     nixexprinput = "log-classifier";
     description = "Log Classifier";
     inputs = {
-      logClassifier = mkFetchGithub "https://github.com/input-output-hk/log-classifier.git ${logClassifierBranch}";
+      log-classifier = mkFetchGithub "https://github.com/input-output-hk/log-classifier.git ${logClassifierBranch}";
     };
   };
   makeDaedalusPR = num: info: {
@@ -141,7 +141,7 @@ let
       nixexprinput = "log-classifier";
       nixexprpath = "release.nix";
       inputs = {
-        logClassifier = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+        log-classifier = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
       };
     };
   };
