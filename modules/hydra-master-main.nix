@@ -79,7 +79,7 @@ in {
         input-output-hk = ${builtins.readFile ../static/github_token}
       </github_authorization>
       <githubstatus>
-        jobs = serokell:iohk-ops.:required
+        jobs = serokell:iohk-ops.*:required
         inputs = jobsets
         excludeBuildFromContext = 1
         useShortContext = 1

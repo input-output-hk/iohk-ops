@@ -6,10 +6,10 @@ let cfg = config.services.log-classifier;
     log-classifier-src = pkgs.fetchFromGitHub {
       owner = "input-output-hk";
       repo = "log-classifier";
-      rev = "aaf0fb346655d93a41bc982569e934176d1b14b7";
-      sha256 = "0q438s6mcwbgnnma8ndh493cpq0f9i46j7svnph7kmj5123k16lc";
+      rev = "fff61ebb4d6380796ec7a6438a873e6826236f2b";
+      sha256 = "1sc56xpbljm63dh877cy4agqjvv5wqc1cp9y5pdwzskwf7h4302g";
     };
-    log-classifier-web = (import "${log-classifier-src}/release.nix").log-classifier-web;
+    log-classifier-web = (import "${log-classifier-src}/" {}).haskellPackages.log-classifier-web;
 
 in {
   options.services.log-classifier = {
