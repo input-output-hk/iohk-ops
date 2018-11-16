@@ -169,7 +169,7 @@ let
 
     plutus = mkPlutus "master";
 
-    logClassifier = mkLogClassifier "master";
+    log-classifier = mkLogClassifier "master";
 
     iohk-ops = mkNixops "master" nixpkgs-src.rev;
     iohk-ops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
