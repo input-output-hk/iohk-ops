@@ -197,9 +197,9 @@ let
     log-classifier-bors-staging = mkLogClassifier "bors/staging";
     log-classifier-bors-trying = mkLogClassifier "bors/trying";
 
-    ouroboros-network = mkLogClassifier "master";
-    ouroboros-network-bors-staging = mkLogClassifier "bors/staging";
-    ouroboros-network-bors-trying = mkLogClassifier "bors/trying";
+    ouroboros-network = mkOuroborosNetwork "master";
+    ouroboros-network-bors-staging = mkOuroborosNetwork "bors/staging";
+    ouroboros-network-bors-trying = mkOuroborosNetwork "bors/trying";
 
     iohk-ops = mkNixops "master" nixpkgs-src.rev;
     iohk-ops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
