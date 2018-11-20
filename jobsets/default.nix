@@ -76,7 +76,7 @@ let
     nixexprinput = "cardano";
     description = "Cardano SL";
     inputs = {
-      cardano = mkFetchGithub "https://github.com/input-output-hk/cardano-sl.git ${cardanoBranch}";
+      cardano = mkFetchGithub "--fetch-submodules https://github.com/input-output-hk/cardano-sl.git ${cardanoBranch}";
     };
   };
   makeCardanoPR = num: info: {
