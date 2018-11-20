@@ -240,7 +240,7 @@ centralCommandParser =
        (FindInstallers
         <$> option str (long "daedalus-rev" <> short 'r' <> metavar "SHA1")
         <*> optional (fromText <$> option auto
-                       (long "download" <> short 'r' <> metavar "DIRECTORY"
+                       (long "download" <> short 'd' <> metavar "DIRECTORY"
                         <> help "Download the found installers to the given directory."
                         <> completer (bashCompleter "directory")))
         <*> optional (option auto (long "buildkite-build-num" <> metavar "NUMBER"))
