@@ -13,7 +13,7 @@ This document is to support developers in their need to deploy ad hoc clusters.
 ## Inputs
 
 1. [cardano-sl](https://github.com/input-output-hk/cardano-sl) git revision hash.
-1. [iohk-ops](https://github.com/input-output-hk/iohk-ops) branch.  In absence of preference, the default is `develop`.
+1. [iohk-ops](https://github.com/input-output-hk/iohk-ops) branch.  In absence of preference, the default is `master`.
 1. [Issue ID](https://iohk.myjetbrains.com) being worked on.
 
 ## Steps
