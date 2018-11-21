@@ -25,8 +25,9 @@ Replace `ISSUE-ID` with your issue ID, or any name to identify the cluster.
 This should all be _in lowercase_ to avoid problems when updating DNS entries.
 
 1. SSH to the `staging` jumpserver.
-1. `iohk-ops clone ISSUE-ID [IOHK-OPS-BRANCH]` -- the branch defaults to `master`.
+1. `iohk-ops clone ISSUE-ID` -- the branch defaults to `master`.
 1. `cd ISSUE-ID`
+1. optional: `git checkout SOME-BRANCH`
 1. `iohk-ops set-rev cardanosl CARDANO-REVISION`
 1. `nix-shell -A withAuxx`
 1. `io new [--dont-generate-keys] [--configuration-key CONFIGURATION-KEY] ISSUE-ID Nodes [Explorer] [ReportServer]`
