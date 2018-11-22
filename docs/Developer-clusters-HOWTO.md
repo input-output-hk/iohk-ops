@@ -69,8 +69,13 @@ When one wants to redeploy a cluster, it's not necessary to destroy the machines
 This uses the customizable wallet connect script generator in cardano-sl
 (see [Exchange Onboarding](https://github.com/input-output-hk/cardano-sl/blob/develop/docs/exchange-onboarding.md#generate-custom-configuration)).
 
-The `io set-rev` command will have already cloned cardano-sl, so
-change to that directory. **Important**: make sure you are in the
+You need to clone the `cardano-sl` repository and checkout the 
+particular commit used in `io set-rev` (see `rev` attribute of `cardano-sl-src.json`):
+
+1. `git clone https://github.com/input-output-hk/cardano-sl.git && cd cardano-sl`
+2. `git checkout CARDANO-REVISION`
+
+**Important**: make sure you are in the
 `cardano-sl` directory not `iohk-ops` -- otherwise the parameters
 won't take effect.
 
