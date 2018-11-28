@@ -13,7 +13,7 @@ This document is to support developers in their need to deploy ad hoc clusters.
 ## Inputs
 
 1. [cardano-sl](https://github.com/input-output-hk/cardano-sl) git revision hash.
-1. [iohk-ops](https://github.com/input-output-hk/iohk-ops) branch.  In absence of preference, the default is `develop`.
+1. [iohk-ops](https://github.com/input-output-hk/iohk-ops) branch.  In absence of preference, the default is `master`.
 1. [Issue ID](https://iohk.myjetbrains.com) being worked on.
 
 ## Steps
@@ -25,8 +25,9 @@ Replace `ISSUE-ID` with your issue ID, or any name to identify the cluster.
 This should all be _in lowercase_ to avoid problems when updating DNS entries.
 
 1. SSH to the `staging` jumpserver.
-1. `iohk-ops clone ISSUE-ID [IOHK-OPS-BRANCH]` -- the branch defaults to `master`.
+1. `iohk-ops clone ISSUE-ID` -- the branch defaults to `master`.
 1. `cd ISSUE-ID`
+1. optional: `git checkout SOME-BRANCH`
 1. `iohk-ops set-rev cardanosl CARDANO-REVISION`
 1. `nix-shell -A withAuxx`
 1. `io new [--dont-generate-keys] [--configuration-key CONFIGURATION-KEY] ISSUE-ID Nodes [Explorer] [ReportServer]`
@@ -68,8 +69,13 @@ When one wants to redeploy a cluster, it's not necessary to destroy the machines
 This uses the customizable wallet connect script generator in cardano-sl
 (see [Exchange Onboarding](https://github.com/input-output-hk/cardano-sl/blob/develop/docs/exchange-onboarding.md#generate-custom-configuration)).
 
-The `io set-rev` command will have already cloned cardano-sl, so
-change to that directory. **Important**: make sure you are in the
+You need to clone the `cardano-sl` repository and checkout the 
+particular commit used in `io set-rev` (see `rev` attribute of `cardano-sl-src.json`):
+
+1. `git clone https://github.com/input-output-hk/cardano-sl.git && cd cardano-sl`
+2. `git checkout CARDANO-REVISION`
+
+**Important**: make sure you are in the
 `cardano-sl` directory not `iohk-ops` -- otherwise the parameters
 won't take effect.
 
