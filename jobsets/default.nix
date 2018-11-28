@@ -4,6 +4,7 @@
 , plutusPrsJSON ? ./simple-pr-dummy.json
 , logClassifierPrsJSON ? ./simple-pr-dummy.json
 , ouroborosNetworkPrsJSON ? ./simple-pr-dummy.json
+, chainPrsJSON ? ./simple-pr-dummy.json
 , nixpkgs ? <nixpkgs>
 , declInput ? {}
 , handleCardanoPRs ? true
@@ -18,6 +19,7 @@ let
   plutusPrs = builtins.fromJSON (builtins.readFile plutusPrsJSON);
   logClassifierPrs = builtins.fromJSON (builtins.readFile logClassifierPrsJSON);
   ouroborosNetworkPrs = builtins.fromJSON (builtins.readFile ouroborosNetworkPrsJSON);
+  chainPrs = builtins.fromJSON (builtins.readFile chainPrsJSON);
 
   iohkOpsURI = "https://github.com/input-output-hk/iohk-ops.git";
   mkFetchGithub = value: {
@@ -87,6 +89,25 @@ let
       nixexprpath = "release.nix";
       inputs = {
         cardano = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+      };
+    };
+  };
+  mkCardanoChain = cardanoBranch: {
+    nixexprpath = "release.nix";
+    nixexprinput = "chain";
+    description = "Cardano Chain";
+    inputs = {
+      chain = mkFetchGithub "https://github.com/input-output-hk/cardano-chain.git ${cardanoBranch}";
+    };
+  };
+  mkCardanoChainPR = num: info: {
+    name = "cardano-chain-pr-${num}";
+    value = defaultSettings // {
+      nixexprpath = "release.nix";
+      nixexprinput = "chain";
+      description = "Cardano Chain";
+      inputs = {
+        chain = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
       };
     };
   };
@@ -176,6 +197,7 @@ let
   plutusPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makePlutusPR   (exclusionFilter plutusPrs));
   logClassifierPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeLogClassifierPR   (exclusionFilter logClassifierPrs));
   ouroborosNetworkPrJobsets   = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList makeOuroborosNetworkPR   (exclusionFilter ouroborosNetworkPrs));
+  chainPrJobsets = pkgs.lib.listToAttrs (pkgs.lib.mapAttrsToList mkCardanoChainPR (exclusionFilter chainPrs));
   mainJobsets = with pkgs.lib; mapAttrs (name: settings: defaultSettings // settings) (rec {
     cardano-sl = mkCardano "develop";
     cardano-sl-master = mkCardano "master";
@@ -185,6 +207,8 @@ let
     cardano-sl-2-0 = mkCardano "release/2.0.0";
     cardano-sl-bors-staging = mkCardano "bors/staging";
     cardano-sl-bors-trying = mkCardano "bors/trying";
+
+    cardano-chain = mkCardanoChain "master";
 
     # Provides cached build projects for PR builds with -O0
     no-opt-cardano-sl = withFasterBuild (mkCardano "develop");
@@ -205,7 +229,7 @@ let
     iohk-ops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
     iohk-ops-bors-trying = mkNixops "bors-trying" nixpkgs-src.rev;
   });
-  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // logClassifierPrJobsets // ouroborosNetworkPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // mainJobsets;
+  jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // logClassifierPrJobsets // ouroborosNetworkPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // chainPrJobsets // mainJobsets;
   jobsetJson = pkgs.writeText "spec.json" (builtins.toJSON jobsetsAttrs);
 in {
   jobsets = with pkgs.lib; pkgs.runCommand "spec.json" {} ''

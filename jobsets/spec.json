@@ -18,5 +18,6 @@
          ,"plutusPrsJSON": { "type": "githubpulls", "value": "input-output-hk plutus", "emailresponsible": false }
          ,"logClassifierPrsJSON": { "type": "githubpulls", "value": "input-output-hk log-classifier", "emailresponsible": false }
          ,"ouroborosNetworkPrsJSON": { "type": "githubpulls", "value": "input-output-hk ouroboros-network", "emailresponsible": false }
+         ,"chainPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-chain", "emailresponsible": false }
      }
 }
