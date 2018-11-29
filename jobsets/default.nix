@@ -209,6 +209,8 @@ let
     cardano-sl-bors-trying = mkCardano "bors/trying";
 
     cardano-chain = mkCardanoChain "master";
+    cardano-chain-bors-staging = mkCardanoChain "bors/staging";
+    cardano-chain-bors-trying = mkCardanoChain "bors/trying";
 
     # Provides cached build projects for PR builds with -O0
     no-opt-cardano-sl = withFasterBuild (mkCardano "develop");
