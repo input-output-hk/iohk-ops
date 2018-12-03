@@ -84,9 +84,9 @@ data UpdateProposalStep
   deriving Show
 
 parseUpdateProposalCommand :: Parser UpdateProposalCommand
-parseUpdateProposalCommand = subparser $
+parseUpdateProposalCommand = hsubparser $
      ( command "init"
-       (info ((UpdateProposalInit <$> mdate <*> updateProposalConfig) <**> helper)
+       (info ((UpdateProposalInit <$> mdate <*> updateProposalConfig))
          (progDesc "Create template config file and working directory.") ) )
   <> ( command "find-installers"
        (info ((UpdateProposalCommand <$> date <*> (UpdateProposalFindInstallers <$> buildNum Buildkite <*> buildNum AppVeyor)) <**> helper)
