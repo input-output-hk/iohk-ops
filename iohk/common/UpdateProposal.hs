@@ -124,7 +124,7 @@ parseUpdateProposalCommand = hsubparser $
     blockVersionP = fmap T.pack $ strOption (long "block-version" <> short 'B' <> metavar "VERSION" <> help "Last known block version. Check the wiki for more info.")
 
     voterIndexP :: Parser Int
-    voterIndexP = option auto (long "voter-index" <> short 'V' <> metavar "INTEGER" <> help "A number representing you, the vote proposer. Check the wiki for more info.")
+    voterIndexP = option auto (long "voter-index" <> short 'V' <> metavar "INTEGER" <> value 0 <> showDefault <> help "Index into stake keys. Check the wiki for more info.")
 
     releaseNotesP :: Parser (Maybe Text)
     releaseNotesP = (Just . T.pack <$> strOption ( long "release-notes" <> metavar "RELEASE_NOTES" <> (help "Path to release notes (html)") <> (completer (bashCompleter "file") )))
@@ -241,10 +241,10 @@ instance FromJSON UpdateProposalConfig5 where
 
 instance ToJSON UpdateProposalConfig1 where
   toJSON (UpdateProposalConfig1 r v p rn) = object [ "daedalusRevision" .= r
-                                                , "lastKnownBlockVersion" .= v
-                                                , "voterIndex" .= p
-                                                , "releaseNotes" .= rn
-                                                ]
+                                                   , "lastKnownBlockVersion" .= v
+                                                   , "voterIndex" .= p
+                                                   , "releaseNotes" .= rn
+                                                   ]
 
 instance ToJSON GitRevision where
   toJSON (GitRevision r) = String r
@@ -303,7 +303,7 @@ class Checkable cfg where
 instance Checkable UpdateProposalConfig1 where
   checkConfig UpdateProposalConfig1{..}
     | T.null cfgLastKnownBlockVersion = Just "Last known block version must be set"
-    | cfgVoterIndex <= 0 = Just "Voter index must be set"
+    | cfgVoterIndex < 0 = Just "Voter index must be set"
     | otherwise = Nothing
 
 instance Checkable UpdateProposalConfig2 where

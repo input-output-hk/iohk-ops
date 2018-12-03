@@ -239,19 +239,14 @@ network where the update will be proposed.
 | testnet |                 `0.1.0` |
 
 
-## Voter index table
+## Voter index
 
-For whatever reason, the update proposal procedure requires a voter
-index. This number is supposed to denote the person who submitted the
-proposal.
+The update proposal procedure requires a voter index which selects the
+secret key used to sign the update proposal.
 
-| `voterIndex` | Person      |
-| ------------:| ----------- |
-|            1 | Domen       |
-|            2 | Serge       |
-
-**Note:** The `voterIndex` needs to be *≥ 0 and ≤ 2*, otherwise you
-will receive the error `Prelude.!!: index too large`.
+**Note:** The `voterIndex` needs to be *≥ 0 and < 7* (where 7 is the
+number of core nodes), otherwise you will receive the error
+`Prelude.!!: index too large`.
 
 
 ## See also
