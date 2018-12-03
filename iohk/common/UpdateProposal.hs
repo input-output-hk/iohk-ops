@@ -707,6 +707,7 @@ copyInstallerFiles opts res hashes = void $ forResults res copy
     copy' magic hash res = do
       let dst = installersPath opts (fromText hash)
       cp (ciResultLocalPath res) dst
+      setmod (Permissions True True False) dst
       checkMagic magic dst
 
     checkMagic :: Text -> FilePath -> Shell ()
