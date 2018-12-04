@@ -10,6 +10,12 @@ resource "aws_s3_bucket" "bucket" {
   bucket   = "${var.bucket_name}"
   region   = "${var.aws_region}"
   acl      = "public-read"
+
+  cors_rule {
+    allowed_methods = ["GET"]
+    allowed_origins = ["*"]
+    max_age_seconds = 3000
+  }
 }
 
 module "s3-full-access" {
