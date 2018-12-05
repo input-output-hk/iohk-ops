@@ -27,6 +27,11 @@
 #     - Use linked clones in virtualbox so that you can snapshot and
 #       revert to working configs.
 #
+# For the Chocolatey package installs to work, you will need to
+# temporarily switch off any Microsoft-blocking software that you have
+# enabled (e.g. [WindowsSpyBlocker](https://github.com/crazy-max/WindowsSpyBlocker/tree/master/data/openwrt/spy)).
+#
+#
 # Configuration
 # -------------
 #
@@ -91,6 +96,7 @@ if (!(Get-Command choco.exe -ErrorAction SilentlyContinue)) {
 choco install -y 7zip.install
 choco install -y curl
 choco install -y vcredist140
+choco install -y vcredist2013
 choco install -y git.install
 choco install -y vim
 choco install -y msys2
@@ -146,7 +152,7 @@ $env:WORK_DIR = "$drive\w"
 # See https://github.com/haskell/cabal/issues/5386
 $env:TMP = "$drive\tmp"
 
-$env:PATH = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";$drive\ghc\ghc-$ghcVer\bin;$drive\stack;$Env:Programfiles\7-Zip;$Env:Programfiles\Git\cmd;$Env:Programfiles\chocolatey\bin"
+$env:PATH = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";$drive\ghc\ghc-$ghcVer\bin;$drive\stack;$Env:Programfiles\7-Zip;$Env:Programfiles\Git\cmd;$Env:Programfiles\chocolatey\bin;$env:WORK_DIR"
 
 [System.Environment]::SetEnvironmentVariable("STACK_ROOT", "$env:STACK_ROOT", "Machine")
 [System.Environment]::SetEnvironmentVariable("STACK_WORK", "$env:STACK_WORK", "Machine")
