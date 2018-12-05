@@ -45,9 +45,13 @@
 # 5. `cd \\VBOXSRV\win_shared`
 # 6 `.\iohk-setup.ps1`
 # 7. Go back to step 1 and run the steps a second time.
-# 8. Change directory to E:\w and try `stack build`
+# 8. You should now be in directory to E:\w ($env:WORK_DIR).
+# 9. Run the build. This command is similar to what is run by CI:
 #
-# The cardano-sl clone is shallow. If you need to change branch, then do
+#      stack.exe install -j 3 --local-bin-path $env:WORK_DIR --flag cardano-sl-tools:for-installer cardano-sl cardano-sl-tools cardano-sl-wallet-new
+#
+# Note that the cardano-sl clone is shallow.
+# If you need to change branch, then do
 #   git fetch --unshallow
 #
 # Related tickets:
@@ -89,6 +93,7 @@ choco install -y curl
 choco install -y vcredist140
 choco install -y git.install
 choco install -y vim
+choco install -y msys2
 
 refreshenv
 
@@ -153,10 +158,25 @@ $env:PATH = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";$
 New-Item -ItemType Directory -Force -Path $env:STACK_ROOT
 New-Item -ItemType Directory -Force -Path $env:TMP
 
+if ($ghcVer -eq "8.2.2") {
+  $stackConfigGhc = ""
+} else {
+  $stackConfigGhc = "ghc-options: `"-copy-libs-when-linking`""
+}
+
 $stackConfig = @"
 system-ghc: true
 local-programs-path: "$drive\\s\\\\programs"
 local-bin-path: "$drive\\s\\bin"
+extra-include-dirs:
+ - "$drive\\OpenSSL-Win64-v102\include"
+ - "$drive\\xz_extracted\\include"
+ - "$drive\\w\\rocksdb\\include"
+extra-lib-dirs:
+ - "$drive\\OpenSSL-Win64-v102"
+ - "$drive\\xz_extracted\\bin_x86-64"
+ - "$drive\\w"
+$stackConfigGhc
 
 "@
 $stackConfig | Out-File -FilePath "$env:STACK_ROOT\config.yaml" -Encoding ASCII
