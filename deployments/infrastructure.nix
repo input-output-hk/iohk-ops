@@ -22,7 +22,7 @@ let
       ../modules/hydra-slave.nix
     ];
   };
-  mkBuildkiteAgent = { ... }: {
+  mkBuildkiteAgent = {
     imports = [
       ../modules/common.nix
       ../modules/buildkite-agent.nix
@@ -36,6 +36,9 @@ in {
   buildkite-packet-1  = mkBuildkiteAgent;
   buildkite-packet-2  = mkBuildkiteAgent;
   buildkite-packet-3  = mkBuildkiteAgent;
+  buildkite-packet-4  = mkBuildkiteAgent;
+  buildkite-packet-5  = mkBuildkiteAgent;
+  buildkite-packet-6  = mkBuildkiteAgent;
 
   cardano-deployer = { config, pkgs, ... }: {
     imports = [
