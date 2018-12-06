@@ -5,16 +5,11 @@ in { pkgs ? (import fixedNixpkgs {})
    , scrubJobs ? true
    }:
 
-with import (fixedNixpkgs + "/pkgs/top-level/release-lib.nix") { inherit supportedSystems scrubJobs; packageSet = import ../.; };
-
 let
   iohkpkgs = import ./../default.nix { inherit pkgs; };
-  jobs = mapTestOn ((packagePlatforms iohkpkgs) // {
-    iohk-ops = [ "x86_64-linux" ];
-    github-webhook-util = [ "x86_64-linux" ];
-    iohk-ops-integration-test = [ "x86_64-linux" ];
-    nixops = [ "x86_64-linux" ];
-  });
+  jobs = {
+    inherit (iohkpkgs) iohk-ops github-webhook-util iohk-ops-integration-test nixops;
+  };
   cardanoSrc = pkgs.fetchgit cardano-sl-src;
   cardano-sl-src = builtins.fromJSON (builtins.readFile ./../cardano-sl-src.json);
   cardanoRelease = import "${cardanoSrc}/release.nix" {
@@ -37,7 +32,7 @@ in pkgs.lib.fix (jobsets: {
       let
         all = x: map (system: x.${system}) supportedSystems;
     in [
-      jobsets.iohk-ops.x86_64-linux
+      jobsets.iohk-ops
       (pkgs.lib.collect (x : x ? outPath) jobsets.cardanoRelease)
       (builtins.attrValues jobsets.tests)
       (builtins.attrValues jobsets.checks)
