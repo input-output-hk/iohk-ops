@@ -1,13 +1,32 @@
 {-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude -Wno-semigroup #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE DataKinds                  #-}
 
-module Appveyor where
+module Appveyor (
+JobId,
+BuildNumber,
+Username,
+Project,
+build,
+buildNumber,
+jobs,
+version,
+jobId,
+name,
+fileName,
+getArtifactUrl,
+fetchAppveyorBuild,
+fetchAppveyorArtifacts,
+parseCiUrl,
+AppveyorArtifact (AppveyorArtifact),
+unBuildNumber,
+unJobId
+) where
 
 import           Control.Lens.TH (makeFields)
 import           Data.Aeson      (FromJSON, parseJSON, withObject, (.:))
@@ -15,13 +34,13 @@ import           Data.Monoid     ((<>))
 import           Data.String     (IsString)
 import qualified Data.Text       as T
 import           GHC.Generics    (Generic)
+import           Types           (ApplicationVersion (ApplicationVersion, getApplicationVersion))
 import           Utils           (fetchJson)
-import           Types           (ApplicationVersion(ApplicationVersion, getApplicationVersion))
 
-newtype JobId = JobId { unJobId :: T.Text } deriving (Show, Eq, Monoid)
+newtype JobId = JobId { unJobId :: T.Text } deriving (Show, Eq, Monoid, Semigroup)
 newtype BuildNumber = BuildNumber { unBuildNumber :: Int } deriving (Show, Eq)
-newtype Username = Username { usernameToText :: T.Text } deriving (Show, Eq, Monoid, IsString)
-newtype Project = Project { projectToText :: T.Text } deriving (Show, Eq, Monoid, IsString)
+newtype Username = Username { usernameToText :: T.Text } deriving (Show, Eq, Monoid, IsString, Semigroup)
+newtype Project = Project { projectToText :: T.Text } deriving (Show, Eq, Monoid, IsString, Semigroup)
 
 data ProjectBuildResults = ProjectBuildResults {
     _projectBuildResultsBuild :: Build
@@ -39,7 +58,7 @@ data BuildJob = BuildJob {
 
 data AppveyorArtifact = AppveyorArtifact {
       _appveyorArtifactFileName :: T.Text
-    , _appveyorArtifactName   :: T.Text
+    , _appveyorArtifactName     :: T.Text
   } deriving (Show, Generic, Eq)
 
 makeFields ''ProjectBuildResults

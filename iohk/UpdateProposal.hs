@@ -1,5 +1,8 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase, RecordWildCards, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module UpdateProposal
   ( UpdateProposalCommand(..)
@@ -15,43 +18,53 @@ module UpdateProposal
   , forResults
   ) where
 
-import Prelude hiding (FilePath)
-import Options.Applicative hiding (action)
-import Turtle hiding (Parser, switch, option, date, o, e, nub)
-import qualified System.Process as P
-import Data.Time.Clock (getCurrentTime)
-import Data.Time.Format (formatTime, iso8601DateFormat, defaultTimeLocale)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import qualified Data.ByteString.Lazy.Char8   as L8
-import Control.Monad (forM_, forM)
-import Filesystem.Path.CurrentOS (encodeString)
-import Data.Yaml (decodeFileEither, encodeFile)
-import Data.Aeson hiding (Options)
-import qualified Data.HashMap.Strict as HM
-import qualified Control.Foldl as Fold
-import Data.Char (isHexDigit, toLower)
-import Data.Bifunctor (first)
-import Data.Maybe (fromMaybe, isJust, fromJust)
-import Data.List (find, nub)
+import qualified Control.Foldl              as Fold
+import           Control.Monad              (forM, forM_)
+import           Data.Aeson                 hiding (Options, encodeFile)
+import           Data.Bifunctor             (first)
+import qualified Data.ByteString.Lazy.Char8 as L8
+import           Data.Char                  (isHexDigit, toLower)
+import qualified Data.HashMap.Strict        as HM
+import           Data.List                  (find, nub)
+import           Data.Maybe                 (fromJust, fromMaybe, isJust)
+import qualified Data.Text                  as T
+import qualified Data.Text.IO               as TIO
+import           Data.Time.Clock            (getCurrentTime)
+import           Data.Time.Format           (defaultTimeLocale, formatTime,
+                                             iso8601DateFormat)
+import           Data.Yaml                  (decodeFileEither, encodeFile)
+import           Filesystem.Path.CurrentOS  (encodeString)
+import           Options.Applicative        hiding (action)
+import           Prelude                    hiding (FilePath)
+import qualified System.Process             as P
+import           Turtle                     hiding (Parser, date, e, nub, o,
+                                             option, switch)
 
-import NixOps ( Options, NixopsConfig(..)
-              , nixopsConfigurationKey, configurationKeys
-              , getCardanoSLConfig )
-import Types ( NixopsDepl(..), Environment(..), Arch(..)
-             , formatArch, ArchMap, archMap, mkArchMap
-             , archMapToList, archMapFromList, lookupArch
-             , idArchMap, archMapEach)
-import UpdateLogic ( InstallersResults(..), CIResult(..)
-                   , CISystem(..), githubWikiRecord
-                   , getInstallersResults, selectBuildNumberPredicate
-                   , installerPredicates
-                   , runAWS', uploadHashedInstaller, updateVersionJson
-                   , uploadSignature )
-import RunCardano
-import InstallerVersions (GlobalResults(..), InstallerNetwork(..), installerNetwork)
-import Utils (tt)
 import           GHC.Generics
+import           InstallerVersions          (GlobalResults (..),
+                                             InstallerNetwork (..),
+                                             installerNetwork)
+import           NixOps                     (NixopsConfig (..), Options,
+                                             configurationKeys,
+                                             getCardanoSLConfig,
+                                             nixopsConfigurationKey)
+import           RunCardano
+import           Types                      (Arch (..), ArchMap,
+                                             Environment (..), NixopsDepl (..),
+                                             archMap, archMapEach,
+                                             archMapFromList, archMapToList,
+                                             formatArch, idArchMap, lookupArch,
+                                             mkArchMap)
+import           UpdateLogic                (CIResult (..), CISystem (..),
+                                             InstallersResults (..),
+                                             getInstallersResults,
+                                             githubWikiRecord,
+                                             installerPredicates, runAWS',
+                                             selectBuildNumberPredicate,
+                                             updateVersionJson,
+                                             uploadHashedInstaller,
+                                             uploadSignature)
+import           Utils                      (tt)
 
 ----------------------------------------------------------------------------
 -- Command-line arguments
@@ -77,9 +90,9 @@ data UpdateProposalStep
   | UpdateProposalUploadS3
   | UpdateProposalSetVersionJSON
   | UpdateProposalSubmit
-    { updateProposalRelayIP           :: Text
-    , updateProposalDryRun            :: Bool
-    , updateProposalWithSystems       :: ArchMap Bool
+    { updateProposalRelayIP     :: Text
+    , updateProposalDryRun      :: Bool
+    , updateProposalWithSystems :: ArchMap Bool
     }
   deriving Show
 
@@ -188,10 +201,10 @@ data UpdateProposalConfig1 = UpdateProposalConfig1
   } deriving (Show)
 
 data UpdateProposalConfig2 = UpdateProposalConfig2
-  { cfgUpdateProposal1    :: UpdateProposalConfig1
-  , cfgInstallersResults  :: InstallersResults
-  , cfgInstallerHashes    :: InstallerHashes
-  , cfgInstallerSHA256    :: InstallerHashes
+  { cfgUpdateProposal1   :: UpdateProposalConfig1
+  , cfgInstallersResults :: InstallersResults
+  , cfgInstallerHashes   :: InstallerHashes
+  , cfgInstallerSHA256   :: InstallerHashes
   } deriving (Show)
 
 data UpdateProposalConfig3 = UpdateProposalConfig3
@@ -201,12 +214,12 @@ data UpdateProposalConfig3 = UpdateProposalConfig3
 type InstallerHashes = ArchMap Text
 
 data UpdateProposalConfig4 = UpdateProposalConfig4
-  { cfgUpdateProposal3 :: UpdateProposalConfig3
+  { cfgUpdateProposal3     :: UpdateProposalConfig3
   , cfgUpdateProposalAddrs :: Text
   } deriving (Show)
 
 data UpdateProposalConfig5 = UpdateProposalConfig5
-  { cfgUpdateProposal4 :: UpdateProposalConfig4
+  { cfgUpdateProposal4  :: UpdateProposalConfig4
   , cfgUpdateProposalId :: Text
   } deriving (Show)
 
@@ -271,7 +284,7 @@ instance ToJSON UpdateProposalConfig5 where
 -- | Adds two json objects together.
 mergeObjects :: Value -> Value -> Value
 mergeObjects (Object a) (Object b) = Object (a <> b)
-mergeObjects _ b = b
+mergeObjects _ b                   = b
 
 ----------------------------------------------------------------------------
 -- Loading and saving the params file
@@ -345,9 +358,9 @@ checkInstallerHashes = firstJust . map (uncurry check) . archMapToList
                      Just ("Bad hash for " <> formatArch a <> " installer")
                  | otherwise = Nothing
     firstJust xs = case (xs, filter isJust xs) of
-                     ([], _) -> Just "There are no installer hashes"
+                     ([], _)          -> Just "There are no installer hashes"
                      (_, (Just e:es)) -> Just e
-                     (_, _) -> Nothing
+                     (_, _)           -> Nothing
 
 -- | Installer hashes are 64 hex digits.
 isInstallerHash :: Text -> Bool
@@ -488,7 +501,7 @@ logFindInstallers env bk av = do
   buildNum Buildkite bk
   buildNum AppVeyor av
   where
-    buildNum _ Nothing = pure ()
+    buildNum _ Nothing     = pure ()
     buildNum ci (Just num) = printf ("    "%w%" build #"%d%"\n") ci num
 
 -- | Checks if an installer from a CI result matches the environment
@@ -523,7 +536,7 @@ updateProposalSignInstallers opts@CommandOptions{..} userId = do
     signInstaller f = system (P.proc "gpg2" $ map T.unpack $ gpgArgs f) empty
     gpgArgs f = userArg ++ ["--detach-sig", "--armor", "--sign", tt f]
     userArg = case userId of
-                Just u -> ["--local-user", u]
+                Just u  -> ["--local-user", u]
                 Nothing -> []
 
 ----------------------------------------------------------------------------
@@ -615,7 +628,7 @@ instance ToJSON DownloadVersionInfo where
     ]
 
 data DownloadVersionJson = DownloadVersionJson
-  { dvjDvis :: ArchMap DownloadVersionInfo
+  { dvjDvis         :: ArchMap DownloadVersionInfo
   , dvjReleaseNotes :: Maybe Text
   } deriving (Show, Generic)
 
