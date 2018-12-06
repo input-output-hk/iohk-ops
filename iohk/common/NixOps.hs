@@ -388,7 +388,6 @@ instance FromJSON NixopsConfig where
         <*> pure undefined
         <*> pure undefined
 
-instance FromJSON BucketName
 instance ToJSON Environment
 instance ToJSON Target
 instance ToJSON Deployment

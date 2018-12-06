@@ -2,11 +2,11 @@
 
 module BuildkiteSpec (spec, main) where
 
-import Test.Hspec
-import Buildkite.Pipeline
-import qualified Data.Yaml as Y
-import Data.ByteString (ByteString)
+import           Buildkite.Pipeline
+import           Data.ByteString     (ByteString)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Yaml           as Y
+import           Test.Hspec
 
 main :: IO ()
 main = hspec spec
@@ -30,7 +30,7 @@ samplePipeline = PipelineDefinition
   }
 
 spec :: Spec
-spec = do
-  describe "Pipeline YAML Parsing" $ do
+spec =
+  describe "Pipeline YAML Parsing" $
     it "works with a typical pipeline" $ do
-      Y.decode samplePipelineYml `shouldBe` Just samplePipeline
+      Y.decodeEither samplePipelineYml `shouldBe` Right samplePipeline

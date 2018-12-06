@@ -1,7 +1,7 @@
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module InstallerVersions
   ( GlobalResults(..)
@@ -11,25 +11,26 @@ module InstallerVersions
   ) where
 
 
-import Prelude hiding (FilePath)
+import           Prelude                    hiding (FilePath)
 
-import           Control.Lens hiding (strict)
-import           Data.Aeson (ToJSON, FromJSON)
+import           Control.Lens               hiding (strict)
+import           Data.Aeson                 (FromJSON, ToJSON)
 import           Data.Aeson.Lens
-import qualified Data.ByteString.Lazy.Char8   as S8
-import           Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.HashMap.Strict          as HM
-import qualified Data.Yaml                    as Y
-import qualified Filesystem.Path.CurrentOS    as FP
-import           GHC.Generics                 (Generic)
+import qualified Data.ByteString.Lazy.Char8 as S8
+import qualified Data.HashMap.Strict        as HM
+import           Data.Text                  (Text)
+import qualified Data.Text                  as T
+import qualified Data.Yaml                  as Y
+import qualified Filesystem.Path.CurrentOS  as FP
+import           GHC.Generics               (Generic)
 import           Turtle
 
-import           Cardano                      (ConfigurationYaml, applicationVersion, update)
-import           Github                       (Rev)
-import           Nix                          (nixEvalExpr, nixBuildExpr)
+import           Cardano                    (ConfigurationYaml,
+                                             applicationVersion, update)
+import           Github                     (Rev)
+import           Nix                        (nixBuildExpr, nixEvalExpr)
 import           Types
-import           Utils                        (tt)
+import           Utils                      (tt)
 
 data GlobalResults = GlobalResults {
       grCardanoCommit      :: Text
@@ -97,7 +98,7 @@ grabAppVersion :: Rev     -- ^ git commit id to check out
                -> IO Int     -- ^ an integer version
 grabAppVersion rev key = do
   bridge <- fetchDaedalusBridge rev
-  Just fullConfiguration <- Y.decodeFile (FP.encodeString $ bridge </> "config/configuration.yaml")
+  (Right fullConfiguration) <- Y.decodeFileEither (FP.encodeString $ bridge </> "config/configuration.yaml")
   appVersionFromConfig key fullConfiguration
 
 appVersionFromConfig :: ApplicationVersionKey -> ConfigurationYaml -> IO Int
