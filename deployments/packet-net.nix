@@ -48,7 +48,7 @@ in
   # New instances
   resources.packetKeyPairs.infra = {
     inherit accessKeyId;
-    project-id = hydra-agents-projid;
+    project = hydra-agents-projid;
   };
 
   buildkite-packet-4 = { resources, ... }: {
@@ -58,7 +58,7 @@ in
       keyPair = resources.packetKeyPairs.infra;
       facility = "ams1";
       plan = "c1.small.x86";
-      project-id = hydra-agents-projid;
+      project = hydra-agents-projid;
     };
   };
   buildkite-packet-5 = { resources, ... }: {
@@ -68,7 +68,7 @@ in
       keyPair = resources.packetKeyPairs.infra;
       facility = "ams1";
       plan = "c1.small.x86";
-      project-id = hydra-agents-projid;
+      project = hydra-agents-projid;
     };
   };
   buildkite-packet-6 = { resources, ... }: {
@@ -78,7 +78,7 @@ in
       keyPair = resources.packetKeyPairs.infra;
       facility = "ams1";
       plan = "c1.small.x86";
-      project-id = hydra-agents-projid;
+      project = hydra-agents-projid;
     };
   };
 }
