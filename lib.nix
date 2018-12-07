@@ -1,5 +1,5 @@
 # To interact with this file:
-# nix-repl lib.nix
+# nix repl lib.nix
 
 let
   # Allow overriding pinned nixpkgs for debugging purposes via iohkops_pkgs
