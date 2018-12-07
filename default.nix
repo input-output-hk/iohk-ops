@@ -20,8 +20,8 @@ let
       nixopsUnstable = pkgs.fetchFromGitHub {
         owner = "input-output-hk";
         repo = "nixops";
-        rev = "b0b62ff773afa17e26898d943a3e0de367601ab8";
-        sha256 = "18mbv1jpygnxgcrppbw6v5k6gqr2za6cxpyvbhwcyy0li95pzcbf";
+        rev = "30458ba91b0e27d3e87578bada952f70992963a5";
+        sha256 = "08pi3hn4i8vz22ac7acd33gcmp10imn5ywn1isfgr56h74v68pzs";
       };
     in (import "${nixopsUnstable}/release.nix" {
          nixpkgs = localLib.fetchNixPkgs;
