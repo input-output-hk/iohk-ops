@@ -10,43 +10,49 @@
 
 module Main where
 
+import           CommandLineUtils          (filePathOption)
 import           Constants
-import           Control.Applicative              (optional, many, (<|>))
-import           Control.Monad                    (forM_)
-import           Data.Char                        (toLower)
-import           Data.List                        (intercalate, intersperse)
-import qualified Data.Map                         as Map
-import           Data.Maybe                       (maybe, fromMaybe, maybeToList)
-import           Data.Monoid                      ((<>))
-import           Data.Optional                    (Optional)
-import           Data.Text                        (Text)
-import qualified Data.Text                        as T
-import qualified Filesystem.Path.CurrentOS        as Path
-import qualified System.Environment               as Sys
-import           NixOps                           (Options(..), cmd, getCardanoSLConfig
-                                                  , clusterConfigurationKey, parserCommit)
-import qualified NixOps                           as Ops
-import           Options.Applicative              (Parser, subparser, progDesc, info, command
-                                                  , commandGroup, flag, option, str, auto, long
-                                                  , short, metavar, value, help, strOption
-                                                  , showDefault, argument, switch
-                                                  , completer, bashCompleter)
-import           Prelude                          hiding (FilePath)
-import           Time.Types
+import           Control.Applicative       (many, optional, (<|>))
+import           Control.Monad             (forM_)
+import           Data.Char                 (toLower)
+import           Data.List                 (intercalate, intersperse)
+import qualified Data.Map                  as Map
+import           Data.Maybe                (fromMaybe, maybe, maybeToList)
+import           Data.Monoid               ((<>))
+import           Data.Optional             (Optional)
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
+import qualified Filesystem.Path.CurrentOS as Path
+import           NixOps                    (Options (..),
+                                            clusterConfigurationKey, cmd,
+                                            getCardanoSLConfig, parserCommit)
+import qualified NixOps                    as Ops
+import           Options.Applicative       (Parser, argument, auto,
+                                            bashCompleter, command,
+                                            commandGroup, completer, flag, help,
+                                            info, long, metavar, option,
+                                            progDesc, short, showDefault, str,
+                                            strOption, subparser, switch, value)
+import           Prelude                   hiding (FilePath)
+import qualified System.Environment        as Sys
 import           Time.System
+import           Time.Types
+import           Turtle                    (ArgName, FilePath, HelpMessage,
+                                            ShortName, arg, argText, cd, cp,
+                                            die, echo, format, fp, fromText,
+                                            opt, optInteger, optText, options,
+                                            prefix, printf, s, sh, suffix,
+                                            testpath, touch, unsafeTextToLine,
+                                            w, when, (%), (</>))
 import qualified Turtle
-import           Turtle                           (FilePath, HelpMessage, ArgName, ShortName
-                                                  , sh, prefix, suffix, echo, format, cp, touch
-                                                  , when, unsafeTextToLine, die, cd, fromText
-                                                  , fp, testpath, w, s, printf, options
-                                                  , optText, argText, optInteger, arg, opt
-                                                  , (</>), (%))
-import           CommandLineUtils                 (filePathOption)
 import           Types
-import           Utils                            (Confirmation(..), every, showT, lowerShowT, errorT)
-import           UpdateProposal                   (UpdateProposalCommand, updateProposal, parseUpdateProposalCommand)
+import           UpdateProposal            (UpdateProposalCommand,
+                                            parseUpdateProposalCommand,
+                                            updateProposal)
+import           Utils                     (Confirmation (..), errorT, every,
+                                            lowerShowT, showT)
 
-
+
 -- * Elementary parsers
 --
 -- | Given a string, either return a constructor that being 'show'n case-insensitively matches the string,
@@ -96,7 +102,7 @@ parserConfirmation question =
          True  -> Confirm)
   <$> switch (long "confirm" <> short 'y' <> help "Confirm this particular action, don't ask questions.")
 
-
+
 -- * Central command
 --
 data Command where
@@ -316,7 +322,7 @@ runTop o@Options{..} args topcmd =
             New{..}                  -> error "impossible"
             SetRev{}                 -> error "impossible"
 
-
+
 runClone :: Options -> NixopsDepl -> Branch -> IO ()
 runClone o@Options{..} depl branch = do
   let bname     = fromBranch branch
@@ -359,6 +365,7 @@ runNew o@Options{..} New{..} args = do
                   , "bors-ng-github-client-secret"
                   , "bors-ng-github-integration.pem"
                   , "bors-ng-github-webhook-secret"
+                  , "packet-accessKeyId.secret"
                   ]
     forM_ secrets touch
     echo "Ensured secrets exist"
