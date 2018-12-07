@@ -52,6 +52,11 @@ let
     };
   };
 
+  # Use to put Bors jobs at the front of the build queue.
+  highPrio = jobset: jobset // {
+    schedulingshares = 420;
+  };
+
   mkNixops = nixopsBranch: nixpkgsRev: {
     nixexprpath = "jobsets/cardano.nix";
     description = "IOHK-Ops";
@@ -205,11 +210,11 @@ let
     cardano-sl-1-2 = mkCardano "release/1.2.0";
     cardano-sl-1-3 = mkCardano "release/1.3.1";
     cardano-sl-2-0 = mkCardano "release/2.0.0";
-    cardano-sl-bors-staging = mkCardano "bors/staging";
+    cardano-sl-bors-staging = highPrio (mkCardano "bors/staging");
     cardano-sl-bors-trying = mkCardano "bors/trying";
 
     cardano-chain = mkCardanoChain "master";
-    cardano-chain-bors-staging = mkCardanoChain "bors/staging";
+    cardano-chain-bors-staging = highPrio (mkCardanoChain "bors/staging");
     cardano-chain-bors-trying = mkCardanoChain "bors/trying";
 
     # Provides cached build projects for PR builds with -O0
@@ -220,15 +225,15 @@ let
     plutus = mkPlutus "master";
 
     log-classifier = mkLogClassifier "master";
-    log-classifier-bors-staging = mkLogClassifier "bors/staging";
+    log-classifier-bors-staging = highPrio (mkLogClassifier "bors/staging");
     log-classifier-bors-trying = mkLogClassifier "bors/trying";
 
     ouroboros-network = mkOuroborosNetwork "master";
-    ouroboros-network-bors-staging = mkOuroborosNetwork "bors/staging";
+    ouroboros-network-bors-staging = highPrio (mkOuroborosNetwork "bors/staging");
     ouroboros-network-bors-trying = mkOuroborosNetwork "bors/trying";
 
     iohk-ops = mkNixops "master" nixpkgs-src.rev;
-    iohk-ops-bors-staging = mkNixops "bors-staging" nixpkgs-src.rev;
+    iohk-ops-bors-staging = highPrio (mkNixops "bors-staging" nixpkgs-src.rev);
     iohk-ops-bors-trying = mkNixops "bors-trying" nixpkgs-src.rev;
   });
   jobsetsAttrs = daedalusPrJobsets // nixopsPrJobsets // plutusPrJobsets // logClassifierPrJobsets // ouroborosNetworkPrJobsets // (if handleCardanoPRs then cardanoPrJobsets else {}) // chainPrJobsets // mainJobsets;
