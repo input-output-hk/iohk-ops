@@ -46,12 +46,18 @@ To hack on the `iohk-ops` tool, use
     io is a function
     io ()
     {
-        runhaskell -iiohk iohk/iohk-ops.hs "$@"
+        cabal exec iohk-ops -- "$@"
     }
     [nix-shell:~/iohk/iohk-ops]$ io --help
 
 This will provide a Haskell environment where you can use `io` to run
-the script or `ghci` for development.
+the script or `ghci` for development:
+
+    [nix-shell:~/iohk/iohk-ops]$ ghci -iiohk/common
+    GHCi, version 8.2.2: http://www.haskell.org/ghc/  :? for help
+    Loaded GHCi configuration from /home/rodney/config/.ghc/ghci.conf
+    λ> :l iohk/iohk-ops.hs
+
 
 ### Run from anywhere
 

@@ -59,7 +59,7 @@ let
              (compiler.callPackage ./iohk/default.nix {})
              (drv: {
                 executableToolDepends = [ pkgs.makeWrapper ];
-                libraryHaskellDepends = iohk-ops-extra-runtime-deps;
+                libraryHaskellDepends = (drv.libraryHaskellDepends or []) ++ iohk-ops-extra-runtime-deps;
                 postInstall = ''
                   cp -vs $out/bin/iohk-ops $out/bin/io
                   wrapProgram $out/bin/iohk-ops \

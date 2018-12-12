@@ -26,7 +26,7 @@ import qualified System.Environment               as Sys
 import           NixOps                           (Options(..), cmd, getCardanoSLConfig
                                                   , clusterConfigurationKey, parserCommit)
 import qualified NixOps                           as Ops
-import           Options.Applicative              (Parser, subparser, progDesc, info, command
+import           Options.Applicative              (Parser, subparser, hsubparser, progDesc, info, command
                                                   , commandGroup, flag, option, str, auto, long
                                                   , short, metavar, value, help, strOption
                                                   , showDefault, argument, switch
@@ -202,7 +202,7 @@ centralCommandParser =
                     (pure ReallocateCoreIPs)
                     (progDesc "Destroy elastic IPs corresponding to the nodes listed and redeploy cluster"))
                  , command "info" (info (pure Info) (progDesc "Invoke 'nixops info'"))])
-  <|> subparser (mconcat
+  <|> hsubparser (mconcat
                  [ commandGroup "Live cluster ops:"
                  , command "deployed-commit"
                    (info

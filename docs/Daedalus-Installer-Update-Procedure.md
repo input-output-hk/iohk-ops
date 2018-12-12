@@ -6,9 +6,6 @@ submitted to the cardano-sl network.
 
 This is how wallet clients will self-update.
 
-**21/08/2018 New!** There have recently been some changes and
-improvements to these commands from [DEVOPS-868][].
-
 ## Intended Audience
 
 This document is mainly intended for use by IOHK DevOps working from
@@ -231,30 +228,25 @@ Also update any other documentation which is missing or out of date.
 
 ## Block version table
 
-The block version reflects the soft forks which have occurred on the
-network. Use the following values depending on the network where the
-update will be proposed.
+The `lastKnownBlockVersion` reflects the current adopted protocol
+version of the network. Use the following values depending on the
+network where the update will be proposed.
 
 | Network | `lastKnownBlockVersion` |
 |:--------| -----------------------:|
-| mainnet |                 `0.1.0` |
-| staging |                 `0.1.0` |
-| testnet |                 `0.0.0` |
+| mainnet |                 `0.2.0` |
+| staging |                 `0.2.0` |
+| testnet |                 `0.1.0` |
 
 
-## Voter index table
+## Voter index
 
-For whatever reason, the update proposal procedure requires a voter
-index. This number is supposed to denote the person who submitted the
-proposal.
+The update proposal procedure requires a voter index which selects the
+secret key used to sign the update proposal.
 
-| `voterIndex` | Person      |
-| ------------:| ----------- |
-|            1 | Domen       |
-|            2 | Serge       |
-
-**Note:** The `voterIndex` needs to be *≥ 0 and ≤ 2*, otherwise you
-will receive the error `Prelude.!!: index too large`.
+**Note:** The `voterIndex` needs to be *≥ 0 and < 7* (where 7 is the
+number of core nodes), otherwise you will receive the error
+`Prelude.!!: index too large`.
 
 
 ## See also

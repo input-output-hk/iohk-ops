@@ -16,10 +16,10 @@ let
   ioSelfBuild = pkgs.lib.overrideDerivation iohk-ops.env (drv: {
     shellHook = ''
       function io {
-        runhaskell -iiohk iohk/iohk-ops.hs "$@"
+        cabal exec iohk-ops -- "$@"
       }
       function ghcid-io {
-        ${pkgs.haskellPackages.ghcid}/bin/ghcid -c "ghci -iiohk iohk/iohk-ops.hs"
+        ${pkgs.haskellPackages.ghcid}/bin/ghcid -c "ghci -iiohk -iiohk/common iohk/iohk-ops.hs"
       }
     '';
   });

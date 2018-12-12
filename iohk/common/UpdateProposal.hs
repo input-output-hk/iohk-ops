@@ -84,9 +84,9 @@ data UpdateProposalStep
   deriving Show
 
 parseUpdateProposalCommand :: Parser UpdateProposalCommand
-parseUpdateProposalCommand = subparser $
+parseUpdateProposalCommand = hsubparser $
      ( command "init"
-       (info ((UpdateProposalInit <$> mdate <*> updateProposalConfig) <**> helper)
+       (info ((UpdateProposalInit <$> mdate <*> updateProposalConfig))
          (progDesc "Create template config file and working directory.") ) )
   <> ( command "find-installers"
        (info ((UpdateProposalCommand <$> date <*> (UpdateProposalFindInstallers <$> buildNum Buildkite <*> buildNum AppVeyor)) <**> helper)
@@ -124,7 +124,7 @@ parseUpdateProposalCommand = subparser $
     blockVersionP = fmap T.pack $ strOption (long "block-version" <> short 'B' <> metavar "VERSION" <> help "Last known block version. Check the wiki for more info.")
 
     voterIndexP :: Parser Int
-    voterIndexP = option auto (long "voter-index" <> short 'V' <> metavar "INTEGER" <> help "A number representing you, the vote proposer. Check the wiki for more info.")
+    voterIndexP = option auto (long "voter-index" <> short 'V' <> metavar "INTEGER" <> value 0 <> showDefault <> help "Index into stake keys. Check the wiki for more info.")
 
     releaseNotesP :: Parser (Maybe Text)
     releaseNotesP = (Just . T.pack <$> strOption ( long "release-notes" <> metavar "RELEASE_NOTES" <> (help "Path to release notes (html)") <> (completer (bashCompleter "file") )))
@@ -241,10 +241,10 @@ instance FromJSON UpdateProposalConfig5 where
 
 instance ToJSON UpdateProposalConfig1 where
   toJSON (UpdateProposalConfig1 r v p rn) = object [ "daedalusRevision" .= r
-                                                , "lastKnownBlockVersion" .= v
-                                                , "voterIndex" .= p
-                                                , "releaseNotes" .= rn
-                                                ]
+                                                   , "lastKnownBlockVersion" .= v
+                                                   , "voterIndex" .= p
+                                                   , "releaseNotes" .= rn
+                                                   ]
 
 instance ToJSON GitRevision where
   toJSON (GitRevision r) = String r
@@ -303,7 +303,7 @@ class Checkable cfg where
 instance Checkable UpdateProposalConfig1 where
   checkConfig UpdateProposalConfig1{..}
     | T.null cfgLastKnownBlockVersion = Just "Last known block version must be set"
-    | cfgVoterIndex <= 0 = Just "Voter index must be set"
+    | cfgVoterIndex < 0 = Just "Voter index must be set"
     | otherwise = Nothing
 
 instance Checkable UpdateProposalConfig2 where
@@ -707,6 +707,7 @@ copyInstallerFiles opts res hashes = void $ forResults res copy
     copy' magic hash res = do
       let dst = installersPath opts (fromText hash)
       cp (ciResultLocalPath res) dst
+      setmod (Permissions True True False) dst
       checkMagic magic dst
 
     checkMagic :: Text -> FilePath -> Shell ()

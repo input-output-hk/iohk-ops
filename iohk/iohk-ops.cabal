@@ -21,6 +21,7 @@ library
   exposed-modules:     Appveyor
                      , Arch
                      , Buildkite.API
+                     , Buildkite.Pipeline
                      , CommandLineUtils
                      , Constants
                      , Github
@@ -29,6 +30,7 @@ library
                      , RunCardano
                      , Types
                      , UpdateLogic
+                     , UpdateProposal
                      , Utils
   other-modules:       Cardano
                      , Nix
@@ -59,10 +61,12 @@ library
                      , network-uri
                      , optional-args
                      , optparse-applicative
+                     , process
                      , resourcet
                      , safe
                      , system-filepath
                      , text
+                     , time
                      , turtle
                      , unordered-containers
                      , utf8-string
@@ -73,8 +77,6 @@ executable iohk-ops
   main-is:             iohk-ops.hs
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
-  other-modules:       UpdateProposal
-
   build-depends:       aeson
                      , base
                      , bytestring
@@ -94,15 +96,13 @@ executable iohk-ops
 
 test-suite iohk-ops-test
   main-is:          Spec.hs
+  hs-source-dirs:   test
   default-language: Haskell2010
   default-extensions: OverloadedStrings, RecordWildCards
-
   type:             exitcode-stdio-1.0
   other-modules:    AppveyorSpec
-                  , Buildkite.Pipeline
                   , BuildkiteSpec
                   , UpdateLogicSpec
-                  , UpdateProposal
                   , UpdateProposalSpec
   build-depends:    base
                   , iohk-ops
@@ -119,14 +119,13 @@ test-suite iohk-ops-test
                   , turtle
                   , unordered-containers
                   , yaml
-  hs-source-dirs:   test .
 
 executable iohk-ops-integration-test
   main-is:          IntegrationTest.hs
+  hs-source-dirs:   test
   default-language: Haskell2010
   build-depends:    base
                   , hspec
                   , iohk-ops
                   , managed
                   , turtle
-  hs-source-dirs:   test .
