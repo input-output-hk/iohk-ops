@@ -38,6 +38,14 @@ in {
   nix.extraOptions = ''
     gc-keep-derivations = true
     gc-keep-outputs = true
+
+    # Max of 8 hours for building any given derivation on macOS.
+    # The long timeout should give enough time to build a cross GHC.
+    # See ../modules/hydra-slave.nix for Linux setting
+    timeout = ${toString (3600 * 8)}
+
+    # Quickly kill stuck builds
+    max-silent-time = ${toString (60 * 15)}
   '';
 
   nix.binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
