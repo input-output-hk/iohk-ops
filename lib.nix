@@ -84,6 +84,9 @@ in lib // (rec {
   devKeys = devOpsKeys ++ allKeysFrom csl-developers;
   mantisOpsKeys = allKeysFrom devOps ++ allKeysFrom mantis-devOps;
 
+  # Access to login to CI infrastructure
+  ciInfraKeys = devOpsKeys ++ allKeysFrom { inherit (csl-developers) angerman; };
+
   buildSlaveKeys = {
     macos = devOpsKeys ++ allKeysFrom remoteBuilderKeys;
     linux = remoteBuilderKeys.hydraBuildFarm;

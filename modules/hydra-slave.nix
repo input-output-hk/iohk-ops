@@ -23,7 +23,9 @@ in
     '';
   };
 
-  users.extraUsers.root.openssh.authorizedKeys.keys = map (key: ''
-    command="nice -n20 nix-store --serve --write" ${key}
-  '') localLib.buildSlaveKeys.linux;
+  users.extraUsers.root.openssh.authorizedKeys.keys =
+    localLib.ciInfraKeys ++
+    map (key: ''
+      command="nice -n20 nix-store --serve --write" ${key}
+    '') localLib.buildSlaveKeys.linux;
 }

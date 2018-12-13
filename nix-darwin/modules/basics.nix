@@ -59,7 +59,7 @@ in {
   ########################################################################
 
   environment.etc."per-user/admin/ssh/authorized_keys".text
-    = lib.concatStringsSep "\n" opsLib.devOpsKeys + "\n";
+    = lib.concatStringsSep "\n" opsLib.ciInfraKeys + "\n";
 
   ########################################################################
 
