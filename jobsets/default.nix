@@ -221,6 +221,8 @@ let
     no-opt-cardano-sl = withFasterBuild (mkCardano "develop");
 
     daedalus = mkDaedalus "develop";
+    daedalus-bors-staging = mkDaedalus "bors/staging";
+    daedalus-bors-trying = mkDaedalus "bors/trying";
 
     plutus = mkPlutus "master";
 
