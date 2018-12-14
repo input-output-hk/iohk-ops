@@ -174,7 +174,7 @@ the effect of immediately updating the download links on
 Find the IP address of a *privileged relay* with `io info`. This is
 normally private info so don't leak it.
 
-    io -c NETWORK.yaml update-proposal submit DATE --relay-ip 1.2.3.4 [--with-linux]
+    io -c NETWORK.yaml update-proposal submit DATE --relay-ip 1.2.3.4 --with-linux
 
 By default, installers will be proposed for Windows and macOS, but not
 Linux. Use the `--with-linux` flag to include these installers in the
@@ -201,7 +201,7 @@ this will be 12 hours.
 2. Search Papertrail for `Processing of proposal csl-daedalus:` and confirm that
     1. the number following `:` matches the intended `applicationVersion`
     2. the correct `UpId:` is referenced
-    3. the tags for the supported platforms are mentioned: `tags: [win64, macos64]`
+    3. the tags for the supported platforms are mentioned: `tags: [win64, macos64, linux]`
     4. matching lines end with `is successful`
 
 ### Testing for proposal confirmation
