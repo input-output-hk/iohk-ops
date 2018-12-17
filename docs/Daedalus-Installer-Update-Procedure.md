@@ -179,7 +179,7 @@ normally private info so don't leak it.
 
 **Updated 2018-12-17**
 By default, installers will be proposed for Linux, Windows and macOS.
-Use the `--without-OS` flag to include these installers in the
+Use the `--without-OS` flag to exclude certain installers from the
 update proposal.
 
 This will generate a new node db, copy keys from the top-level `keys`
