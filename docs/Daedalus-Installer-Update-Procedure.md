@@ -195,7 +195,7 @@ this will be 12 hours.
 
 ## 7. Testing proposal acceptance
 
-*Useful generic search:* [keywords](https://papertrailapp.com/groups/6487901/events?q=UpdateProposal%20OR%20UpdateVote%20OR%20Processing%20of%20proposal%20OR%20New%20vote%20OR%20Stakes%20of%20proposal%20OR%20Verifying%20stake%20for%20proposal%20OR%20Proposal%20is%20confirmed)
+*Useful generic search:* [keywords](https://papertrailapp.com/groups/6487901/events?q=UpdateProposal%20OR%20UpdateVote%20OR%20Processing%20of%20proposal%20OR%20New%20vote%20OR%20Stakes%20of%20proposal%20OR%20Verifying%20stake%20for%20proposal%20OR%20Proposal%20is%20confirmed%20OR%20is%20rejected%2C%20the%20reason%20is)
 
 1. Search Papertrail for `We'll request data for key Tagged (UpdateProposal,[UpdateVote])` and confirm it references the first 8 chars of the proposal ID from the previous step.
 2. Search Papertrail for `Processing of proposal csl-daedalus:` and confirm that
