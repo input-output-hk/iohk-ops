@@ -3,6 +3,7 @@
 
 module UpdateProposal
   ( UpdateProposalCommand(..)
+  , UpdateProposalStep(..)
   , parseUpdateProposalCommand
   , updateProposal
   -- * Exported for testing
@@ -150,9 +151,16 @@ parseUpdateProposalCommand = hsubparser $
     dryRun = switch ( long "dry-run" <> short 'n' <> help "Don't actually do anything" )
 
     withSystems :: Parser (ArchMap Bool)
-    withSystems = mkArchMap <$> withLinux <*> pure True <*> pure True
-      where withLinux = switch ( long "with-linux" <>
-                                 help "Also propose a Linux installer" )
+    withSystems = mkArchMap <$> with "linux" <*> with "macos" <*> with "windows"
+      where
+        with os = without os <|> with' os <|> pure True
+        without os = flag' False
+                     ( long ("without-" ++ os) <>
+                       help ("Do not propose a " ++ os ++ " installer") )
+        with' os = flag' True
+                   ( long ("with-" ++ os) <>
+                     help ("Also propose a " ++ os ++ " installer (the default)") <>
+                     hidden <> internal )
 
 updateProposal :: Options -> NixopsConfig -> UpdateProposalCommand -> IO ()
 updateProposal o cfg cmd = do

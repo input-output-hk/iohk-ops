@@ -174,12 +174,13 @@ the effect of immediately updating the download links on
 Find the IP address of a *privileged relay* with `io info`. This is
 normally private info so don't leak it.
 
-    io -c NETWORK.yaml update-proposal submit DATE --relay-ip 1.2.3.4 --with-linux
+    io -c NETWORK.yaml update-proposal submit DATE --relay-ip 1.2.3.4
+        [--without-linux] [--without-macos] [--without-windows]
 
-By default, installers will be proposed for Windows and macOS, but not
-Linux. Use the `--with-linux` flag to include these installers in the
-update proposal. While the Linux installer is in beta, it will not be
-proposed on the mainnet blockchain.
+**Updated 2018-12-17**
+By default, installers will be proposed for Linux, Windows and macOS.
+Use the `--without-OS` flag to include these installers in the
+update proposal.
 
 This will generate a new node db, copy keys from the top-level `keys`
 directory, then "rearrange" the copied keys.
