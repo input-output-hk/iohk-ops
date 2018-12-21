@@ -91,7 +91,7 @@ let
     };
 
     cardano-wallet = {
-      description = "Cardano Wallet";
+      description = "Cardano Wallet Backend";
       url = "https://github.com/input-output-hk/cardano-wallet.git";
       branch = "develop";
       prs = walletPrsJSON;
@@ -163,7 +163,7 @@ let
       mkJobset { name = "${name}-${suffix}"; inherit description url input branch; });
 
   # Make a jobset for a GitHub PRs
-  mkJobsetPR = { name, description, input, modifier }: num: info: {
+  mkJobsetPR = { name, input, modifier }: num: info: {
     name = "${name}-pr-${num}";
     value = defaultSettings // modifier {
       description = "PR ${num}: ${info.title}";
@@ -176,9 +176,9 @@ let
   };
 
   # Load the PRs json and make a jobset for each
-  mkJobsetPRs = { name, description, input, modifier, prs }:
+  mkJobsetPRs = { name, input, modifier, prs }:
     mapAttrsToList
-      (mkJobsetPR { inherit name description input modifier; })
+      (mkJobsetPR { inherit name input modifier; })
       (loadPrsJSON prs);
 
   # Add two extra jobsets for the bors staging and trying branches
@@ -199,7 +199,7 @@ let
     in
       [ (mkJobset (params // { inherit branch; })) ] ++
       (mkJobsetBranches params (info.branches or {})) ++
-      (mkJobsetPRs { inherit name input; inherit (info) description prs; modifier = prJobsetModifier; }) ++
+      (mkJobsetPRs { inherit name input; inherit (info) prs; modifier = prJobsetModifier; }) ++
       (optionals (info.bors or false) (mkJobsetBors params));
   in
     rs: listToAttrs (concatLists (mapAttrsToList mkRepo rs));
