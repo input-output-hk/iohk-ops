@@ -45,7 +45,9 @@ The commands are run in order with manual checks between each step.
 
 2. You need to know the following things:
 
-   * Daedalus revision to propose.
+   * Daedalus revision to propose. **Note:** this should be the same
+     revision as specified in the release candidate announcement and
+     signed off by QA.
    * The `lastKnownBlockVersion`, according to the table below.
    * The `voterIndex`, according to the table below.
    * Signing key passphrase (optional).
