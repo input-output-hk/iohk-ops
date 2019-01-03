@@ -11,7 +11,7 @@
     "keepnr": 3,
     "inputs": {
          "src": { "type": "git", "value": "https://github.com/input-output-hk/iohk-ops.git master", "emailresponsible": false }
-         ,"nixpkgs": { "type": "git", "value": "https://github.com/NixOS/nixpkgs-channels.git nixos-16.09", "emailresponsible": false }
+         ,"nixpkgs": { "type": "git", "value": "https://github.com/NixOS/nixpkgs-channels.git nixos-18.09", "emailresponsible": false }
          ,"nixopsPrsJSON": { "type": "githubpulls", "value": "input-output-hk iohk-ops", "emailresponsible": false }
          ,"cardanoPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-sl", "emailresponsible": false }
          ,"daedalusPrsJSON": { "type": "githubpulls", "value": "input-output-hk daedalus", "emailresponsible": false }
@@ -19,5 +19,6 @@
          ,"logClassifierPrsJSON": { "type": "githubpulls", "value": "input-output-hk log-classifier", "emailresponsible": false }
          ,"ouroborosNetworkPrsJSON": { "type": "githubpulls", "value": "input-output-hk ouroboros-network", "emailresponsible": false }
          ,"chainPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-chain", "emailresponsible": false }
+         ,"walletPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-wallet", "emailresponsible": false }
      }
 }
