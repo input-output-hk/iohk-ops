@@ -21,27 +21,17 @@ host* (your laptop probably).
 
 ## Deployment host
 
-* Needs a clone of `iohk-ops` somewhere.
-
 * Set up entries for the macs in `~/.ssh/config` and make sure you
   have confirmed the host keys.
 
 ## Setting up `nix-darwin`
 
-### On the target Mac
+1. Build and run prepare script
 
-1. Install [nix](https://nixos.org/nix/)
+       nix-build -A tools
+       result/bin/prepare-mac user@host [buildkite|hydra]
 
-       curl https://nixos.org/nix/install | sh
-       source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-
-2. Run the prepare script. Specify on the command line whether it will
-   be buildkite or hydra.
-
-       nix-build -I iohk-ops=https://github.com/input-output-hk/iohk-ops/archive/develop.tar.gz '<iohk-ops/nix-darwin>'
-       ./result/bin/deploy [ buildkite | hydra ]
-
-   This will prepare the system so that `nix-darwin` can be installed.
+   This will prepare the system so that the mac can be deployed.
 
    It will ask for the admin password so that it can `sudo`.
 
@@ -69,8 +59,7 @@ host* (your laptop probably).
 
 ### From the deployment host
 
-1. `cd iohk-ops/nix-darwin`
-2. `./deploy.hs --role ./roles/ROLE.nix HOSTS...`
+2. `result/bin/deploy --role ./roles/ROLE.nix HOSTS...`
 
 Replace *HOSTS* with the ssh host name of the target mac(s).
 
