@@ -1,5 +1,6 @@
 let
-  nixpkgs = import (builtins.fetchTarball https://nixos.org/channels/nixpkgs-18.03-darwin/nixexprs.tar.xz);
+  localLib = import ../lib.nix;
+  nixpkgs = import localLib.fetchNixPkgs;
   pkgs_mac = nixpkgs {system = "x86_64-darwin";};
   pkgs_native = nixpkgs {};
 
