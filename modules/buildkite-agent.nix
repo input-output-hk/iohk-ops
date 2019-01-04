@@ -1,5 +1,8 @@
 { name, pkgs, ... }:
 
+let
+  localLib = import ../lib.nix;
+in
 {
   imports = [
     ./auto-gc.nix
@@ -43,6 +46,9 @@
     "keys"
     "docker"
   ];
+
+  # Grant CI and dev tools people access to buildkite agents
+  users.users.root.openssh.authorizedKeys.keys = localLib.ciInfraKeys;
 
   deployment.keys = {
     aws-creds = {
