@@ -30,8 +30,8 @@ let org = "IOHK";
     };
 in rec {
   hydra               = mkHydra "hydra" "r3.2xlarge" ["role:hydra"];
-  mantis-hydra        = mkHydra "faster-hydra" "r3.2xlarge" ["role:hydra"];
-  faster-hydra        = mkHydra "mantis-hydra" "c5.4xlarge" ["role:hydra"];
+  mantis-hydra        = mkHydra "mantis-hydra" "r3.2xlarge" ["role:hydra"];
+  faster-hydra        = mkHydra "faster-hydra" "c5.4xlarge" ["role:hydra"];
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
