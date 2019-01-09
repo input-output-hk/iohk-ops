@@ -45,7 +45,7 @@ let
         "1-0" = "release/1.0.x";
         "1-2" = "release/1.2.0";
         "1-3" = "release/1.3.1";
-        "2-0" = "release/2.0.0";
+        "2-0" = "release/2.0.1";
       };
       prs = cardanoPrsJSON;
       prJobsetModifier = withFasterBuild;
