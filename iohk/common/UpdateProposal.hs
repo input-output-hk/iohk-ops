@@ -775,6 +775,6 @@ archUpdateBin :: Arch -> FilePath -> Text
 archUpdateBin a installer = format ("(upd-bin \""%s%"\" "%fp%")") (systemTag a) installer
   where
     -- These correspond to the systemTag values in cardano-sl/lib/configuration.yaml
-    systemTag Linux64 = "linux"
+    systemTag Linux64 = "linux64"
     systemTag Mac64   = "macos64"
     systemTag Win64   = "win64"
