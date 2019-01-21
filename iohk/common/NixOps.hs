@@ -434,7 +434,7 @@ nixopsConfigurationKey = (>>= asString) . Map.lookup "configurationKey" . cDeplA
   where
     -- maybe generating prisms on NixValue would be better.
     -- or maybe using hnix instead of Nix.hs and generating prisms
-    asString (NixStr s) = Just s
+    asString (NixStr str) = Just str
     asString _ = Nothing
 
 -- | Interpret inputs into a NixopsConfig
@@ -459,7 +459,7 @@ writeConfig mFp c@NixopsConfig{..} = do
 
 -- | Read back config, doing validation
 readConfig :: (HasCallStack, MonadIO m) => Options -> FilePath -> m NixopsConfig
-readConfig o@Options{..} cf = do
+readConfig Options{..} cf = do
   cfParse <- liftIO $ YAML.decodeFileEither $ Path.encodeString $ cf
   let c@NixopsConfig{..}
         = case cfParse of

@@ -3,20 +3,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Github (
-  CommitStatus,
   CommitStatus(..),
-  Status,
   Status(..),
-  GitHubSource,
   GitHubSource(..),
   uriParser,
   gitHubURLParser,
   fetchGithubJson,
   fetchGithubStatus,
   Rev,
-  context,
-  statuses,
-  targetUrl
 ) where
 
 import           Data.Aeson           (FromJSON, parseJSON, withObject, (.:))

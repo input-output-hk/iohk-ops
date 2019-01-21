@@ -70,11 +70,10 @@ import           Network.AWS                      (AWS, Credentials (Discover),
                                                    Region, chunkedFile,
                                                    defaultChunkSize, newEnv,
                                                    runAWS, send, toBody, within)
-import           Network.AWS.S3.CopyObject
+import           Network.AWS.S3.CopyObject        (coACL, copyObject)
 import           Network.AWS.S3.GetBucketLocation (gblbrsLocationConstraint,
                                                    getBucketLocation)
-import           Network.AWS.S3.PutObject         (poACL, putObject)
-import           Network.AWS.S3.PutObject
+import           Network.AWS.S3.PutObject         (poACL, poMetadata, putObject)
 import           Network.AWS.S3.Types             (BucketName (BucketName),
                                                    ObjectCannedACL (OPublicRead),
                                                    ObjectKey (ObjectKey),
@@ -91,10 +90,16 @@ import           System.IO.Error                  (ioeGetErrorString)
 import           Turtle                           (MonadIO, d, die, format, fp,
                                                    makeFormat, printf, s, void,
                                                    w, (%))
-import           Turtle.Prelude                   (mktempdir, proc)
 
-import           InstallerVersions
-import           Types                            hiding (Region)
+import           InstallerVersions                (GlobalResults (GlobalResults, grApplicationVersion, grCardanoCommit, grCardanoVersion, grDaedalusCommit, grDaedalusVersion),
+                                                   InstallerNetwork (InstallerMainnet, InstallerStaging, InstallerTestnet),
+                                                   findVersionInfo,
+                                                   installerNetwork)
+import           Types                            (ApplicationVersion,
+                                                   ApplicationVersionKey,
+                                                   Arch (Linux64, Mac64, Win64),
+                                                   NixopsConfig (NixopsConfig, cInstallerURLBase),
+                                                   formatArch)
 import           Utils                            (fetchCachedUrl,
                                                    fetchCachedUrlWithSHA1)
 
@@ -134,7 +139,7 @@ selectBuildNumberPredicate :: Maybe Int -- ^ Buildkite build number
 selectBuildNumberPredicate bk av =
   installerPredicates (buildNum Buildkite bk) (buildNum AppVeyor av)
   where
-    buildNum ci Nothing    _ = True
+    buildNum _ Nothing    _ = True
     buildNum ci (Just num) r = ciResultSystem r /= ci || ciResultBuildNumber r == num
 
 -- | Joins two installer predicates so that both must be satisfied.
@@ -353,7 +358,7 @@ githubWikiRecord InstallersResults{..} = T.intercalate " | " cols <> "\n"
     mdLink = format ("["%s%"]("%s%")")
 
 updateVersionJson :: NixopsConfig -> Text -> LBS.ByteString -> IO Text
-updateVersionJson cfg bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
+updateVersionJson cfg bucket json = runAWS' . withinBucketRegion bucketName $ \_ -> do
   uploadFile json key
   pure $ cdnLink cfg key
   where
@@ -382,7 +387,7 @@ type AWSMeta = HashMap.HashMap Text Text
 
 uploadHashedInstaller :: NixopsConfig -> Text -> FilePath -> GlobalResults -> Text -> AWS Text
 uploadHashedInstaller cfg bucketName localPath GlobalResults{..} hash =
-  withinBucketRegion bucketName' $ \region -> do
+  withinBucketRegion bucketName' $ \_ -> do
     uploadOneFile bucketName' localPath (ObjectKey hash) meta
     copyObject' hashedPath key
     pure $ cdnLink cfg key
