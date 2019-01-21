@@ -36,7 +36,7 @@ do
 done
 
 # Set NIX_PATH to the pinned version in nixpkgs-src.json
-nixpkgs_source=$(nix eval --raw -f fetch-nixpkgs.nix '')
+nixpkgs_source=$(nix eval --raw -f lib.nix 'nixpkgs')
 export NIX_PATH="nixpkgs=$nixpkgs_source"
 
 if [[ ! -v IOHK_OPS ]]

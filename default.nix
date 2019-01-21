@@ -3,7 +3,7 @@ let
 in
 { system ? builtins.currentSystem
 , config ? {}
-, pkgs ? (import (localLib.fetchNixPkgs) { inherit system config; })
+, pkgs ? (import (localLib.nixpkgs) { inherit system config; })
 , compiler ? pkgs.haskellPackages
 , enableDebugging ? false
 , enableProfiling ? false
@@ -24,7 +24,7 @@ let
         sha256 = "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv";
       };
     in (import "${nixopsUnstable}/release.nix" {
-         nixpkgs = localLib.fetchNixPkgs;
+         inherit (localLib) nixpkgs;
         }).build.${system};
   iohk-ops-extra-runtime-deps = with pkgs; [
     gitFull nix-prefetch-scripts compiler.yaml
