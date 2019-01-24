@@ -25,6 +25,35 @@ let
       ip1 = if nodes.${host}.options.networking.publicIPv4.isDefined then nodes.${host}.config.networking.publicIPv4 else "0.0.0.0";
     in
       if ip1 == null then "0.0.0.0" else ip1;
+  hydraRunCommands = ''
+    # Special post-build script to deliver the cardano-sl windows build to AppVeyor
+    <runcommand>
+      command = ${cardanoRunCommand}
+      job = serokell:cardano-sl*:daedalus-mingw32-pkg
+    </runcommand>
+  '';
+  cardanoRunCommand = pkgs.writeScript "cardano-sl-post-build.sh" ''
+    #!${pkgs.stdenv.shell}
+    set -euo pipefail
+
+    export PATH=${lib.makeBinPath [ pkgs.jq pkgs.awscli ]}:$PATH
+
+    out=$(jq -r .outputs.path $HYDRA_JSON)
+
+    echo Running post-build script for $(jq -r .build $HYDRA_JSON) \($(jq -r .project $HYDRA_JSON):$(jq -r .jobset $HYDRA_JSON):$(jq -r .job $HYDRA_JSON)\)
+
+    if [ -n "$out" ]; then
+      if [ -f "$out/*.zip" ]; then
+        # fixme: s3 credentials - where are the credentials for iohk-nix-cache?
+        aws s3 cp "$out/*.zip" s3://appveyor-ci-deploy/cardano-sl
+      else
+        echo No zip file found in $out
+      fi
+    else
+      echo No output path from build
+    fi
+  '';
+
 in {
   imports = [ ./github-webhook-util.nix ];
   environment.etc = lib.singleton {
@@ -120,6 +149,8 @@ in {
         excludeBuildFromContext = 1
         useShortContext = 1
       </githubstatus>
+
+      ${hydraRunCommands}
     '';
   };
   deployment.keys."github-webhook-util".text = builtins.readFile ../static/github-webhook-util.secret;
