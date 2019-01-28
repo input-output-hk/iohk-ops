@@ -96,6 +96,14 @@ in {
         excludeBuildFromContext = 1
         useShortContext = 1
       </githubstatus>
+      # DEVOPS-1208 This CI status for cardano-sl is needed while the
+      # Daedalus Windows installer is built on AppVeyor or Buildkite
+      <githubstatus>
+        jobs = serokell:cardano-sl.*:daedalus-mingw32-pkg
+        inputs = cardano
+        excludeBuildFromContext = 1
+        useShortContext = 1
+      </githubstatus>
       <githubstatus>
         jobs = serokell:daedalus.*:tests\..*
         inputs = daedalus
