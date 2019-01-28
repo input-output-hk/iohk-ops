@@ -2,6 +2,7 @@
 # nix-repl lib.nix
 
 let
+  application = "iohk-ops";
   # iohk-nix can be overridden for debugging purposes by setting
   # NIX_PATH=iohk_nix=/path/to/iohk-nix
   iohkNix = import (
@@ -14,7 +15,7 @@ let
       in builtins.fetchTarball {
         url = "${spec.url}/archive/${spec.rev}.tar.gz";
         inherit (spec) sha256;
-      }) {};
+      }) { inherit application; };
 
   # nixpkgs can be overridden for debugging purposes by setting
   # NIX_PATH=custom_nixpkgs=/path/to/nixpkgs
