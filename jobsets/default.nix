@@ -20,6 +20,7 @@
 , plutusPrsJSON ? ./simple-pr-dummy.json
 , logClassifierPrsJSON ? ./simple-pr-dummy.json
 , ouroborosNetworkPrsJSON ? ./simple-pr-dummy.json
+, iohkMonitoringPrsJSON ? ./simple-pr-dummy.json
 , chainPrsJSON ? ./simple-pr-dummy.json
 , walletPrsJSON ? ./simple-pr-dummy.json
 }:
@@ -87,6 +88,14 @@ let
       url = "https://github.com/input-output-hk/ouroboros-network.git";
       branch = "master";
       prs = ouroborosNetworkPrsJSON;
+      bors = true;
+    };
+
+    iohk-monitoring = {
+      description = "IOHK Monitoring Framework";
+      url = "https://github.com/input-output-hk/iohk-monitoring-framework.git";
+      branch = "develop";
+      prs = iohkMonitoringPrsJSON;
       bors = true;
     };
 
