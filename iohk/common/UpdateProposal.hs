@@ -767,14 +767,16 @@ proposeUpdateCmd opts cfg systems = format
     InstallersResults{..} = cfgInstallersResults
     inst a = installersPath opts (fromText . lookupArch a $ cfgInstallerHashes)
     appVer = grApplicationVersion globalResult
-    updateBins = [ archUpdateBin ciResultArch (inst ciResultArch)
+    updateBins = concat
+                 [ archUpdateBin ciResultArch (inst ciResultArch)
                  | CIResult{..} <- ciResults
                  , lookupArch ciResultArch systems ]
 
-archUpdateBin :: Arch -> FilePath -> Text
-archUpdateBin a installer = format ("(upd-bin \""%s%"\" "%fp%")") (systemTag a) installer
+archUpdateBin :: Arch -> FilePath -> [Text]
+archUpdateBin a installer = map updBin (systemTag a)
   where
+    updBin st = format ("(upd-bin \""%s%"\" "%fp%")") st installer
     -- These correspond to the systemTag values in cardano-sl/lib/configuration.yaml
-    systemTag Linux64 = "linux64"
-    systemTag Mac64   = "macos64"
-    systemTag Win64   = "win64"
+    systemTag Linux64 = ["linux", "linux64"]
+    systemTag Mac64   = ["macos64"]
+    systemTag Win64   = ["win64"]
