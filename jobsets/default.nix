@@ -22,6 +22,7 @@
 , ouroborosNetworkPrsJSON ? ./simple-pr-dummy.json
 , iohkMonitoringPrsJSON ? ./simple-pr-dummy.json
 , chainPrsJSON ? ./simple-pr-dummy.json
+, shellPrsJSON ? ./simple-pr-dummy.json
 , walletPrsJSON ? ./simple-pr-dummy.json
 }:
 
@@ -104,6 +105,13 @@ let
       url = "https://github.com/input-output-hk/cardano-wallet.git";
       branch = "develop";
       prs = walletPrsJSON;
+    };
+
+    cardano-shell = {
+      description = "Cardano Shell";
+      url = "https://github.com/input-output-hk/cardano-shell.git";
+      branch = "develop";
+      prs = shellPrsJSON;
     };
   };
 
