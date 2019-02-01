@@ -23,6 +23,7 @@
 , iohkMonitoringPrsJSON ? ./simple-pr-dummy.json
 , chainPrsJSON ? ./simple-pr-dummy.json
 , walletPrsJSON ? ./simple-pr-dummy.json
+, iohkNixPrsJSON ? ./simple-pr-dummy.json
 }:
 
 let pkgs = import nixpkgs {}; in
@@ -96,6 +97,14 @@ let
       url = "https://github.com/input-output-hk/iohk-monitoring-framework.git";
       branch = "develop";
       prs = iohkMonitoringPrsJSON;
+      bors = true;
+    };
+
+    iohk-nix = {
+      description = "IOHK Common Nix Expressions";
+      url = "https://github.com/input-output-hk/iohk-nix.git";
+      branch = "master";
+      prs = iohkNixPrsJSON;
       bors = true;
     };
 
