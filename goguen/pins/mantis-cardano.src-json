@@ -1,0 +1,7 @@
+{
+  "url": "git@github.com:input-output-hk/mantis-cardano.git",
+  "rev": "4848b2d1618b4842412ecfedda6d526ae06316ab",
+  "date": "2019-02-04T10:56:15+01:00",
+  "sha256": "0y33ick33dihviw8fi0crmasvv4bbfgqywqkrf93sk1kd4il9p1j",
+  "fetchSubmodules": true
+}
