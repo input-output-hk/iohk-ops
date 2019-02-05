@@ -367,15 +367,21 @@ in
       allowedTCPPorts = [ 8546 9076 5679 30303 5555 ];
     };
 
-    users.users.mantis =
-        { isNormalUser = true;
-          home = "/home/mantis";
-          description = "Mantis user";
-          extraGroups = [ "systemd-journal" ];
-          openssh.authorizedKeys.keys = cfg.machines.mantisSshKeys;
-        };
+    users = {
+      users.mantis-node = {
+        uid             = 20014;
+        description     = "mantis-node server user";
+        group           = "mantis-node";
+        home            = stateDir;
+        createHome      = true;
+        extraGroups     = [ "keys" ];
+      };
+      groups.mantis-node = {
+        gid = 321321;
+      };
+    };
 
-    systemd.services.mantis = {
+    systemd.services.mantis-node = {
       requires = [ "${cfg.vmType}.service" ];
       wantedBy = [ "multi-user.target" ];
       unitConfig.RequiresMountsFor = cfg.dataDir;
@@ -391,17 +397,15 @@ in
         TimeoutStartSec = "0";
         Restart = "always";
       };
-      preStart = ''
+      preStart =  let
+        keyId = "key" + toString cfg.node.id;
+        key = keyId + ".key";
+      in ''
         mkdir -p ${cfg.dataDir}
-        if [ ! -f ${cfg.dataDir}/node.key ]; then
-           echo "no key found, copying key from /root/keys.txt to ${cfg.dataDir}/node.key"
-           cp /root/keys.txt ${cfg.dataDir}/node.key
-        else
-           echo "key found at ${cfg.dataDir}/node.key, no action required"
-        fi;
-        chown -R mantis ${cfg.dataDir}
+         [ -f /run/keys/${keyId} ] && cp -f /run/keys/${keyId} ${cfg.dataDir}/node.key
+        chown -R mantis-node ${cfg.dataDir}
       '';
-       script = "mantis mantis -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}";
+       script = "mantis mantis-node -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}";
        restartTriggers = [ mantis_conf logback_xml genesis_json ];
     };
 
