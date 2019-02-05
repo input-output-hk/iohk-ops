@@ -1,9 +1,9 @@
-{ nixpkgs
-, ...
-}:
-with import nixpkgs {};
-let goguenPkgs = import ./. { pkgs = nixpkgs };
+{ ... }:
+let
+  nixpkgs    = import (import ./../fetch-nixpkgs.nix) {};
+  goguenPkgs = import ./. { pkgs = nixpkgs; };
 in
+with nixpkgs; with goguenPkgs;
 goguenPkgs // {
   mantisDocker = stdenv.mkDerivation {
     name = "mantis-docker";
