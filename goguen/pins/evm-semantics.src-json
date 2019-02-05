@@ -1,0 +1,7 @@
+{
+  "url": "https://github.com/kframework/evm-semantics",
+  "rev": "cc9c659510383215e5333d7f60088a2fdf2d120d",
+  "date": "2018-07-12T10:38:10-05:00",
+  "sha256": "1ssvpg713lhdv4a5d8kig6yzbnblc98isgyqjvvck3jh3z7sszk7",
+  "fetchSubmodules": true
+}
