@@ -63,7 +63,8 @@ with (import ./../lib.nix);
     nixPath = [ "nixpkgs=/run/current-system/nixpkgs" ];
 
     # use our hydra builds
-    trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
+    # XXX: if there are any objections for adding mantis-hydra (potential security issues), let's discuss them
+    trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" "https://mantis-hydra.aws.iohkdev.io" ];
     binaryCaches = trustedBinaryCaches;
     binaryCachePublicKeys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
