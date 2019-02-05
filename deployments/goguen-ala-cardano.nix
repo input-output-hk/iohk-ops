@@ -11,8 +11,8 @@ allNodeNames =
   ];
 nixpkgs         = import fetchNixPkgs {};
 goguenPkgs      = import ./../goguen/default.nix { pkgs = nixpkgs; };
-mkMantisMachine = nodeName: { nodes, resources, pkgs, config, ... }:
-let
+mkMantisMachine = nodeName: vmType: { nodes, resources, pkgs, config, ... }:
+with nixpkgs; let
   mantisRPCListenIP = config.networking.privateIPv4;
   otherNodeNames    = filter (on: on != nodeName)                               allNodeNames;
   otherNodeIPs      = map    (on: nodes."${n}".config.networking.privateIPv4) otherNodeNames;
@@ -43,7 +43,7 @@ let
     mantis.vm {
       mode = "external"
        external {
-        vm-type = "${testnetType}"
+        vm-type = "${vmType}"
         run-vm = false
         host = "localhost"
         port = 8888
@@ -193,7 +193,7 @@ let
         monetary-policy {
           first-era-block-reward = ${toString cfg.monetaryPolicyFirstEraBlockReward}
           era-duration = ${toString cfg.monetaryPolicyEraDuration}
-          reward-reduction-rate = ${toString cfg.monetaryPolicyRewardReductionRate}
+          reward-reduction-rate = ${cfg.monetaryPolicyRewardReductionRate}
         }
 
         # specify constant gas limit for all blocks in the blockchain
@@ -242,7 +242,6 @@ let
     '';
   };
   ####### ..mantis-iele-ops/iele/nixops/default.nix
-  testnetType = "iele";
   mantisConfig = {
         ethCompatibilityMode = false;
         frontierBlockNumber = 0;
@@ -256,7 +255,7 @@ let
         difficultyBombContinueBlockNumber = 1000000000000000000;
         monetaryPolicyFirstEraBlockReward = 0;
         monetaryPolicyEraDuration = 50000000;
-        monetaryPolicyRewardReductionRate = 0.0;
+        monetaryPolicyRewardReductionRate = "0.0";
         logbackAdditions = '';
         <logger name="io.micrometer.shaded.reactor.ipc.netty.udp.UdpClient" level="ERROR" />
         <logger name="io.micrometer.shaded.io.netty.util.internal.NativeLibraryUtil" level="ERROR" />
@@ -266,7 +265,7 @@ let
         '';
   };
 in
-{
+with goguenPkgs; {
   options.services.mantis = {
     enable = mkOption {
       description = "Whether to enable the mantis service";
@@ -331,7 +330,7 @@ in
 
     vmPkg = mkOption {
       type = types.package;
-      description = "The VM package to use, e.g. pkgs.iele";
+      description = "The VM package to use, e.g. goguenPkgs.iele";
     };
 
     ethCompatibilityMode = mkOption {
@@ -384,7 +383,7 @@ in
     };
 
     monetaryPolicyRewardReductionRate = mkOption {
-      type = types.float;
+      type = types.str;
     };
 
     riemannHost = mkOption {
@@ -425,12 +424,11 @@ in
     # };
 
     systemd.services.mantis = {
-      requires = [ "${cfg.vmType}.service" ];
+      requires = [ "${vmType}.service" ];
       wantedBy = [ "multi-user.target" ];
       unitConfig.RequiresMountsFor = "/data";
       enable = true;
       path = [
-        (storePath goguenPkgs.mantis)
         (storePath pkgs.openjdk8)
         (storePath pkgs.gawk)
         (storePath pkgs.gnused)
@@ -450,20 +448,17 @@ in
         fi;
         chown -R mantis ${cfg.dataDir}
       '';
-       script = "mantis mantis -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}";
+       script = "${mantis}/mantis mantis -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}";
        restartTriggers = [ mantis_conf logback_xml genesis_json ];
     };
 
-    systemd.services."${cfg.vmType}" = {
+    systemd.services."${vmType}" = {
       enable = true;
-      path = [
-        (builtins.storePath cfg.vmPkg)
-      ];
-       serviceConfig = {
+      serviceConfig = {
         TimeoutStartSec = "0";
         Restart = "always";
       };
-       script = "${cfg.vmType}-vm 8888 0.0.0.0";
+      script = "${goguenPkgs.${vmType}}/${vmType}-vm 8888 0.0.0.0";
     };
 
     services.mantis = {
@@ -473,8 +468,8 @@ in
       node = node;
       nodeIds = nodeIds;
       faucetAddresses = faucetAddresses;
-      vmType = testnetType;
-      vmPkg = goguenPkgs.${testnetType};
+      vmType = vmType;
+      vmPkg = goguenPkgs.${vmType};
       dataDir = "/data/mantis/.mantis";
       riemannHost = "localhost";
     } // mantisConfig;
@@ -483,9 +478,9 @@ in
 in {
   network.description = "GMC";
 
-  mantis-a-0 = mkMantisMachine "mantis-a-0"; 
-  mantis-a-1 = mkMantisMachine "mantis-a-1"; 
-  mantis-b-0 = mkMantisMachine "mantis-b-0"; 
-  mantis-b-1 = mkMantisMachine "mantis-b-1"; 
-  mantis-c-0 = mkMantisMachine "mantis-c-0"; 
+  mantis-a-0 = mkMantisMachine "mantis-a-0" "iele";
+  mantis-a-1 = mkMantisMachine "mantis-a-1" "iele";
+  mantis-b-0 = mkMantisMachine "mantis-b-0" "iele";
+  mantis-b-1 = mkMantisMachine "mantis-b-1" "iele";
+  mantis-c-0 = mkMantisMachine "mantis-c-0" "iele";
 }
