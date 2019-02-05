@@ -1,9 +1,8 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib ... }:
 
 with lib;
 
 let
-  localLib = import ../../../lib.nix;
   cfg = config.services.mantis;
   otherNodes = self:
              let
@@ -346,7 +345,7 @@ in
     };
 
     monetaryPolicyRewardReductionRate = mkOption {
-      type = localLib.nixpkgs.lib.types.float;
+      type = lib.types.float;
     };
 
     riemannHost = mkOption {
