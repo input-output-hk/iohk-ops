@@ -23,8 +23,9 @@ with pkgs.lib;
 
 let
 
-  nixpkgs-src = builtins.fromJSON (builtins.readFile ./../nixpkgs-src.json);
-  iohkOpsJobsetsBranch = "goguen-ala-cardano"; # Should become "master" at some point.
+  nixpkgs-src = builtins.fromJSON (builtins.readFile ./../../nixpkgs-src.json);
+  iohkOpsURI           = "https://github.com/input-output-hk/iohk-ops.git";
+  iohkOpsJobsetsBranch = "goguen-ala-cardano"; # XXX: should become "master" at some point.
 
   ##########################################################################
   # GitHub repos to make jobsets for.
@@ -32,14 +33,16 @@ let
 
   repos = {
     mantis = {
-      description = "Mantis Cardano";
-      url = "git@github.com:input-output-hk/mantis-cardano.git";
+      description = "Goguen Mantis Cardano";
+      url = "https://github.com/input-output-hk/iohk-ops.git";
       input = "mantis";  # corresponds to argument in goguen/release.nix
-      branch = "master";
+      path  = "goguen/release.nix";
+      branch = "goguen-ala-cardano";
       branches = {
-        master = "master";
+        master = "goguen-ala-cardano";
       };
       prs = mantisPrsJSON;
+      enablePRs = false;
       # prJobsetModifier = withFasterBuild;
       bors = false;
     };
@@ -92,12 +95,12 @@ let
   loadPrsJSON = path: exclusionFilter (builtins.fromJSON (builtins.readFile path));
 
   # Make jobset for a project default build
-  mkJobset = { name, description, url, input, branch }: let
+  mkJobset = { name, description, url, input, branch, path }: let
     jobset = defaultSettings // {
-      nixexprpath = "release.nix";
+      nixexprpath  = path;
       nixexprinput = input;
       inherit description;
-      inputs = {
+      inputs = defaultSettings.inputs // {
         "${input}" = mkFetchGithub "${url} ${branch}";
       };
     };
@@ -105,27 +108,27 @@ let
     nameValuePair name jobset;
 
   # Make jobsets for extra project branches (e.g. release branches)
-  mkJobsetBranches = { name, description, url, input }:
+  mkJobsetBranches = { name, description, url, input, path }:
     mapAttrsToList (suffix: branch:
-      mkJobset { name = "${name}-${suffix}"; inherit description url input branch; });
+      mkJobset { name = "${name}-${suffix}"; inherit description url input branch path; });
 
   # Make a jobset for a GitHub PRs
-  mkJobsetPR = { name, input, modifier }: num: info: {
+  mkJobsetPR = { name, input, path, modifier }: num: info: {
     name = "${name}-pr-${num}";
     value = defaultSettings // modifier {
       description = "PR ${num}: ${info.title}";
       nixexprinput = input;
-      nixexprpath = "release.nix";
-      inputs = {
+      nixexprpath = path;
+      inputs = defaultSettings.inputs // {
         "${input}" = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
       };
     };
   };
 
   # Load the PRs json and make a jobset for each
-  mkJobsetPRs = { name, input, modifier, prs }:
+  mkJobsetPRs = { name, input, path, modifier, prs }:
     mapAttrsToList
-      (mkJobsetPR { inherit name input modifier; })
+      (mkJobsetPR { inherit name input path modifier; })
       (loadPrsJSON prs);
 
   # Add two extra jobsets for the bors staging and trying branches
@@ -140,13 +143,14 @@ let
   mkRepoJobsets = let
     mkRepo = name: info: let
       input = info.input or name;
+      path  = info.path  or "release.nix";
       branch = info.branch or "master";
-      params = { inherit name input; inherit (info) description url; };
+      params = { inherit name input path; inherit (info) description url; };
       prJobsetModifier = info.prJobsetModifier or (s: s);
     in
       [ (mkJobset (params // { inherit branch; })) ] ++
       (mkJobsetBranches params (info.branches or {})) ++
-      (mkJobsetPRs { inherit name input; inherit (info) prs; modifier = prJobsetModifier; }) ++
+      (optionals (info.enablePRs  or false) (mkJobsetPRs { inherit name input path; inherit (info) prs; modifier = prJobsetModifier; })) ++
       (optionals (info.bors or false) (mkJobsetBors params));
   in
     rs: listToAttrs (concatLists (mapAttrsToList mkRepo rs));
