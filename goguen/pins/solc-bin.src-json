@@ -1,0 +1,7 @@
+{
+  "url": "https://github.com/ethereum/solc-bin",
+  "rev": "1ca2fb31b2862b4868b2be621cdf7c1716bba5f6",
+  "date": "2019-02-05T15:28:42+00:00",
+  "sha256": "0320jcji5d5acjd6xvdldcikh9my8l9whylbzhrqxa98wq82hmnj",
+  "fetchSubmodules": true
+}

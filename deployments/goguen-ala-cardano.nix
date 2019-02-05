@@ -1,5 +1,5 @@
-with builtins;
-with import ./../lib.nix;
+let localLib = import ./../lib.nix; in
+with builtins; with localLib;
 { ... }:
 let
 allNodeNames =
@@ -9,6 +9,8 @@ allNodeNames =
     "mantis-b-1"
     "mantis-c-0"
   ];
+nixpkgs         = import fetchNixPkgs {};
+goguenPkgs      = import ./../goguen/default.nix { pkgs = nixpkgs; };
 mkMantisMachine = nodeName: { nodes, resources, pkgs, config, ... }:
 let
   mantisRPCListenIP = config.networking.privateIPv4;
@@ -34,7 +36,7 @@ let
   localNode = node: "${node.ip}:0.0.0.0:5679";
   bootstrapEnodes = self: builtins.toJSON (map enode otherNodes);
   bootstrapNodes = self: builtins.toJSON (map (n: "${n.ip}:${n.ip}:5679") otherNodes);
-  mantis_conf = pkgs.writeTextFile {
+  mantis_conf = writeTextFile {
     name = "mantis.conf";
     text = ''
     include "application.conf"
@@ -201,9 +203,9 @@ let
     }
     '';
   };
-  mkAddress = faucetNode: pkgs.lib.attrsets.nameValuePair faucetNode { "balance" = "1606938044258990275541962092341162602522202993782792835301376"; };
+  mkAddress = faucetNode: nameValuePair faucetNode { "balance" = "1606938044258990275541962092341162602522202993782792835301376"; };
   genesisAddresses = builtins.listToAttrs [ (mkAddress faucetAddresses.faucetA) (mkAddress faucetAddresses.faucetB) (mkAddress faucetAddresses.faucetC) ];
-  genesis_json = pkgs.writeTextFile {
+  genesis_json = writeTextFile {
     name = "genesis.json";
     text = ''
     {
@@ -219,7 +221,7 @@ let
     }
     '';
   };
-  logback_xml = pkgs.writeTextFile {
+  logback_xml = writeTextFile {
     name = "logback.xml";
     text = ''
     <configuration>
@@ -382,7 +384,7 @@ in
     };
 
     monetaryPolicyRewardReductionRate = mkOption {
-      type = localLib.nixpkgs.lib.types.float;
+      type = types.float;
     };
 
     riemannHost = mkOption {
@@ -428,7 +430,7 @@ in
       unitConfig.RequiresMountsFor = "/data";
       enable = true;
       path = [
-        (storePath pkgs.mantis)
+        (storePath goguenPkgs.mantis)
         (storePath pkgs.openjdk8)
         (storePath pkgs.gawk)
         (storePath pkgs.gnused)
@@ -472,7 +474,7 @@ in
       nodeIds = nodeIds;
       faucetAddresses = faucetAddresses;
       vmType = testnetType;
-      vmPkg = pkgs."${testnetType}";
+      vmPkg = goguenPkgs.${testnetType};
       dataDir = "/data/mantis/.mantis";
       riemannHost = "localhost";
     } // mantisConfig;
