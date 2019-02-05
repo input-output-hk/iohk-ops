@@ -377,16 +377,10 @@ in
           openssh.authorizedKeys.keys = cfg.machines.mantisSshKeys;
         };
 
-    fileSystems."/data" = {
-      device = "/dev/xvdh";
-      fsType = "ext4";
-      autoFormat = true;
-    };
-
     systemd.services.mantis = {
       requires = [ "${cfg.vmType}.service" ];
       wantedBy = [ "multi-user.target" ];
-      unitConfig.RequiresMountsFor = "/data";
+      unitConfig.RequiresMountsFor = cfg.dataDir;
       enable = true;
       path = [
         (builtins.storePath cfg.mantisPkg)
