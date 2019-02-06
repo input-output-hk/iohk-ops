@@ -9,7 +9,7 @@ allNodeNames =
     "mantis-b-1"
     "mantis-c-0"
   ];
-nixpkgs         = import fetchNixPkgs {};
+nixpkgs         = import (import ./../goguen/pins/fetch-nixpkgs.nix) {};
 goguenPkgs      = import ./../goguen/default.nix { pkgs = nixpkgs; };
 mkMantisMachine = nodeName: vmType: { nodes, resources, pkgs, config, ... }:
 with nixpkgs; let
