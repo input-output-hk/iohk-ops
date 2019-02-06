@@ -1,4 +1,6 @@
-{ pkgs ? import (import ../lib.nix).fetchNixPkgs {} }:
+{ pkgs ? import (import ../lib.nix).fetchNixPkgs {}
+, ...
+}@args:
 with builtins; with pkgs.lib; with pkgs;
 let
   listVersions = drvs: stdenv.mkDerivation {
@@ -23,7 +25,11 @@ let
   };
   valPath         = path: key: type: (path + "/${key}.${type}");
   interpSrcJsonAt = path: repo: fetchgit (removeAttrs (fromJSON (readFile (valPath path repo "src-json"))) ["date"]);
-  getSrc          = interpSrcJsonAt ./pins;
+  ## getSrc: if we have an input -- use it, if not, get a fetchgit-style pin.
+  getSrc          = name:
+    if hasAttr args "${name}"
+    then args.${name}
+    else interpSrcJsonAt ./pins name;
 in
 rec {
   iele            = callPackage ./iele.nix             { inherit getSrc secp256k1;      };
