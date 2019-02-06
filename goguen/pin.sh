@@ -1,5 +1,6 @@
 #!/bin/sh
 ## Usage: USER [REPO] [REV]  Pin a Github REPO to USER/REV,\n\t\t\t\t\t  Defaults: REPO=deduced from $CWD, REV=HEAD
+set -x
 
 nhroot="$(realpath $0 | xargs dirname)"
 cwdRepo="$(basename $(pwd))"
