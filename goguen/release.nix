@@ -1,9 +1,9 @@
-{ ... }:
+{ ... }@args:
 let
   ## fetch-nixpkgs.nix uses nixpkgs-src.json from its directory,
   ## ..so we have a Goguen-specific pair of those.
   nixpkgs    = import (import ./pins/fetch-nixpkgs.nix) {};
-  goguenPkgs = import ./. { pkgs = nixpkgs; };
+  goguenPkgs = import ./. ({ pkgs = nixpkgs; } // args);
 in
 with nixpkgs; with goguenPkgs;
 goguenPkgs // {
