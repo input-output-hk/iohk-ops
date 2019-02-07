@@ -27,7 +27,7 @@ let
   interpSrcJsonAt = path: repo: fetchgit (removeAttrs (fromJSON (readFile (valPath path repo "src-json"))) ["date"]);
   ## getSrc: if we have an input -- use it, if not, get a fetchgit-style pin.
   getSrc          = name:
-    if hasAttr args "${name}"
+    if hasAttr "${name}" args
     then args.${name}
     else interpSrcJsonAt ./pins name;
 in
