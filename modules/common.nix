@@ -64,7 +64,7 @@ with (import ./../lib.nix);
 
     # use our hydra builds
     # XXX: if there are any objections for adding mantis-hydra (potential security issues), let's discuss them
-    trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" "https://mantis-hydra.aws.iohkdev.io" ];
+    trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
     binaryCaches = trustedBinaryCaches;
     binaryCachePublicKeys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="

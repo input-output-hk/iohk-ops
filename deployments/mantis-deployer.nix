@@ -18,6 +18,15 @@ in {
       ../modules/deployer-base.nix
     ];
 
+    nix.binaryCaches = mkForce [
+      "https://cache.nixos.org"
+      "https://hydra.iohk.io" "https://mantis-hydra.aws.iohkdev.io"
+    ];
+    nix.binaryCachePublicKeys = mkForce [
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+      "hydra.iohk.io-1:E8yDJv2SBXM6PQPVbhCWK7VvitistFYSH2u3AuwCiu4="
+    ];
+
     services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}" "role:deployer"];
     networking.hostName = "devMantis-deployer";
 
