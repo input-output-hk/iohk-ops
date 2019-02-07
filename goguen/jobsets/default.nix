@@ -32,14 +32,13 @@ let
   # These are processed by the mkRepoJobsets function below.
 
   repos = {
-    mantis = {
+    iohk-ops = {
       description = "Goguen Mantis Cardano";
       url = "https://github.com/input-output-hk/iohk-ops.git";
-      input = "mantis";  # corresponds to argument in goguen/release.nix
+      input = "iohk-ops";  # corresponds to argument in goguen/release.nix
       path  = "goguen/release.nix";
       branch = "goguen-ala-cardano";
       branches = {
-        master = "goguen-ala-cardano";
       };
       prs = mantisPrsJSON;
       enablePRs = false;
@@ -94,6 +93,12 @@ let
 
   loadPrsJSON = path: exclusionFilter (builtins.fromJSON (builtins.readFile path));
 
+  mkGitSrc = { repo, branch}: {
+    type = "git";
+    value = repo + " " + branch + " leaveDotGit";
+    emailresponsible = false;
+  };
+
   # Make jobset for a project default build
   mkJobset = { name, description, url, input, branch, path }: let
     jobset = defaultSettings // {
@@ -102,6 +107,10 @@ let
       inherit description;
       inputs = defaultSettings.inputs // {
         "${input}" = mkFetchGithub "${url} ${branch}";
+        mantis-cardano = mkGitSrc {
+          repo = "git@github.com:input-output-hk/mantis-cardano.git";
+          branch = "master";
+        };
       };
     };
   in
@@ -120,7 +129,14 @@ let
       nixexprinput = input;
       nixexprpath = path;
       inputs = defaultSettings.inputs // {
-        "${input}" = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+        # "${input}" = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+        ## This is slightly convoluted (repo with release.nix != PR-enumerated repo), because:
+        ## 1. Cardano packages have individual release.nix-es, Mantis has a central one
+        ## 2. We still want the per-PR builds
+        mantis-cardano = mkGitSrc {
+          repo = "git@github.com:input-output-hk/mantis-cardano.git";
+          branch = "pull/${num}/head";
+        };
       };
     };
   };
@@ -136,7 +152,7 @@ let
     jobset = branch: (mkJobset (args // { inherit branch; })).value;
   in [
     (nameValuePair "${name}-bors-staging" (highPrio (jobset "bors/staging")))
-    (nameValuePair "${name}-bors-trying" (jobset "bors/trying"))
+    (nameValuePair "${name}-bors-trying"            (jobset "bors/trying"))
   ];
 
   # Make all the jobsets for a project repo, according to the "repos" spec above.
@@ -151,7 +167,7 @@ let
       [ (mkJobset (params // { inherit branch; })) ] ++
       (mkJobsetBranches params (info.branches or {})) ++
       (optionals (info.enablePRs  or false) (mkJobsetPRs { inherit name input path; inherit (info) prs; modifier = prJobsetModifier; })) ++
-      (optionals (info.bors or false) (mkJobsetBors params));
+      (optionals (info.bors       or false) (mkJobsetBors params));
   in
     rs: listToAttrs (concatLists (mapAttrsToList mkRepo rs));
 
