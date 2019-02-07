@@ -1,8 +1,8 @@
-{ stdenv, pkgs, getSrc, sbtVerify, protobuf }:
+{ stdenv, pkgs, getSrc, sbtVerify, protobuf, mantis-cardano }:
 
 stdenv.mkDerivation rec {
   name = "mantis-cardano";
-  src  = getSrc name;
+  src  = mantis-cardano;
 
   buildInputs = with pkgs; [ scala sbt sbtVerify unzip protobuf openjdk8 ];
 
