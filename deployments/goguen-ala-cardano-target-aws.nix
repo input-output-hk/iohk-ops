@@ -51,5 +51,9 @@ in {
         }];
       };
     };
+    route53HostedZones.hz = { config, ... }: {
+      name = "${config.deployment.name}.dev-mantis.iohkdev.io.";
+      inherit region accessKeyId;
+    };
   };
 }
