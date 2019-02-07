@@ -18,7 +18,7 @@ rec {
         ];
       };
       deployment.route53.accessKeyId = accessKeyId;
-      deployment.route53.hostName = "${hostname}.${config.deployment.name}.aws.iohkdev.io";
+      deployment.route53.hostName = "${hostname}.${config.deployment.name}.dev-mantis.iohkdev.io";
 };
 in {
   mantis-a-0 = mkMantisMachine "mantis-a-0"; 
