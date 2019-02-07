@@ -4,21 +4,25 @@ set -xeu
 cmd=$1; shift
 
 constituents="./deployments/goguen-ala-cardano.nix ./deployments/goguen-ala-cardano-target-aws.nix"
-common_nixops_opts="--deployment goguen-ala-cardano --max-jobs 4 --cores 0 --show-trace"
+nixops_subopts="--deployment goguen-ala-cardano --max-jobs 4 --cores 0 --show-trace"
+nixops_bincaches="https://cache.nixos.org https://hydra.iohk.io https://mantis-hydra.aws.iohkdev.io"
 case ${cmd} in
-        create | c ) nixops create   ${common_nixops_opts} ${constituents}
+        create | c ) nixops create   ${nixops_subopts} ${constituents}
                      deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
                      echo -n "Enter access key ID: "
                      read AKID
-                     nixops set-args ${common_nixops_opts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
+                     nixops set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
                      ;;
-        deploy | d ) nixops modify   ${common_nixops_opts} ${constituents}
-                     nixops deploy   ${common_nixops_opts} "$@" --build-only
-                     nixops deploy   ${common_nixops_opts} "$@" --copy-only
-                     nixops deploy   ${common_nixops_opts} "$@";;
-        delete )     nixops destroy  ${common_nixops_opts} --confirm
-                     nixops delete   ${common_nixops_opts};;
+        full-deploy ) nixops modify   ${nixops_subopts} ${constituents}
+                      nixops deploy   ${nixops_subopts} "$@"              --option trusted-substituters "${nixops_bincaches}"
+                     ;;
+        deploy | d ) nixops modify   ${nixops_subopts} ${constituents}
+                     nixops deploy   ${nixops_subopts} "$@" --build-only --option trusted-substituters "${nixops_bincaches}"
+                     nixops deploy   ${nixops_subopts} "$@" --copy-only
+                     nixops deploy   ${nixops_subopts} "$@";;
+        delete )     nixops destroy  ${nixops_subopts} --confirm
+                     nixops delete   ${nixops_subopts};;
         re )         $0 delete && $0 create && $0 deploy;;
-        info   | i ) nixops info     ${common_nixops_opts};;
+        info   | i ) nixops info     ${nixops_subopts};;
         * ) echo "ERROR: unknown command '${cmd}'" >&2; exit 1;;
 esac
