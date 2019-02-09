@@ -6,7 +6,6 @@ in
 ## Hack to make mantis-cardano parametrisable both in Hydra and in a local evaluation: 
 , valPath         ? path: key: type: (path + "/${key}.${type}")
 , interpSrcJsonAt ? path: repo: pkgs.fetchgit (removeAttrs (fromJSON (readFile (valPath path repo "src-json"))) ["date"])
-, mantis-cardano  ? lib.cleanSource (unsafeDiscardStringContext (fetchGit (fromJSON (readFile ./pins/mantis-cardano.fetchGit.src-json))))
 , ...
 }@args:
 with pkgs.lib; with pkgs;
@@ -36,6 +35,7 @@ let
     if hasAttr "${name}" args
     then args.${name}
     else interpSrcJsonAt ./pins name;
+  mantis-cardano = fetchGit (fromJSON (readFile ./pins/mantis-cardano.fetchGit.src-json));
 in
 rec {
   iele            = callPackage ./iele.nix             { inherit getSrc secp256k1;      };
