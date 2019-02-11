@@ -5,7 +5,7 @@ in
 { pkgs ? import lib.fetchNixPkgs {}
 ## Hack to make mantis-cardano parametrisable both in Hydra and in a local evaluation: 
 , valPath         ? path: key: type: (path + "/${key}.${type}")
-, interpSrcJsonAt ? path: repo: pkgs.fetchgit (removeAttrs (fromJSON (readFile (valPath path repo "src-json"))) ["date"])
+, interpSrcJsonAt ? path: repo: lib.fetchPinWithSubmodules (removeAttrs (fromJSON (readFile (valPath path repo "src-json"))) ["date"])
 , ...
 }@args:
 with pkgs.lib; with pkgs;
