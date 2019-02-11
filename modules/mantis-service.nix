@@ -1,4 +1,4 @@
-{ config, pkgs, lib ... }:
+{ config, pkgs, lib, ... }:
 
 with lib;
 
@@ -405,7 +405,7 @@ in
          [ -f /run/keys/${keyId} ] && cp -f /run/keys/${keyId} ${cfg.dataDir}/node.key
         chown -R mantis-node ${cfg.dataDir}
       '';
-       script = "mantis mantis-node -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}";
+       script = "mantis mantis -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}";
        restartTriggers = [ mantis_conf logback_xml genesis_json ];
     };
 
