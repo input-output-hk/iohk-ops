@@ -1,10 +1,16 @@
 #!/bin/sh
 set -xeu
 
+CLUSTER=create-.config.sh
+if test -f .config.sh
+then . ./.config.sh
+else echo "ERROR:  echo CLUSTER=your-cluster-name > .config.sh" >&2; exit 1
+fi
+
 cmd=$1; shift
 
 constituents="./deployments/goguen-ala-cardano.nix ./deployments/goguen-ala-cardano-target-aws.nix"
-nixops_subopts="--deployment goguen-ala-cardano --max-jobs 4 --cores 0 --show-trace"
+nixops_subopts="--deployment ${CLUSTER} --max-jobs 4 --cores 0 --show-trace"
 nixops_bincaches="https://cache.nixos.org https://hydra.iohk.io https://mantis-hydra.aws.iohkdev.io"
 case ${cmd} in
         create | c ) nixops create   ${nixops_subopts} ${constituents}
