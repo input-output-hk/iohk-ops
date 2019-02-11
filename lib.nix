@@ -27,6 +27,29 @@ in lib // (rec {
     { name = "${node.name}-ip";
       value = { inherit (node) region accessKeyId; };
     };
+  ## repoSpec                = RepoSpec { name :: String, subdir :: FilePath, src :: Drv }
+  ## fetchGitWithSubmodules :: Name -> Drv -> Map String RepoSpec -> Drv
+  fetchGitWithSubmodules = mainName: mainSrc: subRepos:
+    with builtins; with pkgs;
+    let subRepoCmd = repo: ''
+        chmod -R u+w $(dirname $out/${repo.subdir})
+        rmdir $out/${repo.subdir}
+        cp -R  ${repo.src} $out/${repo.subdir}
+        '';
+        cmd = ''
+
+        cp -R ${mainSrc} $out
+
+        '' + concatStringsSep "\n" (map subRepoCmd (attrValues subRepos));
+    in runCommand "fetchGit-composite-src-${mainName}" { buildInputs = []; } (trace cmd cmd);
+
+  fetchPinWithSubmodules = { name, pin, submodules ? {} }:
+    with builtins;
+    let fetchPin = name: pin:
+          let json = readFile pin;
+          in fetchGit ((fromJSON (trace json json)) // { name = name; });
+        fetchSubmodule = subName: subSpec: { inherit (subSpec) subdir; src = fetchPin subName subSpec.pin; };
+    in fetchGitWithSubmodules name (fetchPin name pin) (lib.mapAttrs fetchSubmodule submodules);
 
   centralRegion = "eu-central-1";
   centralZone   = "eu-central-1b";
