@@ -107,10 +107,6 @@ let
       inherit description;
       inputs = defaultSettings.inputs // {
         "${input}" = mkFetchGithub "${url} ${branch}";
-        mantis-cardano = mkGitSrc {
-          repo = "git@github.com:input-output-hk/mantis-cardano.git";
-          branch = "master";
-        };
       };
     };
   in
@@ -129,14 +125,7 @@ let
       nixexprinput = input;
       nixexprpath = path;
       inputs = defaultSettings.inputs // {
-        # "${input}" = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
-        ## This is slightly convoluted (repo with release.nix != PR-enumerated repo), because:
-        ## 1. Cardano packages have individual release.nix-es, Mantis has a central one
-        ## 2. We still want the per-PR builds
-        mantis-cardano = mkGitSrc {
-          repo = "git@github.com:input-output-hk/mantis-cardano.git";
-          branch = "pull/${num}/head";
-        };
+        "${input}" = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
       };
     };
   };
