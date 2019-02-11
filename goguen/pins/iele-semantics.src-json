@@ -1,7 +1,6 @@
 {
   "url": "https://github.com/runtimeverification/iele-semantics",
   "rev": "a5514519a76954aef1dcff89454074e4ca52bd1d",
-  "date": "2019-02-01T10:10:28-06:00",
   "sha256": "1vvwbwzx2iky4vxikwd5i533zg4gp1lxphxvk8hz42h710gdw73p",
   "fetchSubmodules": true
 }
