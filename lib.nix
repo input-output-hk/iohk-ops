@@ -32,13 +32,26 @@ in lib // (rec {
         '' + concatStringsSep "\n" (map subRepoCmd (attrValues subRepos));
     in runCommand "fetchGit-composite-src-${mainName}" { buildInputs = []; } (trace cmd cmd);
 
-  fetchPinWithSubmodules = { name, pin, submodules ? {} }:
+  pinFile = dir: name: dir + "/${name}.src-json";
+  readPin = pin: let json = builtins.readFile pin;
+    in builtins.fromJSON (builtins.trace json json);
+  pinIsPrivate = pinJ: pinJ.url != builtins.replaceStrings ["git@github.com"] [""] pinJ.url;
+
+  fetchGitPin = name: pinJ:
+    builtins.fetchGit (pinJ // { name = name; });
+
+  fetchGitPinWithSubmodules = pinRoot: name: { url, rev, submodules ? {} }:
     with builtins;
-    let fetchPin = name: pin:
-          let json = readFile pin;
-          in fetchGit ((fromJSON (trace json json)) // { name = name; });
-        fetchSubmodule = subName: subSpec: { inherit (subSpec) subdir; src = fetchPin subName subSpec.pin; };
-    in fetchGitWithSubmodules name (fetchPin name pin) (lib.mapAttrs fetchSubmodule submodules);
+    let fetchSubmodule = subName: subDir: { subdir = subDir; src = pkgs.fetchgit (readPin (pinFile pinRoot subName)); };
+    in fetchGitWithSubmodules name (fetchGitPin name { inherit url rev; }) (lib.mapAttrs fetchSubmodule submodules);
+
+  ## Depending on whether the repo is private (URL has 'git@github' in it), we need to use fetchGit*
+  fetchPinAuto = pinRoot: name:
+    with builtins; let
+      pinJ = readPin (pinFile pinRoot name);
+    in if pinIsPrivate pinJ
+    then fetchGitPinWithSubmodules pinRoot name pinJ
+    else pkgs.fetchgit                          pinJ;
 
   centralRegion = "eu-central-1";
   centralZone   = "eu-central-1b";

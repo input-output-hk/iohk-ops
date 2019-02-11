@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/ethereum/tests",
+  "rev": "6df9b4ad039ff0043ca75579979f945598898eb3",
+  "sha256": "1sl9m6akx3blx2pa4i90k0dv7fsh5pzm9810hlaxa6lbnmgs8jjs",
+  "fetchSubmodules": true
+}
