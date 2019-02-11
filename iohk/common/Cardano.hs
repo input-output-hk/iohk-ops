@@ -1,7 +1,13 @@
 {-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Cardano where
+module Cardano (
+  ConfigurationYaml,
+  ConfigurationRoot,
+  ConfigurationUpdate,
+  applicationVersion,
+  update
+) where
 
 import           Data.Aeson          (FromJSON)
 import qualified Data.HashMap.Strict as HashMap

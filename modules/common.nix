@@ -69,7 +69,7 @@ with (import ./../lib.nix);
     binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
   };
   system.extraSystemBuilderCmds = ''
-    ln -sv ${fetchNixPkgs} $out/nixpkgs
+    ln -sv ${nixpkgs} $out/nixpkgs
   '';
 
   # Mosh

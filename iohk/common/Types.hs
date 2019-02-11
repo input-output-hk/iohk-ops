@@ -3,29 +3,30 @@
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
-{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-missing-signatures -Wno-type-defaults #-}
 
 module Types
   ( module Types
   , module Arch
+  , NixopsConfig (cInstallerURLBase)
   ) where
 
-import           Prelude               hiding (FilePath)
 import qualified Data.Aeson            as AE
 import qualified Data.ByteString.Char8 as BS.C8
 import           Data.Csv              (FromField (..))
-import qualified GHC.Generics          as G
 import qualified Data.Map.Strict       as Map
 import           Data.String
 import           Data.Text
 import           Data.Word             (Word16)
 import           Data.Yaml             (FromJSON (..), ToJSON (..))
 import           GHC.Generics          hiding (from, to)
-import qualified Turtle                        as Turtle
+import qualified GHC.Generics          as G
+import           Prelude               hiding (FilePath)
+import qualified Turtle                as Turtle
 
-import Arch
+import           Arch
 
 -- * Elementary types
 --

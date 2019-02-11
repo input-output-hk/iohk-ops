@@ -2,13 +2,24 @@
 # nix-repl lib.nix
 
 let
-  # Allow overriding pinned nixpkgs for debugging purposes via iohkops_pkgs
-  fetchNixPkgs = let try = builtins.tryEval <iohkops_pkgs>;
+  application = "iohk-ops";
+  # iohk-nix can be overridden for debugging purposes by setting
+  # NIX_PATH=iohk_nix=/path/to/iohk-nix
+  iohkNix = import (
+    let try = builtins.tryEval <iohk_nix>;
     in if try.success
-    then builtins.trace "using host <iohkops_pkgs>" try.value
-    else import ./fetch-nixpkgs.nix;
+    then builtins.trace "using host <iohk_nix>" try.value
+    else
+      let
+        spec = builtins.fromJSON (builtins.readFile ./iohk-nix.json);
+      in builtins.fetchTarball {
+        url = "${spec.url}/archive/${spec.rev}.tar.gz";
+        inherit (spec) sha256;
+      }) { inherit application; };
 
-  pkgs = import fetchNixPkgs {};
+  # nixpkgs can be overridden for debugging purposes by setting
+  # NIX_PATH=custom_nixpkgs=/path/to/nixpkgs
+  pkgs = iohkNix.pkgs;
   lib = pkgs.lib;
 in lib // (rec {
   ## nodeElasticIP :: Node -> EIP
@@ -28,7 +39,8 @@ in lib // (rec {
 
   orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
 
-  inherit fetchNixPkgs;
+  inherit (iohkNix) nixpkgs;
+  inherit pkgs;
 
   traceF   = f: x: builtins.trace                         (f x)  x;
   traceSF  = f: x: builtins.trace (builtins.seq     (f x) (f x)) x;

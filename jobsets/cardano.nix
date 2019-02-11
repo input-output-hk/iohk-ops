@@ -1,5 +1,5 @@
 let
-  fixedNixpkgs = (import ../lib.nix).fetchNixPkgs;
+  fixedNixpkgs = (import ../lib.nix).nixpkgs;
 in { pkgs ? (import fixedNixpkgs {})
    , supportedSystems ? [ "x86_64-linux" "x86_64-darwin" ]
    , scrubJobs ? true

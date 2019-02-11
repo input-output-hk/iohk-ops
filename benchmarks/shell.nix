@@ -1,5 +1,5 @@
 { localLib ? import ../lib.nix
-, pkgs ? import (localLib.fetchNixPkgs) {}
+, pkgs ? localLib.pkgs
 , io-dev-mode ? false
 }:
 

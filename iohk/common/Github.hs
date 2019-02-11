@@ -2,7 +2,16 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Github where
+module Github (
+  CommitStatus(..),
+  Status(..),
+  GitHubSource(..),
+  uriParser,
+  gitHubURLParser,
+  fetchGithubJson,
+  fetchGithubStatus,
+  Rev,
+) where
 
 import           Data.Aeson           (FromJSON, parseJSON, withObject, (.:))
 import           Data.Aeson.Types     (Parser)

@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -Weverything -Wno-unsafe -Wno-implicit-prelude -Wno-missing-local-signatures #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 
 module UpdateLogic
   ( getInstallersResults
@@ -29,67 +29,79 @@ module UpdateLogic
   , runAWS'
   ) where
 
-import           Prelude                      hiding (FilePath)
-import           Appveyor                     (AppveyorArtifact (AppveyorArtifact),
-                                               build, fetchAppveyorArtifacts,
-                                               fetchAppveyorBuild,
-                                               buildNumber, unBuildNumber,
-                                               getArtifactUrl, jobId, unJobId,
-                                               parseCiUrl)
+import           Appveyor                         (AppveyorArtifact (AppveyorArtifact),
+                                                   build, buildNumber,
+                                                   fetchAppveyorArtifacts,
+                                                   fetchAppveyorBuild,
+                                                   getArtifactUrl, jobId,
+                                                   parseCiUrl, unBuildNumber,
+                                                   unJobId)
 import qualified Appveyor
-import           Buildkite.API                (APIToken(APIToken)
-                                              , Artifact
-                                              , artifactFilename, artifactSha1sum
-                                              , listArtifactsForBuild)
-import qualified Buildkite.API                as BK
-import           Control.Applicative          ((<|>))
-import           Control.Exception            (try)
-import           Control.Lens                 (to, (^.))
-import qualified Control.Lens                 as Lens
-import           Control.Monad                (guard, when, (<=<), mapM_, forM_)
-import           Control.Monad.IO.Class       (liftIO)
-import           Control.Monad.Trans.Resource (runResourceT)
-import           Data.Aeson                   (ToJSON, FromJSON)
-import qualified Data.ByteString.Lazy         as LBS
-import qualified Data.HashMap.Strict          as HashMap
-import           Data.List                    (nub, find)
-import           Data.Maybe                   (fromMaybe, isJust)
-import           Data.Monoid                  ((<>))
-import qualified Data.Text                    as T
-import           Data.Text                    (Text)
-import qualified Data.Text.IO                 as T
-import qualified Filesystem.Path.CurrentOS    as FP
-import           GHC.Generics                 (Generic)
-import           GHC.Stack                    (HasCallStack)
-import           Github                       (Status, context,
-                                               fetchGithubStatus, statuses,
-                                               targetUrl, Rev)
-import           Network.AWS                  (Credentials (Discover), newEnv,
-                                               send, toBody, within, Region,
-                                               AWS, runAWS,
-                                               chunkedFile, defaultChunkSize)
-import           Network.AWS.S3.PutObject     (poACL, putObject)
-import           Network.AWS.S3.GetBucketLocation (getBucketLocation, gblbrsLocationConstraint)
+import           Buildkite.API                    (APIToken (APIToken),
+                                                   Artifact, artifactFilename,
+                                                   artifactSha1sum,
+                                                   listArtifactsForBuild)
+import qualified Buildkite.API                    as BK
+import           Control.Applicative              ((<|>))
+import           Control.Exception                (try)
+import           Control.Lens                     (to, (^.))
+import qualified Control.Lens                     as Lens
+import           Control.Monad                    (forM_, guard, mapM_, when,
+                                                   (<=<))
+import           Control.Monad.IO.Class           (liftIO)
+import           Control.Monad.Trans.Resource     (runResourceT)
+import           Data.Aeson                       (FromJSON, ToJSON)
+import qualified Data.ByteString.Lazy             as LBS
+import qualified Data.HashMap.Strict              as HashMap
+import           Data.List                        (find, nub)
+import           Data.Maybe                       (fromMaybe, isJust)
+import           Data.Monoid                      ((<>))
+import           Data.Text                        (Text)
+import qualified Data.Text                        as T
+import qualified Data.Text.IO                     as T
+import           Filesystem.Path                  (FilePath, filename, (</>))
+import qualified Filesystem.Path.CurrentOS        as FP
+import           GHC.Generics                     (Generic)
+import           GHC.Stack                        (HasCallStack)
+import           Github                           (Rev, Status, context,
+                                                   fetchGithubStatus, statuses,
+                                                   targetUrl)
+import           Network.AWS                      (AWS, Credentials (Discover),
+                                                   Region, chunkedFile,
+                                                   defaultChunkSize, newEnv,
+                                                   runAWS, send, toBody, within)
+import           Network.AWS.S3.CopyObject        (coACL, copyObject)
+import           Network.AWS.S3.GetBucketLocation (gblbrsLocationConstraint,
+                                                   getBucketLocation)
+import           Network.AWS.S3.PutObject         (poACL, poMetadata, putObject)
+import           Network.AWS.S3.Types             (BucketName (BucketName),
+                                                   ObjectCannedACL (OPublicRead),
+                                                   ObjectKey (ObjectKey),
+                                                   constraintRegion)
+import           Network.URI                      (parseURI, uriPath)
+import           Prelude                          hiding (FilePath)
+import           Safe                             (headMay, lastMay, readMay)
+import           System.Console.ANSI              (Color (Green),
+                                                   ColorIntensity (Dull),
+                                                   ConsoleLayer (Foreground),
+                                                   SGR (Reset, SetColor),
+                                                   setSGR)
+import           System.IO.Error                  (ioeGetErrorString)
+import           Turtle                           (MonadIO, d, die, format, fp,
+                                                   makeFormat, printf, s, void,
+                                                   w, (%))
 
-import           Network.AWS.S3.Types         (BucketName (BucketName), constraintRegion,
-                                               ObjectCannedACL (OPublicRead),
-                                               ObjectKey (ObjectKey))
-import           Network.AWS.S3.PutObject
-import           Network.AWS.S3.CopyObject
-import           Network.URI                  (uriPath, parseURI)
-import           Safe                         (headMay, lastMay, readMay)
-import           System.Console.ANSI          (Color (Green),
-                                               ColorIntensity (Dull),
-                                               ConsoleLayer (Foreground),
-                                               SGR (Reset, SetColor), setSGR)
-import           System.IO.Error              (ioeGetErrorString)
-import           Turtle                       (void, MonadIO, printf, format, fp, d, s, w, (%), die, makeFormat)
-import           Turtle.Prelude               (mktempdir, proc)
-import           Filesystem.Path              (FilePath, (</>), filename)
-
-import           InstallerVersions
-import           Types                 hiding (Region)
-import           Utils                        (fetchCachedUrl, fetchCachedUrlWithSHA1)
+import           InstallerVersions                (GlobalResults (GlobalResults, grApplicationVersion, grCardanoCommit, grCardanoVersion, grDaedalusCommit, grDaedalusVersion),
+                                                   InstallerNetwork (InstallerMainnet, InstallerStaging, InstallerTestnet),
+                                                   findVersionInfo,
+                                                   installerNetwork)
+import           Types                            (ApplicationVersion,
+                                                   ApplicationVersionKey,
+                                                   Arch (Linux64, Mac64, Win64),
+                                                   NixopsConfig (NixopsConfig, cInstallerURLBase),
+                                                   formatArch)
+import           Utils                            (fetchCachedUrl,
+                                                   fetchCachedUrlWithSHA1)
 
 data CIResult = CIResult
   { ciResultSystem      :: CISystem
@@ -127,7 +139,7 @@ selectBuildNumberPredicate :: Maybe Int -- ^ Buildkite build number
 selectBuildNumberPredicate bk av =
   installerPredicates (buildNum Buildkite bk) (buildNum AppVeyor av)
   where
-    buildNum ci Nothing    _ = True
+    buildNum _ Nothing    _ = True
     buildNum ci (Just num) r = ciResultSystem r /= ci || ciResultBuildNumber r == num
 
 -- | Joins two installer predicates so that both must be satisfied.
@@ -244,7 +256,7 @@ fetchCIResults = mapM_ fetchResult
     fetchResult CIResult{..} = fetchCached ciResultDownloadUrl (filename ciResultLocalPath) ciResultLocalPath
       where fetchCached = case ciResultSHA1Sum of
                             Just sha1 -> fetchCachedUrlWithSHA1 sha1
-                            Nothing -> fetchCachedUrl
+                            Nothing   -> fetchCachedUrl
 
 forInstallers :: Text -> (a -> Bool) -> [a] -> (a -> IO CIResult) -> IO (Either Text [CIResult])
 forInstallers job p arts action = case filter p arts of
@@ -346,7 +358,7 @@ githubWikiRecord InstallersResults{..} = T.intercalate " | " cols <> "\n"
     mdLink = format ("["%s%"]("%s%")")
 
 updateVersionJson :: NixopsConfig -> Text -> LBS.ByteString -> IO Text
-updateVersionJson cfg bucket json = runAWS' . withinBucketRegion bucketName $ \region -> do
+updateVersionJson cfg bucket json = runAWS' . withinBucketRegion bucketName $ \_ -> do
   uploadFile json key
   pure $ cdnLink cfg key
   where
@@ -375,7 +387,7 @@ type AWSMeta = HashMap.HashMap Text Text
 
 uploadHashedInstaller :: NixopsConfig -> Text -> FilePath -> GlobalResults -> Text -> AWS Text
 uploadHashedInstaller cfg bucketName localPath GlobalResults{..} hash =
-  withinBucketRegion bucketName' $ \region -> do
+  withinBucketRegion bucketName' $ \_ -> do
     uploadOneFile bucketName' localPath (ObjectKey hash) meta
     copyObject' hashedPath key
     pure $ cdnLink cfg key
