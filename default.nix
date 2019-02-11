@@ -2,8 +2,9 @@ let
   localLib = import ./lib.nix;
 in
 { system ? builtins.currentSystem
+, crossSystem ? null
 , config ? {}
-, pkgs ? (import (localLib.nixpkgs) { inherit system config; })
+, pkgs ? (import (localLib.nixpkgs) { inherit system crossSystem config; })
 , compiler ? pkgs.haskellPackages
 , enableDebugging ? false
 , enableProfiling ? false
