@@ -3,9 +3,6 @@ let
 lib = import ../lib.nix;
 in
 { pkgs ? import lib.fetchNixPkgs {}
-## Hack to make mantis-cardano parametrisable both in Hydra and in a local evaluation: 
-, valPath         ? path: key: type: (path + "/${key}.${type}")
-, interpSrcJsonAt ? path: repo: lib.fetchPinWithSubmodules (removeAttrs (fromJSON (readFile (valPath path repo "src-json"))) ["date"])
 , ...
 }@args:
 with pkgs.lib; with pkgs;
@@ -30,17 +27,12 @@ let
              drvs)
         );
   };
-  ## getSrc: if we have an input -- use it, if not, get a fetchgit-style pin.
-  getSrc          = name:
-    if hasAttr "${name}" args
-    then args.${name}
-    else interpSrcJsonAt ./pins name;
-  mantis-cardano = fetchGit (fromJSON (readFile ./pins/mantis-cardano.fetchGit.src-json));
+  getSrc          = name: lib.fetchPinAuto ./pins name;
 in
 rec {
   iele            = callPackage ./iele.nix             { inherit getSrc secp256k1;      };
   kevm            = callPackage ./kevm.nix             { inherit getSrc;                };
-  mantis          = callPackage ./mantis.nix           { inherit getSrc sbtVerify; mantis-cardano = mantis-cardano; };
+  mantis          = callPackage ./mantis.nix           { inherit getSrc sbtVerify;      };
   remixIde        = callPackage ./remix-ide.nix        { inherit getSrc trimmedSolcBin; };
   sbtVerify       = callPackage ./sbt-verify.nix       { inherit getSrc;                };
   secp256k1       = callPackage ./secp256k1.nix        { inherit getSrc;                };
