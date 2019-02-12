@@ -1,10 +1,13 @@
 { config, pkgs, lib, ... }:
 
-with lib; with pkgs;
+with lib;
 let
-  goguenPkgs        = import ./../goguen/default.nix { pkgs = pkgs; };
+  cfg               = config.services.mantis;
+  # nixpkgsSrc        = import ./../goguen/pins/fetch-nixpkgs.nix;
+  # nixpkgs           = import nixpkgsSrc {};
+  goguenPkgs        = import ./../goguen/default.nix { inherit pkgs; };
   mantisRPCListenIP = config.networking.privateIPv4;
-  otherNodeNames    = filter (on: on != nodeName)                               allNodeNames;
+  otherNodeNames    = filter (on: on != cfg.nodeName)                              allNodeNames;
   otherNodeIPs      = map    (on: nodes."${n}".config.networking.privateIPv4) otherNodeNames;
   mantisMachine     = name: { inherit name; dns = "${name}.iele-internal.testnet.mantis.iohkdev.io"; ip = "${nodes.${name}.config.networking.privateIPv4}"; };
   mantisMachines    = listToAttrs (map (n: { name = n; value = mantisMachine n; }) allNodeNames);
@@ -17,10 +20,9 @@ let
   # nodeIds          = import (there "node-ids.nix");
   nodeIds           = { mantis-a-0 = { id = "b63846ff22bc9ea4f73a354ca8a0014ee0136a130055b7706b8f11c3484a2bb659c20a9ce9253cb0168dd523b9131e56112b49beaeb2ee6d562941ee881d8b37"; }; mantis-a-1 = { id = "b099728b080f52e82a13893e995181aa4ebf69d1e18019d23b392e24334c6f557922f32313b30be7528d2ef350c29232e6183e702533cc20b53d7beed4d2205e"; }; mantis-b-0 = { id = "a5df739652447609c300b89223919ca00c8704f06ace21ec4bb6ce160034f7de48d3166817e744bd96c88c9f22165f95ec50b47e20bd444d98deaacb6a59bba1"; }; mantis-b-1 = { id = "d9b5cadb87a5bda45ecf9fde7f16a477aa5bbead4ae2f9548737e659d4ad83d13ac564f860a0796a6347e2d5766b937cfc620acf80ce7ab6f09efad47467d6ff"; }; mantis-c-0 = { id = "a2cbb6d998d9655a51d6f57c8e7d9158112e5e0b6676a145c24ac4f9c726e092a3caccf77c99b377395aa800bb00fd31c08a8a09ac2cc37a0e10d61b24b0de23"; }; };
   allNodes          = recursiveUpdate machines nodeIds;
-  node              = allNodes.${nodeName};
-  otherNodes        = attrValues (removeAttrs allNodes [ nodeName ]);
+  node              = allNodes.${cfg.nodeName};
+  otherNodes        = attrValues (removeAttrs allNodes [ cfg.nodeName ]);
   ####### ..mantis-iele-ops/common/testnet/nixops/mantis/default.nix
-  cfg               = config.services.mantis;
   enode = node: "enode://${node.id}@${node.ip}:9076";
   localNode = node: "${node.ip}:0.0.0.0:5679";
   bootstrapEnodes = self: builtins.toJSON (map enode otherNodes);
@@ -32,7 +34,7 @@ let
     mantis.vm {
       mode = "external"
        external {
-        vm-type = "${vmType}"
+        vm-type = "${cfg.vmType}"
         run-vm = false
         host = "localhost"
         port = 8888
@@ -413,7 +415,7 @@ with goguenPkgs; {
     # };
 
     systemd.services.mantis = {
-      requires = [ "${vmType}.service" ];
+      requires = [ "${cfg.vmType}.service" ];
       wantedBy = [ "multi-user.target" ];
       unitConfig.RequiresMountsFor = "/data";
       enable = true;
@@ -441,26 +443,24 @@ with goguenPkgs; {
        restartTriggers = [ mantis_conf logback_xml genesis_json ];
     };
 
-    systemd.services."${vmType}" = {
+    systemd.services."${cfg.vmType}" = {
       enable = true;
       serviceConfig = {
         TimeoutStartSec = "0";
         Restart = "always";
       };
-      script = "${goguenPkgs.${vmType}}/${vmType}-vm 8888 0.0.0.0";
+      script = "${goguenPkgs.${cfg.vmType}}/${cfg.vmType}-vm 8888 0.0.0.0";
     };
 
     services.mantis = {
       enable = true;
-      nodeName = nodeName;
       machines = machines;
       node = node;
       nodeIds = nodeIds;
       faucetAddresses = faucetAddresses;
-      vmType = vmType;
       vmPkg = goguenPkgs.${vmType};
       dataDir = "/data/mantis/.mantis";
       riemannHost = "localhost";
     } // mantisConfig;
   };
-};
+}

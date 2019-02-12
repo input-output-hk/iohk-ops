@@ -33,16 +33,16 @@ case ${cmd} in
                      echo -n "Enter access key ID (aws_access_key_id at ~/.aws/credentials): "
                      read AKID
                      nixops set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
-                     nixops deploy   ${nixops_subopts} "$@"              --option trusted-substituters "${nixops_bincaches}"
+                     nixops deploy   ${nixops_subopts} "$@"
                      ;;
         deploy | d ) nixops modify   ${nixops_subopts} ${nixops_constituents}
-                     nixops deploy   ${nixops_subopts} "$@" --copy-only --option trusted-substituters "${nixops_bincaches}"
+                     nixops deploy   ${nixops_subopts} "$@" --copy-only
                      nixops deploy   ${nixops_subopts} "$@";;
         delete )     nixops destroy  ${nixops_subopts} --confirm
                      nixops delete   ${nixops_subopts};;
         re )         $0 delete && $0 create && $0 deploy;;
         ssh )        nixops ssh      ${nixops_subopts} "$@";;
-        eval )       nix-instantiate ${nix_opts} --eval -E  "${nixops_network_expr}";;
+        eval )       nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
         repl )       nix repl        ${nix_opts} --arg depl "${nixops_network_expr}" \
                                                                     ./network.nix \
                                                  --argstr nixpkgsSrc ${nixpkgs};;
