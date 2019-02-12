@@ -23,6 +23,7 @@ in {
       "https://hydra.iohk.io" "https://mantis-hydra.aws.iohkdev.io"
     ];
     nix.binaryCachePublicKeys = mkForce [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
       "hydra.iohk.io-1:E8yDJv2SBXM6PQPVbhCWK7VvitistFYSH2u3AuwCiu4="
     ];
