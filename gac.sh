@@ -21,12 +21,12 @@ case ${cmd} in
                      nixops deploy   ${nixops_subopts} "$@"              --option trusted-substituters "${nixops_bincaches}"
                      ;;
         deploy | d ) nixops modify   ${nixops_subopts} ${constituents}
-                     nixops deploy   ${nixops_subopts} "$@" --build-only --option trusted-substituters "${nixops_bincaches}"
-                     nixops deploy   ${nixops_subopts} "$@" --copy-only
+                     nixops deploy   ${nixops_subopts} "$@" --copy-only --option trusted-substituters "${nixops_bincaches}"
                      nixops deploy   ${nixops_subopts} "$@";;
         delete )     nixops destroy  ${nixops_subopts} --confirm
                      nixops delete   ${nixops_subopts};;
         re )         $0 delete && $0 create && $0 deploy;;
+        ssh )        nixops ssh      ${nixops_subopts} "$@";;
         info   | i ) nixops info     ${nixops_subopts};;
         * ) echo "ERROR: unknown command '${cmd}'" >&2; exit 1;;
 esac
