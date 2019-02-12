@@ -15,7 +15,7 @@ with (import ./../lib.nix);
   environment.systemPackages = with pkgs;
     # nixopsUnstable: wait for 1.5.1 release
     [ git tmux vim sysstat lsof ncdu tree mosh tig
-      cabal2nix stack iptables graphviz tcpdump strace gdb binutils nix-repl ];
+      cabal2nix stack iptables graphviz tcpdump strace gdb binutils ];
 
   services.openssh.passwordAuthentication = false;
   services.openssh.enable = true;
@@ -66,7 +66,10 @@ with (import ./../lib.nix);
     # use our hydra builds
     trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
     binaryCaches = trustedBinaryCaches;
-    binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
+    binaryCachePublicKeys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+    ];
   };
   system.extraSystemBuilderCmds = ''
     ln -sv ${nixpkgs} $out/nixpkgs
