@@ -15,12 +15,10 @@ nixops_bincaches="https://cache.nixos.org https://hydra.iohk.io https://mantis-h
 case ${cmd} in
         create | c ) nixops create   ${nixops_subopts} ${constituents}
                      deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
-                     echo -n "Enter access key ID: "
+                     echo -n "Enter access key ID (aws_access_key_id at ~/.aws/credentials): "
                      read AKID
                      nixops set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
-                     ;;
-        full-deploy ) nixops modify   ${nixops_subopts} ${constituents}
-                      nixops deploy   ${nixops_subopts} "$@"              --option trusted-substituters "${nixops_bincaches}"
+                     nixops deploy   ${nixops_subopts} "$@"              --option trusted-substituters "${nixops_bincaches}"
                      ;;
         deploy | d ) nixops modify   ${nixops_subopts} ${constituents}
                      nixops deploy   ${nixops_subopts} "$@" --build-only --option trusted-substituters "${nixops_bincaches}"
