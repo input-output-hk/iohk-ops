@@ -10,9 +10,16 @@ else if test ${cmd} != "repl" -a ${cmd} != "eval"; then echo "ERROR:  echo CLUST
 fi
 
 nixpkgs=$(nix-instantiate --eval -E "import ./goguen/pins/fetch-nixpkgs.nix" | xargs echo)
-nixops="$(nix-instantiate  --eval -E '(import (import ./goguen/pins/fetch-nixpkgs.nix) {}).nixops.outPath' | xargs echo)/share/nix/nixops"
+nixops_out="$(nix-instantiate  --eval -E '(import (import ./goguen/pins/fetch-nixpkgs.nix) {}).nixops.outPath' | xargs echo)"
+nixops=${nixops_out}/bin/nixops
+nix_opts="-I nixpkgs=${nixpkgs} -I nixops=${nixops_out}/share/nix/nixops"
 
-nix_opts="-I nixpkgs=${nixpkgs} -I nixops=${nixops}"
+if test ! -f ${nixops}
+then nix-store --realise ${nixops}
+fi
+
+export NIX_PATH="nixpkgs=${nixpkgs}"
+
 nixops_subopts="--deployment ${CLUSTER} --max-jobs 4 --cores 0 --show-trace ${nix_opts}"
 nixops_bincaches="https://cache.nixos.org https://hydra.iohk.io https://mantis-hydra.aws.iohkdev.io"
 
@@ -28,24 +35,24 @@ nixops_network_expr="import <nixops/eval-machine-info.nix> { \
   }"
 
 case ${cmd} in
-        create | c ) nixops create   ${nixops_subopts} ${nixops_constituents}
+        create | c ) ${nixops} create   ${nixops_subopts} ${nixops_constituents}
                      deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
                      echo -n "Enter access key ID (aws_access_key_id at ~/.aws/credentials): "
                      read AKID
-                     nixops set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
-                     nixops deploy   ${nixops_subopts} "$@"
+                     ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
+                     ${nixops} deploy   ${nixops_subopts} "$@"
                      ;;
-        deploy | d ) nixops modify   ${nixops_subopts} ${nixops_constituents}
-                     nixops deploy   ${nixops_subopts} "$@" --copy-only
-                     nixops deploy   ${nixops_subopts} "$@";;
-        delete )     nixops destroy  ${nixops_subopts} --confirm
-                     nixops delete   ${nixops_subopts};;
-        re )         $0 delete && $0 create && $0 deploy;;
-        ssh )        nixops ssh      ${nixops_subopts} "$@";;
+        deploy | d ) ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
+                     ${nixops} deploy   ${nixops_subopts} "$@" --copy-only
+                     ${nixops} deploy   ${nixops_subopts} "$@";;
+        delete )     ${nixops} destroy  ${nixops_subopts} --confirm
+                     ${nixops} delete   ${nixops_subopts};;
+        ssh )        ${nixops} ssh      ${nixops_subopts} "$@";;
         eval )       nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
         repl )       nix repl        ${nix_opts} --arg depl "${nixops_network_expr}" \
                                                                     ./network.nix \
                                                  --argstr nixpkgsSrc ${nixpkgs};;
-        info   | i ) nixops info     ${nixops_subopts};;
+        info   | i ) ${nixops} info     ${nixops_subopts};;
+        re )         $0 delete && $0 create && $0 deploy;;
         * ) echo "ERROR: unknown command '${cmd}'" >&2; exit 1;;
 esac
