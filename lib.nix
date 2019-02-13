@@ -17,7 +17,7 @@ let
       }) iohkNixArgs;
   iohkNix       = mkIohkNix { application = "iohk-ops"; };
   iohkNixGoguen = mkIohkNix { application = "goguen"; nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json; };
-  goguenNixpkgs = iohkNixGoguen.pkgs;
+  goguenNixpkgs = iohkNixGoguen.nixpkgs;
 
   # nixpkgs can be overridden for debugging purposes by setting
   # NIX_PATH=custom_nixpkgs=/path/to/nixpkgs
@@ -47,7 +47,7 @@ in lib // (rec {
         cp -R ${mainSrc} $out
 
         '' + concatStringsSep "\n" (map subRepoCmd (attrValues subRepos));
-    in runCommand "fetchGit-composite-src-${mainName}" { buildInputs = []; } (trace cmd cmd);
+    in runCommand "fetchGit-composite-src-${mainName}" { buildInputs = []; } cmd;
 
   pinFile = dir: name: dir + "/${name}.src-json";
   readPin = pin: let json = builtins.readFile pin;

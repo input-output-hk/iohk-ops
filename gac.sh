@@ -9,8 +9,8 @@ then . ./.config.sh
 else if test ${cmd} != "repl" -a ${cmd} != "eval"; then echo "ERROR:  echo CLUSTER=your-cluster-name > .config.sh" >&2; exit 1; fi
 fi
 
-nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).nixpkgs' | xargs echo)
-nixops_out="$(nix-instantiate --eval -E '(import ((import ./lib.nix).nixpkgs) {}).nixops.outPath' | xargs echo)"
+nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).goguenNixpkgs' | xargs echo)
+nixops_out="$(nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nixops.outPath' | xargs echo)"
 nixops=${nixops_out}/bin/nixops
 nix_opts="-I nixpkgs=${nixpkgs_out} -I nixops=${nixops_out}/share/nix/nixops"
 
