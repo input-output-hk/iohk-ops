@@ -5,8 +5,8 @@ let
   extra-statsd = pkgs.callPackage (pkgs.fetchFromGitHub {
     owner = "cleverca22";
     repo = "extra-statsd";
-    rev = "bb4d394b224184f59369d44abecd455c4ca8195b";
-    sha256 = "048r26p853scf5ms71lqa5h97jg1fqbq1dphdx7ink0mdw6hqjpa";
+    rev = "343e8793594c91126dfd18fb31b07fba605711ab";
+    sha256 = "1qf1grqcp232s3vafvrq58xa29yqbnhfnpq2v03dhsfcqr63pdvz";
   }) {};
 in {
   options = {
