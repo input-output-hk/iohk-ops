@@ -2,10 +2,9 @@
 # nix-repl lib.nix
 
 let
-  application = "iohk-ops";
   # iohk-nix can be overridden for debugging purposes by setting
   # NIX_PATH=iohk_nix=/path/to/iohk-nix
-  iohkNix = import (
+  mkIohkNix = iohkNixArgs: import (
     let try = builtins.tryEval <iohk_nix>;
     in if try.success
     then builtins.trace "using host <iohk_nix>" try.value
@@ -15,13 +14,20 @@ let
       in builtins.fetchTarball {
         url = "${spec.url}/archive/${spec.rev}.tar.gz";
         inherit (spec) sha256;
-      }) { inherit application; };
+      }) iohkNixArgs;
+  iohkNix       = mkIohkNix { application = "iohk-ops"; };
+  iohkNixGoguen = mkIohkNix { application = "goguen"; nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json; };
+  goguenNixpkgs = iohkNixGoguen.pkgs;
 
   # nixpkgs can be overridden for debugging purposes by setting
   # NIX_PATH=custom_nixpkgs=/path/to/nixpkgs
   pkgs = iohkNix.pkgs;
   lib = pkgs.lib;
 in lib // (rec {
+  inherit (iohkNix) nixpkgs;
+  inherit mkIohkNix pkgs;
+  inherit iohkNixGoguen goguenNixpkgs;
+
   ## nodeElasticIP :: Node -> EIP
   nodeElasticIP = node:
     { name = "${node.name}-ip";
@@ -74,9 +80,6 @@ in lib // (rec {
   resolveSGName = resources: name: resources.ec2SecurityGroups.${name};
 
   orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
-
-  inherit (iohkNix) nixpkgs;
-  inherit pkgs;
 
   traceF   = f: x: builtins.trace                         (f x)  x;
   traceSF  = f: x: builtins.trace (builtins.seq     (f x) (f x)) x;
