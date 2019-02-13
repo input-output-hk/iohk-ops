@@ -1,9 +1,9 @@
-{ mantis-cardano, ... }@args:
+{ ... }@args:
 let
   ## fetch-nixpkgs.nix uses nixpkgs-src.json from its directory,
   ## ..so we have a Goguen-specific pair of those.
-  nixpkgs    = import (import ./pins/fetch-nixpkgs.nix) {};
-  goguenPkgs = import ./. (args // { pkgs = nixpkgs; inherit mantis-cardano; });
+  nixpkgs    = import ((import ../lib.nix).goguenNixpkgs) {};
+  goguenPkgs = import ./. (args // { pkgs = nixpkgs; });
 in
 with nixpkgs; with goguenPkgs;
 goguenPkgs // {
