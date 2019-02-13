@@ -9,16 +9,16 @@ then . ./.config.sh
 else if test ${cmd} != "repl" -a ${cmd} != "eval"; then echo "ERROR:  echo CLUSTER=your-cluster-name > .config.sh" >&2; exit 1; fi
 fi
 
-nixpkgs=$(nix-instantiate --eval -E "import ./goguen/pins/fetch-nixpkgs.nix" | xargs echo)
-nixops_out="$(nix-instantiate  --eval -E '(import (import ./goguen/pins/fetch-nixpkgs.nix) {}).nixops.outPath' | xargs echo)"
+nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).nixpkgs' | xargs echo)
+nixops_out="$(nix-instantiate --eval -E '(import ((import ./lib.nix).nixpkgs) {}).nixops.outPath' | xargs echo)"
 nixops=${nixops_out}/bin/nixops
-nix_opts="-I nixpkgs=${nixpkgs} -I nixops=${nixops_out}/share/nix/nixops"
+nix_opts="-I nixpkgs=${nixpkgs_out} -I nixops=${nixops_out}/share/nix/nixops"
 
 if test ! -f ${nixops}
 then nix-store --realise ${nixops}
 fi
 
-export NIX_PATH="nixpkgs=${nixpkgs}"
+export NIX_PATH="nixpkgs=${nixpkgs_out}"
 
 nixops_subopts="--deployment ${CLUSTER} --max-jobs 4 --cores 0 --show-trace ${nix_opts}"
 nixops_bincaches="https://cache.nixos.org https://hydra.iohk.io https://mantis-hydra.aws.iohkdev.io"
@@ -51,7 +51,7 @@ case ${cmd} in
         eval )       nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
         repl )       nix repl        ${nix_opts} --arg depl "${nixops_network_expr}" \
                                                                     ./network.nix \
-                                                 --argstr nixpkgsSrc ${nixpkgs};;
+                                                 --argstr nixpkgsSrc ${nixpkgs_out};;
         info   | i ) ${nixops} info     ${nixops_subopts};;
         re )         $0 delete && $0 create && $0 deploy;;
         * ) echo "ERROR: unknown command '${cmd}'" >&2; exit 1;;
