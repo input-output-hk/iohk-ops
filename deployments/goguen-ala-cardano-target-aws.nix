@@ -17,6 +17,9 @@ rec {
           resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
           resources.ec2SecurityGroups."allow-mantis-public-${region}-${org}"
         ];
+        blockDeviceMapping = {
+          "/dev/xvdf" = { size = 120; }; # resources.ebsVolumes."${hostname}-ebs"
+        };
       };
       deployment.route53.accessKeyId = accessKeyId;
       deployment.route53.hostName = "${hostname}.${config.deployment.name}.dev-mantis.iohkdev.io";
@@ -35,6 +38,13 @@ in {
       mantis-b-1-ip = { inherit region accessKeyId; };
       mantis-c-0-ip = { inherit region accessKeyId; };
     };
+    # ebsVolumes = let size = 120; in {
+    #   mantis-a-0-ebs = { inherit region accessKeyId size; };
+    #   mantis-a-1-ebs = { inherit region accessKeyId size; };
+    #   mantis-b-0-ebs = { inherit region accessKeyId size; };
+    #   mantis-b-1-ebs = { inherit region accessKeyId size; };
+    #   mantis-c-0-ebs = { inherit region accessKeyId size; };
+    # };
     ec2KeyPairs = {
       cardano-keypair-IOHK-eu-central-1 = {
         inherit region accessKeyId;

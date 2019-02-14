@@ -14,7 +14,7 @@ do case "$1" in
            --help | "--"* ) usage;;
            * ) break;;
    esac; shift; done
-cmd=$1; shift
+cmd=${1:-doit}; test -n "$1"; shift
 set -u
 
 CLUSTER=create-.config.sh
@@ -77,83 +77,116 @@ case ${cmd} in
 ###
 ###
 ###
-eval )       nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
-repl )       nix repl        ${nix_opts} --arg depl "${nixops_network_expr}" \
+        eval )
+                nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
+        repl )
+                nix repl        ${nix_opts} --arg depl "${nixops_network_expr}" \
                                                             ./network.nix \
                                          --argstr nixpkgsSrc ${nixpkgs_out};;
 ###
 ###
 ###
-genkey | g ) generate_keys;;
-create | c ) ${nixops} create   ${nixops_subopts} ${nixops_constituents}
-             deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
-             echo -n "Enter access key ID (aws_access_key_id at ~/.aws/credentials): "
-             read AKID
-             ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
-             generate_keys
-             ${nixops} deploy   ${nixops_subopts} "$@"
-             ;;
-delete )     ${nixops} destroy  ${nixops_subopts} --confirm
-             ${nixops} delete   ${nixops_subopts};;
-re )         $0 delete && $0 create && $0 deploy;;
-info   | i ) ${nixops} info     ${nixops_subopts};;
+genkey | g )
+        generate_keys;;
+create | c )
+        ${nixops} create   ${nixops_subopts} ${nixops_constituents}
+        deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
+        guessedAKID="$(grep aws_access_key_id ~/.aws/credentials | cut -d= -f2 | xargs echo)"
+        read -ei "${guessedAKID}" -p "Use AWS access key ID: " AKID
+        ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
+        generate_keys
+        ${nixops} deploy   ${nixops_subopts} "$@"
+        ;;
+delete | destroy | terminate | abolish | eliminate | demolish )
+        ${nixops} destroy  ${nixops_subopts} --confirm
+        ${nixops} delete   ${nixops_subopts};;
+re )
+        $0 delete && $0 create && $0 deploy;;
+info   | i )
+        ${nixops} info     ${nixops_subopts};;
 ###
 ###
 ###
 staged-deploy )
-             ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
-             ${nixops} deploy   ${nixops_subopts} "$@" --copy-only
-             ${nixops} deploy   ${nixops_subopts} "$@";;
-deploy | d ) ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
-             ${nixops} deploy   ${nixops_subopts} "$@";;
+        ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
+        ${nixops} deploy   ${nixops_subopts} "$@" --copy-only
+        ${nixops} deploy   ${nixops_subopts} "$@";;
+deploy | d )
+        ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
+        ${nixops} deploy   ${nixops_subopts} "$@";;
 deploy-one | one )
-             $0 deploy --include mantis-a-0;;
+        $0 deploy --include mantis-a-0;;
 ###
 ###
 ###
-ssh )        ${nixops} ssh          ${nixops_subopts} "$@";;
-ssh-all )    ${nixops} ssh-for-each ${nixops_subopts} --parallel --include ${ALL_NODES} -- "$@";;   
+ssh )
+        machine="${1:-mantis-a-0}";
+        set +u; test -n "$1" && shift; set -u
+        ${nixops} ssh          ${nixops_subopts} ${machine} "$@";;
+ssh-all )
+        ${nixops} ssh-for-each ${nixops_subopts} --parallel --include ${ALL_NODES} -- "$@";;   
 ###
 ###
 ###
-restart )    $0        ssh-all      systemctl restart mantis
-             echo "### new start date:  $($0 since mantis-a-0)";;
+stop )
+        $0        ssh-all      -- systemctl    stop mantis;;
+start )
+        $0        ssh-all      -- systemctl   start mantis; echo "### new start date:  $($0 since mantis-a-0)";;
+restart )
+        $0        ssh-all      -- systemctl restart mantis; echo "### new start date:  $($0 since mantis-a-0)";;
+statuses | ss )
+        $0        ssh-all      -- systemctl  status mantis;;
 ###
 ###
 ###
-since )      node=$1
-             ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show mantis --value --property WatchdogTimestamp | cut -d' ' -f3;;
-journal-on | jon ) node=$1
-             ${nixops} ssh          ${nixops_subopts} ${node} -- journalctl  -u mantis --since $($0 since ${node});;
+since )
+        node=$1
+        ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show mantis --value --property WatchdogTimestamp | cut -d' ' -f3;;
+journal-on | jon )
+        node=$1
+        ${nixops} ssh          ${nixops_subopts} ${node} -- journalctl  -u mantis --since $($0 since ${node});;
 journal    | jall | j )
-             start_sample_node='mantis-a-0'
-             since=${1:-$($0 since ${start_sample_node})}
-             echo "### journal since:  ${since}" >&2
-             $0        ssh-all      journalctl -u mantis --since ${since};;
-follow | f ) node=${1:-'mantis-a-0'}
-             $0        ssh ${node} -- journalctl -fu mantis;;
+        start_sample_node='mantis-a-0'
+        since=${1:-$($0 since ${start_sample_node})}
+        echo "### journal since:  ${since}" >&2
+        $0        ssh-all      -- journalctl -u mantis --since ${since};;
+system-journal | sysj )
+        node=${1:-'mantis-a-0'}
+        $0        ssh ${node}  -- journalctl -xe;;
+follow | f )
+        node=${1:-'mantis-a-0'}
+        $0        ssh ${node}  -- journalctl -fu mantis;;
 follow-all | fa )
-             $0        ssh-all     -- journalctl -fu mantis "$@";;
-grep-since ) since=$1; shift
-             echo "### journal since:  ${since}" >&2
-             echo "### filter:         ag $*" >&2
-             $0        journal "${since}" 2>&1 | ${ag} "$@";;
-grep )       start_sample_node='mantis-a-0'
-             since=$($0 since ${start_sample_node})
-             $0        grep-since ${since} "$@";;
-watch-for )  $0        follow-all 2>&1 | ${ag} "$@";;
+        $0        ssh-all      -- journalctl -fu mantis "$@";;
+grep-since )
+        since=$1; shift
+        echo "### journal since:  ${since}" >&2
+        echo "### filter:         ag $*" >&2
+        $0        journal "${since}" 2>&1 | ${ag} "$@";;
+grep )
+        start_sample_node='mantis-a-0'
+        since=$($0 since ${start_sample_node})
+        $0        grep-since ${since} "$@";;
+watch-for )
+        $0        follow-all 2>&1 | ${ag} "$@";;
              
 ###
 ###
 ###
-blocks )     $0        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' -f5,14-;;
-roles )      $0        grep 'role changed|LEADER';;
+blocks )
+        $0        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' -f5,14-;;
+roles )
+        $0        grep 'role changed|LEADER';;
 exceptions | ex )
-             $0        grep -i exception | ag -v 'RiemannBatchClient|exception.counter';;
-watch-blocks )         $0 watch-for 'Best Block: ' | cut -d' ' -f5,14-;;
-watch-exceptions )     $0 watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
+        $0        grep -i exception | ag -v 'RiemannBatchClient|exception.counter';;
+watch-blocks )
+        $0 watch-for 'Best Block: ' | cut -d' ' -f5,14-;;
+watch-exceptions )
+        $0 watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
 ###
 ###
 ###
+doit )
+        echo "magic";;
 * ) usage;;
 esac
