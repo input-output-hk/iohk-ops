@@ -421,27 +421,31 @@ with goguenPkgs; {
       after = [ "keys.target" ];
       unitConfig.RequiresMountsFor = "/data";
       enable = true;
-      path = with pkgs; [ gawk gnused openjdk8 mantis ];
+      path = with pkgs; [ gawk gnused openjdk8 mantis strace ];
       serviceConfig = {
-        PermissionsStartOnly = true;
         User = "mantis";
         Group = "users";
-        # Allow a maximum of 5 retries separated by 30 seconds, in total capped by 200s
+        PermissionsStartOnly = true;
+        TimeoutStartSec = "0";
         Restart = "always";
         RestartSec = 30;
-        StartLimitInterval = 200;
-        StartLimitBurst = 5;
+        # Allow a maximum of 5 retries separated by 30 seconds, in total capped by 200s
+        StartLimitInterval = 60;
+        StartLimitBurst = 10;
         KillSignal = "SIGINT";
         WorkingDirectory = cfg.dataDir;
         PrivateTmp = true;
-        Type = "notify";
       };
       preStart = ''
         mkdir -p ${cfg.dataDir}
         [ -f /var/lib/keys/mantis-node ] && cp -f /var/lib/keys/mantis-node ${cfg.dataDir}/node.key
         chown -R mantis ${cfg.dataDir}
       '';
-       script = "mantis mantis -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}";
+      script = ''
+        env
+        set -x
+        ${goguenPkgs.mantis}/bin/mantis mantis -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}
+      '';
        restartTriggers = [ mantis_conf logback_xml genesis_json ];
     };
 
