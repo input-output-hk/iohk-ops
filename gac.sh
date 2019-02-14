@@ -1,5 +1,5 @@
 #!/bin/sh
-set -eu
+set -e
 
 usage() {
         echo "$(basename $0) [--verbose] COMMAND ARGS.." >&2
@@ -15,6 +15,7 @@ do case "$1" in
            * ) break;;
    esac; shift; done
 cmd=$1; shift
+set -u
 
 CLUSTER=create-.config.sh
 if test -f .config.sh
@@ -131,6 +132,8 @@ journal    | jall | j )
              $0        ssh-all      journalctl -u mantis --since ${since};;
 follow | f ) node=${1:-'mantis-a-0'}
              $0        ssh ${node} -- journalctl -fu mantis;;
+follow-all | fa )
+             $0        ssh-all     -- journalctl -fu mantis "$@";;
 grep-since ) since=$1; shift
              echo "### journal since:  ${since}" >&2
              echo "### filter:         ag $*" >&2
@@ -138,6 +141,7 @@ grep-since ) since=$1; shift
 grep )       start_sample_node='mantis-a-0'
              since=$($0 since ${start_sample_node})
              $0        grep-since ${since} "$@";;
+watch-for )  $0        follow-all 2>&1 | ${ag} "$@";;
              
 ###
 ###
@@ -146,8 +150,10 @@ blocks )     $0        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' 
 roles )      $0        grep 'role changed|LEADER';;
 exceptions | ex )
              $0        grep -i exception | ag -v 'RiemannBatchClient|exception.counter';;
+watch-blocks )         $0 watch-for 'Best Block: ' | cut -d' ' -f5,14-;;
+watch-exceptions )     $0 watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
 ###
 ###
 ###
-* ) echo "ERROR: unknown command '${cmd}'" >&2; exit 1;;
+* ) usage;;
 esac
