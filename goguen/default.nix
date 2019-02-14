@@ -2,7 +2,7 @@ with builtins;
 let
 lib = import ../lib.nix;
 in
-{ pkgs ? import lib.fetchNixPkgs {}
+{ pkgs ? import lib.goguenNixpkgs {}
 , ...
 }@args:
 with pkgs.lib; with pkgs;
