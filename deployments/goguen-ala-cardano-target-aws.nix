@@ -15,6 +15,7 @@ rec {
         elasticIPv4 = resources.elasticIPs."${hostname}-ip";
         securityGroups = [
           resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
+          resources.ec2SecurityGroups."allow-mantis-public-${region}-${org}"
         ];
       };
       deployment.route53.accessKeyId = accessKeyId;
@@ -49,6 +50,18 @@ in {
           fromPort = 22; toPort = 22;
           sourceIp = deployerIP + "/32";
         }];
+      };
+      "allow-mantis-public-${region}-${org}" = {
+        inherit region accessKeyId;
+        description = "Mantis public ports";
+        rules = [
+          { protocol = "tcp"; fromPort = 5555 ; toPort = 5555 ; sourceIp = "0.0.0.0/0"; }
+          { protocol = "tcp"; fromPort = 5679 ; toPort = 5679 ; sourceIp = "0.0.0.0/0"; }
+          { protocol = "udp"; fromPort = 8125 ; toPort = 8125 ; sourceIp = "0.0.0.0/0"; }
+          { protocol = "tcp"; fromPort = 8546 ; toPort = 8546 ; sourceIp = "0.0.0.0/0"; }
+          { protocol = "tcp"; fromPort = 9076 ; toPort = 9076 ; sourceIp = "0.0.0.0/0"; }
+          { protocol = "tcp"; fromPort = 30303; toPort = 30303; sourceIp = "0.0.0.0/0"; }
+        ];
       };
     };
     route53HostedZones.hz = { config, ... }: {
