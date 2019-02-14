@@ -409,11 +409,11 @@ with goguenPkgs; {
           extraGroups = [ "systemd-journal" ];
         };
 
-    # fileSystems."/data" = {
-    #   device = "/dev/xvdh";
-    #   fsType = "ext4";
-    #   autoFormat = true;
-    # };
+    fileSystems."/data" = {
+      device = "/dev/xvdf";
+      fsType = "ext4";
+      autoFormat = true;
+    };
 
     systemd.services.mantis = {
       requires = [ "${cfg.vmType}.service" "keys.target" ];
@@ -433,7 +433,7 @@ with goguenPkgs; {
         StartLimitInterval = 60;
         StartLimitBurst = 10;
         KillSignal = "SIGINT";
-        WorkingDirectory = cfg.dataDir;
+        # WorkingDirectory = cfg.dataDir;
         PrivateTmp = true;
       };
       preStart = ''
@@ -455,7 +455,7 @@ with goguenPkgs; {
         TimeoutStartSec = "0";
         Restart = "always";
       };
-      script = "${goguenPkgs.${cfg.vmType}}/${cfg.vmType}-vm 8888 0.0.0.0";
+      script = "${goguenPkgs.${cfg.vmType}}/bin/${cfg.vmType}-vm 8888 0.0.0.0";
     };
 
     services.mantis = {
