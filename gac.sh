@@ -1,8 +1,19 @@
 #!/bin/sh
-set -xeu
+set -eu
+
+usage() {
+        echo "$(basename $0) [--verbose] COMMAND ARGS.." >&2
+        exit 1
+}
 
 cd `dirname $0`
 
+while test -n "$1"
+do case "$1" in
+           --verbose ) set -x;;
+           --help | "--"* ) usage;;
+           * ) break;;
+   esac; shift; done
 cmd=$1; shift
 
 CLUSTER=create-.config.sh
@@ -10,11 +21,13 @@ if test -f .config.sh
 then . ./.config.sh
 else if test ${cmd} != "repl" -a ${cmd} != "eval"; then echo "ERROR:  echo CLUSTER=your-cluster-name > .config.sh" >&2; exit 1; fi
 fi
+ALL_NODES="mantis-a-0 mantis-a-1 mantis-b-0 mantis-b-1 mantis-c-0 "
 
 nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).goguenNixpkgs' | xargs echo)
 nixops_out="$(nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nixops.outPath' | xargs echo)"
 nixops=${nixops_out}/bin/nixops
 nix_opts="-I nixpkgs=${nixpkgs_out} -I nixops=${nixops_out}/share/nix/nixops"
+ag=$(nix-build -E '(import ((import ./lib.nix).goguenNixpkgs) {}).ag' | xargs echo)/bin/ag
 
 if test ! -f ${nixops}
 then nix-store --realise ${nixops}
@@ -60,27 +73,81 @@ generate_keys () {
 }
 
 case ${cmd} in
-        create | c ) ${nixops} create   ${nixops_subopts} ${nixops_constituents}
-                     deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
-                     echo -n "Enter access key ID (aws_access_key_id at ~/.aws/credentials): "
-                     read AKID
-                     ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
-                     generate_keys
-                     ${nixops} deploy   ${nixops_subopts} "$@"
-                     ;;
-        genkey | g ) generate_keys
-                     ;;
-        deploy | d ) ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
-                     ${nixops} deploy   ${nixops_subopts} "$@" --copy-only
-                     ${nixops} deploy   ${nixops_subopts} "$@";;
-        delete )     ${nixops} destroy  ${nixops_subopts} --confirm
-                     ${nixops} delete   ${nixops_subopts};;
-        ssh )        ${nixops} ssh      ${nixops_subopts} "$@";;
-        eval )       nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
-        repl )       nix repl        ${nix_opts} --arg depl "${nixops_network_expr}" \
-                                                                    ./network.nix \
-                                                 --argstr nixpkgsSrc ${nixpkgs_out};;
-        info   | i ) ${nixops} info     ${nixops_subopts};;
-        re )         $0 delete && $0 create && $0 deploy;;
-        * ) echo "ERROR: unknown command '${cmd}'" >&2; exit 1;;
+###
+###
+###
+eval )       nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
+repl )       nix repl        ${nix_opts} --arg depl "${nixops_network_expr}" \
+                                                            ./network.nix \
+                                         --argstr nixpkgsSrc ${nixpkgs_out};;
+###
+###
+###
+genkey | g ) generate_keys;;
+create | c ) ${nixops} create   ${nixops_subopts} ${nixops_constituents}
+             deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
+             echo -n "Enter access key ID (aws_access_key_id at ~/.aws/credentials): "
+             read AKID
+             ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
+             generate_keys
+             ${nixops} deploy   ${nixops_subopts} "$@"
+             ;;
+delete )     ${nixops} destroy  ${nixops_subopts} --confirm
+             ${nixops} delete   ${nixops_subopts};;
+re )         $0 delete && $0 create && $0 deploy;;
+info   | i ) ${nixops} info     ${nixops_subopts};;
+###
+###
+###
+staged-deploy )
+             ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
+             ${nixops} deploy   ${nixops_subopts} "$@" --copy-only
+             ${nixops} deploy   ${nixops_subopts} "$@";;
+deploy | d ) ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
+             ${nixops} deploy   ${nixops_subopts} "$@";;
+deploy-one | one )
+             $0 deploy --include mantis-a-0;;
+###
+###
+###
+ssh )        ${nixops} ssh          ${nixops_subopts} "$@";;
+ssh-all )    ${nixops} ssh-for-each ${nixops_subopts} --parallel --include ${ALL_NODES} -- "$@";;   
+###
+###
+###
+restart )    $0        ssh-all      systemctl restart mantis
+             echo "### new start date:  $($0 since mantis-a-0)";;
+###
+###
+###
+since )      node=$1
+             ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show mantis --value --property WatchdogTimestamp | cut -d' ' -f3;;
+journal-on | jon ) node=$1
+             ${nixops} ssh          ${nixops_subopts} ${node} -- journalctl  -u mantis --since $($0 since ${node});;
+journal    | jall | j )
+             start_sample_node='mantis-a-0'
+             since=${1:-$($0 since ${start_sample_node})}
+             echo "### journal since:  ${since}" >&2
+             $0        ssh-all      journalctl -u mantis --since ${since};;
+follow | f ) node=${1:-'mantis-a-0'}
+             $0        ssh ${node} -- journalctl -fu mantis;;
+grep-since ) since=$1; shift
+             echo "### journal since:  ${since}" >&2
+             echo "### filter:         ag $*" >&2
+             $0        journal "${since}" 2>&1 | ${ag} "$@";;
+grep )       start_sample_node='mantis-a-0'
+             since=$($0 since ${start_sample_node})
+             $0        grep-since ${since} "$@";;
+             
+###
+###
+###
+blocks )     $0        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' -f5,14-;;
+roles )      $0        grep 'role changed|LEADER';;
+exceptions | ex )
+             $0        grep -i exception | ag -v 'RiemannBatchClient|exception.counter';;
+###
+###
+###
+* ) echo "ERROR: unknown command '${cmd}'" >&2; exit 1;;
 esac
