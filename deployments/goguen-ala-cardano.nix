@@ -19,8 +19,16 @@ let
         };
       };
     };
-    config.services.mantis = {
-      inherit nodeName vmType;
+
+    config = {
+      deployment.keys.mantis-node = {
+        keyFile = ../static + "/${nodeName}.key";
+        user = "mantis";
+        destDir = "/var/lib/keys";
+      };
+      services.mantis = {
+        inherit nodeName vmType;
+      };
     };
   };
 in {

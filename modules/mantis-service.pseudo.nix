@@ -19,8 +19,7 @@ let
   machines          = mantisMachines;
   # faucetAddresses  = import (there "faucet-addresses.nix");
   faucetAddresses   = { faucetA = "347715541c4e6791d1c180892214597bd879ec30"; faucetB = "54d58e16e3d03b40c5b9df8f0527f930b444f2af"; faucetC = "e03a3d53e863ca48b0c8386676b99d3daf35a23f"; };
-  # nodeIds          = import (there "node-ids.nix");
-  nodeIds           = { mantis-a-0 = { id = "b63846ff22bc9ea4f73a354ca8a0014ee0136a130055b7706b8f11c3484a2bb659c20a9ce9253cb0168dd523b9131e56112b49beaeb2ee6d562941ee881d8b37"; }; mantis-a-1 = { id = "b099728b080f52e82a13893e995181aa4ebf69d1e18019d23b392e24334c6f557922f32313b30be7528d2ef350c29232e6183e702533cc20b53d7beed4d2205e"; }; mantis-b-0 = { id = "a5df739652447609c300b89223919ca00c8704f06ace21ec4bb6ce160034f7de48d3166817e744bd96c88c9f22165f95ec50b47e20bd444d98deaacb6a59bba1"; }; mantis-b-1 = { id = "d9b5cadb87a5bda45ecf9fde7f16a477aa5bbead4ae2f9548737e659d4ad83d13ac564f860a0796a6347e2d5766b937cfc620acf80ce7ab6f09efad47467d6ff"; }; mantis-c-0 = { id = "a2cbb6d998d9655a51d6f57c8e7d9158112e5e0b6676a145c24ac4f9c726e092a3caccf77c99b377395aa800bb00fd31c08a8a09ac2cc37a0e10d61b24b0de23"; }; };
+  nodeIds          = import ./../static/mantis-node-ids.nix;
   allNodes          = recursiveUpdate machines nodeIds;
   node              = allNodes.${cfg.nodeName};
   otherNodes        = attrValues (removeAttrs allNodes [ cfg.nodeName ]);
@@ -417,31 +416,32 @@ with goguenPkgs; {
     # };
 
     systemd.services.mantis = {
-      requires = [ "${cfg.vmType}.service" ];
+      requires = [ "${cfg.vmType}.service" "keys.target" ];
       wantedBy = [ "multi-user.target" ];
+      after = [ "keys.target" ];
       unitConfig.RequiresMountsFor = "/data";
       enable = true;
-      path = [
-        (storePath pkgs.openjdk8)
-        (storePath pkgs.gawk)
-        (storePath pkgs.gnused)
-      ];
+      path = with pkgs; [ gawk gnused openjdk8 mantis ];
       serviceConfig = {
         PermissionsStartOnly = true;
-        TimeoutStartSec = "0";
+        User = "mantis";
+        Group = "users";
+        # Allow a maximum of 5 retries separated by 30 seconds, in total capped by 200s
         Restart = "always";
+        RestartSec = 30;
+        StartLimitInterval = 200;
+        StartLimitBurst = 5;
+        KillSignal = "SIGINT";
+        WorkingDirectory = cfg.dataDir;
+        PrivateTmp = true;
+        Type = "notify";
       };
       preStart = ''
         mkdir -p ${cfg.dataDir}
-        if [ ! -f ${cfg.dataDir}/node.key ]; then
-           echo "no key found, copying key from /root/keys.txt to ${cfg.dataDir}/node.key"
-           cp /root/keys.txt ${cfg.dataDir}/node.key
-        else
-           echo "key found at ${cfg.dataDir}/node.key, no action required"
-        fi;
+        [ -f /var/lib/keys/mantis-node ] && cp -f /var/lib/keys/mantis-node ${cfg.dataDir}/node.key
         chown -R mantis ${cfg.dataDir}
       '';
-       script = "${mantis}/mantis mantis -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}";
+       script = "mantis mantis -Dconfig.file=/etc/mantis/mantis.conf -Dlogback.configurationFile=/etc/mantis/logback.xml ${cfg.jvmOptions}";
        restartTriggers = [ mantis_conf logback_xml genesis_json ];
     };
 

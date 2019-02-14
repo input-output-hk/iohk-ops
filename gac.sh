@@ -1,6 +1,8 @@
 #!/bin/sh
 set -xeu
 
+cd `dirname $0`
+
 cmd=$1; shift
 
 CLUSTER=create-.config.sh
@@ -34,13 +36,39 @@ nixops_network_expr="import <nixops/eval-machine-info.nix> { \
     checkConfigurationOptions = false; \
   }"
 
+generate_keys () {
+  export JAVA_HOME=`nix-build -E  "(import (import ./lib.nix).goguenNixpkgs {}).pkgs.openjdk8"  --no-out-link`
+  MANTIS=`nix-build -E  "(import ./goguen/. {}).mantis"`
+  NODES="a-0 a-1 b-0 b-1 c-0"
+  NODE_IDS="static/mantis-node-ids.nix"
+
+  echo "{" > "$NODE_IDS"
+
+  for n in $NODES; do 
+    KEY_FILE="static/mantis-$n.key"
+    
+    if [ ! -f "$KEY_FILE" ]; then
+      $MANTIS/bin/eckeygen > "$KEY_FILE"
+    fi
+    
+    NODE_ID="`sed -n 2p \"$KEY_FILE\"`"
+    echo "  mantis-$n = { id = \"$NODE_ID\"; };" >> "$NODE_IDS"
+  done
+
+  echo "}" >> "$NODE_IDS"
+
+}
+
 case ${cmd} in
         create | c ) ${nixops} create   ${nixops_subopts} ${nixops_constituents}
                      deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
                      echo -n "Enter access key ID (aws_access_key_id at ~/.aws/credentials): "
                      read AKID
                      ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
+                     generate_keys
                      ${nixops} deploy   ${nixops_subopts} "$@"
+                     ;;
+        genkey | g ) generate_keys
                      ;;
         deploy | d ) ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
                      ${nixops} deploy   ${nixops_subopts} "$@" --copy-only
