@@ -28,7 +28,7 @@ in {
       path = [ icarusBackend ];
       serviceConfig = {
         User = "icarus-backend";
-        WorkingDirectory = config.users.icarus-backend.home;
+        WorkingDirectory = config.users.users.icarus-backend.home;
       };
       script = ''
         mkdir -p config

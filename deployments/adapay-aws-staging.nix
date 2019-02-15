@@ -6,7 +6,6 @@ let
   region = "eu-central-1";
   zone = "eu-central-1a";
 in {
-  requires = [ ./adapay.nix ];
   adapay = { config, pkgs, lib, resources, ... }: {
     ec2.hvm = true;
 
