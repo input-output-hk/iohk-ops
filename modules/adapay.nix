@@ -4,7 +4,7 @@ with lib;
 
 let
   cfg = config.services.adapay;
-  rev = "e5344e068a2c7b0081afc7acd3c9d21ca0da5fe6";
+  rev = "5677e38059c22b1c56583c3664534330d0704859";
   ref = "nix";
   # need ssh-agent forwarding to fetch private repo using your ssh key
   adapaySrc = builtins.fetchGit {
@@ -27,19 +27,37 @@ in {
       isSystemUser = true;
       extraGroups = [ "keys" ];
     };
-    systemd.services.adapay = {
-      wantedBy = [ "multi-user.target" ];
-      path = [ adapay ];
-      serviceConfig = {
-        User = "adapay";
-        WorkingDirectory = config.users.users.adapay.home;
+    systemd.services = let
+      makeAdapayWorker = name: {
+        after = [ "adapay.service" ];
+        wantedBy = [ "multi-user.target" ];
+        path = [ adapay ];
+        serviceConfig = {
+          User = "adapay";
+          WorkingDirectory = config.users.users.adapay.home;
+        };
+        script = ''
+          NODE_ENV=${cfg.environment} exec adapay-${name}-worker
+        '';
       };
-      script = ''
-        mkdir -p config
-        [ -f /run/keys/adapay-${cfg.environment}.js ] && cp -f /run/keys/adapay-${cfg.environment}.js ./config/${cfg.environment}.js
-        ln -svf ${adapay}/node_modules/adapay/src
-        NODE_ENV=${cfg.environment} exec adapay
-      '';
+    in {
+      adapay = {
+        wantedBy = [ "multi-user.target" ];
+        path = [ adapay ];
+        serviceConfig = {
+          User = "adapay";
+          WorkingDirectory = config.users.users.adapay.home;
+        };
+        script = ''
+          mkdir -p config
+          [ -f /run/keys/adapay-${cfg.environment}.js ] && cp -f /run/keys/adapay-${cfg.environment}.js ./config/${cfg.environment}.js
+          ln -svf ${adapay}/node_modules/adapay/src
+          NODE_ENV=${cfg.environment} exec adapay
+        '';
+      };
+      adapay-price-worker = makeAdapayWorker "price";
+      adapay-promo-code-gen-worker = makeAdapayWorker "promo-code-gen";
+      adapay-status-updater-worker = makeAdapayWorker "status-updater";
     };
   };
 }
