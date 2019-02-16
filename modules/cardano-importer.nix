@@ -46,7 +46,7 @@ in {
     };
     systemd.services.cardano-importer = {
       wantedBy = [ "multi-user.target" ];
-      path = [ cardano.cardano-sl-blockchain-importer ];
+      path = [ cardano.cardano-sl-blockchain-importer-static ];
       serviceConfig = {
         User = "cardano";
         WorkingDirectory = config.users.users.cardano.home;

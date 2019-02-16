@@ -132,15 +132,5 @@ in {
       destinationCidrBlock = "0.0.0.0/0";
       gatewayId = resources.vpcInternetGateways.adapayIGW;
     };
-    #rdsDbInstances.adapayDB = {
-    #  inherit region accessKeyId;
-    #  instanceClass = "db.t2.small";
-    #  allocatedStorage = 50;
-    #  masterUsername = "devops";
-    #  masterPassword = builtins.readFile ../static/adapay-staging-rds-pw.secret;
-    #  port = 5432;
-    #  engine = "postgres";
-    #  dbName = "devops";
-    #};
   };
 }
