@@ -12,12 +12,15 @@ in {
     deployment = {
       ec2 = {
         inherit accessKeyId region zone;
-        ebsInitialRootDiskSize = 20;
+        ebsInitialRootDiskSize = 200;
         instanceType = "t2.medium";
         keyPair = resources.ec2KeyPairs.adapayKey;
         subnetId = resources.vpcSubnets.adapayVPCSubnet;
         associatePublicIpAddress = true;
-        securityGroupIds = [ resources.ec2SecurityGroups.adapaySG.name ];
+        securityGroupIds = [
+          resources.ec2SecurityGroups.adapaySG.name
+          resources.ec2SecurityGroups.adapaySGimporter.name
+        ];
       };
       targetEnv = "ec2";
       route53 = {
@@ -40,7 +43,10 @@ in {
         keyPair = resources.ec2KeyPairs.adapayKey;
         subnetId = resources.vpcSubnets.adapayVPCSubnet;
         associatePublicIpAddress = true;
-        securityGroupIds = [ resources.ec2SecurityGroups.adapaySG.name ];
+        securityGroupIds = [
+          resources.ec2SecurityGroups.adapaySG.name
+          resources.ec2SecurityGroups.adapaySGadapay.name
+        ];
       };
       targetEnv = "ec2";
       route53 = {
@@ -64,7 +70,10 @@ in {
         elasticIPv4 = resources.elasticIPs.adapayIP;
         subnetId = resources.vpcSubnets.adapayVPCSubnet;
         associatePublicIpAddress = true;
-        securityGroupIds = [ resources.ec2SecurityGroups.adapaySG.name ];
+        securityGroupIds = [
+          resources.ec2SecurityGroups.adapaySG.name
+          resources.ec2SecurityGroups.adapaySGnginx.name
+        ];
       };
       targetEnv = "ec2";
       route53 = {
@@ -84,20 +93,35 @@ in {
     ec2KeyPairs.adapayKey = {
       inherit accessKeyId region;
     };
-    ec2SecurityGroups.adapaySG = { resources, ... }: {
-      inherit accessKeyId region;
-      vpcId = resources.vpc.adapayVPC;
-      rules = let
-        allowPortSingle = source: port: {
-            fromPort = port;
-            toPort = port;
-            sourceIp = source;
-        };
-        allowPortPublic = allowPortSingle "0.0.0.0/0";
-      in [
-        (allowPortSingle deployerIP 22)
-        ] ++
-        (map allowPortPublic [ 80 443 22 ]);
+    ec2SecurityGroups = let
+      allowPortSource = source: port: {
+          fromPort = port;
+          toPort = port;
+          sourceIp = source;
+      };
+      allowPortPublic = allowPortSource "0.0.0.0/0";
+      allowPortVPC = allowPortSource "10.0.0.0/16";
+    in {
+      adapaySG = { resources, ... }: {
+        inherit accessKeyId region;
+        vpcId = resources.vpc.adapayVPC;
+        rules = map allowPortPublic [ 22 ];
+      };
+      adapaySGnginx = { resources, ... }: {
+        inherit accessKeyId region;
+        vpcId = resources.vpc.adapayVPC;
+        rules = map allowPortPublic [ 80 443 ];
+      };
+      adapaySGimporter = { resources, ... }: {
+        inherit accessKeyId region;
+        vpcId = resources.vpc.adapayVPC;
+        rules = [ (allowPortVPC 8200) ];
+      };
+      adapaySGadapay = { resources, ... }: {
+        inherit accessKeyId region;
+        vpcId = resources.vpc.adapayVPC;
+        rules = [ (allowPortVPC 8081) ];
+      };
     };
     vpc.adapayVPC = {
       inherit accessKeyId region;
