@@ -30,14 +30,18 @@
       cardano-importer = {
         inherit environment;
         enable = true;
-        pguser = "cardano_importer";
-        pgdb = "cardano_importer";
+        pguser = "importer_rw";
+        pgdb = "importer";
         pghost = "adapay-staging.c9kpysxcz4mb.eu-central-1.rds.amazonaws.com";
         pgpwFile = "/run/keys/importer-pg-pw";
       };
     };
     deployment.keys = {
-      importer-pg-pw.keyFile = ../static/cardano-importer-pg-pw.secret;
+      importer-pg-pw = {
+        keyFile = ../static/cardano-importer-pg-pw.secret;
+        user = "cardano";
+      };
+      
     };
   };
   adapay = { config, pkgs, resources, ... }: {
@@ -55,8 +59,14 @@
       };
     };
     deployment.keys = {
-      icarus-backend.keyFile = ../static/icarus-backend + "-${environment}.js";
-      adapay.keyFile = ../static/adapay + "-${environment}.js";
+      "icarus-backend-${environment}.js" = {
+        keyFile = ../static/icarus-backend + "-${environment}.js";
+        user = "icarus-backend";
+      };
+      "adapay-${environment}.js" = {
+        keyFile = ../static/adapay + "-${environment}.js";
+        user = "adapay";
+      };
     };
   };
 }

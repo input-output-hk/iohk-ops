@@ -4,7 +4,7 @@ with lib;
 
 let
   cfg = config.services.adapay;
-  rev = "4dc5b17652174ca6584f9a6a4aea0c82a74764a9";
+  rev = "e5344e068a2c7b0081afc7acd3c9d21ca0da5fe6";
   ref = "nix";
   # need ssh-agent forwarding to fetch private repo using your ssh key
   adapaySrc = builtins.fetchGit {
@@ -37,6 +37,7 @@ in {
       script = ''
         mkdir -p config
         [ -f /run/keys/adapay-${cfg.environment}.js ] && cp -f /run/keys/adapay-${cfg.environment}.js ./config/${cfg.environment}.js
+        ln -svf ${adapay}/node_modules/adapay/src
         NODE_ENV=${cfg.environment} exec adapay
       '';
     };

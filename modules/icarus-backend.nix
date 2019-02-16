@@ -37,7 +37,8 @@ in {
       script = ''
         mkdir -p config
         [ -f /run/keys/icarus-backend-${cfg.environment}.js ] && cp -f /run/keys/icarus-backend-${cfg.environment}.js ./config/${cfg.environment}.js
-        NODE_ENV=${cfg.environment} exec project-icarus-backend
+        ln -svf ${icarusBackend}/node_modules/icarus-poc-backend-service/src
+        NODE_ENV=${cfg.environment} exec icarus-backend-service
       '';
     };
   };
