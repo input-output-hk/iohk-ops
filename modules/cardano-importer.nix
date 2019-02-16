@@ -66,7 +66,7 @@ in {
         User = "cardano";
         WorkingDirectory = config.users.users.cardano.home;
       };
-      script = let pgPassFile = toString cfg.pgpassFile;
+      script = let pgPassFile = toString cfg.pgpwFile;
       in ''
         [ -f ${pgPassFile} ] && cp -f ${pgPassFile} pg-pw
 

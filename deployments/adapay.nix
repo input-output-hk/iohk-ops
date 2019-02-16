@@ -48,8 +48,8 @@
       };
     };
     deployment.keys = {
-      icarus-backend.keyFile = ../static/icarus-backend-production.js;
-      adapay.keyFile = ../static/adapay-production.js;
+      icarus-backend.keyFile = ../static/icarus-backend + "-${environment}.js";
+      adapay.keyFile = ../static/adapay + "-${environment}.js";
     };
   };
 }
