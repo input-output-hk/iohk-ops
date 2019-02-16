@@ -15,6 +15,10 @@ let
 in {
   options.services.icarus-backend = {
     enable = mkEnableOption "enable icarus-backend";
+    environment = mkOption {
+      description = "environment";
+      type = types.str;
+    };
   };
   config = lib.mkIf cfg.enable {
     users.users.icarus-backend = {
@@ -32,8 +36,8 @@ in {
       };
       script = ''
         mkdir -p config
-        [ -f /run/keys/icarus-backend-production.js ] && cp -f /run/keys/icarus-backend-production.js ./config/production.js
-        NODE_ENV=production exec project-icarus-backend
+        [ -f /run/keys/icarus-backend-${cfg.environment}.js ] && cp -f /run/keys/icarus-backend-${cfg.environment}.js ./config/${cfg.environment}.js
+        NODE_ENV=${cfg.environment} exec project-icarus-backend
       '';
     };
   };

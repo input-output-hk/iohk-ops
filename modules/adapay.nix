@@ -15,6 +15,10 @@ let
 in {
   options.services.adapay = {
     enable = mkEnableOption "enable adapay";
+    environment = mkOption {
+      description = "environment";
+      type = types.str;
+    };
   };
   config = mkIf cfg.enable {
     users.users.adapay = {
@@ -32,8 +36,8 @@ in {
       };
       script = ''
         mkdir -p config
-        [ -f /run/keys/adapay-production.js ] && cp -f /run/keys/adapay-production.js ./config/production.js
-        NODE_ENV=production exec adapay
+        [ -f /run/keys/adapay-${cfg.environment}.js ] && cp -f /run/keys/adapay-${cfg.environment}.js ./config/${cfg.environment}.js
+        NODE_ENV=${cfg.environment} exec adapay
       '';
     };
   };

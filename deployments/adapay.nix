@@ -26,19 +26,24 @@
     services = {
       cardano-importer = {
         enable = true;
-        pguser = "cardano";
+        pguser = "cardano_importer";
         pgdb = "cardano_importer";
-        pghost = "some-aws-host";
-        pgpw = builtins.readFile ../static/cardano-importer-pw;
+        pghost = "adapay-staging.c9kpysxcz4mb.eu-central-1.rds.amazonaws.com";
+        pgpwFile = "/run/keys/importer-pg-pw";
       };
+    };
+    deployment.keys = {
+      importer-pg-pw.keyFile = ../static/cardano-importer-pg-pw;
     };
   };
   adapay = { config, pkgs, resources, ... }: {
     services = {
       icarus-backend = {
+        inherit environment;
         enable = true;
       };
       adapay = {
+        inherit environment;
         enable = true;
       };
     };

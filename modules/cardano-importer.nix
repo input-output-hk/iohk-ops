@@ -11,16 +11,31 @@ let
     inherit rev;
     sha256 = "0580v3zdlf24dlnsf1zksvqbrkldc1483n73164rdibig83h69y2";
   };
+  environments = {
+    staging = {
+      confKey = "mainnet_dryrun_full";
+      relay = "relays.awstest.iohkdev.io";
+    };
+    production = {
+      confKey = "mainnet_full";
+      relay = "relays.cardano-mainnet.iohk.io";
+    };
+  };
+  env = environments.${cfg.environment};
   cardano = import cardanoSrc { gitrev = rev; };
   topofile = pkgs.writeText "topology.yaml" ''
     wallet:
-      relays: [[{ host: relays.cardano-mainnet.iohk.io }]]
+      relays: [[{ host: ${env.relay}]]
       valency: 1
       fallbacks: 7
   '';
 in {
   options.services.cardano-importer = {
     enable = mkEnableOption "enable cardano importer";
+    environment = mkOption {
+      description = "environment";
+      type = types.str;
+    };
     pguser = mkOption {
       description = "postgres user";
       type = types.str;
@@ -33,9 +48,9 @@ in {
       description = "postgres host";
       type = types.str;
     };
-    pgpw = mkOption {
-      description = "postgres pw";
-      type = types.str;
+    pgpwFile = mkOption {
+      description = "postgres pw file";
+      type = types.path;
     };
   };
   config = lib.mkIf cfg.enable {
@@ -51,8 +66,11 @@ in {
         User = "cardano";
         WorkingDirectory = config.users.users.cardano.home;
       };
-      script = ''
-        exec cardano-blockchain-importer --configuration-key mainnet_full --configuration-file ${cardanoSrc}/lib/configuration.yaml --topology ${topofile} --statsd-server 127.0.0.1:8125 --metrics +RTS -T -RTS --postgres-user sam --postgres-name sam
+      script = let pgPassFile = toString cfg.pgpassFile;
+      in ''
+        [ -f ${pgPassFile} ] && cp -f ${pgPassFile} pg-pw
+
+        exec cardano-blockchain-importer --configuration-key ${env.confKey} --configuration-file ${cardanoSrc}/lib/configuration.yaml --topology ${topofile} --statsd-server 127.0.0.1:8125 --metrics +RTS -T -RTS --postgres-user ${cfg.pguser} --postgres-name ${cfg.pgdb} --postgres-pass $(cat pg-pw)
       '';
     };
   };
