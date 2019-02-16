@@ -16,6 +16,7 @@
     services.dd-agent.tags = [ "env:${environment}" "role:adapay" ];
   };
   nginx = { config, pkgs, resources, ... }: {
+    networking.firewall.allowedTCPPorts = [ 80 443 ];
     services = {
       nginx = {
         enable = true;
@@ -36,6 +37,7 @@
     };
   };
   importer = { config, pkgs, resources, ... }: {
+    networking.firewall.allowedTCPPorts = [ 8200 ];
     environment.systemPackages = with pkgs; [
       postgresql
     ];
@@ -58,6 +60,7 @@
     };
   };
   adapay = { config, pkgs, resources, ... }: {
+    networking.firewall.allowedTCPPorts = [ 8081 ];
     environment.systemPackages = with pkgs; [
       postgresql
     ];
