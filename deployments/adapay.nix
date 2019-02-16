@@ -14,6 +14,12 @@
       ../modules/icarus-backend.nix
     ];
     services.dd-agent.tags = [ "env:${environment}" "role:adapay" ];
+    users.users."alan.verbner" = {
+        isNormalUser = true;
+        description = "Alan Verbner";
+        extraGroups = [ "systemd-journal" ];
+        openssh.authorizedKeys.keys = [ "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCvQkw2IYLIOiQysBJn5UuHkd7mgNkY0Q/TPP2uCPUGBZZGSIop4BzCnnPOYKn+zaMt4bLmdUuWHDs7+XKymV5RlmeMrptwIAL9XWX3d1AnWMCRgaE9ByXkEIMvMeKxUq3y2pY0e9zZLWsJvtZNzeTy227NQYYOxgx/IXdCacKdPEKENWBq6sPehP+9q+0uKW6zVUXHsCUhBXlE/FCwdh1HKoOSKyFYsvu8tIRF5u0crHQ1zDANw9ASRhmYoxvHgfEBY3GiwywTh/JHRuMS5CyD4PeKSOmYq6BALZVyMun0Ol8+XcOh63ljOlfZJGR/xWDaE0lFSuwlkG2UmGI7jLIJ alverbner@gmail.com" ];
+    };
   };
   nginx = { config, pkgs, resources, ... }: {
     networking.firewall.allowedTCPPorts = [ 80 443 ];
