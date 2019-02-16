@@ -33,7 +33,7 @@ in {
       script = ''
         mkdir -p config
         [ -f /run/keys/adapay-production.js ] && cp -f /run/keys/adapay-production.js ./config/production.js
-        exec NODE_ENV=production adapay
+        NODE_ENV=production exec adapay
       '';
     };
   };

@@ -52,7 +52,7 @@ in {
         WorkingDirectory = config.users.users.cardano.home;
       };
       script = ''
-        cardano-blockchain-importer --configuration-key mainnet_full --configuration-file ${cardanoSrc}/lib/configuration.yaml --topology ${topofile} --statsd-server 127.0.0.1:8125 --metrics +RTS -T -RTS --postgres-user sam --postgres-name sam
+        exec cardano-blockchain-importer --configuration-key mainnet_full --configuration-file ${cardanoSrc}/lib/configuration.yaml --topology ${topofile} --statsd-server 127.0.0.1:8125 --metrics +RTS -T -RTS --postgres-user sam --postgres-name sam
       '';
     };
   };

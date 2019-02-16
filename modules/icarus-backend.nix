@@ -33,7 +33,7 @@ in {
       script = ''
         mkdir -p config
         [ -f /run/keys/icarus-backend-production.js ] && cp -f /run/keys/icarus-backend-production.js ./config/production.js
-        NODE_ENV=production icarus-backend
+        NODE_ENV=production exec project-icarus-backend
       '';
     };
   };
