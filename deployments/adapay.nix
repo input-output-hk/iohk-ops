@@ -19,6 +19,19 @@
     services = {
       nginx = {
         enable = true;
+        virtualHosts = {
+          "${environment}.adapay.iohk.io" = {
+            enableACME = true;
+            forceSSL = true;
+            locations."/".extraConfig = ''
+              proxy_pass http://adapay:8081;
+              proxy_set_header Host $http_host;
+              proxy_set_header REMOTE_ADDR $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto https;
+            '';
+          };
+        };
       };
     };
   };
@@ -41,7 +54,7 @@
         keyFile = ../static/cardano-importer-pg-pw.secret;
         user = "cardano";
       };
-      
+
     };
   };
   adapay = { config, pkgs, resources, ... }: {
