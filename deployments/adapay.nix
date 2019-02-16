@@ -25,6 +25,7 @@
   importer = { config, pkgs, resources, ... }: {
     services = {
       cardano-importer = {
+        inherit environment;
         enable = true;
         pguser = "cardano_importer";
         pgdb = "cardano_importer";
