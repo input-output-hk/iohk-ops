@@ -34,7 +34,7 @@
       };
     };
     deployment.keys = {
-      importer-pg-pw.keyFile = ../static/cardano-importer-pg-pw;
+      importer-pg-pw.keyFile = ../static/cardano-importer-pg-pw.secret;
     };
   };
   adapay = { config, pkgs, resources, ... }: {
