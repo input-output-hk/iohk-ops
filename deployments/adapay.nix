@@ -23,6 +23,9 @@
     };
   };
   importer = { config, pkgs, resources, ... }: {
+    environment.systemPackages = with pkgs; [
+      postgresql
+    ];
     services = {
       cardano-importer = {
         inherit environment;
@@ -38,6 +41,9 @@
     };
   };
   adapay = { config, pkgs, resources, ... }: {
+    environment.systemPackages = with pkgs; [
+      postgresql
+    ];
     services = {
       icarus-backend = {
         inherit environment;
