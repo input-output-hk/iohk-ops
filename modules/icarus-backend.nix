@@ -4,14 +4,14 @@ with lib;
 
 let
   cfg = config.services.icarus-backend;
-  rev = "9f965ef1fc58e5d79006e9ef405039f5f28dce63";
+  rev = "fca8a15ab90f342180f33a403f169cf136cfb52c";
   icarusBackendSrc = pkgs.fetchFromGitHub {
     owner = "input-output-hk";
-    repo = "project-icarus-importer";
+    repo = "project-icarus-backend-service";
     inherit rev;
-    sha256 = "0z5ccs95q05nhnmp16g7nbc2pqqbmsqlriffffyjdzn8jxh7wy7f";
+    sha256 = "1xclwd5pdxhqfr4mga9qdmqm3m8zc5dblynw8kbq4zd12r2kk20p";
   };
-  icarusBackend = import icarusBackendSrc {};
+  icarusBackend = (import icarusBackendSrc).project-icarus-backend;
 in {
   options.services.icarus-backend = {
     enable = mkEnableOption "enable icarus-backend";

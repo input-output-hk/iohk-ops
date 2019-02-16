@@ -4,13 +4,14 @@ with lib;
 
 let
   cfg = config.services.adapay;
-  rev = "cb5f8262e3eedec31866d958400cb5f962320a7e";
+  rev = "4dc5b17652174ca6584f9a6a4aea0c82a74764a9";
+  ref = "nix";
   # need ssh-agent forwarding to fetch private repo using your ssh key
   adapaySrc = builtins.fetchGit {
     url = "ssh://git@github.com/input-output-hk/summit-AdaPay";
-    inherit rev;
+    inherit rev ref;
   };
-  adapay = import adapaySrc {};
+  adapay = (import adapaySrc).adapay;
 in {
   options.services.adapay = {
     enable = mkEnableOption "enable adapay";
