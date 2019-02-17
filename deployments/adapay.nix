@@ -41,6 +41,7 @@
         ];
       };
     };
+    networking.firewall.allowedTCPPorts = [ 9100 ];
     users.users = if builtins.pathExists ../static/extra-users.nix then import ../static/extra-users.nix else { };
   };
   nginx = { config, pkgs, resources, ... }: {
