@@ -43,12 +43,12 @@
       postgresql
     ];
     services = {
-      cardano-importer = {
+      cardano-importer = let
+        pgConfig = import ../static/importer-pgconfig + "-${environment}.nix";
+      in {
         inherit environment;
+        inherit (pgConfig) pguser pgdb pghost;
         enable = true;
-        pguser = "importer_rw";
-        pgdb = "importer";
-        pghost = "adapay-staging.c9kpysxcz4mb.eu-central-1.rds.amazonaws.com";
         pgpwFile = "/run/keys/importer-pg-pw";
       };
     };
