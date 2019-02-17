@@ -30,8 +30,8 @@ in {
     systemd.services.icarus-backend = {
       wantedBy = [ "multi-user.target" ];
       path = [ icarusBackend ];
-      partOf = [ "icarus-backend-${environment}.js-key.service" ];
-      after = [ "icarus-backend-${environment}.js-key.service" ];
+      partOf = [ "icarus-backend-${cfg.environment}.js-key.service" ];
+      after = [ "icarus-backend-${cfg.environment}.js-key.service" ];
       serviceConfig = {
         User = "icarus-backend";
         WorkingDirectory = config.users.users.icarus-backend.home;
