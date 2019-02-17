@@ -128,7 +128,7 @@
         rootUrl = "%(protocol)ss://%(domain)s/grafana/";
         extraOptions = {
           AUTH_GOOGLE_ENABLED = "true";
-          AUTH_GOOGLE_CLIENT_ID = "778964826061-5v0m922g1qcbc1mdtpaf8ffevlso2v7p.apps.googleusercontent.com";
+          AUTH_GOOGLE_CLIENT_ID = "778964826061-bfqjes0ch5rfim3h7ugkialnanlmsumt.apps.googleusercontent.com";
           AUTH_GOOGLE_CLIENT_SECRET = builtins.readFile ../static/google_oauth_adapay_grafana.secret;
         };
       };
