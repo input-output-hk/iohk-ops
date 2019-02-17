@@ -90,7 +90,7 @@ in {
         associatePublicIpAddress = true;
         securityGroupIds = [
           resources.ec2SecurityGroups.adapaySG.name
-          resources.ec2SecurityGroups.adapaySGnginx.name
+          resources.ec2SecurityGroups.adapaySGmonitor.name
         ];
       };
       targetEnv = "ec2";
