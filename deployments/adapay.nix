@@ -123,6 +123,7 @@
       grafana = {
         enable = true;
         users.allowSignUp = true;
+        addr = "";
         domain = "${environment}.adapay.iohk.io";
         rootUrl = "%(protocol)ss://%(domain)s/grafana/";
         extraOptions = {
