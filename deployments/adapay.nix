@@ -44,7 +44,7 @@
     ];
     services = {
       cardano-importer = let
-        pgConfig = import ../static/importer-pgconfig- + "${environment}.nix";
+        pgConfig = import (../static/importer-pgconfig- + "${environment}.nix");
       in {
         inherit environment;
         inherit (pgConfig) pguser pgdb pghost;
