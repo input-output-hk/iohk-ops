@@ -59,6 +59,9 @@
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
               proxy_set_header X-Forwarded-Proto https;
             '';
+            locations."/grafana/".extraConfig = ''
+              proxy_pass http://monitoring:3000/;
+            '';
           };
         };
       };
@@ -313,7 +316,7 @@
               "importer"
               "adapay"
               "nginx"
-              "monitor"
+              "monitoring"
             ];
           }
         ];
