@@ -71,7 +71,7 @@ in {
       in ''
         [ -f ${pgPassFile} ] && cp -f ${pgPassFile} pg-pw
 
-        exec cardano-blockchain-importer --configuration-key ${env.confKey} --configuration-file ${cardanoSrc}/lib/configuration.yaml --topology ${topofile} --statsd-server 127.0.0.1:8125 --metrics +RTS -T -RTS --postgres-user ${cfg.pguser} --postgres-name ${cfg.pgdb} --postgres-password $(cat pg-pw) --postgres-host ${cfg.pghost}
+        exec cardano-blockchain-importer --configuration-key ${env.confKey} --configuration-file ${cardanoSrc}/lib/configuration.yaml --topology ${topofile} --statsd-server 127.0.0.1:8125 --metrics +RTS -T -RTS --postgres-user ${cfg.pguser} --postgres-name ${cfg.pgdb} --postgres-password $(cat pg-pw) --postgres-host ${cfg.pghost} --no-tls
       '';
     };
   };
