@@ -49,6 +49,7 @@
     services = {
       nginx = {
         enable = true;
+        statusPage = true;
         virtualHosts = {
           "${environment}.adapay.iohk.io" = {
             enableACME = true;
@@ -66,6 +67,8 @@
           };
         };
       };
+      prometheus.exporters.nginx.enable = true;
+
     };
   };
   importer = { config, pkgs, resources, ... }: {
