@@ -30,6 +30,7 @@ in {
     systemd.services = let
       makeAdapayWorker = name: {
         after = [ "adapay.service" ];
+        partOf = [ "adapay.service" ];
         wantedBy = [ "multi-user.target" ];
         path = [ adapay ];
         serviceConfig = {
@@ -44,6 +45,8 @@ in {
       adapay = {
         wantedBy = [ "multi-user.target" ];
         path = [ adapay ];
+        after = [ "adapay-${cfg.environment}.js-key.service" ];
+        partOf = [ "adapay-${cfg.environment}.js-key.service" ];
         serviceConfig = {
           User = "adapay";
           WorkingDirectory = config.users.users.adapay.home;
