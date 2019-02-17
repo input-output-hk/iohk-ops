@@ -23,10 +23,6 @@ in {
         ];
       };
       targetEnv = "ec2";
-      route53 = {
-        inherit accessKeyId;
-        hostname = "${environment}.adapay.iohk.io";
-      };
     };
 
     # Don't reconfigure the system from EC2 userdata on next startup
@@ -49,10 +45,6 @@ in {
         ];
       };
       targetEnv = "ec2";
-      route53 = {
-        inherit accessKeyId;
-        hostname = "${environment}.adapay.iohk.io";
-      };
     };
 
     # Don't reconfigure the system from EC2 userdata on next startup
@@ -78,7 +70,7 @@ in {
       targetEnv = "ec2";
       route53 = {
         inherit accessKeyId;
-        hostname = "${environment}.adapay.iohk.io";
+        hostName = "${environment}.adapay.iohk.io";
       };
     };
 
