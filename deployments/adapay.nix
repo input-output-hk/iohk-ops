@@ -45,7 +45,7 @@
     users.users = if builtins.pathExists ../static/extra-users.nix then import ../static/extra-users.nix else { };
   };
   nginx = { config, pkgs, resources, ... }: {
-    networking.firewall.allowedTCPPorts = [ 80 443 ];
+    networking.firewall.allowedTCPPorts = [ 80 443 9113 ];
     services = {
       nginx = {
         enable = true;
@@ -322,6 +322,17 @@
               "adapay"
               "nginx"
               "monitoring"
+            ];
+          }
+          {
+            job_name = "nginx";
+            scrape_interval = "5s";
+            static_configs = [
+              {
+                targets = [
+                  "nginx:9113"
+                ];
+              }
             ];
           }
         ];
