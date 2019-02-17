@@ -77,6 +77,29 @@ in {
     # Don't reconfigure the system from EC2 userdata on next startup
     systemd.services.amazon-init.wantedBy = lib.mkForce [ ];
   };
+  monitoring = { config, pkgs, lib, resources, ... }: {
+    ec2.hvm = true;
+
+    deployment = {
+      ec2 = {
+        inherit accessKeyId region zone;
+        ebsInitialRootDiskSize = 200;
+        instanceType = "t2.medium";
+        keyPair = resources.ec2KeyPairs.adapayKey;
+        elasticIPv4 = resources.elasticIPs.adapayIP;
+        subnetId = resources.vpcSubnets.adapayVPCSubnet;
+        associatePublicIpAddress = true;
+        securityGroupIds = [
+          resources.ec2SecurityGroups.adapaySG.name
+          resources.ec2SecurityGroups.adapaySGnginx.name
+        ];
+      };
+      targetEnv = "ec2";
+    };
+
+    # Don't reconfigure the system from EC2 userdata on next startup
+    systemd.services.amazon-init.wantedBy = lib.mkForce [ ];
+  };
   resources = {
     elasticIPs.adapayIP = {
       inherit accessKeyId region;
