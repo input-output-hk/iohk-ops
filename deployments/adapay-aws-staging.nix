@@ -86,7 +86,6 @@ in {
         ebsInitialRootDiskSize = 200;
         instanceType = "t2.medium";
         keyPair = resources.ec2KeyPairs.adapayKey;
-        elasticIPv4 = resources.elasticIPs.adapayIP;
         subnetId = resources.vpcSubnets.adapayVPCSubnet;
         associatePublicIpAddress = true;
         securityGroupIds = [
