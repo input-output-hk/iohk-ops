@@ -183,7 +183,7 @@
       };
       oauth2_proxy = {
         enable = true;
-        inherit (oauthCreds) clientID clientSecret;
+        inherit (oauthCreds) clientID clientSecret cookie;
         provider = "google";
         email.domains = [ "iohk.io" ];
         nginx.virtualHosts = [ "monitoring.${environment}.adapay.iohk.io" ];
