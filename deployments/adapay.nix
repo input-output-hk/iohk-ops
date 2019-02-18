@@ -69,7 +69,7 @@
             '';
           };
           "nginx" = {
-            listen = { addr = "0.0.0.0"; port = "9113"; };
+            listen = [{ addr = "0.0.0.0"; port = "9113"; }];
             locations."/status".extraConfig = ''
               vhost_traffic_status_display;
               vhost_traffic_status_display_format html;
