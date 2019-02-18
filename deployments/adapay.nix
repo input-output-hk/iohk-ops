@@ -179,8 +179,8 @@
                 proxy_set_header Connection "Keep-Alive";
                 proxy_set_header Proxy-Connection "Keep-Alive";
                 proxy_set_header Authorization "";
-                proxy_pass ${esConfig.esHost}/_plugin/kibana/;
-                proxy_redirect ${esConfig.esHost}/_plugin/kibana/ https://monitoring.${environment}.adapay.iohk.io/kibana/;
+                proxy_pass https://${esConfig.esHost}/_plugin/kibana/;
+                proxy_redirect https://${esConfig.esHost}/_plugin/kibana/ https://monitoring.${environment}.adapay.iohk.io/kibana/;
               '';
             };
           };
