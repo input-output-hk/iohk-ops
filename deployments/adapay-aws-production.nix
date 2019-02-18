@@ -144,7 +144,7 @@ in {
       adapaySGadapay = { resources, ... }: {
         inherit accessKeyId region;
         vpcId = resources.vpc.adapayVPC;
-        rules = []; # (allowPortVPC 8081) ];
+        rules = [ (allowPortVPC 8081) ];
       };
     };
     vpc.adapayVPC = {
