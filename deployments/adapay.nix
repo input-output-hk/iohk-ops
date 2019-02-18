@@ -370,7 +370,7 @@
                 name = "team-pager";
                 pagerduty_configs = [
                   {
-                    service_key = builtins.readFile ./static/pushover-key.secret;
+                    service_key = builtins.readFile ./static/pagerduty-key.secret;
                   }
                 ];
               }
