@@ -22,7 +22,8 @@ logs-analyze/
 static/*.secret
 static/*.js
 static/extra-users.nix
-static/adapay-oauth2-proxy.nix
+static/adapay-oauth.nix
+static/adapay-es-config.nix
 static/github_token
 static/buildkite_token
 static/id_buildfarm
