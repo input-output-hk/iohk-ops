@@ -132,13 +132,61 @@
     };
   };
   monitoring = { config, pkgs, resources, ... }: {
-    networking.firewall.allowedTCPPorts = [ 3000 ];
+    networking.firewall.allowedTCPPorts = [ 80 443 ];
     services = {
+      nginx = {
+        enable = true;
+        package = with pkgs; nginxStable.override {
+          modules = [ nginxModules.rtmp nginxModules.dav nginxModules.moreheaders nginxModules.vts ];
+        };
+        appendHttpConfig = ''
+          vhost_traffic_status_zone;
+        '';
+        virtualHosts = {
+          "monitoring.${environment}.adapay.iohk.io" = {
+            enableACME = true;
+            forceSSL = true;
+            locations."/".extraConfig = ''
+              proxy_pass http://localhost:3000;
+              proxy_set_header Host $http_host;
+              proxy_set_header REMOTE_ADDR $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto https;
+            '';
+            locations."/prometheus/".extraConfig = ''
+              proxy_pass http://monitoring:9090/;
+              proxy_set_header Host $http_host;
+              proxy_set_header REMOTE_ADDR $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto https;
+            '';
+            locations."/alertmanager/".extraConfig = ''
+              proxy_pass http://monitoring:9093/;
+              proxy_set_header Host $http_host;
+              proxy_set_header REMOTE_ADDR $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto https;
+            '';
+          };
+          "monitoring" = {
+            listen = [{ addr = "0.0.0.0"; port = 9113; }];
+            locations."/status".extraConfig = ''
+              vhost_traffic_status_display;
+              vhost_traffic_status_display_format html;
+            '';
+
+          };
+        };
+      };
+      oauth2_proxy = if builtins.pathExists ../static/adapay-oauth2-proxy.nix then import ../static/adapay-oauth2-proxy.nix else {};
+      oauth2_proxy.nginx = {
+        virtualHosts = [ "monitoring.${environment}.adapay.iohk.io" ];
+      };
       grafana = {
         enable = true;
         users.allowSignUp = true;
         addr = "";
-        domain = "${environment}.adapay.iohk.io";
+        domain = "monitoring.${environment}.adapay.iohk.io";
         rootUrl = "%(protocol)ss://%(domain)s/grafana/";
         extraOptions = {
           AUTH_GOOGLE_ENABLED = "true";
@@ -343,6 +391,7 @@
               {
                 targets = [
                   "nginx:9113"
+                  "monitoring:9113"
                 ];
               }
             ];

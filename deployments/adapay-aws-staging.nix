@@ -94,6 +94,10 @@ in {
         ];
       };
       targetEnv = "ec2";
+      route53 = {
+        inherit accessKeyId;
+        hostName = "monitoring.${environment}.adapay.iohk.io";
+      };
     };
 
     # Don't reconfigure the system from EC2 userdata on next startup
@@ -130,7 +134,7 @@ in {
       adapaySGmonitor = { resources, ... }: {
         inherit accessKeyId region;
         vpcId = resources.vpc.adapayVPC;
-        rules = map allowPortVPC [ 3000 9090 9091 9093 ];
+        rules = map allowPortPublic [ 80 443 ];
       };
       adapaySGimporter = { resources, ... }: {
         inherit accessKeyId region;
