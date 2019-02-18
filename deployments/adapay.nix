@@ -132,6 +132,7 @@
     networking.firewall.allowedTCPPorts = [ 80 443 ];
     services = let
       oauthCreds = import ../static/adapay-oauth.nix;
+      esConfig = if builtins.pathExists ../static/adapay-es-config.nix then import ../static/adapay-es-config.nix else { };
     in {
       nginx = {
         enable = true;
@@ -145,31 +146,41 @@
           "monitoring.${environment}.adapay.iohk.io" = {
             enableACME = true;
             forceSSL = true;
-            locations."/grafana/".extraConfig = ''
-              proxy_pass http://localhost:3000/;
-              proxy_set_header Host $http_host;
-              proxy_set_header REMOTE_ADDR $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto https;
-            '';
-            locations."/prometheus/".extraConfig = ''
-              proxy_pass http://monitoring:9090/;
-              proxy_set_header Host $http_host;
-              proxy_set_header REMOTE_ADDR $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto https;
-              sub_filter_types text/html;
-              sub_filter_once off;
-              sub_filter '="/' '="/prometheus/';
-              sub_filter '="/static/' '="/static/prometheus/';
-            '';
-            locations."/alertmanager/".extraConfig = ''
-              proxy_pass http://monitoring:9093/;
-              proxy_set_header Host $http_host;
-              proxy_set_header REMOTE_ADDR $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto https;
-            '';
+            locations = {
+              "/grafana/".extraConfig = ''
+                proxy_pass http://localhost:3000/;
+                proxy_set_header Host $http_host;
+                proxy_set_header REMOTE_ADDR $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+              '';
+              "/prometheus/".extraConfig = ''
+                proxy_pass http://monitoring:9090/;
+                proxy_set_header Host $http_host;
+                proxy_set_header REMOTE_ADDR $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+                sub_filter_types text/html;
+                sub_filter_once off;
+                sub_filter '="/' '="/prometheus/';
+                sub_filter '="/static/' '="/static/prometheus/';
+              '';
+              "/alertmanager/".extraConfig = ''
+                proxy_pass http://monitoring:9093/;
+                proxy_set_header Host $http_host;
+                proxy_set_header REMOTE_ADDR $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+              '';
+            } // lib.optionalAttr (esConfig != {}) {
+              "/kibana/".extraConfig = ''
+                proxy_pass http://${esConfig.kibana_url}/;
+                proxy_set_header Host $http_host;
+                proxy_set_header REMOTE_ADDR $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+              '';
+            };
           };
           "monitoring" = {
             listen = [{ addr = "0.0.0.0"; port = 9113; }];
