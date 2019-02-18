@@ -133,6 +133,21 @@
     services = let
       oauthCreds = import ../static/adapay-oauth.nix;
       esConfig = if builtins.pathExists ../static/adapay-es-config.nix then import ../static/adapay-es-config.nix else { };
+      oauthProxyConfig = ''
+        auth_request /oauth2/auth;
+        error_page 401 = /oauth2/sign_in;
+
+        # pass information via X-User and X-Email headers to backend,
+        # requires running with --set-xauthrequest flag
+        auth_request_set $user   $upstream_http_x_auth_request_user;
+        auth_request_set $email  $upstream_http_x_auth_request_email;
+        proxy_set_header X-User  $user;
+        proxy_set_header X-Email $email;
+
+        # if you enabled --cookie-refresh, this is needed for it to work with auth_request
+        auth_request_set $auth_cookie $upstream_http_set_cookie;
+        add_header Set-Cookie $auth_cookie;
+      '';
     in {
       nginx = {
         enable = true;
@@ -148,6 +163,7 @@
             forceSSL = true;
             locations = {
               "/grafana/".extraConfig = ''
+                ${oauthProxyConfig}
                 proxy_pass http://localhost:3000/;
                 proxy_set_header Host $http_host;
                 proxy_set_header REMOTE_ADDR $remote_addr;
@@ -155,6 +171,7 @@
                 proxy_set_header X-Forwarded-Proto https;
               '';
               "/prometheus/".extraConfig = ''
+                ${oauthProxyConfig}
                 proxy_pass http://monitoring:9090/;
                 proxy_set_header Host $http_host;
                 proxy_set_header REMOTE_ADDR $remote_addr;
@@ -166,6 +183,7 @@
                 sub_filter '="/static/' '="/static/prometheus/';
               '';
               "/alertmanager/".extraConfig = ''
+                ${oauthProxyConfig}
                 proxy_pass http://monitoring:9093/;
                 proxy_set_header Host $http_host;
                 proxy_set_header REMOTE_ADDR $remote_addr;
@@ -174,6 +192,7 @@
               '';
             } // lib.optionalAttrs (esConfig != {}) {
               "/kibana".extraConfig = ''
+                ${oauthProxyConfig}
                 proxy_set_header Host ${esConfig.esHost};
                 proxy_http_version 1.1;
                 proxy_set_header Connection "Keep-Alive";
