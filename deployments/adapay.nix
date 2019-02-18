@@ -404,7 +404,7 @@
           }
         ];
         alertmanager = {
-          enable = if environment == "staging" then true else false;
+          enable = if environment == "production" then true else false;
           configuration = {
             route = {
               group_by = [ "alertname" "alias" ];
