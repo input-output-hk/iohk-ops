@@ -76,6 +76,9 @@
             '';
 
           };
+          appendHttpConfig = ''
+            vhost_traffic_status_zone;
+          '';
         };
       };
     };
