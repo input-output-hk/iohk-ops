@@ -1,10 +1,7 @@
-{ accessKeyId, ... }:
-let
-  region = "eu-central-1";
-  org    = "IOHK";
-in
-{
-  hydra.imports = [ ../../modules/hydra-aws.nix ];
+{ configFile ? <config/default.nix>
+, accessKeyId, ... }:
+with import configFile; {
+  hydra.imports = [ <module/hydra-aws.nix> ];
 
   resources.elasticIPs.hydra-ip = { inherit region accessKeyId; };
   resources.ec2SecurityGroups = {

@@ -1,3 +1,3 @@
 {
-  hydra.imports = [ ../../modules/hydra-base.nix ];
+  hydra.imports = [ <module/hydra-base.nix> ];
 }

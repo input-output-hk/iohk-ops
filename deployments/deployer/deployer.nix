@@ -1,6 +1,6 @@
 {
   deployer.imports = [
-    ../../modules/deployer-base.nix
-    ../../modules/deployer-aws.nix
+    <module/deployer-base.nix>
+    <module/deployer-aws.nix>
   ];
 }
