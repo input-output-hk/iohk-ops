@@ -60,6 +60,9 @@
   config = {
     deployment.ec2 = {
       inherit (config.node) accessKeyId region instanceType;
+      elasticIPv4 = if config.node.allocateElasticIP
+                    then resources.elasticIPs.cardanod-ip
+                    else null;
     };
     deployment.route53 = optionalAttrs (config.cluster.toplevelDomain != null) {
       accessKeyId = accessKeyId;
