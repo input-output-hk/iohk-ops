@@ -175,13 +175,11 @@
             } // lib.optionalAttrs (esConfig != {}) {
               "/kibana/".extraConfig = ''
                 proxy_pass ${esConfig.kibanaUrl};
+                proxy_redirect ${esConfig.kibanaUrl} https://monitoring.${environment}.adapay.iohk.io/;
                 proxy_set_header Host $http_host;
                 proxy_set_header REMOTE_ADDR $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto https;
-                sub_filter_types text/html;
-                sub_filter_once off;
-                sub_filter '="/' '="/kibana/';
               '';
             };
           };
