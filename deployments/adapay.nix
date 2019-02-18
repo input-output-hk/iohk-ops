@@ -49,6 +49,9 @@
     services = {
       nginx = {
         enable = true;
+        package = with pkgs; nginxStable.override {
+          modules = [ nginxModules.rtmp nginxModules.dav nginxModules.moreheaders nginxModules.vts ];
+        };
         statusPage = true;
         virtualHosts = {
           "${environment}.adapay.iohk.io" = {
@@ -65,10 +68,16 @@
               proxy_pass http://monitoring:3000/;
             '';
           };
+          "nginx" = {
+            listen = { addr = "0.0.0.0"; port = "9113"; };
+            locations."/status".extraConfig = ''
+              vhost_traffic_status_display;
+              vhost_traffic_status_display_format html;
+            '';
+
+          };
         };
       };
-      prometheus.exporters.nginx.enable = true;
-
     };
   };
   importer = { config, pkgs, resources, ... }: {
@@ -330,7 +339,7 @@
             static_configs = [
               {
                 targets = [
-                  "nginx:9113"
+                  "nginx:9113/status/format/prometheus"
                 ];
               }
             ];
