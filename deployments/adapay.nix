@@ -349,7 +349,34 @@
           }
         ];
         alertmanager = {
-          enable = false;
+          enable = if environment == "staging" then true else false;
+          configuration = {
+            route = {
+              group_by = [ "alertname" "alias" ];
+              group_wait = "30s";
+              group_interval = "2m";
+              receiver = "team-pager";
+              routes = [
+                {
+                  match = {
+                    severity = "page";
+                  };
+                  receiver = "team-pager";
+                }
+              ];
+            };
+            receivers = [
+              {
+                name = "team-pager";
+                pagerduty_configs = [
+                  {
+                    service_key = builtins.readFile ./static/pushover-key.secret;
+                  }
+                ];
+              }
+            ];
+          };
+
         };
       };
     };
