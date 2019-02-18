@@ -52,7 +52,9 @@
         package = with pkgs; nginxStable.override {
           modules = [ nginxModules.rtmp nginxModules.dav nginxModules.moreheaders nginxModules.vts ];
         };
-        statusPage = true;
+        appendHttpConfig = ''
+          vhost_traffic_status_zone;
+        '';
         virtualHosts = {
           "${environment}.adapay.iohk.io" = {
             enableACME = true;
@@ -76,9 +78,6 @@
             '';
 
           };
-          appendHttpConfig = ''
-            vhost_traffic_status_zone;
-          '';
         };
       };
     };
