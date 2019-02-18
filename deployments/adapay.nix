@@ -66,9 +66,6 @@
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
               proxy_set_header X-Forwarded-Proto https;
             '';
-            locations."/grafana/".extraConfig = ''
-              proxy_pass http://monitoring:3000/;
-            '';
           };
           "nginx" = {
             listen = [{ addr = "0.0.0.0"; port = 9113; }];
@@ -133,7 +130,9 @@
   };
   monitoring = { config, pkgs, resources, ... }: {
     networking.firewall.allowedTCPPorts = [ 80 443 ];
-    services = {
+    services = let
+      oauthCreds = import ../static/adapay-oauth.nix;
+    in {
       nginx = {
         enable = true;
         package = with pkgs; nginxStable.override {
@@ -146,8 +145,8 @@
           "monitoring.${environment}.adapay.iohk.io" = {
             enableACME = true;
             forceSSL = true;
-            locations."/".extraConfig = ''
-              proxy_pass http://localhost:3000;
+            locations."/grafana/".extraConfig = ''
+              proxy_pass http://localhost:3000/;
               proxy_set_header Host $http_host;
               proxy_set_header REMOTE_ADDR $remote_addr;
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -159,6 +158,10 @@
               proxy_set_header REMOTE_ADDR $remote_addr;
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
               proxy_set_header X-Forwarded-Proto https;
+              sub_filter_types text/html;
+              sub_filter_once off;
+              sub_filter '="/' '="/prometheus/';
+              sub_filter '="/static/' '="/static/prometheus/';
             '';
             locations."/alertmanager/".extraConfig = ''
               proxy_pass http://monitoring:9093/;
@@ -178,9 +181,12 @@
           };
         };
       };
-      oauth2_proxy = if builtins.pathExists ../static/adapay-oauth2-proxy.nix then import ../static/adapay-oauth2-proxy.nix else {};
-      oauth2_proxy.nginx = {
-        virtualHosts = [ "monitoring.${environment}.adapay.iohk.io" ];
+      oauth2_proxy = {
+        enable = true;
+        inherit (oauthCreds) clientID clientSecret;
+        provider = "google";
+        email.domains = [ "iohk.io" ];
+        nginx.virtualHosts = [ "monitoring.${environment}.adapay.iohk.io" ];
       };
       grafana = {
         enable = true;
@@ -190,8 +196,8 @@
         rootUrl = "%(protocol)ss://%(domain)s/grafana/";
         extraOptions = {
           AUTH_GOOGLE_ENABLED = "true";
-          AUTH_GOOGLE_CLIENT_ID = "778964826061-bfqjes0ch5rfim3h7ugkialnanlmsumt.apps.googleusercontent.com";
-          AUTH_GOOGLE_CLIENT_SECRET = builtins.readFile ../static/google_oauth_adapay_grafana.secret;
+          AUTH_GOOGLE_CLIENT_ID = oauthCreds.clientID;
+          AUTH_GOOGLE_CLIENT_SECRET = oauthCreds.clientSecret;
         };
       };
       prometheus = {
@@ -425,7 +431,6 @@
               }
             ];
           };
-
         };
       };
     };
