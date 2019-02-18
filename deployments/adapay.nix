@@ -172,7 +172,7 @@
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto https;
               '';
-            } // lib.optionalAttr (esConfig != {}) {
+            } // lib.optionalAttrs (esConfig != {}) {
               "/kibana/".extraConfig = ''
                 proxy_pass http://${esConfig.kibana_url}/;
                 proxy_set_header Host $http_host;
