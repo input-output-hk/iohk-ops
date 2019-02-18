@@ -213,7 +213,7 @@
             });
           };
         };
-        alertmanagerURL = [ "http://${environment}.adapay.iohk.io:9093" ];
+        alertmanagerURL = [ "http://monitoring:9093" ];
         rules = [
           ''
             ALERT node_down
