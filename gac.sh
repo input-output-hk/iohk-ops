@@ -19,6 +19,7 @@ self="$0 ${verbose}"
 cmd=${1:-doit}; test -n "$1"; shift
 set -u
 
+CONFIG=
 CLUSTER=create-.config.sh
 if test -f .config.sh
 then . ./.config.sh
@@ -30,7 +31,14 @@ ALL_NODES="mantis-a-0 mantis-a-1 mantis-b-0 mantis-b-1 mantis-c-0 "
 nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).goguenNixpkgs' | xargs echo)
 nixops_out="$(nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nixops.outPath' | xargs echo)"
 nixops=${nixops_out}/bin/nixops
-nix_opts="-I nixpkgs=${nixpkgs_out} -I nixops=${nixops_out}/share/nix/nixops --max-jobs 4 --cores 0 --show-trace"
+nix_opts="\
+--max-jobs 4 --cores 0 --show-trace \
+-I nixpkgs=${nixpkgs_out} \
+-I nixops=${nixops_out}/share/nix/nixops \
+-I config=./configs \
+-I module=./modules \
+-I static=./static \
+"
 
 ag=$( nix-build -E '(import ((import ./lib.nix).goguenNixpkgs) {}).ag'     | xargs echo)/bin/ag
 aws=$(nix-build -E '(import ((import ./lib.nix).goguenNixpkgs) {}).awscli' | xargs echo)/bin/aws
@@ -168,7 +176,11 @@ cluster-config | csconf )
                 guessedAKID="$(grep aws_access_key_id ~/.aws/credentials | cut -d= -f2 | xargs echo)"
                 read -ei "${guessedAKID}" -p "Use AWS access key ID: " AKID
         }
-        ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}";;
+        ${nixops} set-args ${nixops_subopts} \
+                  --argstr accessKeyId "${AKID}" \
+                  --argstr deployerIP "${deployerIP}" \
+                  --arg    configFile "${CONFIG}" \
+                ;;
 cluster-create | csc )
         set +u; AKID="$1"; test -n "$1" && shift; set -u
         $self     cluster-components
@@ -181,6 +193,8 @@ cluster-components | ls )
 cluster-deploy | csd )
         $self     cluster-components
         ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER}/*.nix
+        ${nixops} set-args ${nixops_subopts} \
+                  --arg    configFile "${CONFIG}"
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
 cluster-destroy )
         ${nixops} destroy  ${nixops_subopts} "$@"
@@ -308,12 +322,22 @@ Host ${CLUSTER}-deployer
   User     deployer
   Hostname ${deployer_ip}
 EOF
-        ;;
+        if test "$1" = "--full"
+        then shift
+             echo "Full setup requested, proceeding to set up deployer."
+             $0 setup-deployer "$@"
+        fi;;
 setup-deployer )
         test -d ./clusters/${CLUSTER} || {
                 echo "ERROR: unknown cluster ${CLUSTER} -- to see available clusters:  ls clusters"
                 exit 1
         }
+        cluster_config="${CONFIG}"
+        while test ! -f "${cluster_config}"
+        do read -ei "./configs/default.nix" -p "Enter path to configuration file (one of ./config/*.nix):  " cluster_config
+           test -f "${cluster_config}" || echo "ERROR: ${cluster_config} is not a readable file" >&2
+        done
+
         region="eu-central-1"
         export AWS_PROFILE=${CLUSTER} AWS_REGION=${region}
         deployer_tags="tag:deployment,Values=${CLUSTER},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
@@ -347,6 +371,7 @@ read foo && \
 git clone ${ops_url} infra && \
 cd infra && \
 echo CLUSTER=${CLUSTER} > .config.sh && \
+echo CONFIG=${cluster_config} >> .config.sh && \
 git checkout ${ops_branch} && \
 git config --replace-all receive.denyCurrentBranch updateInstead"
         ssh "deployer@${deployer_ip}" sh -c "\"${setup_cmd}\""
