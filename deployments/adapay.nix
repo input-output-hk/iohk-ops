@@ -338,10 +338,11 @@
           {
             job_name = "nginx";
             scrape_interval = "5s";
+            metrics_path = "/status/format/prometheus";
             static_configs = [
               {
                 targets = [
-                  "nginx:9113/status/format/prometheus"
+                  "nginx:9113"
                 ];
               }
             ];
