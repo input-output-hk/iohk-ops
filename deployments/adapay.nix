@@ -191,15 +191,14 @@
                 proxy_set_header X-Forwarded-Proto https;
               '';
             } // lib.optionalAttrs (esConfig != {}) {
-              "/kibana".extraConfig = ''
-                ${oauthProxyConfig}
+              "/".extraConfig = ''
                 proxy_set_header Host ${esConfig.esHost};
                 proxy_http_version 1.1;
                 proxy_set_header Connection "Keep-Alive";
                 proxy_set_header Proxy-Connection "Keep-Alive";
                 proxy_set_header Authorization "";
-                proxy_pass https://${esConfig.esHost}/_plugin/kibana/;
-                proxy_redirect https://${esConfig.esHost}/_plugin/kibana/ https://monitoring.${environment}.adapay.iohk.io/kibana/;
+                proxy_pass https://${esConfig.esHost}/;
+                proxy_redirect https://${esConfig.esHost}/ https://monitoring.${environment}.adapay.iohk.io/;
               '';
             };
           };
