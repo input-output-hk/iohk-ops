@@ -179,6 +179,8 @@
                 proxy_set_header REMOTE_ADDR $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto https;
+                sub_filter_once off;
+                sub_filter '="/' '="/kibana/';
               '';
             };
           };
