@@ -128,7 +128,7 @@
       };
     };
   };
-  monitoring = { config, pkgs, resources, ... }: {
+  monitoring = { config, pkgs, lib, resources, ... }: {
     networking.firewall.allowedTCPPorts = [ 80 443 ];
     services = let
       oauthCreds = import ../static/adapay-oauth.nix;
