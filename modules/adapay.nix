@@ -4,8 +4,8 @@ with lib;
 
 let
   cfg = config.services.adapay;
-  rev = "004e357c94fc88e3bf22453c4b9f78aeed465d47";
-  ref = "0.1.0";
+  rev = "d57e6d56a856d890fb153774d6d3271b27f54929";
+  ref = "0.1.1";
   # need ssh-agent forwarding to fetch private repo using your ssh key
   adapaySrc = builtins.fetchGit {
     url = "ssh://git@github.com/input-output-hk/summit-AdaPay";
