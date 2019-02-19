@@ -533,10 +533,13 @@ in {
         package = pkgs.elasticsearch-oss;
       };
       graylog = {
+        inherit (graylogCreds) rootPasswordSha2 passwordSecret;
         enable = true;
         plugins = with pkgs.graylogPlugins; [ auth_sso pagerduty slack ];
         elasticsearchHosts = [ "http://graylog:9200" ];
-        inherit (graylogCreds) rootPasswordSha2 passwordSecret;
+        extraConfig = ''
+          trusted_proxies = 127.0.0.1/32
+        '';
       };
     };
   };
