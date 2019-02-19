@@ -146,6 +146,7 @@
   };
   monitoring = { config, pkgs, lib, resources, ... }: {
     networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
+    nixpkgs.config.allowUnfree = true;
     services = let
       oauthCreds = import ../static/adapay-oauth.nix;
       esConfig = if builtins.pathExists ../static/adapay-es-config.nix then import ../static/adapay-es-config.nix else { };
