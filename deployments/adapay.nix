@@ -485,6 +485,7 @@ in {
     };
   };
   graylog = { config, pkgs, lib, resources, ... }: {
+    networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
     services = {
       nginx = {
         enable = true;
