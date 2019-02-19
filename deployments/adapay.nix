@@ -206,17 +206,13 @@
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto https;
               '';
-              "/kibana/".extraConfig = ''
+              "/kibana".extraConfig = ''
                 ${oauthProxyConfig}
-                rewrite ^/(.*) /$1 break;
-                proxy_ignore_client_abort on;
-                proxy_pass http://localhost:5601;
-                proxy_set_header  X-Real-IP  $remote_addr;
-                proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header  Host $http_host;
-                sub_filter_types text/html;
-                sub_filter_once off;
-                sub_filter '="/' '="/kibana/';
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
               '';
             };
           };
