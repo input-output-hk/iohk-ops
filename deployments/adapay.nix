@@ -489,7 +489,6 @@
           }
         '';
         filterConfig = ''
-          filter {
             json {
               skip_on_invalid_json => true
               source => message
