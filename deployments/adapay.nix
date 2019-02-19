@@ -15,7 +15,7 @@
     ];
     services = {
       journalbeat = {
-        enable = true;
+        enable = false;
         extraConfig = ''
         journalbeat:
           seek_position: cursor
@@ -27,7 +27,7 @@
           move_metadata_to_field: journal
           default_type: journal
         output.logstash:
-          hosts: ["monitoring:5044"]
+          hosts: ["graylog:5044"]
         '';
       };
       dd-agent.tags = [
@@ -145,7 +145,7 @@
     };
   };
   monitoring = { config, pkgs, lib, resources, ... }: {
-    networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
+    networking.firewall.allowedTCPPorts = [ 80 443 ];
     #nixpkgs.config.allowUnfree = true;
     services = let
       oauthCreds = import ../static/adapay-oauth.nix;
@@ -477,37 +477,40 @@
           };
         };
       };
-      elasticsearch = {
-        enable = true;
-        listenAddress = "0";
-        package = pkgs.elasticsearch-oss;
-      };
-      logstash = {
-        enable = true;
-        package = pkgs.logstash6-oss;
-        inputConfig = ''
-          beats {
-            port => 5044
-          }
-        '';
-        filterConfig = ''
-            json {
-              skip_on_invalid_json => true
-              source => message
-            }
-        '';
-        outputConfig = ''
-          elasticsearch {
-            index  => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
-            hosts => ["monitoring:9200"]
-         }
-        '';
-      };
-      kibana = {
-        enable = true;
-        elasticsearch.url = "http://localhost:9200";
-        package = pkgs.kibana-oss;
-      };
     };
   };
+  #graylog = { config, pkgs, lib, resources, ... }: {
+  #  services = let
+  #    oauthCreds = import ../static/adapay-oauth.nix;
+  #    oauthProxyConfig = ''
+  #      auth_request /oauth2/auth;
+  #      error_page 401 = /oauth2/sign_in;
+
+  #      # pass information via X-User and X-Email headers to backend,
+  #      # requires running with --set-xauthrequest flag
+  #      auth_request_set $user   $upstream_http_x_auth_request_user;
+  #      auth_request_set $email  $upstream_http_x_auth_request_email;
+  #      proxy_set_header X-User  $user;
+  #      proxy_set_header X-Email $email;
+
+  #      # if you enabled --cookie-refresh, this is needed for it to work with auth_request
+  #      auth_request_set $auth_cookie $upstream_http_set_cookie;
+  #      add_header Set-Cookie $auth_cookie;
+  #    '';
+  #  in {
+  #    mongodb.enable = true;
+  #    elasticsearch = {
+  #      enable = true;
+  #      listenAddress = "0";
+  #      package = pkgs.elasticsearch-oss;
+  #    };
+  #    graylog = let
+  #      graylogCreds = import ../static/graylog-creds.nix;
+  #    in {
+  #      enable = true;
+  #      elasticsearchHosts = [ "http://graylog:9200" ];
+  #      inherit (graylogCreds) rootPasswordSha2 passwordSecret;
+  #    };
+  #  };
+  #};
 }
