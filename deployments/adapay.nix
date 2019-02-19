@@ -146,7 +146,7 @@
   };
   monitoring = { config, pkgs, lib, resources, ... }: {
     networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
-    nixpkgs.config.allowUnfree = true;
+    #nixpkgs.config.allowUnfree = true;
     services = let
       oauthCreds = import ../static/adapay-oauth.nix;
       oauthProxyConfig = ''
@@ -481,9 +481,11 @@
       elasticsearch = {
         enable = true;
         listenAddress = "0";
+        package = pkgs.elasticsearch-oss;
       };
       logstash = {
         enable = true;
+        package = pkgs.logstash6-oss;
         inputConfig = ''
           beats {
             port => 5044
@@ -505,6 +507,7 @@
       kibana = {
         enable = true;
         elasticsearch.url = "http://localhost:9200";
+        package = pkgs.kibana-oss;
       };
     };
   };
