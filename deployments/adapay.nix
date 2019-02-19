@@ -484,7 +484,6 @@ in {
       };
     };
   };
-} // optionalAttrs (graylogEnabled) {
   graylog = { config, pkgs, lib, resources, ... }: {
     services = {
       nginx = {
