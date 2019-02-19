@@ -497,8 +497,9 @@
         outputConfig = ''
           elasticsearch {
             index  => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
-            hosts => ["https://vpc-adapay-production-lty557djew6uqkhb67uwiwzwum.eu-central-1.es.amazonaws.com"]
-            sniffing => false
+            hosts => ["vpc-adapay-production-lty557djew6uqkhb67uwiwzwum.eu-central-1.es.amazonaws.com"]
+            ssl => true
+            flush_size => 250000
          }
         '';
       };
