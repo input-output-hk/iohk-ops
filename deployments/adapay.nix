@@ -208,6 +208,7 @@
               '';
               "/kibana".extraConfig = ''
                 ${oauthProxyConfig}
+                proxy_pass http://127.0.0.1:5601/;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection 'upgrade';
