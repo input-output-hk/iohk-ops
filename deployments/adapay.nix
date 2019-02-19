@@ -479,7 +479,7 @@
         };
       };
       elasticsearch = {
-        enable = false;
+        enable = true;
         listenAddress = "0";
       };
       logstash = {
