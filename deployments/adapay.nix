@@ -1,4 +1,4 @@
-{ environment ? "staging", lib, ... }:
+{ environment ? "staging", ... }:
 
 let
   graylogCreds = if builtins.pathExists ../static/graylog-creds.nix then import ../static/graylog-creds.nix else { };
@@ -484,7 +484,7 @@ in {
       };
     };
   };
-} // lib.optionalAttrs (graylogEnabled) {
+} // optionalAttrs (graylogEnabled) {
   graylog = { config, pkgs, lib, resources, ... }: {
     services = {
       nginx = {
