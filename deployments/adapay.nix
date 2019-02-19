@@ -497,7 +497,7 @@
         outputConfig = ''
           elasticsearch {
             index  => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
-            hosts => ["vpc-adapay-production-lty557djew6uqkhb67uwiwzwum.eu-central-1.es.amazonaws.com"]
+            hosts => ["${esConfig.esHost}:443"]
             ssl => true
          }
         '';
