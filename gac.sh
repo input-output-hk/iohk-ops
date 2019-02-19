@@ -5,6 +5,19 @@ usage() {
         echo "$(basename $0) [--verbose] COMMAND ARGS.." >&2
         exit 1
 }
+if test -n "RUNNING_GAC"
+then RECURSIVE_GAC=yes
+fi
+export RUNNING_GAC=yes
+log() {
+        echo "==(  $*" >&2
+}
+logtop() {
+        test -z "${RECURSING_GAC}" && echo "==(  $*" >&2
+}
+logn() {
+        echo -n "==(  $*" >&2
+}
 
 cd `dirname $0`
 
@@ -27,9 +40,18 @@ else if test ${cmd} != "repl" -a ${cmd} != "eval"
      then echo "ERROR:  echo CLUSTER=your-cluster-name > .config.sh" >&2; exit 1; fi
 fi
 ALL_NODES="mantis-a-0 mantis-a-1 mantis-b-0 mantis-b-1 mantis-c-0 "
+if test -z "${RECURSIVE_GAC}"
+then log ".config.sh settings:"
+     cat <<EOF
+CONFIG=${CONFIG}
+CLUSTER=${CLUSTER}
+EOF
+fi
 
+nix_out="$(   nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nix.outPath'    | xargs echo)"
 nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).goguenNixpkgs' | xargs echo)
 nixops_out="$(nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nixops.outPath' | xargs echo)"
+nix=${nix_out}/bin/nix
 nixops=${nixops_out}/bin/nixops
 nix_opts="\
 --max-jobs 4 --cores 0 --show-trace \
@@ -38,6 +60,7 @@ nix_opts="\
 -I config=./configs \
 -I module=./modules \
 -I static=./static \
+-I lib=./lib.nix \
 "
 
 ag=$( nix-build -E '(import ((import ./lib.nix).goguenNixpkgs) {}).ag'     | xargs echo)/bin/ag
@@ -110,7 +133,7 @@ has_region_tagged_instances() {
 wait_region_tagged_instances() {
         local region="$1"
         local tags="$2"
-        echo -n "Waiting for $region/$tags to appear: "
+        logn "Waiting for $region/$tags to appear: "
         while ! has_region_tagged_instances "$region" "$tags"
         do echo -n "."
         done
@@ -119,7 +142,7 @@ wait_region_tagged_instances() {
 wait_host_ssh() {
         local host="$1"
 
-        echo -n "Waiting for ssh on ${host}: "
+        logn "Waiting for ssh pong from ${host}: "
         while ! ssh -tt -o ConnectionAttempts=20 ${host} -o ConnectTimeout=10 -o KbdInteractiveAuthentication=no -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o StrictHostKeyChecking=no -o HashKnownHosts=no -o CheckHostIP=no "echo pong." 2>/dev/null
         do true; done
 }
@@ -131,9 +154,12 @@ case ${cmd} in
         eval )
                 nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
         repl )
-                nix repl        ${nix_opts} --arg depl "${nixops_network_expr}" \
-                                                            ./network.nix \
-                                         --argstr nixpkgsSrc ${nixpkgs_out};;
+                nixver="$(nix --version | cut -d ' ' -f3)"
+                if test ${nixver} != 2.2 -a ${nixver} != 2.3 -a ${nixver} != 2.4 -a ${nixver} != 2.5
+                then log "ERROR:  nix version 2.2 required for 'gac repl'"
+                fi
+                nix repl     ${nix_opts} --arg depl       "${nixops_network_expr}" ./network.nix \
+                                         --argstr nixpkgsSrc "${nixpkgs_out}";;
 ###
 ###
 ###
@@ -168,9 +194,9 @@ deploy | d )
 deploy-one | one )
         $self     deploy --include mantis-a-0;;
 cluster-config | csconf )
-        echo "Querying own IP.." >&2
+        log "querying own IP.."
         deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
-        echo "Setting up the AWS access key.." >&2
+        log "setting up the AWS access key.."
         AKID="$1"
         test -z "$1" && {
                 guessedAKID="$(grep aws_access_key_id ~/.aws/credentials | cut -d= -f2 | xargs echo)"
@@ -188,7 +214,7 @@ cluster-create | csc )
         $self     cluster-config $AKID
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
 cluster-components | ls )
-        echo "Components of cluster '${CLUSTER}':"
+        log "components of cluster '${CLUSTER}':"
         echo ${nixops_constituents} | tr " " "\n" | sort | sed 's,^,   ,';;
 cluster-deploy | csd )
         $self     cluster-components
@@ -216,10 +242,10 @@ stop )
         $0        ssh-all ${on} -- systemctl    stop mantis;;
 start )
         on=${1:+--include $*}
-        $0        ssh-all ${on} -- systemctl   start mantis; echo "### new start date:  $($0 since mantis-a-0)";;
+        $0        ssh-all ${on} -- systemctl   start mantis; log "new start date:  $($0 since mantis-a-0)";;
 restart )
         on=${1:+--include $*}
-        $0        ssh-all ${on} -- systemctl restart mantis; echo "### new start date:  $($0 since mantis-a-0)";;
+        $0        ssh-all ${on} -- systemctl restart mantis; log "new start date:  $($0 since mantis-a-0)";;
 statuses | ss )
         on=${1:+--include $*}
         $0        ssh-all ${on} -- systemctl  status mantis;;
@@ -235,7 +261,7 @@ journal-on | jon )
 journal    | jall | j )
         start_sample_node='mantis-a-0'
         since=${1:-$($0 since ${start_sample_node})}
-        echo "### journal since:  ${since}" >&2
+        log "journal since:  ${since}"
         $0        ssh-all      -- journalctl -u mantis --since ${since};;
 system-journal | sysj )
         node=${1:-'mantis-a-0'}
@@ -247,8 +273,8 @@ follow-all | fa )
         $0        ssh-all      -- journalctl -fu mantis "$@";;
 grep-since )
         since=$1; shift
-        echo "### journal since:  ${since}" >&2
-        echo "### filter:         ag $*" >&2
+        log "journal since:  ${since}"
+        log "filter:         ag $*"
         $0        journal "${since}" 2>&1 | ${ag} "$@";;
 grep )
         start_sample_node='mantis-a-0'
@@ -296,9 +322,9 @@ create-deployer )
         fi
 
         if has_region_tagged_instances ${region} ${deployer_tags}
-        then echo "ERROR:  deployer already exist." >&2; exit 1
+        then log "ERROR:  deployer already exist."; exit 1
         fi
-        echo "Creating a deployer..";
+        log "creating a deployer.."
         ami="$(nix-instantiate --eval -E "(import ${nixpkgs_out}/nixos/modules/virtualisation/ec2-amis.nix).\"${nixos_ver}\".${region}.hvm-ebs" | xargs echo)"
         ${aws}      ec2 run-instances                                                \
                     --image-id ${ami}                                                \
@@ -311,7 +337,7 @@ create-deployer )
 
         wait_region_tagged_instances ${region} ${deployer_tags}
         deployer_ip=$(region_tagged_instances_property ${region} ${deployer_tags} '[0].Instances[0].PublicIpAddress' | xargs echo)
-        echo "New deployer IP: ${deployer_ip}"
+        log "new deployer IP: ${deployer_ip}"
 
         wait_host_ssh "deployer@${deployer_ip}"
 
@@ -324,25 +350,25 @@ Host ${CLUSTER}-deployer
 EOF
         if test "$1" = "--full"
         then shift
-             echo "Full setup requested, proceeding to set up deployer."
+             log "full setup requested, proceeding to set up deployer."
              $0 setup-deployer "$@"
         fi;;
 setup-deployer )
         test -d ./clusters/${CLUSTER} || {
-                echo "ERROR: unknown cluster ${CLUSTER} -- to see available clusters:  ls clusters"
+                log "ERROR: unknown cluster ${CLUSTER} -- to see available clusters:  ls clusters"
                 exit 1
         }
         cluster_config="${CONFIG}"
         while test ! -f "${cluster_config}"
         do read -ei "./configs/default.nix" -p "Enter path to configuration file (one of ./config/*.nix):  " cluster_config
-           test -f "${cluster_config}" || echo "ERROR: ${cluster_config} is not a readable file" >&2
+           test -f "${cluster_config}" || log "ERROR: ${cluster_config} is not a readable file"
         done
 
         region="eu-central-1"
         export AWS_PROFILE=${CLUSTER} AWS_REGION=${region}
         deployer_tags="tag:deployment,Values=${CLUSTER},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
 
-        echo "Setting up AWS.." >&2
+        log "setting up AWS.."
         deployer_ip=$(region_tagged_instances_property ${region} ${deployer_tags} '[0].Instances[0].PublicIpAddress' | xargs echo)
 
         set +u
@@ -352,7 +378,7 @@ setup-deployer )
         test -z "$2" && read -ei "$(git symbolic-ref HEAD | sed 's|refs/heads/||')" -p "Ops git repository branch: " ops_branch
         set -u
 
-        echo "Setting up AWS credentials.." >&2
+        log "setting up AWS credentials.."
         AKID="$(sed -n "/\\[${CLUSTER}\\]/,/^\\[.*/ p" < ~/.aws/credentials | grep aws_access_key_id     | cut -d= -f2 | xargs echo)"
         ssh "deployer@${deployer_ip}" sh -c "\"mkdir -p ~/.aws && cat > ~/.aws/credentials && chmod -R go-rwx ~/.aws\"" <<EOF
 [default]
@@ -360,7 +386,7 @@ aws_access_key_id = ${AKID}
 aws_secret_access_key = $(sed -n "/\\[${CLUSTER}\\]/,/^\\[.*/ p" < ~/.aws/credentials | grep aws_secret_access_key | cut -d= -f2 | xargs echo)
 region = ${region}
 EOF
-        echo "Generating SSH key and setting up ops checkout.." >&2
+        log "generating SSH key and setting up ops checkout.."
         setup_cmd="\
 ssh-keygen  -t ed25519 -b 2048 -f ~/.ssh/id_ed25519 -N ''; \
 ssh-keyscan -t rsa     github.com >> ~/.ssh/known_hosts && \
