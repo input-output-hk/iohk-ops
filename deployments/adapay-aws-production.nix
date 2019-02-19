@@ -103,6 +103,32 @@ in {
     # Don't reconfigure the system from EC2 userdata on next startup
     systemd.services.amazon-init.wantedBy = lib.mkForce [ ];
   };
+  graylog = { config, pkgs, lib, resources, ... }: {
+    ec2.hvm = true;
+
+    deployment = {
+      ec2 = {
+        inherit accessKeyId region zone;
+        ebsInitialRootDiskSize = 200;
+        instanceType = "m4.large";
+        keyPair = resources.ec2KeyPairs.adapayKey;
+        subnetId = resources.vpcSubnets.adapayVPCSubnet;
+        associatePublicIpAddress = true;
+        securityGroupIds = [
+          resources.ec2SecurityGroups.adapaySG.name
+          resources.ec2SecurityGroups.adapaySGmonitor.name
+        ];
+      };
+      targetEnv = "ec2";
+      route53 = {
+        inherit accessKeyId;
+        hostName = "graylog.${environment}.adapay.iohk.io";
+      };
+    };
+
+    # Don't reconfigure the system from EC2 userdata on next startup
+    systemd.services.amazon-init.wantedBy = lib.mkForce [ ];
+  };
   resources = {
     elasticIPs.adapayIP = {
       inherit accessKeyId region;
