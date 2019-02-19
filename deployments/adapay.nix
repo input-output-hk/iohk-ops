@@ -207,7 +207,6 @@
                 proxy_set_header X-Forwarded-Proto https;
               '';
               "/".extraConfig = ''
-                ${oauthProxyConfig}
                 proxy_pass http://127.0.0.1:5601/;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
