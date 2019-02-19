@@ -149,7 +149,6 @@
     nixpkgs.config.allowUnfree = true;
     services = let
       oauthCreds = import ../static/adapay-oauth.nix;
-      esConfig = if builtins.pathExists ../static/adapay-es-config.nix then import ../static/adapay-es-config.nix else { };
       oauthProxyConfig = ''
         auth_request /oauth2/auth;
         error_page 401 = /oauth2/sign_in;
@@ -219,17 +218,6 @@
                 sub_filter_once off;
                 sub_filter '="/' '="/kibana/';
               '';
-            } // lib.optionalAttrs (esConfig != {}) {
-              "/".extraConfig = ''
-                proxy_set_header Host ${esConfig.esHost};
-                proxy_http_version 1.1;
-                proxy_set_header Connection "Keep-Alive";
-                proxy_set_header Proxy-Connection "Keep-Alive";
-                proxy_set_header Authorization "";
-                proxy_pass https://${esConfig.esHost}/;
-                proxy_redirect https://${esConfig.esHost}/ https://monitoring.${environment}.adapay.iohk.io/;
-              '';
-            };
           };
           "monitoring" = {
             listen = [{ addr = "0.0.0.0"; port = 9113; }];
