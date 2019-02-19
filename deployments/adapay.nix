@@ -481,7 +481,7 @@
         };
       };
       logstash = {
-        enable = false;
+        enable = true;
         inputConfig = ''
           beats {
             port => 5044
