@@ -218,6 +218,7 @@
                 sub_filter_once off;
                 sub_filter '="/' '="/kibana/';
               '';
+            };
           };
           "monitoring" = {
             listen = [{ addr = "0.0.0.0"; port = 9113; }];
@@ -225,7 +226,6 @@
               vhost_traffic_status_display;
               vhost_traffic_status_display_format html;
             '';
-
           };
         };
       };
