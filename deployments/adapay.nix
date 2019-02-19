@@ -207,6 +207,18 @@
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto https;
               '';
+              "/kibana/".extraConfig = ''
+                ${oauthProxyConfig}
+                rewrite ^/(.*) /$1 break;
+                proxy_ignore_client_abort on;
+                proxy_pass http://localhost:5601;
+                proxy_set_header  X-Real-IP  $remote_addr;
+                proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header  Host $http_host;
+                sub_filter_types text/html;
+                sub_filter_once off;
+                sub_filter '="/' '="/kibana/';
+              '';
             } // lib.optionalAttrs (esConfig != {}) {
               "/".extraConfig = ''
                 proxy_set_header Host ${esConfig.esHost};
@@ -481,6 +493,10 @@
           };
         };
       };
+      elasticsearch = {
+        enable = false;
+        listenAddress = "0";
+      };
       logstash = {
         enable = true;
         inputConfig = ''
@@ -497,10 +513,13 @@
         outputConfig = ''
           elasticsearch {
             index  => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
-            hosts => ["${esConfig.esHost}:443"]
-            ssl => true
+            hosts => ["monitoring:9200"]
          }
         '';
+      };
+      kibana = {
+        enable = true;
+        elasticsearch.url = "http://localhost:9200";
       };
     };
   };
