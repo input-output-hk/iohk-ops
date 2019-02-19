@@ -14,6 +14,22 @@
       ../modules/icarus-backend.nix
     ];
     services = {
+      journalbeat = {
+        enable = true;
+        extraConfig = ''
+        journalbeat:
+          seek_position: cursor
+          cursor_seek_fallback: tail
+          write_cursor_state: true
+          cursor_flush_period: 5s
+          clean_field_names: true
+          convert_to_numbers: false
+          move_metadata_to_field: journal
+          default_type: journal
+        output.logstash:
+          hosts: ["monitoring:5044"]
+        '';
+      };
       dd-agent.tags = [
         "env:${environment}"
         "role:adapay"
@@ -129,7 +145,7 @@
     };
   };
   monitoring = { config, pkgs, lib, resources, ... }: {
-    networking.firewall.allowedTCPPorts = [ 80 443 ];
+    networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
     services = let
       oauthCreds = import ../static/adapay-oauth.nix;
       esConfig = if builtins.pathExists ../static/adapay-es-config.nix then import ../static/adapay-es-config.nix else { };
@@ -463,6 +479,28 @@
             ];
           };
         };
+      };
+      logstash = {
+        enable = false;
+        inputConfig = ''
+          beats {
+            port => 5044
+          }
+        '';
+        filterConfig = ''
+          filter {
+            json {
+              skip_on_invalid_json => true
+              source => message
+            }
+        '';
+        outputConfig = ''
+          elasticsearch {
+            index  => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+            hosts => ["https://vpc-adapay-production-lty557djew6uqkhb67uwiwzwum.eu-central-1.es.amazonaws.com"]
+            sniffing => false
+         }
+        '';
       };
     };
   };

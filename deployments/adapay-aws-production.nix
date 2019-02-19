@@ -134,7 +134,8 @@ in {
       adapaySGmonitor = { resources, ... }: {
         inherit accessKeyId region;
         vpcId = resources.vpc.adapayVPC;
-        rules = map allowPortPublic [ 80 443 ];
+        rules = (map allowPortPublic [ 80 443 ]) ++
+                (map allowPortVPC [ 5044 ]);
       };
       adapaySGimporter = { resources, ... }: {
         inherit accessKeyId region;
