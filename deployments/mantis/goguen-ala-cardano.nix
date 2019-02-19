@@ -1,6 +1,6 @@
-let localLib = import ./../lib.nix; in
-with builtins; with localLib;
-{ ... }:
+with builtins;
+with import <lib>;
+
 let
   mkMantisMachine = vmType: nodeName: { nodes, resources, pkgs, config, ... }: {
     imports = [ ../modules/mantis-service.pseudo.nix ];

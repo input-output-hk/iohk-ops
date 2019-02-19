@@ -1,5 +1,5 @@
 with builtins;
-with import ./../lib.nix;
+with import <lib>;
 { accessKeyId, deployerIP, ... }:
 let
     org             = "IOHK";
