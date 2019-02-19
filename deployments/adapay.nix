@@ -533,7 +533,7 @@ in {
       };
       graylog = {
         enable = true;
-        plugins = with pkgs.graylogPlugins; [ "auth_sso" "pagerduty" "slack" ];
+        plugins = with pkgs.graylogPlugins; [ auth_sso pagerduty slack ];
         elasticsearchHosts = [ "http://graylog:9200" ];
         inherit (graylogCreds) rootPasswordSha2 passwordSecret;
       };
