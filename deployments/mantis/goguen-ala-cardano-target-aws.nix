@@ -1,3 +1,4 @@
+let topology = import ./../../topology.nix; in
 with builtins;
 with import ../../lib.nix;
 { accessKeyId, deployerIP, ... }:
@@ -21,7 +22,10 @@ let
     mkExplorer = mkMachine ["allow-explorer-public"];
     mkFaucet   = mkMachine ["allow-faucet-public"];
     mkMantis   = mkMachine ["allow-mantis-public"];
-in {
+in listToAttrs (map 
+      (mantisNode: nameValuePair mantisNode (mkMantis mantisNode))
+      (goguenNodes topology "mantis")
+  ) // {
   explorer-a = mkExplorer;
 
   faucet-a   = mkFaucet;

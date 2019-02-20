@@ -1,3 +1,5 @@
+let localLib = import ./../lib.nix; 
+    topology = import ./../topology.nix; in
 { pkgs, lib, nodes, options, name, config, ... }:
 
 with lib; with builtins; with import ../lib.nix;
@@ -5,7 +7,7 @@ let
   goguenPkgs        = import ./../goguen/default.nix { inherit pkgs; };
   #
   cfg               = config.services.mantis;
-  allNodeNames      = cfg.nodeNames;
+  allNodeNames      = localLib.goguenNodes topology "mantis";
   # nixpkgsSrc        = import ./../goguen/pins/fetch-nixpkgs.nix;
   # nixpkgs           = import nixpkgsSrc {};
   # nodeDryRunnableIP = node: if hasAttr node.config.networking "privateIPv4" then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";

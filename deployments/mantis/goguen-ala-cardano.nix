@@ -1,3 +1,4 @@
+let topology = import ./../../topology.nix; in
 with builtins;
 with import ../../lib.nix;
 
@@ -22,10 +23,7 @@ in {
   explorer-a = mkExplorer "mantis-a-0";
 
   faucet-a   = mkFaucet "mantis-a-0";
-
-  mantis-a-0 = mkMantis;
-  mantis-a-1 = mkMantis;
-  mantis-b-0 = mkMantis;
-  mantis-b-1 = mkMantis;
-  mantis-c-0 = mkMantis;
-}
+} // listToAttrs (map 
+      (mantisNode: nameValuePair mantisNode mkMantis)
+      (goguenNodes topology "mantis")
+    )

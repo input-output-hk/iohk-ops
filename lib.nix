@@ -83,6 +83,13 @@ in lib // (rec {
 
   orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
 
+  goguenNodes = topology: nodeType: 
+    lib.flatten (
+      lib.mapAttrsToList
+        (region: nodes: builtins.genList (n: "${nodeType}-" + region + "-" + toString n) nodes."${nodeType}")
+        topology.regions
+    );
+
   traceF   = f: x: builtins.trace                         (f x)  x;
   traceSF  = f: x: builtins.trace (builtins.seq     (f x) (f x)) x;
   traceDSF = f: x: builtins.trace (builtins.deepSeq (f x) (f x)) x;
