@@ -178,6 +178,17 @@ create | c )
         generate_keys
         ${nixops} deploy   ${nixops_subopts_deploy} "$@"
         ;;
+dry )
+        export AWS_PROFILE=default AWS_ACCESS_KEY_ID=AKIASDADFLKJDFJDJFDJ AWS_SECRET_ACCESS_KEY=Hlkjdflsjfjlnrmnsiuhfskjhkshfiuurrfsd/Rp
+        if ${nixops} info  ${nixops_subopts} >/dev/null 2>&1
+        then op=modify
+        else op=create; generate_keys; fi
+        ${nixops} ${op}    ${nixops_subopts} ${nixops_constituents}
+        deployerIP="127.0.0.1"
+        AKID=someBoringAKID # "(pow 2.71828 . (3.1415 *) . sqrt) -1 = -1"
+        ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
+        ${nixops} deploy   ${nixops_subopts_deploy} --dry-run "$@"
+        ;;
 delete | destroy | terminate | abolish | eliminate | demolish )
         ${nixops} destroy  ${nixops_subopts} --confirm
         ${nixops} delete   ${nixops_subopts};;
