@@ -15,10 +15,9 @@
 ##          influence on resources, that are deployment-independent.
 ##
 ##       3. For the (unfortunate) remainder of cases, where resource-based interpretation
-##          depends on the deployment, the particular deployment must import this file
-##          by interpreting a network parameter (see deployments/config.nix for example):
+##          depends on the deployment, the particular deployment must import this file:
 ##
-##          configFile ? ../../configs/default.nix
+##          import <config>
 {
   ## Default values for organisation and region.
   org           = "IOHK";

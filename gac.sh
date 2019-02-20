@@ -32,19 +32,23 @@ self="$0 ${verbose}"
 cmd=${1:-doit}; test -n "$1"; shift
 set -u
 
-CONFIG=
+CONFIG=default
 CLUSTER=create-.config.sh
-if test -f .config.sh
-then . ./.config.sh
-else if test ${cmd} != "repl" -a ${cmd} != "eval"
-     then echo "ERROR:  echo CLUSTER=your-cluster-name > .config.sh" >&2; exit 1; fi
+if test ! -f .config.sh
+then
+        log "WARNING:  creating a default .config.sh with an empty cluster"
+        cat > .config.sh <<EOF
+CLUSTER=mempty
+CONFIG=default
+EOF
 fi
+. ./.config.sh
 ALL_NODES="mantis-a-0 mantis-a-1 mantis-b-0 mantis-b-1 mantis-c-0 "
 if test -z "${RECURSIVE_GAC}"
 then log ".config.sh settings:"
      cat <<EOF
-CONFIG=${CONFIG}
 CLUSTER=${CLUSTER}
+CONFIG=${CONFIG}
 EOF
 fi
 
@@ -57,7 +61,7 @@ nix_opts="\
 --max-jobs 4 --cores 0 --show-trace \
 -I nixpkgs=${nixpkgs_out} \
 -I nixops=${nixops_out}/share/nix/nixops \
--I config=./configs \
+-I config=./configs/${CONFIG}.nix \
 -I module=./modules \
 -I static=./static \
 -I lib=./lib.nix \
@@ -218,8 +222,6 @@ cluster-components | ls )
 cluster-deploy | csd )
         $self     cluster-components
         ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER}/*.nix
-        ${nixops} set-args ${nixops_subopts} \
-                  --arg    configFile "${CONFIG}"
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
 cluster-destroy )
         ${nixops} destroy  ${nixops_subopts} "$@"
