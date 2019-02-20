@@ -1,17 +1,20 @@
-{ pkgs, lib, nodes, config, ... }:
+{ pkgs, lib, nodes, options, config, ... }:
 
 with lib; with builtins;
 let
   cfg               = config.services.mantis;
   cluster           = config.cluster;
-  allNodeNames      = cluster.mantisNodeNames;
+  allNodeNames      = config.mantis.nodeNames;
   # nixpkgsSrc        = import ./../goguen/pins/fetch-nixpkgs.nix;
   # nixpkgs           = import nixpkgsSrc {};
   goguenPkgs        = import ./../goguen/default.nix { inherit pkgs; };
-  mantisRPCListenIP = config.networking.privateIPv4;
-  otherNodeNames    = filter (on: on != cfg.nodeName)                              allNodeNames;
-  otherNodeIPs      = map    (on: nodes."${n}".config.networking.privateIPv4) otherNodeNames;
-  mantisMachine     = name: { inherit name; dns = "${name}.iele-internal.testnet.mantis.iohkdev.io"; ip = "${nodes.${name}.config.networking.privateIPv4}"; };
+  # nodeDryRunnableIP = node: if hasAttr node.config.networking "privateIPv4" then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
+  # nodeDryRunnableIP = node: if hasAttr node.config.networking "privateIPv4" then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
+  nodeDryRunnableIP = node: if node.options.networking.privateIPv4.isDefined then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
+  mantisRPCListenIP = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
+  otherNodeNames    = filter (on: on != cfg.nodeName)              allNodeNames;
+  otherNodeIPs      = map    (on: nodeDryRunnableIP nodes."${on}") otherNodeNames;
+  mantisMachine     = name: { inherit name; dns = "${name}.iele-internal.testnet.mantis.iohkdev.io"; ip = "${nodeDryRunnableIP nodes.${name}}"; };
   mantisMachines    = listToAttrs (map (n: { name = n; value = mantisMachine n; }) allNodeNames);
   ####### ..injected through Terraform, all XXX
   networkId         = "1234";
@@ -19,15 +22,14 @@ let
   machines          = mantisMachines;
   # faucetAddresses  = import (there "faucet-addresses.nix");
   faucetAddresses   = { faucetA = "347715541c4e6791d1c180892214597bd879ec30"; faucetB = "54d58e16e3d03b40c5b9df8f0527f930b444f2af"; faucetC = "e03a3d53e863ca48b0c8386676b99d3daf35a23f"; };
-  nodeIds          = import ./../static/mantis-node-ids.nix;
+  nodeIds           = import <static/mantis-node-ids.nix>;
   allNodes          = recursiveUpdate machines nodeIds;
   node              = allNodes.${cfg.nodeName};
   otherNodes        = attrValues (removeAttrs allNodes [ cfg.nodeName ]);
   ####### ..mantis-iele-ops/common/testnet/nixops/mantis/default.nix
-  enode = node: "enode://${node.id}@${node.ip}:9076";
-  localNode = node: "${node.ip}:0.0.0.0:5679";
-  bootstrapEnodes = self: builtins.toJSON (map enode otherNodes);
-  bootstrapNodes = self: builtins.toJSON (map (n: "${n.ip}:${n.ip}:5679") otherNodes);
+  enode             = node: "enode://${node.id}@${node.ip}:9076";
+  bootstrapEnodes   = self: builtins.toJSON (map enode otherNodes);
+  bootstrapNodes    = self: builtins.toJSON (map (n: "${n.ip}:${n.ip}:5679") otherNodes);
   mantis_conf = pkgs.writeTextFile {
     name = "mantis.conf";
     text = ''
@@ -58,7 +60,7 @@ let
         block-forging-delay = 15.seconds
 
         # The format is: ID:IP:PORT
-        local-node = "${localNode cfg.node}"
+        local-node = ${mantisRPCListenIP}:0.0.0.0:5679
 
         # Each list item has the same format as the `local-node`
         bootstrap-nodes = ${bootstrapNodes cfg.nodeName}
@@ -386,7 +388,7 @@ with goguenPkgs; {
   };
 
   imports = [
-    ../modules/common.nix
+    <module/common.nix>
   ];
   config = mkIf true {
     nix.requireSignedBinaryCaches = false;
