@@ -22,6 +22,7 @@
 , ouroborosNetworkPrsJSON ? ./simple-pr-dummy.json
 , iohkMonitoringPrsJSON ? ./simple-pr-dummy.json
 , chainPrsJSON ? ./simple-pr-dummy.json
+, fmLedgerRulesPrsJSON ? ./simple-pr-dummy.json
 , shellPrsJSON ? ./simple-pr-dummy.json
 , walletPrsJSON ? ./simple-pr-dummy.json
 , iohkNixPrsJSON ? ./simple-pr-dummy.json
@@ -83,6 +84,13 @@ let
       input = "chain";  # corresponds to argument in cardano-chain/release.nix
       prs = chainPrsJSON;
       bors = true;
+    };
+
+    fm-ledger-rules = {
+      description = "FM Ledger Rules";
+      url = "https://github.com/input-output-hk/fm-ledger-rules.git";
+      branch = "master";
+      prs = fmLedgerRulesPrsJSON;
     };
 
     ouroboros-network = {
