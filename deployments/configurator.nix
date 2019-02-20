@@ -1,10 +1,9 @@
-{ configFile ? <config>
-, accessKeyId
+{ accessKeyId
 , deployerIP
 , ...
 }:
 with (import <nixpkgs> {}).lib;
-with import configFile; {
+with import <config>; {
 
   ## Per-machine defaults:
   defaults = {
