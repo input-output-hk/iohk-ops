@@ -96,13 +96,13 @@ generate_keys () {
 
   echo "{" > "$NODE_IDS"
 
-  for n in $NODES; do 
+  for n in $NODES; do
     KEY_FILE="static/mantis-$n.key"
-    
+
     if [ ! -f "$KEY_FILE" ]; then
       $MANTIS/bin/eckeygen > "$KEY_FILE"
     fi
-    
+
     NODE_ID="`sed -n 2p \"$KEY_FILE\"`"
     echo "  mantis-$n = { id = \"$NODE_ID\"; };" >> "$NODE_IDS"
   done
@@ -158,7 +158,7 @@ case ${cmd} in
                 if test ${nixver} != 2.2 -a ${nixver} != 2.3 -a ${nixver} != 2.4 -a ${nixver} != 2.5
                 then log "ERROR:  nix version 2.2 required for 'gac repl'"
                 fi
-                nix repl     ${nix_opts} --arg depl       "${nixops_network_expr}" ./network.nix \
+                nix repl     ${nix_opts} --arg    depl       "${nixops_network_expr}" ./network.nix \
                                          --argstr nixpkgsSrc "${nixpkgs_out}";;
 ###
 ###
@@ -197,15 +197,14 @@ cluster-config | csconf )
         log "querying own IP.."
         deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
         log "setting up the AWS access key.."
-        AKID="$1"
-        test -z "$1" && {
+        set +u; AKID="$1"; set -u
+        test -z "$AKID" && {
                 guessedAKID="$(grep aws_access_key_id ~/.aws/credentials | cut -d= -f2 | xargs echo)"
                 read -ei "${guessedAKID}" -p "Use AWS access key ID: " AKID
         }
         ${nixops} set-args ${nixops_subopts} \
                   --argstr accessKeyId "${AKID}" \
-                  --argstr deployerIP "${deployerIP}" \
-                  --arg    configFile "${CONFIG}" \
+                  --argstr deployerIP "${deployerIP}"
                 ;;
 cluster-create | csc )
         set +u; AKID="$1"; test -n "$1" && shift; set -u
@@ -233,7 +232,7 @@ ssh )
         set +u; test -n "$1" && shift; set -u
         ${nixops} ssh          ${nixops_subopts} ${machine} "$@";;
 ssh-all )
-        ${nixops} ssh-for-each ${nixops_subopts} --parallel --include ${ALL_NODES} -- "$@";;   
+        ${nixops} ssh-for-each ${nixops_subopts} --parallel --include ${ALL_NODES} -- "$@";;
 ###
 ###
 ###
@@ -282,7 +281,7 @@ grep )
         $0        grep-since ${since} "$@";;
 watch-for )
         $0        follow-all 2>&1 | ${ag} "$@";;
-             
+
 ###
 ###
 ###

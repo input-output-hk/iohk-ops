@@ -24,7 +24,7 @@
           instanceType = mkOption {
             type = str;
             description = "Instance type.";
-            default = null;
+            default = "t2.large";
           };
           org = mkOption {
             type = str;
