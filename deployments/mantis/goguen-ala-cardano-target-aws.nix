@@ -6,13 +6,8 @@ let
     region          = "eu-central-1";
     mkMantisMachine = hostname: { nodes, resources, pkgs, config, ... }:
 rec {
-      imports = [
-        ../modules/amazon-base.nix
-      ];
+      imports = [ <module/amazon-base.nix> ];
       deployment.ec2 = {
-        inherit accessKeyId;
-        associatePublicIpAddress = true;
-        elasticIPv4 = resources.elasticIPs."${hostname}-ip";
         securityGroups = [
           resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
           resources.ec2SecurityGroups."allow-mantis-public-${region}-${org}"
@@ -20,9 +15,9 @@ rec {
         blockDeviceMapping = {
           "/dev/xvdf" = { size = 120; }; # resources.ebsVolumes."${hostname}-ebs"
         };
+        associatePublicIpAddress = true;
       };
-      deployment.route53.accessKeyId = accessKeyId;
-      deployment.route53.hostName = "${hostname}.${config.deployment.name}.dev-mantis.iohkdev.io";
+      # deployment.route53.hostName = "${hostname}.${config.deployment.name}.dev-mantis.iohkdev.io";
 };
 in {
   mantis-a-0 = mkMantisMachine "mantis-a-0"; 
@@ -45,22 +40,7 @@ in {
     #   mantis-b-1-ebs = { inherit region accessKeyId size; };
     #   mantis-c-0-ebs = { inherit region accessKeyId size; };
     # };
-    ec2KeyPairs = {
-      cardano-keypair-IOHK-eu-central-1 = {
-        inherit region accessKeyId;
-        description = "Keypair for ${org}/${region}";
-      };
-    };
     ec2SecurityGroups = {
-      "allow-deployer-ssh-${region}-${org}" = {
-        inherit region accessKeyId;
-        description = "SSH";
-        rules = [{
-          protocol = "tcp"; # TCP
-          fromPort = 22; toPort = 22;
-          sourceIp = deployerIP + "/32";
-        }];
-      };
       "allow-mantis-public-${region}-${org}" = {
         inherit region accessKeyId;
         description = "Mantis public ports";
@@ -74,9 +54,9 @@ in {
         ];
       };
     };
-    route53HostedZones.hz = { config, ... }: {
-      name = "${config.deployment.name}.dev-mantis.iohkdev.io.";
-      inherit region accessKeyId;
-    };
+    # route53HostedZones.hz = { config, ... }: {
+    #   name = "${config.deployment.name}.dev-mantis.iohkdev.io.";
+    #   inherit region accessKeyId;
+    # };
   };
 }

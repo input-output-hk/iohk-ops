@@ -3,14 +3,14 @@ with import <lib>;
 
 let
   mkMantisMachine = vmType: nodeName: { nodes, resources, pkgs, config, ... }: {
-    imports = [ ../modules/mantis-service.pseudo.nix ];
+    imports = [ <module/mantis-service.pseudo.nix> ];
     options = {
-      cluster = mkOption {
+      mantis = mkOption {
         description = "Cluster parameters.";
         default = {};
         type = with types; submodule {
           options = {
-            mantisNodeNames = mkOption {
+            nodeNames = mkOption {
               type = listOf str;
               description = "List of Mantis node names.";
               default = [ "mantis-a-0" "mantis-a-1" "mantis-b-0" "mantis-b-1" "mantis-c-0" ];
@@ -22,7 +22,7 @@ let
 
     config = {
       deployment.keys.mantis-node = {
-        keyFile = ../static + "/${nodeName}.key";
+        keyFile = <static> + "/${nodeName}.key";
         user = "mantis";
         destDir = "/var/lib/keys";
       };
