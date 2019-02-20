@@ -90,6 +90,16 @@ in lib // (rec {
         topology.regions
     );
 
+  goguenNodesRegions = topology: nodeType: 
+    builtins.listToAttrs (lib.flatten (
+      lib.mapAttrsToList
+        (region: nodes: builtins.genList (n: lib.nameValuePair ("${nodeType}-" + region + "-" + toString n) region) nodes."${nodeType}")
+        topology.regions
+    ));
+
+  goguenRegions = topology: nodeType: 
+    lib.mapAttrsToList (region: _: region) topology.regions;
+
   traceF   = f: x: builtins.trace                         (f x)  x;
   traceSF  = f: x: builtins.trace (builtins.seq     (f x) (f x)) x;
   traceDSF = f: x: builtins.trace (builtins.deepSeq (f x) (f x)) x;

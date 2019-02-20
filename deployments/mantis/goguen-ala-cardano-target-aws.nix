@@ -4,7 +4,15 @@ with import ../../lib.nix;
 { accessKeyId, deployerIP, ... }:
 let
     org             = "IOHK";
-    region          = "eu-central-1";
+    defaultRegion      = "eu-central-1";
+    mantisNodes        = goguenNodes topology "mantis";
+    mantisNodesRegions = goguenNodesRegions topology "mantis";
+    allAwsRegions         = {
+      "a" = defaultRegion;
+      "b" = defaultRegion;
+      "c" = defaultRegion;
+    };
+    nodesAwsRegions = map (r: allAwsRegions."${r}") (goguenRegions topology "mantis") ;
 
     sgByName        = resources: org: region: name:
       resources.ec2SecurityGroups."${name}-${region}-${org}";
@@ -23,53 +31,48 @@ let
     mkFaucet   = mkMachine ["allow-faucet-public"];
     mkMantis   = mkMachine ["allow-mantis-public"];
 in listToAttrs (map 
-      (mantisNode: nameValuePair mantisNode (mkMantis mantisNode))
+      (mantisNode: nameValuePair mantisNode mkMantis)
       (goguenNodes topology "mantis")
   ) // {
   explorer-a = mkExplorer;
 
   faucet-a   = mkFaucet;
 
-  mantis-a-0 = mkMantis;
-  mantis-a-1 = mkMantis;
-  mantis-b-0 = mkMantis;
-  mantis-b-1 = mkMantis;
-  mantis-c-0 = mkMantis;
-
   resources = {
-    elasticIPs = {
-      explorer-a-ip = { inherit region accessKeyId; };
+    elasticIPs =  mapAttrs' (node: logicalRegion: nameValuePair "${node}-ip" { 
+      inherit accessKeyId;
+      region = allAwsRegions."${logicalRegion}"; }
+    ) mantisNodesRegions // {
+      explorer-a-ip = { inherit  accessKeyId;
+        region = defaultRegion;
+      };
 
-      faucet-a-ip   = { inherit region accessKeyId; };
-
-      mantis-a-0-ip = { inherit region accessKeyId; };
-      mantis-a-1-ip = { inherit region accessKeyId; };
-      mantis-b-0-ip = { inherit region accessKeyId; };
-      mantis-b-1-ip = { inherit region accessKeyId; };
-      mantis-c-0-ip = { inherit region accessKeyId; };
+      faucet-a-ip   = { inherit  accessKeyId;
+        region = defaultRegion;
+      };
     };
 
     ec2SecurityGroups =
     let public = type: port: { protocol = type; fromPort = port ; toPort = port ; sourceIp = "0.0.0.0/0"; };
     in {
-      "allow-explorer-public-${region}-${org}" = {
-        inherit region accessKeyId;
+      "allow-explorer-public-${defaultRegion}-${org}" = { inherit  accessKeyId;
+        region = defaultRegion;
         description = "Goguen Explorer public ports";
         rules =  map (public "tcp") [ 80 8080 5601 ]
               ++ map (public "udp") [];
       };
-      "allow-faucet-public-${region}-${org}" = {
-        inherit region accessKeyId;
+      "allow-faucet-public-${defaultRegion}-${org}" = { inherit  accessKeyId;
+        region = defaultRegion;
         description = "Goguen Faucet public ports";
         rules =  map (public "tcp") [ 8099 5555 ]
               ++ map (public "udp") [ 8125 ];
       };
-      "allow-mantis-public-${region}-${org}" = {
+    } // listToAttrs (map (region: nameValuePair "allow-mantis-public-${region}-${org}" {
         inherit region accessKeyId;
         description = "Mantis public ports";
         rules =  map (public "tcp") [ 5555 5679 8546 9076 30303 ]
               ++ map (public "udp") [ 8125 ];
-      };
+      }) nodesAwsRegions);
     };
   };
 }
