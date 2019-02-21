@@ -1,18 +1,16 @@
-{ pkgs, lib, nodes, options, config, ... }:
+{ pkgs, lib, nodes, options, name, config, ... }:
 
-with lib; with builtins;
+with lib; with builtins; with import ../lib.nix;
 let
   cfg               = config.services.mantis;
-  cluster           = config.cluster;
-  allNodeNames      = config.mantis.nodeNames;
+  allNodeNames      = cfg.nodeNames;
   # nixpkgsSrc        = import ./../goguen/pins/fetch-nixpkgs.nix;
   # nixpkgs           = import nixpkgsSrc {};
   goguenPkgs        = import ./../goguen/default.nix { inherit pkgs; };
   # nodeDryRunnableIP = node: if hasAttr node.config.networking "privateIPv4" then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
   # nodeDryRunnableIP = node: if hasAttr node.config.networking "privateIPv4" then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
-  nodeDryRunnableIP = node: if node.options.networking.privateIPv4.isDefined then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
   mantisRPCListenIP = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
-  otherNodeNames    = filter (on: on != cfg.nodeName)              allNodeNames;
+  otherNodeNames    = filter (on: on != name)              allNodeNames;
   otherNodeIPs      = map    (on: nodeDryRunnableIP nodes."${on}") otherNodeNames;
   mantisMachine     = name: { inherit name; dns = "${name}.iele-internal.testnet.mantis.iohkdev.io"; ip = "${nodeDryRunnableIP nodes.${name}}"; };
   mantisMachines    = listToAttrs (map (n: { name = n; value = mantisMachine n; }) allNodeNames);
@@ -24,8 +22,8 @@ let
   faucetAddresses   = { faucetA = "347715541c4e6791d1c180892214597bd879ec30"; faucetB = "54d58e16e3d03b40c5b9df8f0527f930b444f2af"; faucetC = "e03a3d53e863ca48b0c8386676b99d3daf35a23f"; };
   nodeIds           = import <static/mantis-node-ids.nix>;
   allNodes          = recursiveUpdate machines nodeIds;
-  node              = allNodes.${cfg.nodeName};
-  otherNodes        = attrValues (removeAttrs allNodes [ cfg.nodeName ]);
+  node              = allNodes.${name};
+  otherNodes        = attrValues (removeAttrs allNodes [ name ]);
   ####### ..mantis-iele-ops/common/testnet/nixops/mantis/default.nix
   enode             = node: "enode://${node.id}@${node.ip}:9076";
   bootstrapEnodes   = self: builtins.toJSON (map enode otherNodes);
@@ -63,7 +61,7 @@ let
         local-node = "${mantisRPCListenIP}:0.0.0.0:5679"
 
         # Each list item has the same format as the `local-node`
-        bootstrap-nodes = ${bootstrapNodes cfg.nodeName}
+        bootstrap-nodes = ${bootstrapNodes name}
       }
       datadir = ${cfg.dataDir}
 
@@ -75,7 +73,7 @@ let
          batch-size = 10
          auto-flush-ms = 1000
          # optional hostname to send to Riemann server, if not provided the client will use InetAddress.getLocalHost().getHostName()
-         host-name = ${cfg.nodeName}
+         host-name = ${name}
        }
        ''}
 
@@ -130,7 +128,7 @@ let
           # Note that this is a UDP port
           # port = 30303
 
-          bootstrap-nodes = ${bootstrapEnodes cfg.nodeName}
+          bootstrap-nodes = ${bootstrapEnodes name}
         }
       }
       metrics {
@@ -260,138 +258,90 @@ let
   };
 in
 with goguenPkgs; {
-  options.services.mantis = {
+  options.services.mantis = with types; {
+    nodeNames = mkOption {
+      type = listOf str;
+      description = "List of all Mantis node names.";
+      default = [ "mantis-a-0" "mantis-a-1" "mantis-b-0" "mantis-b-1" "mantis-c-0" ];
+    };
+
+    riemannHost = mkOption {
+      type = str;
+      description = "DNS address or IP of the Riemann server";
+    };
+
     enable = mkOption {
       description = "Whether to enable the mantis service";
       default = false;
-      type = types.bool;
+      type = bool;
     };
 
     node = mkOption {
       description = "This mantis node";
-      type = types.attrs;
-    };
-
-    nodeName = mkOption {
-      description = "This mantis node name";
-      example = "mantis-a-0";
-      type = types.str;
+      type = attrs;
     };
 
     machines = mkOption {
       description = "All the testnet machines";
-      type = types.attrs;
+      type = attrs;
     };
 
     logbackAdditions = mkOption {
       description = "Any additions to the logback.xml file";
       default = "";
-      type = types.str;
+      type = str;
     };
 
     logbackLevel = mkOption {
       description = "The root logger level";
       default = "DEBUG";
-      type = types.enum [ "TRACE" "DEBUG" "INFO" "WARN" "ERROR" ];
+      type = enum [ "TRACE" "DEBUG" "INFO" "WARN" "ERROR" ];
     };
 
     dataDir = mkOption {
       description = "Where mantis stores its data";
-      type = types.str;
+      type = str;
     };
 
     jvmOptions = mkOption {
       description = "Additional JVM options";
       example = "-J-Xss10M";
       default = "-J-Xss10M";
-      type = types.str;
+      type = str;
     };
 
-    nodeIds = mkOption {
-      description = "The mantis node ids";
-      type = types.attrs;
-    };
+    nodeIds                           = mkOption {type = attrs;   description = "The mantis node ids";};
+    faucetAddresses                   = mkOption {type = attrs;   description = "The faucet addresses";};
+    vmType                            = mkOption {type = enum [ "iele" "kevm" ]; default = "iele";};
+    vmPkg                             = mkOption {type = package; description = "The VM package to use, e.g. goguenPkgs.iele";};
 
-    faucetAddresses = mkOption {
-      description = "The faucet addresses";
-      type = types.attrs;
-    };
-
-    vmType = mkOption {
-      description = "iele or kevm";
-      type = types.enum [ "iele" "kevm" ];
-    };
-
-    vmPkg = mkOption {
-      type = types.package;
-      description = "The VM package to use, e.g. goguenPkgs.iele";
-    };
-
-    ethCompatibilityMode = mkOption {
-      type = types.bool;
-      description = "should be true for KEVM and false for IELE";
-    };
-
-    frontierBlockNumber = mkOption {
-      type = types.int;
-    };
-
-    homesteadBlockNumber = mkOption {
-      type = types.int;
-    };
-
-    eip106BlockNumber = mkOption {
-      type = types.int;
-    };
-
-    eip150BlockNumber = mkOption {
-      type = types.int;
-    };
-
-    eip155BlockNumber = mkOption {
-      type = types.int;
-    };
-
-    eip160BlockNumber = mkOption {
-      type = types.int;
-    };
-
-    eip161BlockNumber = mkOption {
-      type = types.int;
-    };
-
-    difficultyBombPauseBlockNumber = mkOption {
-      type = types.int;
-    };
-
-    difficultyBombContinueBlockNumber = mkOption {
-      type = types.int;
-    };
-
-    monetaryPolicyFirstEraBlockReward = mkOption {
-      type = types.int;
-    };
-
-    monetaryPolicyEraDuration = mkOption {
-      type = types.int;
-    };
-
-    monetaryPolicyRewardReductionRate = mkOption {
-      type = types.str;
-    };
-
-    riemannHost = mkOption {
-      type = types.str;
-      description = "DNS address or IP of the Riemann server";
-    };
-
+    ethCompatibilityMode              = mkOption {type = bool;    description = "should be true for KEVM and false for IELE";};
+    frontierBlockNumber               = mkOption {type = int;};
+    homesteadBlockNumber              = mkOption {type = int;};
+    eip106BlockNumber                 = mkOption {type = int;};
+    eip150BlockNumber                 = mkOption {type = int;};
+    eip155BlockNumber                 = mkOption {type = int;};
+    eip160BlockNumber                 = mkOption {type = int;};
+    eip161BlockNumber                 = mkOption {type = int;};
+    difficultyBombPauseBlockNumber    = mkOption {type = int;};
+    difficultyBombContinueBlockNumber = mkOption {type = int;};
+    monetaryPolicyFirstEraBlockReward = mkOption {type = int;};
+    monetaryPolicyEraDuration         = mkOption {type = int;};
+    monetaryPolicyRewardReductionRate = mkOption {type = str;};
   };
 
   imports = [
     <module/common.nix>
   ];
+
   config = mkIf true {
     nix.requireSignedBinaryCaches = false;
+
+    deployment.keys.mantis-node = {
+      keyFile = <static> + "/${name}.key";
+      user = "mantis";
+      destDir = "/var/lib/keys";
+    };
 
     environment.etc = [ { source = mantis_conf; target = "mantis/mantis.conf"; }
                         { source = logback_xml; target = "mantis/logback.xml"; }
