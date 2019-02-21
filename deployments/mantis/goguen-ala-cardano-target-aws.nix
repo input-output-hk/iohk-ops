@@ -9,7 +9,7 @@ let
     mantisNodesRegions = goguenNodesRegions topology "mantis";
     allAwsRegions         = {
       "a" = defaultRegion;
-      "b" = defaultRegion;
+      "b" = "eu-west-1";
       "c" = defaultRegion;
     };
     nodesAwsRegions = map (r: allAwsRegions."${r}") (goguenRegions topology "mantis") ;
