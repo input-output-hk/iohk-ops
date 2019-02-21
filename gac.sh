@@ -3,6 +3,7 @@ set -e
 
 usage() {
         echo "$(basename $0) [--verbose] COMMAND ARGS.." >&2
+        echo
         grep ' ) # Doc:' $0 | sed 's,^\([^ ]*\) .* \([^ ]*\) ) # Doc:\(.*\)$,"\1" "\2",' | tail -n +2 | {
                 read a b
                 while test -n "$a"
@@ -11,6 +12,7 @@ usage() {
                         read a b
                 done
         }
+        echo
 }
 if test -n "RUNNING_GAC"
 then RECURSIVE_GAC=yes
@@ -63,6 +65,7 @@ nix_out="$(   nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpk
 nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).goguenNixpkgs' | xargs echo)
 nixops_out="$(nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nixops.outPath' | xargs echo)"
 nix=${nix_out}/bin/nix
+nix_build=${nix_out}/bin/nix-build
 nixops=${nixops_out}/bin/nixops
 nix_opts="\
 --max-jobs 4 --cores 0 --show-trace \
@@ -159,9 +162,12 @@ wait_host_ssh() {
 }
 
 case ${cmd} in
-###
-###  Debug support
-###
+"" | "" ) # Doc:
+        ;;
+"" | debug-support ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
 eval | evaluate-nixops-machine-definition ) # Doc:
         nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
 repl | repl-with-machine-definition ) # Doc:
@@ -184,9 +190,10 @@ dry | full-deploy-dry-run ) # Doc:
         ;;
 "" | "" ) # Doc:
         ;;
-###
-###
-###
+"" | initial-cluster-setup ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
 components | ls | list-cluster-components ) # Doc:
         log "components of cluster '${CLUSTER}':"
         echo ${nixops_constituents} | tr " " "\n" | sort | sed 's,^,   ,';;
@@ -221,9 +228,10 @@ info   | i | nixops-info ) # Doc:
         ${nixops} info     ${nixops_subopts};;
 "" | "" ) # Doc:
         ;;
-###
-###
-###
+"" | cluster-deployment ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
 deploy-one | one | deploy-one-machine ) # Doc:
         $self     deploy --include mantis-a-0;;
 deploy | d | update-and-deploy ) # Doc:
@@ -232,9 +240,12 @@ deploy | d | update-and-deploy ) # Doc:
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
 "" | "" ) # Doc:
         ;;
-###
-###
-###
+"" | "" ) # Doc:
+        ;;
+"" | basic-node-ssh ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
 ssh | ssh-to-mantis-node ) # Doc:
         machine="${1:-mantis-a-0}";
         set +u; test -n "$1" && shift; set -u
@@ -243,9 +254,10 @@ ssh-all | parallel-ssh-on-all-mantis-nodes ) # Doc:
         ${nixops} ssh-for-each ${nixops_subopts} --parallel --include ${ALL_NODES} -- "$@";;
 "" | "" ) # Doc:
         ;;
-###
-###
-###
+"" | systemd-service-control ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
 stop | stop-all-mantis-services ) # Doc:
         on=${1:+--include $*}
         $0        ssh-all ${on} -- systemctl    stop mantis;;
@@ -260,9 +272,10 @@ statuses | ss | all-mantis-service-statuses ) # Doc:
         $0        ssh-all ${on} -- systemctl  status mantis;;
 "" | "" ) # Doc:
         ;;
-###
-###
-###
+"" | journald-logs-and-grepping ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
 since | mantis-service-start-date-on-node ) # Doc:
         node=$1
         ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show mantis --value --property WatchdogTimestamp | cut -d' ' -f3;;
@@ -296,9 +309,10 @@ watch-for | watch-all-mantis-service-journals-for-regex-occurence ) # Doc:
 
 "" | "" ) # Doc:
         ;;
-###
-###
-###
+"" | service-logs-interpretation ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
 blocks | mantis-node-recent-block-numbers ) # Doc:
         $0        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' -f5,14-;;
 roles | mantis-node-roles-since-start ) # Doc:
@@ -311,9 +325,10 @@ watch-exceptions | watch-mantis-node-current-exception-stream ) # Doc:
         $0 watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
 "" | "" ) # Doc:
         ;;
-###
-###
-###
+"" | deployer-bootstrap ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
 describe-image | describe-deployer-nixops-image ) # Doc:
         nixos_ver="18.09"
         region="eu-central-1"
