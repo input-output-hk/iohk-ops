@@ -76,7 +76,7 @@ nixops_nix_opts="${nix_opts} \
 -I config=./configs/${CONFIG}.nix \
 -I module=./modules \
 -I static=./static \
--I lib=./lib.nix \
+-I goguen=./goguen \
 "
 
 ag=$( nix-build -E '(import ((import ./lib.nix).goguenNixpkgs) {}).ag'     | xargs echo)/bin/ag
