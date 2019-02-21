@@ -60,7 +60,7 @@ let
         block-forging-delay = 15.seconds
 
         # The format is: ID:IP:PORT
-        local-node = ${mantisRPCListenIP}:0.0.0.0:5679
+        local-node = "${mantisRPCListenIP}:0.0.0.0:5679"
 
         # Each list item has the same format as the `local-node`
         bootstrap-nodes = ${bootstrapNodes cfg.nodeName}
