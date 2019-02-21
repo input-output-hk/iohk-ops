@@ -65,10 +65,13 @@ nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).goguenNixpkgs' | xar
 nixops_out="$(nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nixops.outPath' | xargs echo)"
 nix=${nix_out}/bin/nix
 nix_build=${nix_out}/bin/nix-build
+nix_inst=${nix_out}/bin/nix-instantiate
 nixops=${nixops_out}/bin/nixops
 nix_opts="\
 --max-jobs 4 --cores 0 --show-trace \
 -I nixpkgs=${nixpkgs_out} \
+"
+nixops_nix_opts="${nix_opts} \
 -I nixops=${nixops_out}/share/nix/nixops \
 -I config=./configs/${CONFIG}.nix \
 -I module=./modules \
@@ -86,7 +89,7 @@ fi
 
 export NIX_PATH="nixpkgs=${nixpkgs_out}"
 
-nixops_subopts="--deployment ${CLUSTER} ${nix_opts}"
+nixops_subopts="--deployment ${CLUSTER} ${nixops_nix_opts}"
 nixops_subopts_deploy="${nixops_subopts} --max-concurrent-copy=50"
 nixops_bincaches="https://cache.nixos.org https://hydra.iohk.io https://mantis-hydra.aws.iohkdev.io"
 
@@ -168,14 +171,14 @@ case ${cmd} in
 "" | "" ) # Doc:
         ;;
 eval | evaluate-nixops-machine-definition ) # Doc:
-        nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
+        nix-instantiate ${nixops_nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
 repl | repl-with-machine-definition ) # Doc:
         nixver="$(nix --version | cut -d ' ' -f3)"
         if test ${nixver} != 2.2 -a ${nixver} != 2.3 -a ${nixver} != 2.4 -a ${nixver} != 2.5
         then log "ERROR:  nix version 2.2 required for 'gac repl'"
         fi
-        nix repl     ${nix_opts} --arg    depl       "${nixops_network_expr}" ./network.nix \
-                                 --argstr nixpkgsSrc "${nixpkgs_out}";;
+        nix repl     ${nixops_nix_opts} --arg    depl       "${nixops_network_expr}" ./network.nix \
+                                        --argstr nixpkgsSrc "${nixpkgs_out}";;
 dry | full-deploy-dry-run ) # Doc:
         export AWS_PROFILE=default AWS_ACCESS_KEY_ID=AKIASDADFLKJDFJDJFDJ AWS_SECRET_ACCESS_KEY=Hlkjdflsjfjlnrmnsiuhfskjhkshfiuurrfsd/Rp
         if ${nixops} info  ${nixops_subopts} >/dev/null 2>&1
@@ -245,7 +248,20 @@ deploy | d | update-and-deploy ) # Doc:
         ;;
 build | build-goguen-package ) # Doc:
         pkg=$1
-        ${nix_build} -A ${pkg} goguen/default.nix;;
+        ${nix_build} ${nix_opts} -A ${pkg} goguen/release.nix;;
+build-ala-hydra | build-goguen-package-like-hydra-does ) # Doc:
+        #pkg=$1
+        log "building Hydra"
+        hydra_drv="$(   nix-instantiate -E '(import ((import ./lib.nix).goguenNixpkgs) {}).hydra')"
+        hydra=$(${nix_build} ${nix_opts} ${hydra_drv})
+        log "using Hydra to evaluate goguen/release.nix"
+        ${hydra}/bin/hydra-eval-jobs -I ${nixpkgs_out} -I . -I https://github.com/input-output-hk/iohk-nix/archive/25225e9e23d8fe73663c1e958d41d481b0a4e0f0.tar.gz goguen/release.nix "$@";;
+drv | goguen-derivation ) # Doc:
+        pkg=$1
+        ${nix_inst}  ${nix_opts} -A ${pkg} goguen/release.nix;;
+drv-show | prettyprint-goguen-derivation ) # Doc:
+        pkg=$1
+        ${nix_inst}  ${nix_opts} -A ${pkg} goguen/release.nix | xargs ${nix} show-derivation;;
 "" | "" ) # Doc:
         ;;
 "" | basic-node-ssh ) # Doc:
