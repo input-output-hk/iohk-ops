@@ -12,7 +12,6 @@ usage() {
                         read a b
                 done
         }
-        echo
 }
 if test -n "RUNNING_GAC"
 then RECURSIVE_GAC=yes
@@ -240,6 +239,13 @@ deploy | d | update-and-deploy ) # Doc:
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
 "" | "" ) # Doc:
         ;;
+"" | building-derivations ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
+build | build-goguen-package ) # Doc:
+        pkg=$1
+        ${nix_build} -A ${pkg} goguen/default.nix;;
 "" | "" ) # Doc:
         ;;
 "" | basic-node-ssh ) # Doc:
