@@ -3,7 +3,14 @@ set -e
 
 usage() {
         echo "$(basename $0) [--verbose] COMMAND ARGS.." >&2
-        exit 1
+        grep ' ) # Doc:' $0 | sed 's,^\([^ ]*\) .* \([^ ]*\) ) # Doc:\(.*\)$,"\1" "\2",' | tail -n +2 | {
+                read a b
+                while test -n "$a"
+                do
+                        printf "%20s  %s\n" "$(echo $a | xargs echo)" "$(echo $b | sed 's,-, ,g; s/\b\(.\)/\u\1/' | xargs echo)"
+                        read a b
+                done
+        }
 }
 if test -n "RUNNING_GAC"
 then RECURSIVE_GAC=yes
@@ -25,7 +32,7 @@ verbose=""
 while test -n "$1"
 do case "$1" in
            --verbose | -v ) set -x; verbose="--verbose";;
-           --help | "--"* ) usage;;
+           --help | "--"* ) usage; exit 1;;
            * ) break;;
    esac; shift; done
 self="$0 ${verbose}"
@@ -153,32 +160,18 @@ wait_host_ssh() {
 
 case ${cmd} in
 ###
+###  Debug support
 ###
-###
-        eval )
-                nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
-        repl )
-                nixver="$(nix --version | cut -d ' ' -f3)"
-                if test ${nixver} != 2.2 -a ${nixver} != 2.3 -a ${nixver} != 2.4 -a ${nixver} != 2.5
-                then log "ERROR:  nix version 2.2 required for 'gac repl'"
-                fi
-                nix repl     ${nix_opts} --arg    depl       "${nixops_network_expr}" ./network.nix \
-                                         --argstr nixpkgsSrc "${nixpkgs_out}";;
-###
-###
-###
-genkey | g )
-        generate_keys;;
-create | c )
-        ${nixops} create   ${nixops_subopts} ${nixops_constituents}
-        deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
-        guessedAKID="$(grep aws_access_key_id ~/.aws/credentials | cut -d= -f2 | xargs echo)"
-        read -ei "${guessedAKID}" -p "Use AWS access key ID: " AKID
-        ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
-        generate_keys
-        ${nixops} deploy   ${nixops_subopts_deploy} "$@"
-        ;;
-dry )
+eval | evaluate-nixops-machine-definition ) # Doc:
+        nix-instantiate ${nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
+repl | repl-with-machine-definition ) # Doc:
+        nixver="$(nix --version | cut -d ' ' -f3)"
+        if test ${nixver} != 2.2 -a ${nixver} != 2.3 -a ${nixver} != 2.4 -a ${nixver} != 2.5
+        then log "ERROR:  nix version 2.2 required for 'gac repl'"
+        fi
+        nix repl     ${nix_opts} --arg    depl       "${nixops_network_expr}" ./network.nix \
+                                 --argstr nixpkgsSrc "${nixpkgs_out}";;
+dry | full-deploy-dry-run ) # Doc:
         export AWS_PROFILE=default AWS_ACCESS_KEY_ID=AKIASDADFLKJDFJDJFDJ AWS_SECRET_ACCESS_KEY=Hlkjdflsjfjlnrmnsiuhfskjhkshfiuurrfsd/Rp
         if ${nixops} info  ${nixops_subopts} >/dev/null 2>&1
         then op=modify
@@ -189,26 +182,15 @@ dry )
         ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
         ${nixops} deploy   ${nixops_subopts_deploy} --dry-run "$@"
         ;;
-delete | destroy | terminate | abolish | eliminate | demolish )
-        ${nixops} destroy  ${nixops_subopts} --confirm
-        ${nixops} delete   ${nixops_subopts};;
-re )
-        $self delete && $self create && $self deploy;;
-info   | i )
-        ${nixops} info     ${nixops_subopts};;
+"" | "" ) # Doc:
+        ;;
 ###
 ###
 ###
-staged-deploy )
-        ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
-        ${nixops} deploy   ${nixops_subopts_deploy} "$@" --copy-only
-        ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
-deploy | d )
-        ${nixops} modify   ${nixops_subopts} ${nixops_constituents}
-        ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
-deploy-one | one )
-        $self     deploy --include mantis-a-0;;
-cluster-config | csconf )
+components | ls | list-cluster-components ) # Doc:
+        log "components of cluster '${CLUSTER}':"
+        echo ${nixops_constituents} | tr " " "\n" | sort | sed 's,^,   ,';;
+configure | conf | configure-nixops-deployment-arguments ) # Doc:
         log "querying own IP.."
         deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
         log "setting up the AWS access key.."
@@ -221,104 +203,125 @@ cluster-config | csconf )
                   --argstr accessKeyId "${AKID}" \
                   --argstr deployerIP "${deployerIP}"
                 ;;
-cluster-create | csc )
+genkey | g | generate-mantis-keys ) # Doc:
+        generate_keys;;
+create | create-deployment-from-cluster-components ) # Doc:
         set +u; AKID="$1"; test -n "$1" && shift; set -u
-        $self     cluster-components
+        $self     list-cluster-components
         ${nixops} create   ${nixops_subopts} clusters/${CLUSTER}/*.nix
-        $self     cluster-config $AKID
+        $self     config   $AKID
+        $self     generate-mantis-keys
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
-cluster-components | ls )
-        log "components of cluster '${CLUSTER}':"
-        echo ${nixops_constituents} | tr " " "\n" | sort | sed 's,^,   ,';;
-cluster-deploy | csd )
-        $self     cluster-components
+delete | destroy | terminate | abolish | eliminate | demolish | delete-nixops-deployment ) # Doc:
+        ${nixops} destroy  ${nixops_subopts} --confirm
+        ${nixops} delete   ${nixops_subopts};;
+fromscratch | re | redeploy-cluster-from-scrach ) # Doc:
+        $self delete && $self create && $self deploy;;
+info   | i | nixops-info ) # Doc:
+        ${nixops} info     ${nixops_subopts};;
+"" | "" ) # Doc:
+        ;;
+###
+###
+###
+deploy-one | one | deploy-one-machine ) # Doc:
+        $self     deploy --include mantis-a-0;;
+deploy | d | update-and-deploy ) # Doc:
+        $self     components
         ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER}/*.nix
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
-cluster-destroy )
-        ${nixops} destroy  ${nixops_subopts} "$@"
-        ${nixops} delete   ${nixops_subopts} "$@";;
+"" | "" ) # Doc:
+        ;;
 ###
 ###
 ###
-ssh )
+ssh | ssh-to-mantis-node ) # Doc:
         machine="${1:-mantis-a-0}";
         set +u; test -n "$1" && shift; set -u
         ${nixops} ssh          ${nixops_subopts} ${machine} "$@";;
-ssh-all )
+ssh-all | parallel-ssh-on-all-mantis-nodes ) # Doc:
         ${nixops} ssh-for-each ${nixops_subopts} --parallel --include ${ALL_NODES} -- "$@";;
+"" | "" ) # Doc:
+        ;;
 ###
 ###
 ###
-stop )
+stop | stop-all-mantis-services ) # Doc:
         on=${1:+--include $*}
         $0        ssh-all ${on} -- systemctl    stop mantis;;
-start )
+start | start-all-mantis-services ) # Doc:
         on=${1:+--include $*}
         $0        ssh-all ${on} -- systemctl   start mantis; log "new start date:  $($0 since mantis-a-0)";;
-restart )
+restart | restart-all-mantis-services ) # Doc:
         on=${1:+--include $*}
         $0        ssh-all ${on} -- systemctl restart mantis; log "new start date:  $($0 since mantis-a-0)";;
-statuses | ss )
+statuses | ss | all-mantis-service-statuses ) # Doc:
         on=${1:+--include $*}
         $0        ssh-all ${on} -- systemctl  status mantis;;
+"" | "" ) # Doc:
+        ;;
 ###
 ###
 ###
-since )
+since | mantis-service-start-date-on-node ) # Doc:
         node=$1
         ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show mantis --value --property WatchdogTimestamp | cut -d' ' -f3;;
-journal-on | jon )
+journal-on | jon | mantis-service-journal-on-node ) # Doc:
         node=$1
         ${nixops} ssh          ${nixops_subopts} ${node} -- journalctl  -u mantis --since $($0 since ${node});;
-journal    | jall | j )
+journal    | jall | j | all-mantis-service-journals ) # Doc:
         start_sample_node='mantis-a-0'
         since=${1:-$($0 since ${start_sample_node})}
         log "journal since:  ${since}"
         $0        ssh-all      -- journalctl -u mantis --since ${since};;
-system-journal | sysj )
+system-journal | sysj | system-journal-on-node ) # Doc:
         node=${1:-'mantis-a-0'}
         $0        ssh ${node}  -- journalctl -xe;;
-follow | f )
+follow | f | follow-mantis-service-journal-on-node ) # Doc:
         node=${1:-'mantis-a-0'}
         $0        ssh ${node}  -- journalctl -fu mantis;;
-follow-all | fa )
+follow-all | fa | follow-all-mantis-service-journals ) # Doc:
         $0        ssh-all      -- journalctl -fu mantis "$@";;
-grep-since )
+grep-since | grep-all-mantis-service-journals-since-timestamp ) # Doc:
         since=$1; shift
         log "journal since:  ${since}"
         log "filter:         ag $*"
         $0        journal "${since}" 2>&1 | ${ag} "$@";;
-grep )
+grep | grep-all-mantis-service-journals-since-last-restart ) # Doc:
         start_sample_node='mantis-a-0'
         since=$($0 since ${start_sample_node})
         $0        grep-since ${since} "$@";;
-watch-for )
+watch-for | watch-all-mantis-service-journals-for-regex-occurence ) # Doc:
         $0        follow-all 2>&1 | ${ag} "$@";;
 
+"" | "" ) # Doc:
+        ;;
 ###
 ###
 ###
-blocks )
+blocks | mantis-node-recent-block-numbers ) # Doc:
         $0        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' -f5,14-;;
-roles )
+roles | mantis-node-roles-since-start ) # Doc:
         $0        grep 'role changed|LEADER';;
-exceptions | ex )
+exceptions | ex | mantis-node-exceptions-since-start ) # Doc:
         $0        grep -i exception | ag -v 'RiemannBatchClient|exception.counter';;
-watch-blocks )
+watch-blocks | watch-mantis-node-current-block-number-stream ) # Doc:
         $0 watch-for 'Best Block: ' | cut -d' ' -f5,14-;;
-watch-exceptions )
+watch-exceptions | watch-mantis-node-current-exception-stream ) # Doc:
         $0 watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
+"" | "" ) # Doc:
+        ;;
 ###
 ###
 ###
-describe-image )
+describe-image | describe-deployer-nixops-image ) # Doc:
         nixos_ver="18.09"
         region="eu-central-1"
         export AWS_PROFILE=${CLUSTER} AWS_REGION=${region}
         ami="$(nix-instantiate --eval -E "(import ${nixpkgs_out}/nixos/modules/virtualisation/ec2-amis.nix).\"${nixos_ver}\".${region}.hvm-ebs" | xargs echo)"
         ${aws} ec2 describe-images --image-id ${ami} --region ${region}
         ;;
-create-deployer )
+create-deployer | create-and-maybe-deploy-new-deployer ) # Doc:
         nixos_ver="18.09"
         region="eu-central-1"
         az=${region}b
@@ -365,7 +368,7 @@ EOF
              log "full setup requested, proceeding to set up deployer."
              $0 setup-deployer "$@"
         fi;;
-setup-deployer )
+setup-deployer | finalise-deployer-nixops-bootstrap ) # Doc:
         test -d ./clusters/${CLUSTER} || {
                 log "ERROR: unknown cluster ${CLUSTER} -- to see available clusters:  ls clusters"
                 exit 1
@@ -415,7 +418,11 @@ git config --replace-all receive.denyCurrentBranch updateInstead"
         ssh "deployer@${deployer_ip}" sh -c "\"${setup_cmd}\""
 
         echo "Deploying infra cluster.." >&2
-        ssh -A "deployer@${deployer_ip}" sh -c "\"cd infra && ./gac.sh ${verbose} cluster-create ${AKID} \""
+        ssh -A "deployer@${deployer_ip}" sh -c "\"cd infra && ./gac.sh ${verbose} create-deployment-from-cluster-components ${AKID} \""
         ;;
-* ) usage;;
+"" | "" ) # Doc:
+        ;;
+help | show-this-help-message ) # Doc: Show this help message
+        usage; exit 1;;
+* ) usage; exit 1;;
 esac
