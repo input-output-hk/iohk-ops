@@ -1,5 +1,5 @@
 with builtins;
-with import <lib>;
+with import ../../lib.nix;
 
 let
   mkMantisMachine = vmType: nodeName: { nodes, resources, pkgs, config, ... }: {

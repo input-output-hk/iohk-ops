@@ -1,10 +1,7 @@
-with builtins;
-let
-lib = import ../lib.nix;
-in
-{ pkgs ? import lib.goguenNixpkgs {}
+with builtins; with import ../lib.nix;
+{ pkgs ? import goguenNixpkgs {}
 , ...
-}@args:
+}:
 with pkgs.lib; with pkgs;
 let
   listVersions = drvs: stdenv.mkDerivation {
@@ -27,9 +24,10 @@ let
              drvs)
         );
   };
-  getSrc          = name: lib.fetchPinAuto ./pins name;
+  getSrc          = name: fetchPinAuto ./pins name;
 in
 rec {
+  ethereum-explorer    = callPackage ./explorer.nix         { inherit getSrc;                };
   iele            = callPackage ./iele.nix             { inherit getSrc secp256k1;      };
   kevm            = callPackage ./kevm.nix             { inherit getSrc;                };
   mantis          = callPackage ./mantis.nix           { inherit getSrc sbtVerify;      };
