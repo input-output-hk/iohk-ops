@@ -29,7 +29,6 @@ with import <goguen/default.nix> { inherit pkgs; }; {
       wantedBy = [ "nginx.service" ];
       before = [ "nginx.service" ];
       enable = true;
-      # path = [ (builtins.storePath hydra.mantis.solidityService) ];
 
       serviceConfig = {
         TimeoutStartSec = "0";
