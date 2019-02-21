@@ -18,39 +18,53 @@ let
         associatePublicIpAddress = true;
       };
     };
-    mkMantis   = mkMachine ["allow-mantis-public"];
     mkExplorer = mkMachine ["allow-explorer-public"];
+    mkFaucet   = mkMachine ["allow-faucet-public"];
+    mkMantis   = mkMachine ["allow-mantis-public"];
 in {
-  mantis-a-0 = mkMantis; 
-  mantis-a-1 = mkMantis; 
-  mantis-b-0 = mkMantis; 
-  mantis-b-1 = mkMantis; 
-  mantis-c-0 = mkMantis;
   explorer-a = mkExplorer;
+
+  faucet-a   = mkFaucet;
+
+  mantis-a-0 = mkMantis;
+  mantis-a-1 = mkMantis;
+  mantis-b-0 = mkMantis;
+  mantis-b-1 = mkMantis;
+  mantis-c-0 = mkMantis;
 
   resources = {
     elasticIPs = {
+      explorer-a-ip = { inherit region accessKeyId; };
+
+      faucet-a-ip   = { inherit region accessKeyId; };
+
       mantis-a-0-ip = { inherit region accessKeyId; };
       mantis-a-1-ip = { inherit region accessKeyId; };
       mantis-b-0-ip = { inherit region accessKeyId; };
       mantis-b-1-ip = { inherit region accessKeyId; };
       mantis-c-0-ip = { inherit region accessKeyId; };
-      explorer-a-ip = { inherit region accessKeyId; };
     };
+
     ec2SecurityGroups =
     let public = type: port: { protocol = type; fromPort = port ; toPort = port ; sourceIp = "0.0.0.0/0"; };
     in {
-      "allow-mantis-public-${region}-${org}" = {
-        inherit region accessKeyId;
-        description = "Mantis public ports";
-        rules =  map (public "tcp") [ 5555 5679 8546 9076 30303 ]
-              ++ map (public "udp") [ 8125 ];
-      };
       "allow-explorer-public-${region}-${org}" = {
         inherit region accessKeyId;
         description = "Goguen Explorer public ports";
         rules =  map (public "tcp") [ 80 8080 5601 ]
               ++ map (public "udp") [];
+      };
+      "allow-faucet-public-${region}-${org}" = {
+        inherit region accessKeyId;
+        description = "Goguen Faucet public ports";
+        rules =  map (public "tcp") [ 8099 5555 ]
+              ++ map (public "udp") [ 8125 ];
+      };
+      "allow-mantis-public-${region}-${org}" = {
+        inherit region accessKeyId;
+        description = "Mantis public ports";
+        rules =  map (public "tcp") [ 5555 5679 8546 9076 30303 ]
+              ++ map (public "udp") [ 8125 ];
       };
     };
   };

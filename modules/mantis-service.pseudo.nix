@@ -2,11 +2,12 @@
 
 with lib; with builtins; with import ../lib.nix;
 let
+  goguenPkgs        = import ./../goguen/default.nix { inherit pkgs; };
+  #
   cfg               = config.services.mantis;
   allNodeNames      = cfg.nodeNames;
   # nixpkgsSrc        = import ./../goguen/pins/fetch-nixpkgs.nix;
   # nixpkgs           = import nixpkgsSrc {};
-  goguenPkgs        = import ./../goguen/default.nix { inherit pkgs; };
   # nodeDryRunnableIP = node: if hasAttr node.config.networking "privateIPv4" then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
   # nodeDryRunnableIP = node: if hasAttr node.config.networking "privateIPv4" then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
   mantisRPCListenIP = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
@@ -373,7 +374,7 @@ with goguenPkgs; {
       after = [ "keys.target" ];
       unitConfig.RequiresMountsFor = "/data";
       enable = true;
-      path = with pkgs; [ gawk gnused openjdk8 mantis strace ];
+      path = with pkgs; [ gawk gnused openjdk8 strace ];
       serviceConfig = {
         User = "mantis";
         Group = "users";
