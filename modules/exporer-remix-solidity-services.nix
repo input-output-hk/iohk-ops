@@ -16,7 +16,7 @@ with import <goguen/default.nix> { inherit pkgs; }; {
 
   config = let
     mantis-node-name = config.services.mantis-explorer.mantis-node;
-    mantis-node-ip   = nodeDryRunnableIP nodes.${mantis-node-name};
+    mantis-node-ip   = nodeDryRunnablePrivateIP nodes.${mantis-node-name};
   in {
     nix.requireSignedBinaryCaches = false;
 

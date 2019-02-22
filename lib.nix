@@ -33,7 +33,8 @@ in lib // (rec {
     { name = "${node.name}-ip";
       value = { inherit (node) region accessKeyId; };
     };
-  nodeDryRunnableIP = node: if node.options.networking.privateIPv4.isDefined then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
+  nodeDryRunnablePrivateIP = node: if node.options.networking.privateIPv4.isDefined then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
+  nodeDryRunnablePublicIP  = node: if node.options.networking.publicIPv4.isDefined  then node.config.networking.publicIPv4  else "DRYRUN-PLACEHOLDER";
 
   ## repoSpec                = RepoSpec { name :: String, subdir :: FilePath, src :: Drv }
   ## fetchGitWithSubmodules :: Name -> Drv -> Map String RepoSpec -> Drv

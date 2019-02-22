@@ -12,15 +12,14 @@ let
   # nodeDryRunnableIP = node: if hasAttr node.config.networking "privateIPv4" then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
   mantisRPCListenIP = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
   otherNodeNames    = filter (on: on != name)              allNodeNames;
-  otherNodeIPs      = map    (on: nodeDryRunnableIP nodes."${on}") otherNodeNames;
-  mantisMachine     = name: { inherit name; dns = "${name}.iele-internal.testnet.mantis.iohkdev.io"; ip = "${nodeDryRunnableIP nodes.${name}}"; };
+  otherNodeIPs      = map    (on: nodeDryRunnablePublicIP nodes."${on}") otherNodeNames;
+  mantisMachine     = name: { inherit name; dns = "${name}.iele-internal.testnet.mantis.iohkdev.io"; ip = "${nodeDryRunnablePublicIP nodes.${name}}"; };
   mantisMachines    = listToAttrs (map (n: { name = n; value = mantisMachine n; }) allNodeNames);
   ####### ..injected through Terraform, all XXX
   networkId         = "1234";
   # machines          = (lib.importJSON (there "machines.json")) // (lib.importJSON (there "mantis_machines.json"));
   machines          = mantisMachines;
-  # faucetAddresses  = import (there "faucet-addresses.nix");
-  faucetAddresses   = { faucetA = "347715541c4e6791d1c180892214597bd879ec30"; faucetB = "54d58e16e3d03b40c5b9df8f0527f930b444f2af"; faucetC = "e03a3d53e863ca48b0c8386676b99d3daf35a23f"; };
+  faucetAddresses   = import <static/faucet-addresses.nix>;
   nodeIds           = import <static/mantis-node-ids.nix>;
   allNodes          = recursiveUpdate machines nodeIds;
   node              = allNodes.${name};
@@ -197,7 +196,7 @@ let
     '';
   };
   mkAddress = faucetNode: nameValuePair faucetNode { "balance" = "1606938044258990275541962092341162602522202993782792835301376"; };
-  genesisAddresses = builtins.listToAttrs [ (mkAddress faucetAddresses.faucetA) (mkAddress faucetAddresses.faucetB) (mkAddress faucetAddresses.faucetC) ];
+  genesisAddresses = builtins.listToAttrs [ (mkAddress faucetAddresses.faucet-a) ];
   genesis_json = pkgs.writeTextFile {
     name = "genesis.json";
     text = ''

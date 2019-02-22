@@ -104,27 +104,40 @@ nixops_network_expr="import <nixops/eval-machine-info.nix> { \
     checkConfigurationOptions = false; \
   }"
 
-generate_keys () {
-  export JAVA_HOME=`nix-build -E  "(import (import ./lib.nix).goguenNixpkgs {}).pkgs.openjdk8"  --no-out-link`
-  MANTIS=`nix-build -E  "(import ./goguen/. {}).mantis"`
-  NODES="a-0 a-1 b-0 b-1 c-0"
-  NODE_IDS="static/mantis-node-ids.nix"
+generate_faucet_and_node_keys () {
+        export JAVA_HOME=`nix-build -E  "(import (import ./lib.nix).goguenNixpkgs {}).pkgs.openjdk8"  --no-out-link`
+        mantis=`nix-build -E  "(import ./goguen/. {}).mantis"`
+        NODES="a-0 a-1 b-0 b-1 c-0"
+        NODE_IDS="static/mantis-node-ids.nix"
 
-  echo "{" > "$NODE_IDS"
+        FAUCETS="faucet-a"
+        FAUCET_ADDRS="static/faucet-addresses.nix"
+        FAUCET_KEYGEN_CONF="static/mantis-faucet-keygen.conf"
 
-  for n in $NODES; do
-    KEY_FILE="static/mantis-$n.key"
+        echo 'include "application.conf"' > ${FAUCET_KEYGEN_CONF}
 
-    if [ ! -f "$KEY_FILE" ]; then
-      $MANTIS/bin/eckeygen > "$KEY_FILE"
-    fi
+        echo '{'                          > ${FAUCET_ADDRS}
+        for f in $FAUCETS; do
+                rm -f ~/.mallet/*
+                ${mantis}/bin/mantis -Dconfig.file=${FAUCET_KEYGEN_CONF} mallet "http://127.0.0.1" --command newAccount --password ""
+                cat   ~/.mallet/*         >> "static/mallet-${f}.json"
+                addr="$(jq ".address" ~/.mallet/*)"
+                echo "${f} = ${addr};"    >> ${FAUCET_ADDRS}
+        done
+        echo '}'                          >> ${FAUCET_ADDRS}
 
-    NODE_ID="`sed -n 2p \"$KEY_FILE\"`"
-    echo "  mantis-$n = { id = \"$NODE_ID\"; };" >> "$NODE_IDS"
-  done
+        echo "{" > "$NODE_IDS"
+        for n in $NODES; do
+                KEY_FILE="static/mantis-$n.key"
 
-  echo "}" >> "$NODE_IDS"
+                if [ ! -f "$KEY_FILE" ]; then
+                        $MANTIS/bin/eckeygen > "$KEY_FILE"
+                fi
 
+                NODE_ID="`sed -n 2p \"$KEY_FILE\"`"
+                echo "  mantis-$n = { id = \"$NODE_ID\"; };" >> "$NODE_IDS"
+        done
+        echo "}" >> "$NODE_IDS"
 }
 
 region_tagged_instances() {
@@ -183,7 +196,7 @@ dry | full-deploy-dry-run ) # Doc:
         export AWS_PROFILE=default AWS_ACCESS_KEY_ID=AKIASDADFLKJDFJDJFDJ AWS_SECRET_ACCESS_KEY=Hlkjdflsjfjlnrmnsiuhfskjhkshfiuurrfsd/Rp
         if ${nixops} info  ${nixops_subopts} >/dev/null 2>&1
         then op=modify
-        else op=create; generate_keys; fi
+        else op=create; generate_faucet_and_node_keys; fi
         ${nixops} ${op}    ${nixops_subopts} ${nixops_constituents}
         deployerIP="127.0.0.1"
         AKID=someBoringAKID # "(pow 2.71828 . (3.1415 *) . sqrt) -1 = -1"
@@ -212,14 +225,14 @@ configure | conf | configure-nixops-deployment-arguments ) # Doc:
                   --argstr accessKeyId "${AKID}" \
                   --argstr deployerIP "${deployerIP}"
                 ;;
-genkey | g | generate-mantis-keys ) # Doc:
-        generate_keys;;
+genkey | g | generate-mantis-faucet-and-node-keys ) # Doc:
+        generate_faucet_and_node_keys;;
 create | create-deployment-from-cluster-components ) # Doc:
         set +u; AKID="$1"; test -n "$1" && shift; set -u
         $self     list-cluster-components
         ${nixops} create   ${nixops_subopts} clusters/${CLUSTER}/*.nix
-        $self     config   $AKID
-        $self     generate-mantis-keys
+        $self     configure-nixops-deployment-arguments $AKID
+        $self     generate-mantis-faucet-and-node-keys
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
 delete | destroy | terminate | abolish | eliminate | demolish | delete-nixops-deployment ) # Doc:
         ${nixops} destroy  ${nixops_subopts} --confirm
