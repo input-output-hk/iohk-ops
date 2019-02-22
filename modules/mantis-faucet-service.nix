@@ -1,4 +1,4 @@
-{ pkgs, lib, nodes, options, config, ... }:
+{ pkgs, lib, nodes, resources, options, name, config, ... }:
 
 with lib; with builtins; with import ../lib.nix;
 with import <goguen/default.nix> { inherit pkgs; }; {
@@ -16,7 +16,8 @@ with import <goguen/default.nix> { inherit pkgs; }; {
 
   config = let
     mantis-node-name = config.services.mantis-faucet.mantis-node;
-    mantis-node-ip   = nodeDryRunnableIP nodes.${mantis-node-name};
+    # mantis-node-ip   = let x = resources.elasticIPs."${mantis-node-name}-ip"; in traceSeqN 5 x x.address;
+    mantis-node-ip   = nodeDryRunnablePublicIP nodes."${mantis-node-name}";
     goguenPkgs       = import <goguen/default.nix> { inherit pkgs; };
   in with goguenPkgs; {
     nix.requireSignedBinaryCaches = false;
@@ -26,6 +27,12 @@ with import <goguen/default.nix> { inherit pkgs; }; {
       allowedTCPPorts = [ 8099 5555 ];
       allowedUDPPorts = [ 8125 ];
       trustedInterfaces = [ "lo" ];
+    };
+
+    deployment.keys."mallet.json" = {
+      keyFile = <static> + "/mallet-${name}.json";
+      user = "mantis";
+      destDir = "/var/lib/keys";
     };
 
     users.users.mantis =
@@ -67,12 +74,12 @@ with import <goguen/default.nix> { inherit pkgs; }; {
           latest-timestamp-cache-size = 1024
         }
         CONF
-        cp /root/mallet.json ${config.users.users.mantis.home}/faucet-keystore/mallet.json
+        cp /var/lib/keys/mallet.json ${config.users.users.mantis.home}/faucet-keystore/mallet.json
         chown -R $(id -u mantis):$(id -g mantis) ${config.users.users.mantis.home}/conf
         chmod 600 ${config.users.users.mantis.home}/faucet-keystore/mallet.json
       '';
 
-      script = "${goguenPkgs.mantis} faucet -Dconfig.file=/home/mantis/conf/faucet.conf -c 'source /home/mantis/.profile && ${goguenPkgs.mantis} -Dconfig.file=/home/mantis/conf/faucet.conf faucet'";
+      script = "${goguenPkgs.mantis}/bin/mantis faucet -Dconfig.file=/home/mantis/conf/faucet.conf -c 'source /home/mantis/.profile && ${goguenPkgs.mantis} -Dconfig.file=/home/mantis/conf/faucet.conf faucet'";
     };
   };
 }
