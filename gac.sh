@@ -295,9 +295,11 @@ ssh-all | parallel-ssh-on-all-mantis-nodes ) # Doc:
         ;;
 stop | stop-all-mantis-services ) # Doc:
         on=${1:+--include $*}
+        log "stopping Mantis services on:  ${on}"
         $0        ssh-all ${on} -- systemctl    stop mantis;;
 start | start-all-mantis-services ) # Doc:
         on=${1:+--include $*}
+        log "starting Mantis services on:  ${on}"
         $0        ssh-all ${on} -- systemctl   start mantis; log "new start date:  $($0 since mantis-a-0)";;
 restart | restart-all-mantis-services ) # Doc:
         on=${1:+--include $*}
@@ -314,9 +316,12 @@ statuses | ss | all-mantis-service-statuses ) # Doc:
 since | mantis-service-start-date-on-node ) # Doc:
         node=$1
         ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show mantis --value --property WatchdogTimestamp | cut -d' ' -f3;;
-journal-on | jon | mantis-service-journal-on-node ) # Doc:
-        node=$1
+journal-on | jo | mantis-service-journal-on-node-since-start ) # Doc:
+        node=${1:-'mantis-a-0'}
         ${nixops} ssh          ${nixops_subopts} ${node} -- journalctl  -u mantis --since $($0 since ${node});;
+pretty-journal-on | pj | mantis-service-journal-on-node-since-its-start-prettified-version ) # Doc:
+        node=${1:-'mantis-a-0'}
+        $0 mantis-service-journal-on-node-since-start ${node} | cut -c92- | less;;
 journal    | jall | j | all-mantis-service-journals ) # Doc:
         start_sample_node='mantis-a-0'
         since=${1:-$($0 since ${start_sample_node})}
@@ -330,16 +335,21 @@ follow | f | follow-mantis-service-journal-on-node ) # Doc:
         $0        ssh ${node}  -- journalctl -fu mantis;;
 follow-all | fa | follow-all-mantis-service-journals ) # Doc:
         $0        ssh-all      -- journalctl -fu mantis "$@";;
-grep-since | grep-all-mantis-service-journals-since-timestamp ) # Doc:
+grep-on | gro | grep-mantis-node-service-journals-since-start ) # Doc:
+        node=$1; shift
+        log "node:           ${node}"
+        log "filter:         ag $*"
+        $0        journal-on ${node} 2>&1 | ${ag} "$@";;
+grep-since | gras | grep-all-mantis-service-journals-since-timestamp ) # Doc:
         since=$1; shift
         log "journal since:  ${since}"
         log "filter:         ag $*"
         $0        journal "${since}" 2>&1 | ${ag} "$@";;
-grep | grep-all-mantis-service-journals-since-last-restart ) # Doc:
+grep | g | grep-all-mantis-service-journals-since-last-restart ) # Doc:
         start_sample_node='mantis-a-0'
         since=$($0 since ${start_sample_node})
         $0        grep-since ${since} "$@";;
-watch-for | watch-all-mantis-service-journals-for-regex-occurence ) # Doc:
+watch-for | w | watch-all-mantis-service-journals-for-regex-occurence ) # Doc:
         $0        follow-all 2>&1 | ${ag} "$@";;
 
 "" | "" ) # Doc:
@@ -348,16 +358,57 @@ watch-for | watch-all-mantis-service-journals-for-regex-occurence ) # Doc:
         ;;
 "" | "" ) # Doc:
         ;;
-blocks | mantis-node-recent-block-numbers ) # Doc:
+blocks | bs |  mantis-node-recent-block-numbers ) # Doc:
         $0        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' -f5,14-;;
-roles | mantis-node-roles-since-start ) # Doc:
+roles | rs | mantis-node-roles-since-start ) # Doc:
         $0        grep 'role changed|LEADER';;
 exceptions | ex | mantis-node-exceptions-since-start ) # Doc:
         $0        grep -i exception | ag -v 'RiemannBatchClient|exception.counter';;
-watch-blocks | watch-mantis-node-current-block-number-stream ) # Doc:
-        $0 watch-for 'Best Block: ' | cut -d' ' -f5,14-;;
-watch-exceptions | watch-mantis-node-current-exception-stream ) # Doc:
-        $0 watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
+watch-blocks | wb | watch-mantis-node-current-block-number-stream ) # Doc:
+        $0        watch-for 'Best Block: ' | cut -d' ' -f5,14-;;
+watch-roles | wr | watch-mantis-node-current-role-stream ) # Doc:
+        $0        watch-for 'role changed|LEADER';;
+watch-roles-pretty | wrp | watch-mantis-node-current-role-stream-prettified ) # Doc:
+        $0        watch-roles | sed 's/^\([^\.]*\)\..*oldRole","value": "\([A-Z]*\)".*newRole","value": "\([A-Z]*\).*$/\1: \2 -> \3/';;
+watch-exceptions | we | watch-mantis-node-current-exception-stream ) # Doc:
+        $0        watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
+troubleshoot | tro | troubleshoot-mantis-logs-for-known-problems ) # Doc:
+        node=${1:-'mantis-a-0'}
+        $0        grep-mantis-node-service-journals-since-start ${node} 'Genesis data present in the database does not match genesis block from file.';;
+"" | "" ) # Doc:
+        ;;
+"" | DANGER:-destructive-operations ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
+drop-leveldb | remove-blockchain-on-all-nodes ) # Doc:
+        log "about to nuke blockchain DB, globally.."
+        $0        stop
+        log "nuking.."
+        $0        ssh-all      -- rm -rf /data/mantis/.mantis/leveldb
+        $0        start;;
+drop-raftdb | remove-leadership-consensus-on-all-nodes ) # Doc:
+        log "about to nuke leadership consensus DB (Raft), globally.."
+        $0        stop
+        log "nuking.."
+        $0        ssh-all      -- rm -rf /data/mantis/.mantis/atomix-raft-data
+        $0        start;;
+drop-dbs | remove-all-blockchain-data-on-all-nodes ) # Doc:
+        log "about to nuke blockchain DB and leadership consensus DB, globally.."
+        $0        stop
+        log "nuking.."
+        $0        ssh-all      -- rm -rf /data/mantis/.mantis/leveldb
+        $0        ssh-all      -- rm -rf /data/mantis/.mantis/atomix-raft-data
+        $0        start;;
+"" | "" ) # Doc:
+        ;;
+"" | blockchain-level-interaction ) # Doc:
+        ;;
+"" | "" ) # Doc:
+        ;;
+get-funds | faucet | money-please | withdraw-funds-from-faucet ) # Doc:
+        to_addr=${1:-805932097ab26cc1061424ddcae9f4cd54a09c7b}
+        curl -X POST "http://faucet-a.${CLUSTER}.dev-mantis.iohkdev.io:8099/faucet?address=0x${to_addr}";;
 "" | "" ) # Doc:
         ;;
 "" | deployer-bootstrap ) # Doc:
