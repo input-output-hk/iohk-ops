@@ -30,7 +30,8 @@ let
 in pkgs.lib.fix (jobsets: {
   inherit (jobs) iohk-ops iohk-ops-integration-test nixops;
   inherit (iohkpkgs) checks;
-  inherit tests cardanoRelease;
+  inherit tests;
+  cardano-linux = cardanoRelease.all-cardano-sl.x86_64-linux;
   required = pkgs.lib.hydraJob (pkgs.releaseTools.aggregate {
     name = "iohk-ops-required-checks";
     constituents =
@@ -38,7 +39,7 @@ in pkgs.lib.fix (jobsets: {
         all = x: map (system: x.${system}) supportedSystems;
     in [
       jobsets.iohk-ops.x86_64-linux
-      (pkgs.lib.collect (x : x ? outPath) jobsets.cardanoRelease)
+      jobsets.cardano-linux
       (builtins.attrValues jobsets.tests)
       (builtins.attrValues jobsets.checks)
     ];
