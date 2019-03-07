@@ -1,0 +1,59 @@
+* Goguen deployment HOWTO
+
+ ~gac.sh~ script is used to configure a Goguen cluster
+ and control its lifecyle.
+
+Use 
+: ./gac.sh --help
+to see all available commands.
+
+** Topology
+
+Currently the only pre-defined goguen cluster (~goguen-ala-cardano~) consists of:
+ - 5 mantis nodes runing iele VM.
+ - 1 explorer node
+ - 1 faucet node
+
+** Developpements clusters
+
+Developpements clusters can be deployed from ~dev@devMantis-deployer~.
+To get access to this deployer, open a PR on https://github.com/input-output-hk/iohk-ops/blob/master/lib/ssh-keys.nix
+to add you ssh key to the appropriate keyset.
+Then ask devops for ssh config fragment to use for connection.
+
+** Initial cluster setup
+
+: git clone https://github.com/input-output-hk/iohk-ops <new-cluster-name>
+: cd <new-cluster-name>
+: git checkout goguen-ala-cardano
+
+Display the nix files that will compose the new cluster:
+: ./gac.sh components
+
+On first run this should print:
+: ==(  WARNING:  creating a default .config.sh with an empty cluster
+: ==(  components of cluster 'mempty':
+:    ./clusters/mempty/default.nix
+
+List of predefined clusters (including at least one non-empty cluster):
+: ls ./clusters/
+
+Choose one (eg. ~goguen-ala-cardano~) and copy its configuration over:
+: cp -a ./clusters/goguen-ala-cardano ./clusters/<your-cluster-name>
+
+Then edit ~.config.sh~ and modify such that:
+: CLUSTER=<your-cluster-name>
+
+Re-run ~./gac.sh components~ to see the changes.
+
+You can now create and deploy the cluster in one command:
+: ./gac.sh create
+(You will have to confirm AWS access key ID)
+
+** Cluster Management
+
+*** Dry run
+
+Before deploying an update you may first check that the nix configuration is correct without acutally deploying anything:
+: ./gac.sh dry
+
