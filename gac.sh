@@ -106,7 +106,7 @@ nixops_network_expr="import <nixops/eval-machine-info.nix> { \
 
 generate_faucet_and_node_keys () {
         export JAVA_HOME=`nix-build -E  "(import (import ./lib.nix).goguenNixpkgs {}).pkgs.openjdk8"  --no-out-link`
-        mantis=`nix-build -E  "(import ./goguen/. {}).mantis"`
+        MANTIS=`nix-build -E  "(import ./goguen/. {}).mantis"`
         NODES="a-0 a-1 b-0 b-1 c-0"
         NODE_IDS="static/mantis-node-ids.nix"
 
@@ -119,7 +119,7 @@ generate_faucet_and_node_keys () {
         echo '{'                          > ${FAUCET_ADDRS}
         for f in $FAUCETS; do
                 rm -f ~/.mallet/*
-                ${mantis}/bin/mantis -Dconfig.file=${FAUCET_KEYGEN_CONF} mallet "http://127.0.0.1" --command newAccount --password ""
+                $MANTIS/bin/mantis -Dconfig.file=${FAUCET_KEYGEN_CONF} mallet "http://127.0.0.1" --command newAccount --password ""
                 cat   ~/.mallet/*         >> "static/mallet-${f}.json"
                 addr="$(jq ".address" ~/.mallet/*)"
                 echo "${f} = ${addr};"    >> ${FAUCET_ADDRS}
