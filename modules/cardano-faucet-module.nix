@@ -6,7 +6,7 @@ let
   cfg = config.services.cardano-faucet;
 
   iohkPkgs = import ../default.nix { inherit config pkgs; inherit (pkgs) system; };
-  walletPackage = iohkPkgs.cardanoPackages.cardano-sl-wallet-new-static;
+  walletPackage = iohkPkgs.cardanoPackages.cardano-wallet-static;
   faucetPackage = iohkPkgs.cardanoPackages.cardano-sl-faucet-static;
   toolsPackage = iohkPkgs.cardano-sl-tools;
   configFiles = iohkPkgs.cardano-sl-config;
