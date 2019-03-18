@@ -33,6 +33,9 @@ in
 
       # load S3 credentials for artifact upload
       source /var/lib/buildkite-agent/hooks/aws-creds
+
+      # load extra credentials for user services
+      source /var/lib/buildkite-agent/hooks/buildkite-extra-creds
     '';
     hooks.pre-command = ''
       # Clean out the state that gets messed up and makes builds fail.
@@ -57,6 +60,15 @@ in
       user    = "buildkite-agent";
       permissions = "0770";
     };
+
+    # Project-specific credentials to install on Buildkite agents.
+    buildkite-extra-creds = {
+      keyFile = ./. + "/../static/buildkite-hook-extra-creds.sh";
+      destDir = "/var/lib/buildkite-agent/hooks";
+      user    = "buildkite-agent";
+      permissions = "0770";
+    };
+
     # SSH keypair for buildkite-agent user
     buildkite-ssh-private = {
       keyFile = ./. + "/../static/buildkite-ssh";
@@ -66,16 +78,19 @@ in
       keyFile = ./. + "/../static/buildkite-ssh.pub";
       user    = "buildkite-agent";
     };
+
     # GitHub deploy key for input-output-hk/hackage.nix
     buildkite-hackage-ssh-private = {
       keyFile = ./. + "/../static/buildkite-hackage-ssh";
       user    = "buildkite-agent";
     };
+
     # GitHub deploy key for input-output-hk/stackage.nix
     buildkite-stackage-ssh-private = {
       keyFile = ./. + "/../static/buildkite-stackage-ssh";
       user    = "buildkite-agent";
     };
+
     # API Token for BuildKite
     buildkite-token = {
       keyFile = ./. + "/../static/buildkite_token";
