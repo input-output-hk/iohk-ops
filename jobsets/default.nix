@@ -77,11 +77,11 @@ let
       bors = true;
     };
 
-    cardano-chain = {
-      description = "Cardano Chain";
-      url = "https://github.com/input-output-hk/cardano-chain.git";
+    cardano-ledger = {
+      description = "Cardano Ledger";
+      url = "https://github.com/input-output-hk/cardano-ledger.git";
       branch = "master";
-      input = "chain";  # corresponds to argument in cardano-chain/release.nix
+      input = "chain";  # corresponds to argument in cardano-ledger/release.nix
       prs = chainPrsJSON;
       bors = true;
     };

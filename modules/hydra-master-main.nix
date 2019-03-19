@@ -86,7 +86,7 @@ in {
         useShortContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = serokell:cardano-chain.*:required
+        jobs = Cardano:cardano-ledger.*:required
         inputs = chain
         excludeBuildFromContext = 1
         useShortContext = 1
