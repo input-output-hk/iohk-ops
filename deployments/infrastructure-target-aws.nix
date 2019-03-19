@@ -157,7 +157,8 @@ in rec {
       log-classifier-ip      = { inherit region accessKeyId; };
     };
     datadogMonitors = (with (import ../modules/datadog-monitors.nix); {
-      disk       = mkMonitor (disk_monitor "!group:hydra-and-slaves" "0.8"  "0.9");
+      disk       = mkMonitor (disk_monitor "!group:hydra-and-slaves,!group:buildkite-agents" "0.8"  "0.9");
+      disk_buildkite = mkMonitor (disk_monitor  "group:buildkite-agents" "0.9" "0.95");
       disk_hydra = mkMonitor (disk_monitor  "group:hydra-and-slaves" "0.95" "0.951");
       ntp  = mkMonitor ntp_monitor;
     });
