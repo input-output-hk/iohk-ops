@@ -3,6 +3,10 @@
 # generate jobsets.
 #
 # The arguments for this file come from spec.json.
+# So also update that file when you add a repo here.
+#
+# Test this file locally with:
+#   jq . < $(nix-build --no-out-link jobsets/default.nix)
 #
 # See also the Hydra manual:
 #   https://github.com/NixOS/hydra/blob/master/doc/manual/declarative-projects.xml
@@ -26,6 +30,7 @@
 , shellPrsJSON ? ./simple-pr-dummy.json
 , walletPrsJSON ? ./simple-pr-dummy.json
 , iohkNixPrsJSON ? ./simple-pr-dummy.json
+, haskellNixPrsJSON ? ./simple-pr-dummy.json
 }:
 
 let pkgs = import nixpkgs {}; in
@@ -115,6 +120,13 @@ let
       branch = "master";
       prs = iohkNixPrsJSON;
       bors = true;
+    };
+
+    haskell-nix = {
+      description = "Haskell.nix Build System";
+      url = "https://github.com/input-output-hk/haskell.nix.git";
+      branch = "master";
+      prs = haskellNixPrsJSON;
     };
 
     cardano-wallet = {
