@@ -29,7 +29,12 @@ in
       # Provide a minimal build environment
       export NIX_BUILD_SHELL="/run/current-system/sw/bin/bash"
       export PATH="/run/current-system/sw/bin:$PATH"
-      export NIX_PATH="nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos"
+
+      # Provide NIX_PATH, unless it's already set by the pipeline
+      if [ -z "$NIX_PATH" ]; then
+          # see iohk-ops/modules/common.nix (system.extraSystemBuilderCmds)
+          export NIX_PATH="nixpkgs=/run/current-system/nixpkgs"
+      fi
 
       # load S3 credentials for artifact upload
       source /var/lib/buildkite-agent/hooks/aws-creds
