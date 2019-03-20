@@ -32,6 +32,7 @@ host* (your laptop probably).
        result/bin/prepare-mac user@host [buildkite|hydra]
 
    This will prepare the system so that the mac can be deployed.
+   NOTE: THIS WILL NUKE ANY EXISTING NIX SETUP ON THE SYSTEM!
 
    It will ask for the admin password so that it can `sudo`.
 
