@@ -92,6 +92,12 @@ in {
         useShortContext = 1
       </githubstatus>
       <githubstatus>
+        jobs = Cardano:cardano-ledger-specs.*:required
+        inputs = cardano-ledger-specs
+        excludeBuildFromContext = 1
+        useShortContext = 1
+      </githubstatus>
+      <githubstatus>
         jobs = serokell:cardano.*:required
         inputs = cardano
         excludeBuildFromContext = 1
