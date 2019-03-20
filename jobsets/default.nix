@@ -5,6 +5,9 @@
 # The arguments for this file come from spec.json.
 # So also update that file when you add a repo here.
 #
+# You may also want to check and update the GitHub notifications list
+# in modules/hydra-master-main.nix.
+#
 # Test this file locally with:
 #   jq . < $(nix-build --no-out-link jobsets/default.nix)
 #

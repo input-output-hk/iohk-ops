@@ -135,6 +135,12 @@ in {
         excludeBuildFromContext = 1
         useShortContext = 1
       </githubstatus>
+      <githubstatus>
+        jobs = Cardano:haskell-nix.*:required
+        inputs = haskell-nix
+        excludeBuildFromContext = 1
+        useShortContext = 1
+      </githubstatus>
     '';
   };
   deployment.keys."github-webhook-util".text = builtins.readFile ../static/github-webhook-util.secret;
