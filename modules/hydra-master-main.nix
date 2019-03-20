@@ -92,8 +92,8 @@ in {
         useShortContext = 1
       </githubstatus>
       <githubstatus>
-        jobs = Cardano:fm-ledger-rules.*:required
-        inputs = fm-ledger-rules
+        jobs = Cardano:cardano-ledger-specs.*:required
+        inputs = cardano-ledger-specs
         excludeBuildFromContext = 1
         useShortContext = 1
       </githubstatus>

@@ -22,7 +22,7 @@
 , ouroborosNetworkPrsJSON ? ./simple-pr-dummy.json
 , iohkMonitoringPrsJSON ? ./simple-pr-dummy.json
 , chainPrsJSON ? ./simple-pr-dummy.json
-, fmLedgerRulesPrsJSON ? ./simple-pr-dummy.json
+, cardanoLedgerSpecsPrsJSON ? ./simple-pr-dummy.json
 , shellPrsJSON ? ./simple-pr-dummy.json
 , walletPrsJSON ? ./simple-pr-dummy.json
 , iohkNixPrsJSON ? ./simple-pr-dummy.json
@@ -86,11 +86,11 @@ let
       bors = true;
     };
 
-    fm-ledger-rules = {
-      description = "FM Ledger Rules";
-      url = "https://github.com/input-output-hk/fm-ledger-rules.git";
+    cardano-ledger-specs = {
+      description = "Cardano Ledger Specs";
+      url = "https://github.com/input-output-hk/cardano-ledger-specs.git";
       branch = "master";
-      prs = fmLedgerRulesPrsJSON;
+      prs = cardanoLedgerSpecsPrsJSON;
     };
 
     ouroboros-network = {
