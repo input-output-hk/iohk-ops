@@ -11,5 +11,5 @@
 
   hardware.enableAllFirmware = true;
 
-  nix.maxJobs = 3;
+  nix.maxJobs = 8;
 }
