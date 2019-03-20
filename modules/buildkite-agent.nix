@@ -96,6 +96,13 @@ in
       user    = "buildkite-agent";
     };
 
+    # GitHub deploy key for input-output-hk/haskell.nix
+    # (used to update gh-pages documentation)
+    buildkite-haskell-dot-nix-ssh-private = {
+      keyFile = ./. + "/../static/buildkite-haskell-dot-nix-ssh";
+      user    = "buildkite-agent";
+    };
+
     # API Token for BuildKite
     buildkite-token = {
       keyFile = ./. + "/../static/buildkite_token";
