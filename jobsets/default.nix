@@ -120,7 +120,7 @@ let
     cardano-wallet = {
       description = "Cardano Wallet Backend";
       url = "https://github.com/input-output-hk/cardano-wallet.git";
-      branch = "develop";
+      branch = "master";
       prs = walletPrsJSON;
     };
 
