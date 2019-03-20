@@ -28,7 +28,7 @@
 , logClassifierPrsJSON ? ./simple-pr-dummy.json
 , ouroborosNetworkPrsJSON ? ./simple-pr-dummy.json
 , iohkMonitoringPrsJSON ? ./simple-pr-dummy.json
-, chainPrsJSON ? ./simple-pr-dummy.json
+, ledgerPrsJSON ? ./simple-pr-dummy.json
 , cardanoLedgerSpecsPrsJSON ? ./simple-pr-dummy.json
 , shellPrsJSON ? ./simple-pr-dummy.json
 , walletPrsJSON ? ./simple-pr-dummy.json
@@ -89,8 +89,8 @@ let
       description = "Cardano Ledger";
       url = "https://github.com/input-output-hk/cardano-ledger.git";
       branch = "master";
-      input = "chain";  # corresponds to argument in cardano-ledger/release.nix
-      prs = chainPrsJSON;
+      input = "ledger";  # corresponds to argument in cardano-ledger/release.nix
+      prs = ledgerPrsJSON;
       bors = true;
     };
 

@@ -87,7 +87,7 @@ in {
       </githubstatus>
       <githubstatus>
         jobs = Cardano:cardano-ledger.*:required
-        inputs = chain
+        inputs = ledger
         excludeBuildFromContext = 1
         useShortContext = 1
       </githubstatus>
