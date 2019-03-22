@@ -21,7 +21,7 @@
          ,"logClassifierPrsJSON": { "type": "githubpulls", "value": "input-output-hk log-classifier", "emailresponsible": false }
          ,"ouroborosNetworkPrsJSON": { "type": "githubpulls", "value": "input-output-hk ouroboros-network", "emailresponsible": false }
          ,"iohkMonitoringPrsJSON": { "type": "githubpulls", "value": "input-output-hk iohk-monitoring-framework", "emailresponsible": false }
-         ,"chainPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-chain", "emailresponsible": false }
+         ,"ledgerPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-ledger", "emailresponsible": false }
          ,"cardanoLedgerSpecsPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-ledger-specs", "emailresponsible": false }
          ,"walletPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-wallet", "emailresponsible": false }
      }

@@ -25,6 +25,21 @@ let
       ip1 = if nodes.${host}.options.networking.publicIPv4.isDefined then nodes.${host}.config.networking.publicIPv4 else "0.0.0.0";
     in
       if ip1 == null then "0.0.0.0" else ip1;
+  mkGithubStatus = { jobset, inputs }: ''
+    <githubstatus>
+      jobs = Cardano:${jobset}.*:required
+      inputs = ${inputs}
+      excludeBuildFromContext = 1
+      useShortContext = 1
+    </githubstatus>
+    <githubstatus>
+      jobs = serokell:${jobset}.*:required
+      inputs = ${inputs}
+      excludeBuildFromContext = 1
+      useShortContext = 1
+    </githubstatus>
+  '';
+  mkStatusBlocks = concatMapStringsSep "" mkGithubStatus;
 in {
   imports = [ ./github-webhook-util.nix ];
   environment.etc = lib.singleton {
@@ -79,30 +94,19 @@ in {
       <github_authorization>
         input-output-hk = ${builtins.readFile ../static/github_token}
       </github_authorization>
-      <githubstatus>
-        jobs = serokell:iohk-ops.*:required
-        inputs = jobsets
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = Cardano:cardano-ledger.*:required
-        inputs = chain
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = Cardano:cardano-ledger-specs.*:required
-        inputs = cardano-ledger-specs
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = serokell:cardano.*:required
-        inputs = cardano
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
+
+      ${mkStatusBlocks [
+        { jobset = "iohk-ops"; inputs = "jobsets"; }
+        { jobset = "cardano-ledger-specs"; inputs = "cardano-ledger-specs"; }
+        { jobset = "cardano-ledger"; inputs = "cardano-ledger"; }
+        { jobset = "cardano"; inputs = "cardano"; }
+        { jobset = "plutus"; inputs = "plutus"; }
+        { jobset = "log-classifier"; inputs = "log-classifier"; }
+        { jobset = "ouroboros-network"; inputs = "ouroboros-network"; }
+        { jobset = "iohk-monitoring"; inputs = "iohk-monitoring"; }
+        { jobset = "haskell-nix"; inputs = "haskell-nix"; }
+      ]}
+
       # DEVOPS-1208 This CI status for cardano-sl is needed while the
       # Daedalus Windows installer is built on AppVeyor or Buildkite
       <githubstatus>
@@ -114,36 +118,6 @@ in {
       <githubstatus>
         jobs = serokell:daedalus.*:tests\..*
         inputs = daedalus
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = serokell:plutus.*:required
-        inputs = plutus
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = serokell:log-classifier.*:required
-        inputs = log-classifier
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = serokell:ouroboros-network.*:required
-        inputs = ouroboros-network
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = Cardano:iohk-monitoring.*:required
-        inputs = iohk-monitoring
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = Cardano:haskell-nix.*:required
-        inputs = haskell-nix
         excludeBuildFromContext = 1
         useShortContext = 1
       </githubstatus>
