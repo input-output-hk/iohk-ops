@@ -97,7 +97,7 @@ in {
 
       ${mkStatusBlocks [
         { jobset = "iohk-ops"; inputs = "jobsets"; }
-        { jobset = "cardano-ledger"; inputs = "chain"; }
+        { jobset = "cardano-ledger"; inputs = "cardano-ledger"; }
         { jobset = "cardano-ledger-specs"; inputs = "cardano-ledger-specs"; }
         { jobset = "cardano"; inputs = "cardano"; }
         { jobset = "plutus"; inputs = "plutus"; }
