@@ -12,7 +12,7 @@ let
   };
   mkLinux = hostName: commonBuildMachineOpt // {
     inherit hostName;
-    maxJobs = 4;
+    maxJobs = 8;
   };
   mkMac = hostName: commonBuildMachineOpt // {
     inherit hostName;
