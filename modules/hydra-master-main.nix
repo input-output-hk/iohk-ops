@@ -99,6 +99,7 @@ in {
         { jobset = "iohk-ops"; inputs = "jobsets"; }
         { jobset = "cardano-ledger-specs"; inputs = "cardano-ledger-specs"; }
         { jobset = "cardano-ledger"; inputs = "cardano-ledger"; }
+        { jobset = "cardano-wallet"; inputs = "cardano-wallet"; }
         { jobset = "cardano"; inputs = "cardano"; }
         { jobset = "plutus"; inputs = "plutus"; }
         { jobset = "log-classifier"; inputs = "log-classifier"; }
@@ -117,6 +118,12 @@ in {
       </githubstatus>
       <githubstatus>
         jobs = serokell:daedalus.*:tests\..*
+        inputs = daedalus
+        excludeBuildFromContext = 1
+        useShortContext = 1
+      </githubstatus>
+      <githubstatus>
+        jobs = Cardano:daedalus.*:tests\..*
         inputs = daedalus
         excludeBuildFromContext = 1
         useShortContext = 1
