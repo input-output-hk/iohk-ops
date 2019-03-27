@@ -13,7 +13,7 @@ let
   mantisRPCListenIP = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
   otherNodeNames    = filter (on: on != name)              allNodeNames;
   otherNodeIPs      = map    (on: nodeDryRunnablePublicIP nodes."${on}") otherNodeNames;
-  mantisMachine     = name: { inherit name; dns = "${name}.iele-internal.testnet.mantis.iohkdev.io"; ip = "${nodeDryRunnablePublicIP nodes.${name}}"; };
+  mantisMachine     = name: { inherit name; dns = "${name}.iele-internal.testnet.mantis.iohkdev.io"; ip = "${nodeDryRunnablePrivateIP nodes.${name}}"; };
   mantisMachines    = listToAttrs (map (n: { name = n; value = mantisMachine n; }) allNodeNames);
   ####### ..injected through Terraform, all XXX
   networkId         = "1234";

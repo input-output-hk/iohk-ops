@@ -4,19 +4,23 @@
 let
   # iohk-nix can be overridden for debugging purposes by setting
   # NIX_PATH=iohk_nix=/path/to/iohk-nix
-  mkIohkNix = iohkNixArgs: import (
+  mkIohkNix = { iohkNixJsonOverride ? ./iohk-nix.json, ... }@iohkNixArgs: import (
     let try = builtins.tryEval <iohk_nix>;
     in if try.success
     then builtins.trace "using host <iohk_nix>" try.value
     else
       let
-        spec = builtins.fromJSON (builtins.readFile ./iohk-nix.json);
+        spec = builtins.fromJSON (builtins.readFile iohkNixJsonOverride);
       in builtins.fetchTarball {
         url = "${spec.url}/archive/${spec.rev}.tar.gz";
         inherit (spec) sha256;
-      }) iohkNixArgs;
+      }) (removeAttrs iohkNixArgs ["iohkNixJsonOverride"]);
   iohkNix       = mkIohkNix { application = "iohk-ops"; };
-  iohkNixGoguen = mkIohkNix { application = "goguen"; nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json; };
+  iohkNixGoguen = mkIohkNix { application = "goguen"
+                            ; nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json
+                            ; iohkNixJsonOverride = ./goguen/pins/iohk-nix-src.json
+                            ; config = { allowUnfree = true; }
+                            ; };
   goguenNixpkgs = iohkNixGoguen.nixpkgs;
 
   # nixpkgs can be overridden for debugging purposes by setting
@@ -26,7 +30,7 @@ let
 in lib // (rec {
   inherit (iohkNix) nixpkgs;
   inherit mkIohkNix pkgs;
-  inherit iohkNixGoguen goguenNixpkgs;
+  inherit iohkNix iohkNixGoguen goguenNixpkgs;
 
   ## nodeElasticIP :: Node -> EIP
   nodeElasticIP = node:
@@ -38,40 +42,43 @@ in lib // (rec {
 
   ## repoSpec                = RepoSpec { name :: String, subdir :: FilePath, src :: Drv }
   ## fetchGitWithSubmodules :: Name -> Drv -> Map String RepoSpec -> Drv
-  fetchGitWithSubmodules = mainName: mainSrc: subRepos:
+  fetchGitWithSubmodules = mainName: mainRev: mainSrc: subRepos:
     with builtins; with pkgs;
     let subRepoCmd = repo: ''
         chmod -R u+w $(dirname $out/${repo.subdir})
         rmdir $out/${repo.subdir}
-        cp -R  ${repo.src} $out/${repo.subdir}
+        cp -R  ${trace "processing subrepo ${repo.subdir}" repo.src} $out/${repo.subdir}
         '';
         cmd = ''
 
         cp -R ${mainSrc} $out
 
         '' + concatStringsSep "\n" (map subRepoCmd (attrValues subRepos));
-    in runCommand "fetchGit-composite-src-${mainName}" { buildInputs = []; } cmd;
+    in runCommand "fetchGit-composite-src-${mainName}-${mainRev}" { buildInputs = []; } cmd;
 
-  pinFile = dir: name: dir + "/${name}.src-json";
-  readPin = pin: let json = builtins.readFile pin;
-    in builtins.fromJSON (builtins.trace json json);
-  pinIsPrivate = pinJ: pinJ.url != builtins.replaceStrings ["git@github.com"] [""] pinJ.url;
-
+  pinFile       = dir: name: dir + "/${name}-src.json";
+  readPin       = dir: name: builtins.fromJSON (builtins.readFile (pinFile dir name));
+  readPinTraced = dir: name: let json = builtins.readFile (pinFile dir name); in
+                             builtins.fromJSON (builtins.trace json json);
+  pinIsPrivate  = dir: name: let pin = builtins.fromJSON (builtins.readFile (pinFile dir name));
+                             in pin.url != builtins.replaceStrings ["git@github.com"] [""] pin.url;
+  addPinName = name: pin: pin // { name = name+"-git-${pin.rev}"; };
+  getPinFetchgit = dir: name: removeAttrs     (readPinTraced dir name)  ["ref"];
+  getPinFetchGit = dir: name: addPinName name (readPinTraced dir name); ## 'submodules' to be removed later
   fetchGitPin = name: pinJ:
     builtins.fetchGit (pinJ // { name = name; });
 
-  fetchGitPinWithSubmodules = pinRoot: name: { url, rev, submodules ? {} }:
-    with builtins;
-    let fetchSubmodule = subName: subDir: { subdir = subDir; src = pkgs.fetchgit (readPin (pinFile pinRoot subName)); };
-    in fetchGitWithSubmodules name (fetchGitPin name { inherit url rev; }) (lib.mapAttrs fetchSubmodule submodules);
+  fetchGitPinWithSubmodules = pinRoot: name: { submodules ? {}, ... }@pin:
+    let fetchSubmodule = subName: subDir: { subdir = subDir; src = pkgs.fetchgit (getPinFetchgit pinRoot subName); };
+    in fetchGitWithSubmodules name pin.rev
+       (builtins.fetchGit (removeAttrs pin ["submodules"]))
+       (lib.mapAttrs fetchSubmodule submodules);
 
   ## Depending on whether the repo is private (URL has 'git@github' in it), we need to use fetchGit*
   fetchPinAuto = pinRoot: name:
-    with builtins; let
-      pinJ = readPin (pinFile pinRoot name);
-    in if pinIsPrivate pinJ
-    then fetchGitPinWithSubmodules pinRoot name pinJ
-    else pkgs.fetchgit                          pinJ;
+    if pinIsPrivate pinRoot name
+    then fetchGitPinWithSubmodules pinRoot name (getPinFetchGit pinRoot name)
+    else pkgs.fetchgit                          (getPinFetchgit pinRoot name);
 
   centralRegion = "eu-central-1";
   centralZone   = "eu-central-1b";

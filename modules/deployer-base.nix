@@ -30,14 +30,5 @@ in
   ]);
 
   users.groups.deployers = {};
-  users.users = {
-    # Re-deploy the deployer host itself.
-    deployer = {
-      isNormalUser = true;
-      description  = "Deploy the deployer";
-      group        = "deployers";
-      extraGroups  = [ "wheel" ];
-      openssh.authorizedKeys.keys = devOpsKeys;
-    };
-  };
+  users.users.deployer = (import ../lib/users/deployer-users.nix).deployer;
 }

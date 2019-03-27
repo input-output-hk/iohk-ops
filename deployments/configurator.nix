@@ -1,32 +1,34 @@
 { accessKeyId
 , deployerIP
+, config
 , ...
 }:
 with (import <nixpkgs> {}).lib;
-with import <config>; {
-
+{
   ## Per-machine defaults:
   defaults = {
-    imports = [ <module/parameters.nix> ];
-    node    = { inherit accessKeyId org region; };
-    cluster = { inherit deployerIP hostedZone; };
-  };
+    # For Nixops configs, the `config` object we constructed in `/config.nix` should be sufficient;
+    # for NixOS configs however, we need to make a distinction between defaults and and user-supplied parameters.
+    imports = [ <module/configurator.nix> ];
 
-  ## Universal resource logic:
-  resources.route53HostedZones = optionalAttrs (hostedZone != null) {
-    hostedZone = { config, ... }: {
-      inherit region accessKeyId;
-      name = "${hostedZone}";
+    # The configurator *module* basically just changes the precedence of everything in `optionDefaults` and `userConfig` and merges them
+    # together. The reason we have to send it off to a NixOS module is because we literally can't do it here in nixops. Trust, I tried. There be dragons and hydrae 🐉🐲.
+    configurator = {
+      # So yeah `config` already has both defaults and user-defined parameters but we can't tell which is which
+      optionDefaults = config;
+      # So we also pass the bare user config so that we can work the magic of set theory (I think?)
+      userConfig     = import <config>;
     };
   };
 
-  resources.ec2KeyPairs."cardano-keypair-${org}-${region}" = {
-    inherit accessKeyId region;
+  ## Universal resource logic:
+  resources.ec2KeyPairs."cardano-keypair-${config.node.org}-${config.node.region}" = {
+    inherit accessKeyId; inherit (config.node) region;
   };
 
   resources.ec2SecurityGroups = {
-    "allow-deployer-ssh-${region}-${org}" = {
-      inherit region accessKeyId;
+    "allow-deployer-ssh-${config.node.region}-${config.node.org}" = {
+      inherit accessKeyId; inherit (config.node) region;
       description = "SSH";
       rules = [{
         protocol = "tcp"; # TCP

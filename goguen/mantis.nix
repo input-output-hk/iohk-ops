@@ -1,10 +1,10 @@
-{ stdenv, pkgs, getSrc, sbtVerify, protobuf }:
+{ stdenv, pkgs, getSrc, sbt-verify, protobuf }:
 
 stdenv.mkDerivation rec {
   name = "mantis-cardano";
   src  = getSrc name;
 
-  buildInputs = with pkgs; [ scala sbt sbtVerify unzip protobuf openjdk8 ];
+  buildInputs = with pkgs; [ scala sbt sbt-verify unzip protobuf openjdk8 ];
 
   outputs = [ "out" "zip" ];
 
@@ -12,9 +12,9 @@ stdenv.mkDerivation rec {
     export HOME="$NIX_BUILD_TOP"
     export "_JAVA_OPTIONS=-Dsbt.global.base=.sbt/1.0 -Dsbt.ivy.home=.ivy"
 
-    cp -r ${sbtVerify}/.ivy .
-    cp -r ${sbtVerify}/.sbt .
-    cp -r ${sbtVerify}/target .
+    cp -r ${sbt-verify}/.ivy .
+    cp -r ${sbt-verify}/.sbt .
+    cp -r ${sbt-verify}/target .
     chmod -R u+w .ivy .sbt target
 
     # Get sbt to pre-fetch its dependencies. The cleanest way I've

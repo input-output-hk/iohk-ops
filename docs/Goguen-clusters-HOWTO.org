@@ -1,0 +1,64 @@
+* Goguen deployment HOWTO
+
+The ~gac.sh~ script is used to configure a Goguen cluster and control its lifecyle.
+
+Use 
+: ./gac.sh --help
+to see all available commands.
+
+*** Topology
+
+Currently the only pre-defined goguen cluster (~goguen-ala-cardano~) consists of:
+ - 5 mantis nodes runing iele VM.
+ - 1 explorer node
+ - 1 faucet node
+
+*** Dev clusters
+
+Developements clusters can be deployed from ~dev@devMantis-deployer~.
+To get access to this deployer, open a PR on https://github.com/input-output-hk/iohk-ops/blob/master/lib/ssh-keys.nix
+to add you ssh key to the appropriate keyset.
+Then ask devops for ssh config fragment to use for connection.
+
+*** Initial cluster setup
+
+1. Log into the deployer.  There is a single directory (ops checkout) per cluster deployment.
+
+2. Choose the new cluster's name and type.  The cluster name shouldn't conflict with
+   already existing clusters -- cluster names are conventionally named after
+   deployment checkout directories.  The types are subdirectory names in
+   https://github.com/input-output-hk/iohk-ops/tree/master/clusters
+
+3. Use the =gac.sh= script available in =~= to create a new deployment checkout:
+: ./gac.sh new --help
+: ./gac.sh new CLUSTER-NAME [CLUSTER-TYPE] 
+
+4. Deploy the new cluster:
+
+: cd CLUSTER-NAME
+: ./gac.sh deploy
+
+*** Cluster composition
+
+The type of a cluster determines its composition.
+
+List of predefined cluster types is essentially the list of directories in: https://github.com/input-output-hk/iohk-ops/tree/master/clusters
+
+Each directory contains a number of Nix files that are Nixops deployment components.
+
+To define a new type, you can take one as basis (eg. ~mantis~) and copy its configuration over:
+: cp -a ./clusters/mantis ./clusters/CLUSTER-TYPE
+
+The type of a cluster is specified to the =gac,sh new= subcommand, and is recorded
+as =CLUSTER_TYPE= variable in ~.config.sh~.  ~./gac.sh components~ essentially
+lists de-facto components of that cluster (as =nixops info -d CLUSTER-NAME= would).
+
+*** Cluster Management
+***** Dry run
+
+On your dev machine, you can locally dry-test the deployment (as specified by your
+local =.config.sh=), without touching AWS:
+: ./gac.sh dry
+
+Note that this mutates the Nixops state for the deployment specified by
+=.config.sh=, so be careful not to run this in a _real_ depployment checkout!

@@ -37,9 +37,9 @@ with import <goguen/default.nix> { inherit pkgs; }; {
       };
 
       script = ''
-        ${solidityService}/bin/solidity-service \
+        ${solidity-service}/bin/solidity-service \
           -b 127.0.0.1 -p 3000 \
-          ${remixIde}
+          ${remix-ide}
       '';
           # -r ${machines.riemannA.dns} \
     };

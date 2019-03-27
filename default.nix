@@ -8,7 +8,12 @@ in
 , compiler ? pkgs.haskellPackages
 , enableDebugging ? false
 , enableProfiling ? false
+##
+, enableCardano ? false
 , cardanoRevOverride ? null
+##
+, enableMantis ? true
+, mantisRevOverride ? null
 }:
 
 with pkgs.lib;
@@ -35,25 +40,54 @@ let
     coreutils
     gnupg
   ];
+  #####
+  #####
+  ##### Project definitions
+  #####
+  ##### TODO: factor
+  ###
+  ### Project: Cardano
+  ###
   # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
   cardano-sl-src = let
     try = builtins.tryEval <cardano-sl>;
-    cfg = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
-    fixedSrc = pkgs.fetchgit cfg;
-  in if try.success then
-    builtins.trace "using search host <cardano-sl>" try.value
-  else fixedSrc;
+    in if try.success
+    then builtins.trace "using search host <cardano-sl>" try.value
+    else localLib.fetchPinAuto ./. "cardano-sl";
   cardano-sl-src-phase2 = let
     localOverride = {
       outPath = builtins.fetchTarball "https://github.com/input-output-hk/cardano-sl/archive/${cardanoRevOverride}.tar.gz";
       rev = cardanoRevOverride;
     };
-  in if (cardanoRevOverride != null) then localOverride else cardano-sl-src;
+    in if (cardanoRevOverride != null) then localOverride else cardano-sl-src;
   cardano-sl-pkgs = import cardano-sl-src-phase2 ({
     inherit enableDebugging enableProfiling;
-  } // optionalAttrs (cardano-sl-src-phase2 ? rev) {
-    gitrev = cardano-sl-src-phase2.rev;
-  });
+    } // optionalAttrs (cardano-sl-src-phase2 ? rev) {
+      gitrev = cardano-sl-src-phase2.rev;
+    });
+  ###
+  ### Project: Mantis
+  ###
+  mantis-src = let
+    try = builtins.tryEval <mantis>;
+    in if try.success
+    then builtins.trace "using search host <mantis>" try.value
+    else localLib.fetchPinAuto ./goguen/pins "mantis";
+  mantis-src-phase2 = let
+    localOverride = {
+      ### XXX: not really workable right now, for obvious reasons.  Left for uniformity with CSL definition above/future refactoring.
+      outPath = builtins.fetchTarball "https://github.com/input-output-hk/mantis/archive/${mantisRevOverride}.tar.gz";
+      rev = mantisRevOverride;
+    };
+    in if (mantisRevOverride != null) then localOverride else mantis-src;
+  mantis-pkgs = import mantis-src-phase2 ({
+    inherit enableDebugging enableProfiling;
+    } // optionalAttrs (mantis-src-phase2 ? rev) {
+      gitrev = mantis-src-phase2.rev;
+    });
+  ###
+  ###
+  ###
   github-webhook-util = pkgs.callPackage ./github-webhook-util { };
 
   iohk-ops = pkgs.haskell.lib.overrideCabal
@@ -82,15 +116,16 @@ let
     fi
     exit 0
   '';
+  cardano-sl-ops-pkgs = {
+    inherit nixops iohk-ops iohk-ops-integration-test github-webhook-util;
+    terraform = pkgs.callPackage ./terraform/terraform.nix {};
+    mfa = pkgs.callPackage ./terraform/mfa.nix {};
 
-in {
-  inherit nixops iohk-ops iohk-ops-integration-test github-webhook-util;
-  terraform = pkgs.callPackage ./terraform/terraform.nix {};
-  mfa = pkgs.callPackage ./terraform/mfa.nix {};
-
-  checks = let
-    src = localLib.cleanSourceTree ./.;
-  in {
-    shellcheck = pkgs.callPackage ./scripts/shellcheck.nix { inherit src; };
+    checks = let src = localLib.cleanSourceTree ./.;
+    in {
+      shellcheck = pkgs.callPackage ./scripts/shellcheck.nix { inherit src; };
+    };
   };
-} // cardano-sl-pkgs
+in {}
+// optionalAttrs enableCardano  (cardano-sl-ops-pkgs // cardano-sl-pkgs)
+// optionalAttrs enableMantis mantis-pkgs

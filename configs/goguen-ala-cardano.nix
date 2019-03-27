@@ -1,7 +1,12 @@
 {
-  ## Default values for organisation and region.
-  org           = "IOHK";
-  region        = "eu-central-1";
+  node = {
+    org                  = "IOHK";
+    region               = "eu-central-1";
+  };
 
-  hostedZone    = "goguen-ala-cardano.dev-mantis.iohkdev.io";
+  cluster = {
+    hostedZone           = "project42.iohkdev.io";
+    allocateElasticIP    = true;
+    oauthEnable          = true;
+  };
 }

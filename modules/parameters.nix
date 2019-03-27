@@ -1,4 +1,4 @@
-{ name, lib, config, ... }: with lib; with types; {
+{ lib, config, ... }: with lib; with types; {
   options = {
     ##
     ##
@@ -33,15 +33,15 @@
           };
           allocateElasticIP = mkOption {
             type = bool;
-            description = "Node-specific EIP allocation override.  You must provide ${name}-ip.";
+            description = "Node-specific EIP allocation override.  You must provide <name>-ip.";
             default = config.cluster.allocateElasticIP;
           };
-          fqdn = mkOption {
+          fqdn = let
+            fqdn' = with config.cluster; "${name}.${config.cluster.name}.${toplevelDomain}";
+          in mkOption {
             type = nullOr str;
-            description = "Node's FQDN, which defaults to ${name}.${toplevelDomain}";
-            default = if config.cluster.toplevelDomain != null
-                      then name + "." + config.cluster.toplevelDomain
-                      else null;
+            description = "Node's FQDN, which defaults to ${fqdn'}";
+            default = "${fqdn'}";
           };
         };
       };
@@ -55,6 +55,11 @@
         options = {
           ##
           ## Mandatory configuration:
+          name = mkOption {
+            type = str;
+            description = "Name of the cluster instance";
+            default = null;
+          };
           deployerIP = mkOption {
             type = str;
             description = "Deployer machine IP.  Must be set (use deployments/config.nix).";
@@ -65,7 +70,9 @@
           toplevelDomain = mkOption {
             type = nullOr str;
             description = "Top level domain.  'null' for no DNS record.";
-            default = config.cluster.hostedZone;
+            default = if config.cluster.hostedZone != null
+                      then config.cluster.hostedZone
+                      else "iohk";
           };
           hostedZone = mkOption {
             type = nullOr str;
@@ -77,19 +84,13 @@
             description = "Cluster-wide EIP allocation policy.";
             default = false;
           };
+          oauthEnable = mkOption {
+            type = bool;
+            description = "Configure oauth proxy.";
+            default = true;
+          };
         };
       };
-    };
-  };
-  config = {
-    deployment.ec2 = {
-      inherit (config.node) accessKeyId region instanceType;
-    } // optionalAttrs config.node.allocateElasticIP {
-      elasticIPv4 = resources.elasticIPs."${name}-ip";
-    };
-    deployment.route53 = optionalAttrs (config.cluster.toplevelDomain != null) {
-      inherit (config.node) accessKeyId;
-      hostName    = "${name}.${config.cluster.toplevelDomain}";
     };
   };
 }

@@ -25,27 +25,29 @@ let
         );
   };
   getSrc          = name: fetchPinAuto ./pins name;
+  getPin          = name: readPin      ./pins name; ## To allo package reference their own pins, for e.g. Git commit ids.
+  buildSbtLib     = (import ./build-sbt-lib.nix { inherit stdenv scala sbt sbt-extras; }).buildSbtLib;
+  fetchSbtDeps    = (import ./build-sbt-lib.nix { inherit stdenv scala sbt sbt-extras; }).fetchSbtDeps;
 in
 rec {
-  ethereum-explorer    = callPackage ./explorer.nix         { inherit getSrc;                };
-  iele            = callPackage ./iele.nix             { inherit getSrc secp256k1;      };
-  kevm            = callPackage ./kevm.nix             { inherit getSrc;                };
-  mantis          = callPackage ./mantis.nix           { inherit getSrc sbtVerify;      };
-  remixIde        = callPackage ./remix-ide.nix        { inherit getSrc trimmedSolcBin; };
-  sbtVerify       = callPackage ./sbt-verify.nix       { inherit getSrc;                };
-  secp256k1       = callPackage ./secp256k1.nix        { inherit getSrc;                };
-  solidity        = callPackage ./solidity.nix         { inherit getSrc iele;           };
-  solidityService = callPackage ./solidity-service.nix { inherit getSrc solidity iele;  };
-  trimmedSolcBin  = callPackage ./trimmed-solc-bin.nix { inherit getSrc;                };
+  docker-image         = callPackage ./docker-image.nix          { inherit mantis iele-semantics; };
+  ethereum-explorer    = callPackage ./explorer.nix              { inherit getSrc;                };
+  iele-semantics       = callPackage ./iele-semantics.nix        { inherit getSrc secp256k1;      };
+  mantis               = callPackage ./mantis.nix                { inherit getSrc sbt-verify; };
+  remix-ide            = callPackage ./remix-ide.nix             { inherit getSrc trimmed-solc-bin; };
+  sbt-verify           = callPackage ./sbt-verify.nix            { inherit getSrc;                };
+  secp256k1            = callPackage ./secp256k1.nix             { inherit getSrc;                };
+  solidity             = callPackage ./solidity.nix              { inherit getSrc iele-semantics; };
+  solidity-service     = callPackage ./solidity-service.nix      { inherit getSrc solidity iele-semantics; };
+  trimmed-solc-bin     = callPackage ./trimmed-solc-bin.nix      { inherit getSrc;                };
 
-  versions        = listVersions [
-    iele
-    kevm
+  versions             = listVersions [
+    iele-semantics
     mantis
-    remixIde
-    sbtVerify
+    remix-ide
+    sbt-verify
     secp256k1
     solidity
-    solidityService
+    solidity-service
   ];
 }

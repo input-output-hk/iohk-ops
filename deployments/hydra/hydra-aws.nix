@@ -1,5 +1,5 @@
-{ accessKeyId, ... }:
-with import <config>; {
+{ config, accessKeyId, ... }:
+with config; with node; {
   hydra.imports = [ <module/hydra-aws.nix> ];
 
   resources.elasticIPs.hydra-ip = { inherit region accessKeyId; };

@@ -19,10 +19,20 @@
 ##
 ##          import <config>
 {
-  ## Default values for organisation and region.
-  org           = "IOHK";
-  region        = "eu-central-1";
+  node = {
+    ## Default values for organisation and region.
+    org                        = "IOHK";
+    region                     = "eu-central-1";
+  };
 
-  ## Do not allocate hosted zones by default.
-  hostedZone    = null;
+  cluster = {
+    ## Do not allocate hosted zones by default.
+    hostedZone                 = "project42.iohkdev.io";
+
+    ## Do not allocate EIPs by default.
+    allocateElasticIP          = false;
+
+    ## Do not use oauth proxy by default as it requires a domain and additional setup.
+    oauthEnable                = false;
+  };
 }

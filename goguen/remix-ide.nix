@@ -1,6 +1,6 @@
 { stdenv
 , getSrc
-, trimmedSolcBin
+, trimmed-solc-bin
 , pkgs
 }:
 
@@ -34,7 +34,7 @@ stdenv.mkDerivation rec {
   installPhase = ''
     mv build $out
 
-    ln -s ${trimmedSolcBin} $out/solc-bin
+    ln -s ${trimmed-solc-bin} $out/solc-bin
 
     cp -r index.html soljson.js assets $out/
     substituteInPlace $out/index.html \

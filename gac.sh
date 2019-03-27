@@ -1,9 +1,10 @@
-#!/bin/sh
+#!/usr/bin/env bash
 set -e
 
 usage() {
         echo "$(basename $0) [--verbose] COMMAND ARGS.." >&2
         echo
+        echo "                new  CLUSTER-NAME [OPS-BRANCH-NAME] [CLUSTER-TYPE] [CLUSTER-KIND]"
         grep ' ) # Doc:' $0 | sed 's,^\([^ ]*\) .* \([^ ]*\) ) # Doc:\(.*\)$,"\1" "\2",' | tail -n +2 | {
                 read a b
                 while test -n "$a"
@@ -29,7 +30,92 @@ logn() {
 
 cd `dirname $0`
 
+CLUSTER_KIND=mantis
+CLUSTER_TYPE=mempty
+CLUSTER_NAME=create-.config.sh
+OPS_REPO='git@github.com:input-output-hk/iohk-ops'
+DEFAULT_OPS_BRANCH='master'
+
+if test "$1" = "new" -o "$1" = "seed"
+then
+        shift
+        case "$1" in
+                -h | --help | help )cat <<EOF
+$(basename $0) new CLUSTER-NAME [OPS-BRANCH-NAME] [CLUSTER-TYPE] [CLUSTER-KIND]
+
+Sets up a new, named deployment checkout for a cluster of type CLUSTER_TYPE
+for subsequent deployment.
+
+The CLUSTER-NAME will be used both for the ops checkout directory, and
+the Nixops deployment.
+
+Available cluster types:  $(if test ! -d clusters; then cd .seed; fi && ls clusters | xargs echo)
+
+Generals documentation: https://github.com/input-output-hk/iohk-ops/blob/goguen-ala-cardano/docs/Goguen-clusters-HOWTO.org
+
+EOF
+                                    exit 1;; esac;
+        CLUSTER_NAME="$1";                            test -n "$1" && shift
+        BRANCH_NAME="${1:-$DEFAULT_OPS_BRANCH}";      test -n "$1" && shift
+        CLUSTER_TYPE="${1:-mantis}";                  test -n "$1" && shift
+        CLUSTER_KIND="${1:-mantis}";                  test -n "$1" && shift
+        set -u
+        while test -d "${CLUSTER_NAME}" -o -z "${CLUSTER_NAME}" || nixops info -d "${CLUSTER_NAME}" >/dev/null 2>/dev/null
+        do read -ei "${CLUSTER_NAME}" -p "Cluster '${CLUSTER_NAME}' already exists, please choose another name: " CLUSTER_NAME
+        done
+        git clone "${OPS_REPO}" "${CLUSTER_NAME}"
+        cd "${CLUSTER_NAME}"
+        git checkout "${BRANCH_NAME}"
+        cat > .config.sh <<EOF
+CLUSTER_KIND=${CLUSTER_KIND}
+CLUSTER_TYPE=${CLUSTER_TYPE}
+CLUSTER_NAME=${CLUSTER_NAME}
+CONFIG=default
+EOF
+        ./gac.sh     list-cluster-components
+        if test "${CLUSTER_TYPE}" = "mantis"
+        then log "generating node keys.."
+             ./gac.sh     generate-node-keys
+        fi
+        log "creating the Nixops deployment.."
+        nixops       create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/*.nix
+        ./gac.sh     configure-nixops-deployment-arguments
+        log "cluster has been set up, but not deployed;  Next steps:"
+        log "  1. cd ${CLUSTER_NAME}"
+        log "  2. ./gac.sh deploy"
+        exit 0
+fi
+
+
+CONFIG=default
 verbose=""
+if test ! -f .config.sh
+then
+        log "WARNING:  creating a default .config.sh with an empty cluster"
+fi
+. ./.config.sh
+if test -z "${RECURSIVE_GAC}"
+then log ".config.sh settings:"
+     cat <<EOF
+CLUSTER_KIND=${CLUSTER_KIND}
+CLUSTER_TYPE=${CLUSTER_TYPE}
+CLUSTER_NAME=${CLUSTER_NAME}
+CONFIG=${CONFIG}
+EOF
+fi
+OPS_REPO='git@github.com:input-output-hk/iohk-ops'
+case ${CLUSTER_KIND} in
+        mantis
+          ) true;;
+        * ) log "ERROR:  invalid cluster kind: '${CLUSTER_KIND}'"; exit 1;;
+esac
+NODE_DERIVATION=${CLUSTER_KIND}
+NODE_EXECUTABLE=${CLUSTER_KIND}
+DEFAULT_NODE=${CLUSTER_KIND}-a-0
+NODE_SERVICE=${CLUSTER_KIND}
+NODE_DB_PATH=/data/${CLUSTER_KIND}
+ALL_NODES="${DEFAULT_NODE} ${CLUSTER_KIND}-a-1 ${CLUSTER_KIND}-b-0 ${CLUSTER_KIND}-b-1 ${CLUSTER_KIND}-c-0 "
+
 while test -n "$1"
 do case "$1" in
            --verbose | -v ) set -x; verbose="--verbose";;
@@ -40,29 +126,9 @@ self="$0 ${verbose}"
 cmd=${1:-doit}; test -n "$1"; shift
 set -u
 
-CONFIG=default
-CLUSTER=create-.config.sh
-if test ! -f .config.sh
-then
-        log "WARNING:  creating a default .config.sh with an empty cluster"
-        cat > .config.sh <<EOF
-CLUSTER=mempty
-CONFIG=default
-EOF
-fi
-. ./.config.sh
-ALL_NODES="mantis-a-0 mantis-a-1 mantis-b-0 mantis-b-1 mantis-c-0 "
-if test -z "${RECURSIVE_GAC}"
-then log ".config.sh settings:"
-     cat <<EOF
-CLUSTER=${CLUSTER}
-CONFIG=${CONFIG}
-EOF
-fi
-
-nix_out="$(   nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nix.outPath'    | xargs echo)"
+nix_out="$(   nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nix'    | xargs echo)"
 nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).goguenNixpkgs' | xargs echo)
-nixops_out="$(nix-instantiate --eval -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nixops.outPath' | xargs echo)"
+nixops_out="$(nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nixops' | xargs echo)"
 nix=${nix_out}/bin/nix
 nix_build=${nix_out}/bin/nix-build
 nix_inst=${nix_out}/bin/nix-instantiate
@@ -74,14 +140,15 @@ nix_opts="\
 nixops_nix_opts="${nix_opts} \
 -I nixops=${nixops_out}/share/nix/nixops \
 -I config=./configs/${CONFIG}.nix \
+-I configs=./configs \
 -I module=./modules \
 -I static=./static \
 -I goguen=./goguen \
 "
 
-ag=$( nix-build -E '(import ((import ./lib.nix).goguenNixpkgs) {}).ag'     | xargs echo)/bin/ag
-aws=$(nix-build -E '(import ((import ./lib.nix).goguenNixpkgs) {}).awscli' | xargs echo)/bin/aws
-jq=$( nix-build -E '(import ((import ./lib.nix).goguenNixpkgs) {}).jq'     | xargs echo)/bin/jq
+ag=$( nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).ag'     | xargs echo)/bin/ag
+aws=$(nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).awscli' | xargs echo)/bin/aws
+jq=$( nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).jq'     | xargs echo)/bin/jq
 
 if test ! -f ${nixops}
 then nix-store --realise ${nixops}
@@ -89,53 +156,56 @@ fi
 
 export NIX_PATH="nixpkgs=${nixpkgs_out}"
 
-nixops_subopts="--deployment ${CLUSTER} ${nixops_nix_opts}"
+nixops_subopts="--deployment ${CLUSTER_NAME} ${nixops_nix_opts}"
 nixops_subopts_deploy="${nixops_subopts} --max-concurrent-copy=50"
 nixops_bincaches="https://cache.nixos.org https://hydra.iohk.io https://mantis-hydra.aws.iohkdev.io"
 
-nixops_constituents="$(ls ./clusters/${CLUSTER}/*.nix)"
+nixops_constituents="$(ls ./clusters/${CLUSTER_TYPE}/*.nix)"
 nixops_constituents_quoted="$(echo ${nixops_constituents} | sed 's,\\b,\",g')"
 nixops_deplArgs="{ accessKeyId = \"AKID\"; deployerIP = \"127.0.0.1\"; }"
 nixops_network_expr="import <nixops/eval-machine-info.nix> { \
     networkExprs = [ ${nixops_constituents_quoted} ]; \
     args = ${nixops_deplArgs}; \
     uuid = \"81976a61-80f6-11e7-9369-06258a1e40fd\"; \
-    deploymentName = \"${CLUSTER}\"; \
+    deploymentName = \"${CLUSTER_NAME}\"; \
     checkConfigurationOptions = false; \
   }"
 
-generate_faucet_and_node_keys () {
+generate_faucet_keys () {
         export JAVA_HOME=`nix-build -E  "(import (import ./lib.nix).goguenNixpkgs {}).pkgs.openjdk8"  --no-out-link`
-        mantis=`nix-build -E  "(import ./goguen/. {}).mantis"`
-        NODES="a-0 a-1 b-0 b-1 c-0"
-        NODE_IDS="static/mantis-node-ids.nix"
-
+        node=`nix-build --no-out-link -E  "(import ./goguen/. {}).${NODE_DERIVATION}"`
         FAUCETS="faucet-a"
         FAUCET_ADDRS="static/faucet-addresses.nix"
-        FAUCET_KEYGEN_CONF="static/mantis-faucet-keygen.conf"
+        FAUCET_KEYGEN_CONF="static/faucet-keygen.conf"
 
         echo 'include "application.conf"' > ${FAUCET_KEYGEN_CONF}
 
         echo '{'                          > ${FAUCET_ADDRS}
         for f in $FAUCETS; do
                 rm -f ~/.mallet/*
-                ${mantis}/bin/mantis -Dconfig.file=${FAUCET_KEYGEN_CONF} mallet "http://127.0.0.1" --command newAccount --password ""
+                ${node}/bin/${NODE_EXECUTABLE} -Dconfig.file=${FAUCET_KEYGEN_CONF} mallet "http://127.0.0.1" --command newAccount --password ""
                 cat   ~/.mallet/*         >> "static/mallet-${f}.json"
                 addr="$(jq ".address" ~/.mallet/*)"
                 echo "${f} = ${addr};"    >> ${FAUCET_ADDRS}
         done
         echo '}'                          >> ${FAUCET_ADDRS}
+}
+
+generate_node_keys () {
+        export JAVA_HOME=`nix-build -E  "(import (import ./lib.nix).goguenNixpkgs {}).pkgs.openjdk8"  --no-out-link`
+        node=`nix-build --no-out-link -E  "(import ./goguen/. {}).${NODE_DERIVATION}"`
+        NODE_IDS="static/node-ids.nix"
 
         echo "{" > "$NODE_IDS"
-        for n in $NODES; do
-                KEY_FILE="static/mantis-$n.key"
+        for n in $ALL_NODES; do
+                KEY_FILE="static/$n.key"
 
                 if [ ! -f "$KEY_FILE" ]; then
-                        $MANTIS/bin/eckeygen > "$KEY_FILE"
+                        ${node}/bin/eckeygen > "$KEY_FILE"
                 fi
 
                 NODE_ID="`sed -n 2p \"$KEY_FILE\"`"
-                echo "  mantis-$n = { id = \"$NODE_ID\"; };" >> "$NODE_IDS"
+                echo "  $n = { id = \"$NODE_ID\"; };" >> "$NODE_IDS"
         done
         echo "}" >> "$NODE_IDS"
 }
@@ -184,7 +254,7 @@ case ${cmd} in
 "" | "" ) # Doc:
         ;;
 eval | evaluate-nixops-machine-definition ) # Doc:
-        nix-instantiate ${nixops_nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"mantis-a-0\"]; }";;
+        nix-instantiate ${nixops_nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"${DEFAULT_NODE}\"]; }";;
 repl | repl-with-machine-definition ) # Doc:
         nixver="$(nix --version | cut -d ' ' -f3)"
         if test ${nixver} != 2.2 -a ${nixver} != 2.3 -a ${nixver} != 2.4 -a ${nixver} != 2.5
@@ -192,15 +262,19 @@ repl | repl-with-machine-definition ) # Doc:
         fi
         nix repl     ${nixops_nix_opts} --arg    depl       "${nixops_network_expr}" ./network.nix \
                                         --argstr nixpkgsSrc "${nixpkgs_out}";;
-dry | full-deploy-dry-run ) # Doc:
+dry | full-new-cluster-create-and-deploy-dry-run ) # Doc:
         export AWS_PROFILE=default AWS_ACCESS_KEY_ID=AKIASDADFLKJDFJDJFDJ AWS_SECRET_ACCESS_KEY=Hlkjdflsjfjlnrmnsiuhfskjhkshfiuurrfsd/Rp
         if ${nixops} info  ${nixops_subopts} >/dev/null 2>&1
         then op=modify
-        else op=create; generate_faucet_and_node_keys; fi
+        else op=create; generate_node_keys; fi
         ${nixops} ${op}    ${nixops_subopts} ${nixops_constituents}
         deployerIP="127.0.0.1"
         AKID=someBoringAKID # "(pow 2.71828 . (3.1415 *) . sqrt) -1 = -1"
-        ${nixops} set-args ${nixops_subopts} --argstr accessKeyId "${AKID}" --argstr deployerIP "${deployerIP}"
+        ${nixops} set-args ${nixops_subopts} \
+		  --argstr accessKeyId "${AKID}" \
+		  --argstr deployerIP "${deployerIP}" \
+	          --argstr clusterName "${CLUSTER_NAME}" \
+		  --arg config "import ./config.nix { clusterName = \"${CLUSTER_NAME}\"; deployerIP = \"${deployerIP}\"; accessKeyId = \"${AKID}\"; }"
         ${nixops} deploy   ${nixops_subopts_deploy} --dry-run "$@"
         ;;
 "" | "" ) # Doc:
@@ -209,8 +283,14 @@ dry | full-deploy-dry-run ) # Doc:
         ;;
 "" | "" ) # Doc:
         ;;
+create | create-cluster-nixops-deployment ) # Doc:
+        set +u; AKID="$1"; test -n "$1" && shift; set -u
+        ${nixops}    create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/*.nix
+        ${self}      configure-nixops-deployment-arguments
+        ;;
+
 components | ls | list-cluster-components ) # Doc:
-        log "components of cluster '${CLUSTER}':"
+        log "components of cluster ${CLUSTER_NAME}:"
         echo ${nixops_constituents} | tr " " "\n" | sort | sed 's,^,   ,';;
 configure | conf | configure-nixops-deployment-arguments ) # Doc:
         log "querying own IP.."
@@ -223,17 +303,13 @@ configure | conf | configure-nixops-deployment-arguments ) # Doc:
         }
         ${nixops} set-args ${nixops_subopts} \
                   --argstr accessKeyId "${AKID}" \
-                  --argstr deployerIP "${deployerIP}"
+                  --argstr deployerIP "${deployerIP}" \
+	          --argstr clusterName "${CLUSTER_NAME}" \
+		  --arg config "import ./config.nix { clusterName = \"${CLUSTER_NAME}\"; deployerIP = \"${deployerIP}\"; accessKeyId = \"${AKID}\"; }"
                 ;;
-genkey | g | generate-mantis-faucet-and-node-keys ) # Doc:
-        generate_faucet_and_node_keys;;
-create | create-deployment-from-cluster-components ) # Doc:
-        set +u; AKID="$1"; test -n "$1" && shift; set -u
-        $self     list-cluster-components
-        ${nixops} create   ${nixops_subopts} clusters/${CLUSTER}/*.nix
-        $self     configure-nixops-deployment-arguments $AKID
-        $self     generate-mantis-faucet-and-node-keys
-        ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
+genkey | g | generate-node-keys ) # Doc:
+        generate_node_keys;;
+
 delete | destroy | terminate | abolish | eliminate | demolish | delete-nixops-deployment ) # Doc:
         ${nixops} destroy  ${nixops_subopts} --confirm
         ${nixops} delete   ${nixops_subopts};;
@@ -248,10 +324,15 @@ info   | i | nixops-info ) # Doc:
 "" | "" ) # Doc:
         ;;
 deploy-one | one | deploy-one-machine ) # Doc:
-        $self     deploy --include mantis-a-0;;
+        $self     deploy --include ${DEFAULT_NODE};;
 deploy | d | update-and-deploy ) # Doc:
+	if ! ${nixops} info ${nixops_subopts} &>/dev/null; then
+		log "recreating the Nixops deployment.."
+		${nixops} create ${nixops_subopts} "clusters/${CLUSTER_TYPE}"/*.nix
+	fi
+        ./gac.sh     configure-nixops-deployment-arguments
         $self     components
-        ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER}/*.nix
+        ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER_TYPE}/*.nix
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
 "" | "" ) # Doc:
         ;;
@@ -259,9 +340,11 @@ deploy | d | update-and-deploy ) # Doc:
         ;;
 "" | "" ) # Doc:
         ;;
-build | build-goguen-package ) # Doc:
-        pkg=$1
-        ${nix_build} ${nix_opts} -A ${pkg} goguen/release.nix;;
+update-pin | update | pin | update-a-goguen-package-pin ) # Doc:
+        $(dirname $0)/goguen/update-pin.sh "$@";;
+build | b | build-goguen-package ) # Doc:
+        pkg=$1; shift
+        ${nix_build} ${nix_opts} -A ${pkg} './default.nix' "$@";;
 build-ala-hydra | build-goguen-package-like-hydra-does ) # Doc:
         #pkg=$1
         log "building Hydra"
@@ -281,11 +364,11 @@ drv-show | prettyprint-goguen-derivation ) # Doc:
         ;;
 "" | "" ) # Doc:
         ;;
-ssh | ssh-to-mantis-node ) # Doc:
-        machine="${1:-mantis-a-0}";
+ssh | ssh-to-node ) # Doc:
+        machine="${1:-${DEFAULT_NODE}}";
         set +u; test -n "$1" && shift; set -u
         ${nixops} ssh          ${nixops_subopts} ${machine} "$@";;
-ssh-all | parallel-ssh-on-all-mantis-nodes ) # Doc:
+ssh-all | parallel-ssh-on-all-nodes ) # Doc:
         ${nixops} ssh-for-each ${nixops_subopts} --parallel --include ${ALL_NODES} -- "$@";;
 "" | "" ) # Doc:
         ;;
@@ -293,63 +376,67 @@ ssh-all | parallel-ssh-on-all-mantis-nodes ) # Doc:
         ;;
 "" | "" ) # Doc:
         ;;
-stop | stop-all-mantis-services ) # Doc:
+stop | stop-all-node-services ) # Doc:
         on=${1:+--include $*}
-        log "stopping Mantis services on:  ${on}"
-        $0        ssh-all ${on} -- systemctl    stop mantis;;
-start | start-all-mantis-services ) # Doc:
+        log "stopping node services on:  ${on}"
+        $0        ssh-all ${on} -- systemctl    stop ${NODE_SERVICE};;
+start | start-all-node-services ) # Doc:
         on=${1:+--include $*}
-        log "starting Mantis services on:  ${on}"
-        $0        ssh-all ${on} -- systemctl   start mantis; log "new start date:  $($0 since mantis-a-0)";;
-restart | restart-all-mantis-services ) # Doc:
+        log "starting node services on:  ${on}"
+        $0        ssh-all ${on} -- systemctl   start ${NODE_SERVICE}; log "new start date:  $($0 since ${DEFAULT_NODE})";;
+restart | restart-all-node-services ) # Doc:
         on=${1:+--include $*}
-        $0        ssh-all ${on} -- systemctl restart mantis; log "new start date:  $($0 since mantis-a-0)";;
-statuses | ss | all-mantis-service-statuses ) # Doc:
+        $0        ssh-all ${on} -- systemctl restart ${NODE_SERVICE}; log "new start date:  $($0 since ${DEFAULT_NODE})";;
+statuses | ss | all-node-service-statuses ) # Doc:
         on=${1:+--include $*}
-        $0        ssh-all ${on} -- systemctl  status mantis;;
+        $0        ssh-all ${on} -- systemctl  status ${NODE_SERVICE};;
 "" | "" ) # Doc:
         ;;
 "" | journald-logs-and-grepping ) # Doc:
         ;;
 "" | "" ) # Doc:
         ;;
-since | mantis-service-start-date-on-node ) # Doc:
-        node=$1
-        ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show mantis --value --property WatchdogTimestamp | cut -d' ' -f3;;
-journal-on | jo | mantis-service-journal-on-node-since-start ) # Doc:
-        node=${1:-'mantis-a-0'}
-        ${nixops} ssh          ${nixops_subopts} ${node} -- journalctl  -u mantis --since $($0 since ${node});;
-pretty-journal-on | pj | mantis-service-journal-on-node-since-its-start-prettified-version ) # Doc:
-        node=${1:-'mantis-a-0'}
-        $0 mantis-service-journal-on-node-since-start ${node} | cut -c92- | less;;
-journal    | jall | j | all-mantis-service-journals ) # Doc:
-        start_sample_node='mantis-a-0'
+since | node-service-start-date-on ) # Doc:
+        node=${1:-${DEFAULT_NODE}}
+        ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show ${NODE_SERVICE} --value --property WatchdogTimestamp 2>&1 | cut -d' ' -f3;;
+journal-on | jo | node-service-journal-on-node-since-start ) # Doc:
+        node=${1:-${DEFAULT_NODE}}
+        set +u; since=${2:-$($0 since ${node})}; set -u
+        if test -z "${since}"; then since='3 hours ago'; fi
+        ${nixops} ssh          ${nixops_subopts} ${node} -- journalctl  -u ${NODE_SERVICE} --since "'${since}'" 2>&1;;
+pretty-journal-on | pj | node-service-journal-on-node-since-its-start-prettified-version ) # Doc:
+        node=${1:-${DEFAULT_NODE}}
+        $0 node-service-journal-on-node-since-start ${node} | fgrep -v ',"state": "ok","service": "' | cut -c92- | less;;
+journal    | jall | j | all-node-service-journals ) # Doc:
+        start_sample_node=${DEFAULT_NODE}
         since=${1:-$($0 since ${start_sample_node})}
+        if test -z "${since}"; then since='3 hours ago'; fi
         log "journal since:  ${since}"
-        $0        ssh-all      -- journalctl -u mantis --since ${since};;
+        $0        ssh-all      -- journalctl -u ${NODE_SERVICE} --since "'${since}'" 2>&1;;
 system-journal | sysj | system-journal-on-node ) # Doc:
-        node=${1:-'mantis-a-0'}
-        $0        ssh ${node}  -- journalctl -xe;;
-follow | f | follow-mantis-service-journal-on-node ) # Doc:
-        node=${1:-'mantis-a-0'}
-        $0        ssh ${node}  -- journalctl -fu mantis;;
-follow-all | fa | follow-all-mantis-service-journals ) # Doc:
-        $0        ssh-all      -- journalctl -fu mantis "$@";;
-grep-on | gro | grep-mantis-node-service-journals-since-start ) # Doc:
+        node=${1:-${DEFAULT_NODE}}
+        $0        ssh ${node}  -- journalctl -xe 2>&1;;
+follow | f | follow-node-service-journal-on ) # Doc:
+        node=${1:-${DEFAULT_NODE}}
+        $0        ssh ${node}  -- journalctl -fu ${NODE_SERVICE} 2>&1;;
+follow-all | fa | follow-all-node-service-journals ) # Doc:
+        $0        ssh-all      -- journalctl -fu ${NODE_SERVICE} "$@" 2>&1;;
+grep-on | gro | grep-node-service-journals-since-start ) # Doc:
         node=$1; shift
         log "node:           ${node}"
         log "filter:         ag $*"
         $0        journal-on ${node} 2>&1 | ${ag} "$@";;
-grep-since | gras | grep-all-mantis-service-journals-since-timestamp ) # Doc:
+grep-since | gras | grep-all-node-service-journals-since-timestamp ) # Doc:
         since=$1; shift
         log "journal since:  ${since}"
         log "filter:         ag $*"
         $0        journal "${since}" 2>&1 | ${ag} "$@";;
-grep | g | grep-all-mantis-service-journals-since-last-restart ) # Doc:
-        start_sample_node='mantis-a-0'
+grep | g | grep-all-node-service-journals-since-last-restart ) # Doc:
+        start_sample_node=${DEFAULT_NODE}
         since=$($0 since ${start_sample_node})
+        if test -z "${since}"; then since='3 hours ago'; fi
         $0        grep-since ${since} "$@";;
-watch-for | w | watch-all-mantis-service-journals-for-regex-occurence ) # Doc:
+watch-for | w | watch-all-node-service-journals-for-regex-occurence ) # Doc:
         $0        follow-all 2>&1 | ${ag} "$@";;
 
 "" | "" ) # Doc:
@@ -358,47 +445,39 @@ watch-for | w | watch-all-mantis-service-journals-for-regex-occurence ) # Doc:
         ;;
 "" | "" ) # Doc:
         ;;
-blocks | bs |  mantis-node-recent-block-numbers ) # Doc:
+blocks | bs |  node-recent-block-numbers ) # Doc:
         $0        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' -f5,14-;;
-roles | rs | mantis-node-roles-since-start ) # Doc:
+roles | rs | node-roles-since-start ) # Doc:
         $0        grep 'role changed|LEADER';;
-exceptions | ex | mantis-node-exceptions-since-start ) # Doc:
+exceptions | ex | node-exceptions-since-start ) # Doc:
         $0        grep -i exception | ag -v 'RiemannBatchClient|exception.counter';;
-watch-blocks | wb | watch-mantis-node-current-block-number-stream ) # Doc:
+watch-blocks | wb | watch-node-current-block-number-stream ) # Doc:
         $0        watch-for 'Best Block: ' | cut -d' ' -f5,14-;;
-watch-roles | wr | watch-mantis-node-current-role-stream ) # Doc:
+watch-roles | wr | watch-node-current-role-stream ) # Doc:
         $0        watch-for 'role changed|LEADER';;
-watch-roles-pretty | wrp | watch-mantis-node-current-role-stream-prettified ) # Doc:
+watch-roles-pretty | wrp | watch-node-current-role-stream-prettified ) # Doc:
         $0        watch-roles | sed 's/^\([^\.]*\)\..*oldRole","value": "\([A-Z]*\)".*newRole","value": "\([A-Z]*\).*$/\1: \2 -> \3/';;
-watch-exceptions | we | watch-mantis-node-current-exception-stream ) # Doc:
+watch-exceptions | we | watch-node-current-exception-stream ) # Doc:
         $0        watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
-troubleshoot | tro | troubleshoot-mantis-logs-for-known-problems ) # Doc:
-        node=${1:-'mantis-a-0'}
-        $0        grep-mantis-node-service-journals-since-start ${node} 'Genesis data present in the database does not match genesis block from file.';;
+troubleshoot | tro | troubleshoot-node-logs-for-known-problems ) # Doc:
+        node=${1:-${DEFAULT_NODE}}
+        $0        grep-node-service-journals-since-start ${node} 'Genesis data present in the database does not match genesis block from file.' && echo 'PROBLEM FOUND!' || true
+        $0        grep-node-service-journals-since-start ${node} 'candidate is not known to the local member' && echo 'PROBLEM FOUND!' || true
+        ;;
 "" | "" ) # Doc:
         ;;
 "" | DANGER:-destructive-operations ) # Doc:
         ;;
 "" | "" ) # Doc:
         ;;
-drop-leveldb | remove-blockchain-on-all-nodes ) # Doc:
-        log "about to nuke blockchain DB, globally.."
-        $0        stop
-        log "nuking.."
-        $0        ssh-all      -- rm -rf /data/mantis/.mantis/leveldb
-        $0        start;;
-drop-raftdb | remove-leadership-consensus-on-all-nodes ) # Doc:
-        log "about to nuke leadership consensus DB (Raft), globally.."
-        $0        stop
-        log "nuking.."
-        $0        ssh-all      -- rm -rf /data/mantis/.mantis/atomix-raft-data
-        $0        start;;
 drop-dbs | remove-all-blockchain-data-on-all-nodes ) # Doc:
         log "about to nuke blockchain DB and leadership consensus DB, globally.."
+        read -ei "No!" -p "Really? Type 'yes' to confirm:  " disaster
+        test "${disaster}" == "yes" || { log "disaster averted"; exit 1; }
+        log "disaster considered authorized"
         $0        stop
         log "nuking.."
-        $0        ssh-all      -- rm -rf /data/mantis/.mantis/leveldb
-        $0        ssh-all      -- rm -rf /data/mantis/.mantis/atomix-raft-data
+        $0        ssh-all      -- rm -rf ${NODE_DB_PATH}
         $0        start;;
 "" | "" ) # Doc:
         ;;
@@ -408,7 +487,7 @@ drop-dbs | remove-all-blockchain-data-on-all-nodes ) # Doc:
         ;;
 get-funds | faucet | money-please | withdraw-funds-from-faucet ) # Doc:
         to_addr=${1:-805932097ab26cc1061424ddcae9f4cd54a09c7b}
-        curl -X POST "http://faucet-a.${CLUSTER}.dev-mantis.iohkdev.io:8099/faucet?address=0x${to_addr}";;
+        curl -X POST "http://faucet-a.${CLUSTER_NAME}.dev-mantis.iohkdev.io:8099/faucet?address=0x${to_addr}";;
 "" | "" ) # Doc:
         ;;
 "" | deployer-bootstrap ) # Doc:
@@ -418,7 +497,7 @@ get-funds | faucet | money-please | withdraw-funds-from-faucet ) # Doc:
 describe-image | describe-deployer-nixops-image ) # Doc:
         nixos_ver="18.09"
         region="eu-central-1"
-        export AWS_PROFILE=${CLUSTER} AWS_REGION=${region}
+        export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
         ami="$(nix-instantiate --eval -E "(import ${nixpkgs_out}/nixos/modules/virtualisation/ec2-amis.nix).\"${nixos_ver}\".${region}.hvm-ebs" | xargs echo)"
         ${aws} ec2 describe-images --image-id ${ami} --region ${region}
         ;;
@@ -429,8 +508,8 @@ create-deployer | create-and-maybe-deploy-new-deployer ) # Doc:
         org=IOHK
         ec2type=t2.large
         depl_ssh_sg="allow-public-ssh-${region}-${org}"
-        deployer_tags="tag:deployment,Values=${CLUSTER},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
-        export AWS_PROFILE=${CLUSTER} AWS_REGION=${region}
+        deployer_tags="tag:deployment,Values=${CLUSTER_KIND},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
+        export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
 
         if ! ${aws} ec2  describe-security-groups        --group-names ${depl_ssh_sg}
         then ${aws} ec2    create-security-group         --group-name  ${depl_ssh_sg} --description "${depl_ssh_sg}"
@@ -448,7 +527,7 @@ create-deployer | create-and-maybe-deploy-new-deployer ) # Doc:
                     --instance-type ${ec2type}                                       \
                     --placement AvailabilityZone=${az}                               \
                     --block-device-mappings DeviceName=/dev/sda1,Ebs={VolumeSize=200} \
-                    --tag-specifications "ResourceType=instance,Tags=[{Key=deployment,Value=${CLUSTER}},{Key=role,Value=deployer}]" \
+                    --tag-specifications "ResourceType=instance,Tags=[{Key=deployment,Value=${CLUSTER_KIND}},{Key=role,Value=deployer}]" \
                     --user-data file://terraform/deployer/configuration-bootstrap.nix
 
         wait_region_tagged_instances ${region} ${deployer_tags}
@@ -460,7 +539,7 @@ create-deployer | create-and-maybe-deploy-new-deployer ) # Doc:
         cat <<EOF
 Access the new deployer as:
 -------------------- 8< ----------------------
-Host ${CLUSTER}-deployer
+Host ${CLUSTER_KIND}-deployer
   User     deployer
   Hostname ${deployer_ip}
 EOF
@@ -470,8 +549,8 @@ EOF
              $0 setup-deployer "$@"
         fi;;
 setup-deployer | finalise-deployer-nixops-bootstrap ) # Doc:
-        test -d ./clusters/${CLUSTER} || {
-                log "ERROR: unknown cluster ${CLUSTER} -- to see available clusters:  ls clusters"
+        test -d ./clusters/${CLUSTER_KIND} || {
+                log "ERROR: unknown cluster ${CLUSTER_KIND} -- to see available clusters:  ls clusters"
                 exit 1
         }
         cluster_config="${CONFIG}"
@@ -481,8 +560,8 @@ setup-deployer | finalise-deployer-nixops-bootstrap ) # Doc:
         done
 
         region="eu-central-1"
-        export AWS_PROFILE=${CLUSTER} AWS_REGION=${region}
-        deployer_tags="tag:deployment,Values=${CLUSTER},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
+        export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
+        deployer_tags="tag:deployment,Values=${CLUSTER_KIND},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
 
         log "setting up AWS.."
         deployer_ip=$(region_tagged_instances_property ${region} ${deployer_tags} '[0].Instances[0].PublicIpAddress' | xargs echo)
@@ -495,11 +574,11 @@ setup-deployer | finalise-deployer-nixops-bootstrap ) # Doc:
         set -u
 
         log "setting up AWS credentials.."
-        AKID="$(sed -n "/\\[${CLUSTER}\\]/,/^\\[.*/ p" < ~/.aws/credentials | grep aws_access_key_id     | cut -d= -f2 | xargs echo)"
+        AKID="$(sed -n "/\\[${CLUSTER_KIND}\\]/,/^\\[.*/ p" < ~/.aws/credentials | grep aws_access_key_id     | cut -d= -f2 | xargs echo)"
         ssh "deployer@${deployer_ip}" sh -c "\"mkdir -p ~/.aws && cat > ~/.aws/credentials && chmod -R go-rwx ~/.aws\"" <<EOF
 [default]
 aws_access_key_id = ${AKID}
-aws_secret_access_key = $(sed -n "/\\[${CLUSTER}\\]/,/^\\[.*/ p" < ~/.aws/credentials | grep aws_secret_access_key | cut -d= -f2 | xargs echo)
+aws_secret_access_key = $(sed -n "/\\[${CLUSTER_KIND}\\]/,/^\\[.*/ p" < ~/.aws/credentials | grep aws_secret_access_key | cut -d= -f2 | xargs echo)
 region = ${region}
 EOF
         log "generating SSH key and setting up ops checkout.."
@@ -512,7 +591,9 @@ echo 'Please authorise this key and press Enter: ' && \
 read foo && \
 git clone ${ops_url} infra && \
 cd infra && \
-echo CLUSTER=${CLUSTER} > .config.sh && \
+echo CLUSTER_KIND=${CLUSTER_KIND} > .config.sh && \
+echo CLUSTER_TYPE=${CLUSTER_KIND}-infra > .config.sh && \
+echo CLUSTER_NAME=infra > .config.sh && \
 echo CONFIG=${cluster_config} >> .config.sh && \
 git checkout ${ops_branch} && \
 git config --replace-all receive.denyCurrentBranch updateInstead"

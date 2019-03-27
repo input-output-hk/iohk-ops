@@ -20,24 +20,37 @@
 let pkgs = import nixpkgs {}; in
 
 with pkgs.lib;
+with import ../../lib.nix;
 
 let
 
-  nixpkgs-src = builtins.fromJSON (builtins.readFile ./../../nixpkgs-src.json);
-  iohkOpsURI           = "https://github.com/input-output-hk/iohk-ops.git";
-  iohkOpsJobsetsBranch = "goguen-ala-cardano"; # XXX: should become "master" at some point.
+  nixpkgs-src          = readPin ../pins "nixpkgs";
+  projectJobsetsURI    = "git@github.com:input-output-hk/iohk-ops.git";
+  projectJobsetsBranch = "goguen-ala-cardano"; # XXX: should become "master" at some point.
 
   ##########################################################################
   # GitHub repos to make jobsets for.
   # These are processed by the mkRepoJobsets function below.
 
   repos = {
+    mantis = {
+      description = "Mantis";
+      url = "git@github.com:input-output-hk/mantis.git";
+      mantis = "cardano";  # corresponds to argument in cardano-sl/release.nix
+      branch = "develop";
+      branches = {
+      };
+      prs = mantisPrsJSON;
+      prJobsetModifier = x: x;
+      bors = false;
+    };
+
     iohk-ops = {
-      description = "Goguen Mantis Cardano";
-      url = "https://github.com/input-output-hk/iohk-ops.git";
+      description = "Mantis ops";
+      url = "git@github.com:input-output-hk/iohk-ops.git";
       input = "iohk-ops";  # corresponds to argument in goguen/release.nix
       path  = "goguen/release.nix";
-      branch = "goguen-ala-cardano";
+      branch = "master";
       branches = {
       };
       prs = mantisPrsJSON;
@@ -50,7 +63,7 @@ let
   ##########################################################################
   # Jobset generation functions
 
-  mkFetchGithub = value: {
+  mkFetchGit = value: {
     inherit value;
     type = "git";
     emailresponsible = false;
@@ -64,8 +77,8 @@ let
     schedulingshares = 42;
     checkinterval = 60;
     inputs = {
-      nixpkgs = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
-      jobsets = mkFetchGithub "${iohkOpsURI} ${iohkOpsJobsetsBranch}";
+      jobsets  = mkFetchGit "${projectJobsetsURI} ${projectJobsetsBranch}";
+      nixpkgs  = mkFetchGit "${nixpkgs-src.url}   ${nixpkgs-src.rev}";
     };
     enableemail = false;
     emailoverride = "";
@@ -106,7 +119,7 @@ let
       nixexprinput = input;
       inherit description;
       inputs = defaultSettings.inputs // {
-        "${input}" = mkFetchGithub "${url} ${branch}";
+        "${input}" = mkFetchGit "${url} ${branch}";
       };
     };
   in
@@ -125,7 +138,7 @@ let
       nixexprinput = input;
       nixexprpath = path;
       inputs = defaultSettings.inputs // {
-        "${input}" = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
+        "${input}" = mkFetchGit "${info.base.repo.clone_url} pull/${num}/head";
       };
     };
   };
@@ -170,7 +183,9 @@ let
   # The final jobsets spec as JSON
 
   mainJobsets = mkRepoJobsets repos;
-  jobsetsAttrs = mainJobsets // extraJobsets;
+  jobsetsAttrs =
+     traceSeqN 2 { inherit mainJobsets; }  mainJobsets //
+     traceSeqN 2 { inherit extraJobsets; } extraJobsets;
 in {
   jobsets = pkgs.runCommand "spec.json" {} ''
     cat <<EOF

@@ -1,5 +1,5 @@
 { pkgs
-, iele
+, iele-semantics
 , getSrc
 }:
 
@@ -31,6 +31,6 @@ pkgs.stdenv.mkDerivation rec {
     mkdir -p $out/bin
     ls solc/
     mv solc/isolc $out/bin/
-    wrapProgram $out/bin/isolc --prefix PATH : ${pkgs.lib.makeBinPath [ iele ]}
+    wrapProgram $out/bin/isolc --prefix PATH : ${pkgs.lib.makeBinPath [ iele-semantics ]}
   '';
 }
