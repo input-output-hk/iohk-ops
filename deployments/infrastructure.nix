@@ -13,6 +13,7 @@ let
       ../modules/common.nix
       ../modules/hydra-slave.nix
       ../modules/hydra-master-common.nix
+      ../modules/datadog.nix
       extraImport
     ];
   };
@@ -20,6 +21,7 @@ let
     imports = [
       ../modules/common.nix
       ../modules/hydra-slave.nix
+      ../modules/datadog.nix
     ];
   };
   mkBuildkiteAgent = { ... }: {
