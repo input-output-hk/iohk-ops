@@ -18,7 +18,7 @@ repo=${1:-${cwdRepo}}
 rev=${2:-$(if test "${cwdRepo}" = "${repo}"; then git rev-parse 'HEAD'; fi)}
 new_ref=$3
 
-jq=$(nix-build -E '(import ((import ./lib.nix).goguenNixpkgs) {}).jq' | xargs echo)/bin/jq
+jq=$(nix-build -E '(import <nixpkgs> {}).jq' | xargs echo)/bin/jq
 pinfile="${nhroot}"/pins/${repo}-src.json
 
 if test -f ${pinfile}

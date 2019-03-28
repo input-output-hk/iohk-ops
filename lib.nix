@@ -23,41 +23,17 @@ let
                             ; };
   goguenNixpkgs = iohkNixGoguen.nixpkgs;
 
-  # nixpkgs can be overridden for debugging purposes by setting
-  # NIX_PATH=custom_nixpkgs=/path/to/nixpkgs
-  pkgs = iohkNix.pkgs;
-  lib = pkgs.lib;
-  fetchProjectPackages = name: host: pinRoot: revOverride: args:
-    let
-      src = let try = builtins.tryEval host;
-        in if try.success
-           then builtins.trace "using search host <${name}>" try.value
-           else localLib.fetchPinAuto pinRoot name;
-      src-phase2 = let
-        localOverride = {
-          ### XXX: not really workable right now, for obvious reasons.  Left for uniformity with CSL definition above/future refactoring.
-          outPath = builtins.fetchTarball "https://github.com/input-output-hk/${name}/archive/${revOverride}.tar.gz";
-          rev = revOverride;
-        };
-        in if (revOverride != null) then localOverride else src;
-      pkgs = import src-phase2 ({
-          inherit (args) enableDebugging enableProfiling;
-        } // optionalAttrs (src-phase2 ? rev) {
-          gitrev = src-phase2.rev;
-        });
-    in pkgs;
-in lib // (rec {
-  inherit (iohkNix) nixpkgs;
-  inherit mkIohkNix fetchProjectPackages pkgs;
-  inherit iohkNix iohkNixGoguen goguenNixpkgs;
-
-  ## nodeElasticIP :: Node -> EIP
-  nodeElasticIP = node:
-    { name = "${node.name}-ip";
-      value = { inherit (node) region accessKeyId; };
-    };
-  nodeDryRunnablePrivateIP = node: if node.options.networking.privateIPv4.isDefined then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
-  nodeDryRunnablePublicIP  = node: if node.options.networking.publicIPv4.isDefined  then node.config.networking.publicIPv4  else "DRYRUN-PLACEHOLDER";
+  pinFile       = dir: name: dir + "/${name}-src.json";
+  readPin       = dir: name: builtins.fromJSON (builtins.readFile (pinFile dir name));
+  readPinTraced = dir: name: let json = builtins.readFile (pinFile dir name); in
+                             builtins.fromJSON (builtins.trace json json);
+  pinIsPrivate  = dir: name: let pin = builtins.fromJSON (builtins.readFile (pinFile dir name));
+                             in pin.url != builtins.replaceStrings ["git@github.com"] [""] pin.url;
+  addPinName = name: pin: pin // { name = name+"-git-${pin.rev}"; };
+  getPinFetchgit = dir: name: removeAttrs     (readPinTraced dir name)  ["ref"];
+  getPinFetchGit = dir: name: addPinName name (readPinTraced dir name); ## 'submodules' to be removed later
+  fetchGitPin = name: pinJ:
+    builtins.fetchGit (pinJ // { name = name; });
 
   ## repoSpec                = RepoSpec { name :: String, subdir :: FilePath, src :: Drv }
   ## fetchGitWithSubmodules :: Name -> Drv -> Map String RepoSpec -> Drv
@@ -75,18 +51,6 @@ in lib // (rec {
         '' + concatStringsSep "\n" (map subRepoCmd (attrValues subRepos));
     in runCommand "fetchGit-composite-src-${mainName}-${mainRev}" { buildInputs = []; } cmd;
 
-  pinFile       = dir: name: dir + "/${name}-src.json";
-  readPin       = dir: name: builtins.fromJSON (builtins.readFile (pinFile dir name));
-  readPinTraced = dir: name: let json = builtins.readFile (pinFile dir name); in
-                             builtins.fromJSON (builtins.trace json json);
-  pinIsPrivate  = dir: name: let pin = builtins.fromJSON (builtins.readFile (pinFile dir name));
-                             in pin.url != builtins.replaceStrings ["git@github.com"] [""] pin.url;
-  addPinName = name: pin: pin // { name = name+"-git-${pin.rev}"; };
-  getPinFetchgit = dir: name: removeAttrs     (readPinTraced dir name)  ["ref"];
-  getPinFetchGit = dir: name: addPinName name (readPinTraced dir name); ## 'submodules' to be removed later
-  fetchGitPin = name: pinJ:
-    builtins.fetchGit (pinJ // { name = name; });
-
   fetchGitPinWithSubmodules = pinRoot: name: { submodules ? {}, ... }@pin:
     let fetchSubmodule = subName: subDir: { subdir = subDir; src = pkgs.fetchgit (getPinFetchgit pinRoot subName); };
     in fetchGitWithSubmodules name pin.rev
@@ -98,6 +62,42 @@ in lib // (rec {
     if pinIsPrivate pinRoot name
     then fetchGitPinWithSubmodules pinRoot name (getPinFetchGit pinRoot name)
     else pkgs.fetchgit                          (getPinFetchgit pinRoot name);
+
+  # nixpkgs can be overridden for debugging purposes by setting
+  # NIX_PATH=custom_nixpkgs=/path/to/nixpkgs
+  pkgs = iohkNix.pkgs;
+  lib = pkgs.lib;
+  fetchProjectPackages = name: host: pinRoot: revOverride: args:
+    let
+      src = let try = builtins.tryEval host;
+        in if try.success
+           then builtins.trace "using search host <${name}>" try.value
+           else fetchPinAuto pinRoot name;
+      src-phase2 = let
+        localOverride = {
+          ### XXX: not really workable right now, for obvious reasons.  Left for uniformity with CSL definition above/future refactoring.
+          outPath = builtins.fetchTarball "https://github.com/input-output-hk/${name}/archive/${revOverride}.tar.gz";
+          rev = revOverride;
+        };
+        in if (revOverride != null) then localOverride else src;
+      pkgs = import src-phase2 ({
+          inherit (args) enableDebugging enableProfiling;
+        } // lib.optionalAttrs (src-phase2 ? rev) {
+          gitrev = src-phase2.rev;
+        });
+    in pkgs;
+in lib // (rec {
+  inherit (iohkNix) nixpkgs;
+  inherit mkIohkNix fetchProjectPackages pkgs;
+  inherit iohkNix iohkNixGoguen goguenNixpkgs;
+
+  ## nodeElasticIP :: Node -> EIP
+  nodeElasticIP = node:
+    { name = "${node.name}-ip";
+      value = { inherit (node) region accessKeyId; };
+    };
+  nodeDryRunnablePrivateIP = node: if node.options.networking.privateIPv4.isDefined then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
+  nodeDryRunnablePublicIP  = node: if node.options.networking.publicIPv4.isDefined  then node.config.networking.publicIPv4  else "DRYRUN-PLACEHOLDER";
 
   centralRegion = "eu-central-1";
   centralZone   = "eu-central-1b";

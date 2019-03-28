@@ -104,11 +104,6 @@ CONFIG=${CONFIG}
 EOF
 fi
 OPS_REPO='git@github.com:input-output-hk/iohk-ops'
-case ${CLUSTER_KIND} in
-        mantis
-          ) true;;
-        * ) log "ERROR:  invalid cluster kind: '${CLUSTER_KIND}'"; exit 1;;
-esac
 NODE_DERIVATION=${CLUSTER_KIND}
 NODE_EXECUTABLE=${CLUSTER_KIND}
 DEFAULT_NODE=${CLUSTER_KIND}-a-0
