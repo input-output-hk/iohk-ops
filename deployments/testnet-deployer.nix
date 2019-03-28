@@ -12,7 +12,6 @@ in {
     imports = [
       ../modules/common.nix
       ../modules/papertrail.nix
-      ../modules/deployer-base.nix
     ];
 
     networking.hostName = "testnet-deployer";
