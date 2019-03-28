@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/bitcoin-core/secp256k1",
+  "rev": "b408c6a8b287003d1ade5709e6f7bc3c7f1d5be7",
+  "sha256": "16fn3a8ldj8r337a3cmraqml1q4xfznbgqh1gjj4i0lmfm5lg570",
+  "fetchSubmodules": true
+}
