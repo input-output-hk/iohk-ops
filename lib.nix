@@ -45,6 +45,7 @@ let
         } // optionalAttrs (src-phase2 ? rev) {
           gitrev = src-phase2.rev;
         });
+    in pkgs;
 in lib // (rec {
   inherit (iohkNix) nixpkgs;
   inherit mkIohkNix fetchProjectPackages pkgs;
