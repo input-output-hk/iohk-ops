@@ -5,6 +5,7 @@
 keys/*.key
 /test-*.yaml
 config.yaml
+.config.sh
 
 .stack-work
 /cardano-sl/
