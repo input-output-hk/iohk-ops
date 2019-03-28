@@ -27,9 +27,27 @@ let
   # NIX_PATH=custom_nixpkgs=/path/to/nixpkgs
   pkgs = iohkNix.pkgs;
   lib = pkgs.lib;
+  fetchProjectPackages = name: host: pinRoot: revOverride: args:
+    let
+      src = let try = builtins.tryEval host;
+        in if try.success
+           then builtins.trace "using search host <${name}>" try.value
+           else localLib.fetchPinAuto pinRoot name;
+      src-phase2 = let
+        localOverride = {
+          ### XXX: not really workable right now, for obvious reasons.  Left for uniformity with CSL definition above/future refactoring.
+          outPath = builtins.fetchTarball "https://github.com/input-output-hk/${name}/archive/${revOverride}.tar.gz";
+          rev = revOverride;
+        };
+        in if (revOverride != null) then localOverride else src;
+      pkgs = import src-phase2 ({
+          inherit (args) enableDebugging enableProfiling;
+        } // optionalAttrs (src-phase2 ? rev) {
+          gitrev = src-phase2.rev;
+        });
 in lib // (rec {
   inherit (iohkNix) nixpkgs;
-  inherit mkIohkNix pkgs;
+  inherit mkIohkNix fetchProjectPackages pkgs;
   inherit iohkNix iohkNixGoguen goguenNixpkgs;
 
   ## nodeElasticIP :: Node -> EIP
