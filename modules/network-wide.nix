@@ -10,6 +10,7 @@ with import ./../lib.nix;
       securityGroups = map (resolveSGName resources)
         (optionals (! config.global.omitDetailedSecurityGroups) [
           "allow-deployer-ssh-${config.deployment.ec2.region}-${config.global.organisation}"
+          "allow-monitoring-collection-${config.deployment.ec2.region}-${config.global.organisation}"
         ]);
     };
 

@@ -7,12 +7,8 @@ let
 in
 {
   imports = [ ./auto-gc.nix
-              ./datadog.nix
               ./nix_nsswitch.nix
             ];
-  services = {
-    dd-agent.tags = ["group:slaves" "group:hydra-and-slaves" ];
-  };
 
   nix = {
     binaryCaches = mkForce [ "https://cache.nixos.org" ];

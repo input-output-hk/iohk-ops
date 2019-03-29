@@ -131,6 +131,7 @@ data Deployment
   | Infra
   | Nodes
   | ReportServer
+  | Monitoring
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Deployment
 

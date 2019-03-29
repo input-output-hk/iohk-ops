@@ -10,8 +10,6 @@ let org = "IOHK";
         ../modules/amazon-base.nix
       ];
 
-      services.dd-agent.tags = ["group:linux"] ++ ddtags;
-
       deployment.ec2 = {
         inherit accessKeyId;
         elasticIPv4 = resources.elasticIPs."${hostname}-ip";

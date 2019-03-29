@@ -4,7 +4,6 @@ with (import ../lib.nix);
 let
   mkPacketNet = hostname: module: extraopts: { config, name, pkgs, resources, ... }: {
     deployment.targetHost = hostname + ".aws.iohkdev.io";
-    services.dd-agent.tags = ["group:linux"];
     imports = [ ../modules/common.nix
                 module
               ] ++
@@ -24,8 +23,8 @@ let
       groups.staging = {};
     };
     ## Disabled due to build failures:
-    services.nixosManual.enable = false;
-    services.extra-statsd = mkForce false;
+    documentation.nixos.enable = false;
+    # services.extra-statsd = mkForce false;
   } // extraopts;
 in
 {

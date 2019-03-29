@@ -10,14 +10,10 @@ in {
 
   testnet-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ../modules/deployer-base.nix
-      ../modules/deployer-aws.nix
-      ../modules/datadog.nix
+      ../modules/common.nix
       ../modules/papertrail.nix
     ];
-
-    services.dd-agent.tags = [ "env:production" "role:deployer" ];
-    networking.hostName = mkForce "testnet-deployer";
+    networking.hostName = "testnet-deployer";
 
     users.groups.developers = {};
 
