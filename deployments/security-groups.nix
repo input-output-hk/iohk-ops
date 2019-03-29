@@ -25,7 +25,7 @@ with import ../lib.nix;
            ++  map  (regionSGs         { nodePort = 3000; }) # TODO: 'config' is mostly empty here.
                     globals.allRegions
 
-           ++  map  (orgXRegionSGs)
+           ++  map  (orgXRegionSGs resources.elasticIPs)
                     globals.orgXRegions
 
            ++  map  (coreSGs           3000 resources.elasticIPs) # TODO: config for port
@@ -62,8 +62,9 @@ with import ../lib.nix;
         orgXRegionSGNames = { org, region }:
             [ "allow-deployer-ssh-${region}-${org}"
               "allow-ekg-public-tcp-${region}-${org}"
+              "allow-monitoring-collection-${region}-${org}"
             ];
-        orgXRegionSGs     = { org, region}: {
+        orgXRegionSGs     = ips: { org, region}: {
             "allow-deployer-ssh-${region}-${org}" = {
               inherit region;
               accessKeyId = globals.orgAccessKeys.${org};
@@ -82,6 +83,25 @@ with import ../lib.nix;
                 protocol = "tcp";
                 fromPort = 8080; toPort = 8080;
                 sourceIp = "0.0.0.0/0";
+              }];
+            };
+            "allow-monitoring-collection-${region}-${org}" = {
+              inherit region;
+              accessKeyId = globals.orgAccessKeys.${org};
+              description = "Monitoring collection";
+              rules = let monitoringSourceIp = ips."monitoring-ip"; in
+              [{
+                protocol = "tcp";
+                fromPort = 9100; toPort = 9100; # prometheus exporters
+                sourceIp = monitoringSourceIp;
+              }{
+                protocol = "tcp";
+                fromPort = 9102; toPort = 9102; # statd exporter
+                sourceIp = monitoringSourceIp;
+              }{
+                protocol = "tcp";
+                fromPort = 9113; toPort = 9113; # nginx exporter
+                sourceIp = monitoringSourceIp;
               }];
             };
           };
@@ -107,7 +127,8 @@ with import ../lib.nix;
         centralRegionSGNames = centralRegion:
             [ "allow-to-explorer-${centralRegion}"
               "allow-to-faucet-${centralRegion}"
-              "allow-to-report-server-${centralRegion}" ];
+              "allow-to-report-server-${centralRegion}"
+              "allow-to-monitoring-${centralRegion}" ];
         centralRegionSGs = centralRegion:
           let region = centralRegion;
           in [{
@@ -143,6 +164,19 @@ with import ../lib.nix;
               rules = [{
                 protocol = "tcp";
                 fromPort = 8080; toPort = 8080;
+                sourceIp = "0.0.0.0/0";
+              }];
+            };
+            "allow-to-monitoring-${region}" = {
+              inherit region accessKeyId;
+              description = "Access to monitoring server";
+              rules = [{
+                protocol = "tcp";
+                fromPort = 80; toPort = 80;
+                sourceIp = "0.0.0.0/0";
+              } {
+                protocol = "tcp";
+                fromPort = 443; toPort = 443;
                 sourceIp = "0.0.0.0/0";
               }];
             };

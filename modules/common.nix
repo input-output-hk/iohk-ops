@@ -4,7 +4,7 @@ with (import ./../lib.nix);
 
 {
   imports = [
-    ./extra-statsd.nix
+    ./monitoring-exporters.nix
   ];
   boot.kernel.sysctl = {
     ## DEVOPS-592
@@ -40,7 +40,7 @@ with (import ./../lib.nix);
   };
 
   services.cron.enable = true;
-  services.extra-statsd = true;
+  # services.extra-statsd = true;
   #services.cron.systemCronJobs = [
   #  "*/1 * * * *  root /run/current-system/sw/lib/sa/sadc -S DISK 2 29 /var/log/saALL"
   #];

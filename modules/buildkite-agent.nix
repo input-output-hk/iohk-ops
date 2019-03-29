@@ -7,11 +7,8 @@ in
   imports = [
     ./auto-gc.nix
     ./nix_nsswitch.nix
-    ./datadog.nix
     ./docker-builder.nix
   ];
-
-  services.dd-agent.tags = ["group:buildkite-agents"];
 
   services.buildkite-agent = {
     enable = true;

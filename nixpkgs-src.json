@@ -1,6 +1,7 @@
 {
-    "owner":  "NixOS",
-    "repo":   "nixpkgs",
-    "rev": "e39e43a349d5f4f661d929fbe9a31129bda0acb2",
-    "sha256": "04ygzqd4kayx1rnfgv6zl77k591lb29wh9a1zim78r1gacnxr7ng"
+  "url": "https://github.com/input-output-hk/nixpkgs",
+  "rev": "1aabb42269128f57f2d3a64e60c294a49799f6f4",
+  "date": "2019-04-09T19:13:05+02:00",
+  "sha256": "1zpgdcckr96n6x6hqck9p9mni23wfxxvlhyxg0pmavsid3qf9dwr",
+  "fetchSubmodules": false
 }
