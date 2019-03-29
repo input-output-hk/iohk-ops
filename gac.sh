@@ -28,9 +28,6 @@ logn() {
         echo -n "==(  $*" >&2
 }
 
-CLUSTER_KIND=mantis
-CLUSTER_TYPE=mempty
-CLUSTER_NAME=create-.config.sh
 OPS_REPO='git@github.com:input-output-hk/iohk-ops'
 DEFAULT_OPS_BRANCH='master'
 
@@ -84,12 +81,14 @@ EOF
         exit 0
 fi
 
-
-CONFIG=default
 verbose=""
-if test ! -f .config.sh
+if ! grep -q CLUSTER_KIND ./.config.sh || \
+   ! grep -q CLUSTER_TYPE ./.config.sh || \
+   ! grep -q CLUSTER_NAME ./.config.sh || \
+   ! grep -q CONFIG       ./.config.sh
 then
-        log "WARNING:  creating a default .config.sh with an empty cluster"
+        log "ERROR:  malformed .config.sh -- missing one of CLUSTER_{KIND,TYPE,NAME} or CONFIG"
+        exit 1
 fi
 . ./.config.sh
 if test -z "${RECURSIVE_GAC}"
@@ -119,9 +118,14 @@ self="$0 ${verbose}"
 cmd=${1:-doit}; test -n "$1"; shift
 set -u
 
-nix_out="$(   nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nix'    | xargs echo)"
-nixpkgs_out=$(nix-instantiate --eval -E '(import ./lib.nix).goguenNixpkgs' | xargs echo)
-nixops_out="$(nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).nixops' | xargs echo)"
+###
+### Note: Nixpkgs specification convention
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### gac.sh relies on ./default.nix providing the 'pkgs' and 'nixpkgs' attributes coming from iohk-nix.
+###
+nixpkgs_out=$(nix-instantiate  --eval -E '(import ./. {}).nixpkgs'     | xargs echo)
+nix_out="$(   nix-build --no-out-link -E '(import ./. {}).pkgs.nix'    | xargs echo)"
+nixops_out="$(nix-build --no-out-link -E '(import ./. {}).pkgs.nixops' | xargs echo)"
 nix=${nix_out}/bin/nix
 nix_build=${nix_out}/bin/nix-build
 nix_inst=${nix_out}/bin/nix-instantiate
@@ -138,10 +142,6 @@ nixops_nix_opts="${nix_opts} \
 -I static=./static \
 -I goguen=./goguen \
 "
-
-ag=$( nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).ag'     | xargs echo)/bin/ag
-aws=$(nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).awscli' | xargs echo)/bin/aws
-jq=$( nix-build --no-out-link -E '(import ((import ./lib.nix).goguenNixpkgs) {}).jq'     | xargs echo)/bin/jq
 
 if test ! -f ${nixops}
 then nix-store --realise ${nixops}
@@ -165,8 +165,8 @@ nixops_network_expr="import <nixops/eval-machine-info.nix> { \
   }"
 
 generate_faucet_keys () {
-        export JAVA_HOME=`nix-build -E  "(import (import ./lib.nix).goguenNixpkgs {}).pkgs.openjdk8"  --no-out-link`
-        node=`nix-build --no-out-link -E  "(import ./goguen/. {}).${NODE_DERIVATION}"`
+        export JAVA_HOME=`nix-build -E    "(import ./. {}).pkgs.openjdk8"  --no-out-link`
+        node=`nix-build --no-out-link -E  "(import ./. {}).${NODE_DERIVATION}"`
         FAUCETS="faucet-a"
         FAUCET_ADDRS="static/faucet-addresses.nix"
         FAUCET_KEYGEN_CONF="static/faucet-keygen.conf"
@@ -185,8 +185,8 @@ generate_faucet_keys () {
 }
 
 generate_node_keys () {
-        export JAVA_HOME=`nix-build -E  "(import (import ./lib.nix).goguenNixpkgs {}).pkgs.openjdk8"  --no-out-link`
-        node=`nix-build --no-out-link -E  "(import ./goguen/. {}).${NODE_DERIVATION}"`
+        export JAVA_HOME=`nix-build   -E  "(import ./. {}).pkgs.openjdk8"  --no-out-link`
+        node=`nix-build --no-out-link -E  "(import ./. {}).${NODE_DERIVATION}"`
         NODE_IDS="static/node-ids.nix"
 
         echo "{" > "$NODE_IDS"
@@ -206,12 +206,14 @@ generate_node_keys () {
 region_tagged_instances() {
         local region="$1"
         local tags="$2"
+        aws=$(nix-build --no-out-link -E '(import ./. {}).pkgs.awscli' | xargs echo)/bin/aws
         ${aws} ec2 describe-instances --filters "Name=${tags}" --region  ${region} --output json
 }
 region_tagged_instances_property() {
         local region="$1"
         local tags="$2"
         local prop="$3"
+        jq=$( nix-build --no-out-link -E '(import ./. {}).pkgs.jq'     | xargs echo)/bin/jq
         region_tagged_instances ${region} ${tags} | ${jq} ".Reservations${prop}"
 }
 count_region_tagged_instances() {
@@ -341,7 +343,7 @@ build | b | build-goguen-package ) # Doc:
 build-ala-hydra | build-goguen-package-like-hydra-does ) # Doc:
         #pkg=$1
         log "building Hydra"
-        hydra_drv="$(   nix-instantiate -E '(import ((import ./lib.nix).goguenNixpkgs) {}).hydra')"
+        hydra_drv="$(   nix-instantiate -E '(import ./. {}).pkgs.hydra')"
         hydra=$(${nix_build} ${nix_opts} ${hydra_drv})
         log "using Hydra to evaluate goguen/release.nix"
         ${hydra}/bin/hydra-eval-jobs -I ${nixpkgs_out} -I . -I https://github.com/input-output-hk/iohk-nix/archive/25225e9e23d8fe73663c1e958d41d481b0a4e0f0.tar.gz goguen/release.nix "$@";;
@@ -418,11 +420,13 @@ grep-on | gro | grep-node-service-journals-since-start ) # Doc:
         node=$1; shift
         log "node:           ${node}"
         log "filter:         ag $*"
+        ag=$( nix-build --no-out-link -E '(import ./. {}).pkgs.ag'     | xargs echo)/bin/ag
         $0        journal-on ${node} 2>&1 | ${ag} "$@";;
 grep-since | gras | grep-all-node-service-journals-since-timestamp ) # Doc:
         since=$1; shift
         log "journal since:  ${since}"
         log "filter:         ag $*"
+        ag=$( nix-build --no-out-link -E '(import ./. {}).pkgs.ag'     | xargs echo)/bin/ag
         $0        journal "${since}" 2>&1 | ${ag} "$@";;
 grep | g | grep-all-node-service-journals-since-last-restart ) # Doc:
         start_sample_node=${DEFAULT_NODE}
@@ -430,6 +434,7 @@ grep | g | grep-all-node-service-journals-since-last-restart ) # Doc:
         if test -z "${since}"; then since='3 hours ago'; fi
         $0        grep-since ${since} "$@";;
 watch-for | w | watch-all-node-service-journals-for-regex-occurence ) # Doc:
+        ag=$( nix-build --no-out-link -E '(import ./. {}).pkgs.ag'     | xargs echo)/bin/ag
         $0        follow-all 2>&1 | ${ag} "$@";;
 
 "" | "" ) # Doc:
@@ -492,6 +497,7 @@ describe-image | describe-deployer-nixops-image ) # Doc:
         region="eu-central-1"
         export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
         ami="$(nix-instantiate --eval -E "(import ${nixpkgs_out}/nixos/modules/virtualisation/ec2-amis.nix).\"${nixos_ver}\".${region}.hvm-ebs" | xargs echo)"
+        aws=$(nix-build --no-out-link -E '(import ./. {}).pkgs.awscli' | xargs echo)/bin/aws
         ${aws} ec2 describe-images --image-id ${ami} --region ${region}
         ;;
 create-deployer | create-and-maybe-deploy-new-deployer ) # Doc:
@@ -503,6 +509,7 @@ create-deployer | create-and-maybe-deploy-new-deployer ) # Doc:
         depl_ssh_sg="allow-public-ssh-${region}-${org}"
         deployer_tags="tag:deployment,Values=${CLUSTER_KIND},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
         export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
+        aws=$(nix-build --no-out-link -E '(import ./. {}).pkgs.awscli' | xargs echo)/bin/aws
 
         if ! ${aws} ec2  describe-security-groups        --group-names ${depl_ssh_sg}
         then ${aws} ec2    create-security-group         --group-name  ${depl_ssh_sg} --description "${depl_ssh_sg}"
