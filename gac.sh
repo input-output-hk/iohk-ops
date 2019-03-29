@@ -28,8 +28,6 @@ logn() {
         echo -n "==(  $*" >&2
 }
 
-cd `dirname $0`
-
 CLUSTER_KIND=mantis
 CLUSTER_TYPE=mempty
 CLUSTER_NAME=create-.config.sh
