@@ -1,6 +1,6 @@
 let
   localLib = import ../lib.nix;
-  nixpkgs = import localLib.fetchNixPkgs;
+  nixpkgs = import localLib.nixpkgs;
   pkgs_mac = nixpkgs {system = "x86_64-darwin";};
   pkgs_native = nixpkgs {};
 
