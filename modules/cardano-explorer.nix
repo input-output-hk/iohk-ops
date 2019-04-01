@@ -10,6 +10,8 @@ in
   imports = [ ./cardano.nix ];
   global.dnsHostname   = mkForce   "cardano-explorer";
 
+  deployment.ec2.instanceType = "t3.xlarge";
+
   services.cardano-node.executable = "${explorer-drv}/bin/cardano-explorer";
 
   networking.firewall.allowedTCPPorts = [
