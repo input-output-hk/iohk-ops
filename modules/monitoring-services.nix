@@ -221,8 +221,7 @@ in {
             ];
             dashboards = [
               {
-                options.path = builtins.toFile "node-system-dashboard.json" 
-                  (builtins.readFile ./grafana/node-system-dashboard.json);
+                options.path = ./grafana/node-system-dashboard.json;
               }
             ];
           };

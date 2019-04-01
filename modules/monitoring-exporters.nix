@@ -93,6 +93,7 @@ in {
             "netstat"
             "stat"
             "time"
+            "timex"
             "vmstat"
             "logind"
             "interrupts"
