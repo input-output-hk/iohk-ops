@@ -28,8 +28,11 @@ files:
 - deployments/cardano-explorer-env-testnet.nix
 - deployments/cardano-faucet.nix
 - deployments/cardano-faucet-env-testnet.nix
+- deployments/monitoring.nix
+- deployments/monitoring-env-staging.nix
 elements:
 - Nodes
 - Explorer
 - Faucet
+- Monitoring
 target: AWS

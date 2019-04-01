@@ -25,7 +25,7 @@ let
     };
     ## Disabled due to build failures:
     services.nixosManual.enable = false;
-    services.extra-statsd = mkForce false;
+    # services.extra-statsd = mkForce false;
   } // extraopts;
 in
 {
