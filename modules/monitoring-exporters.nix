@@ -93,11 +93,13 @@ in {
             "netstat"
             "stat"
             "time"
+            "ntp"
             "timex"
             "vmstat"
             "logind"
             "interrupts"
             "ksmd"
+            "processes"
           ];
         };
       };
