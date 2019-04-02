@@ -151,6 +151,7 @@ nixops_nix_opts="${nix_opts} \
 -I static=./static \
 -I goguen=${gacroot}/goguen \
 ${OVERLAY_MODE:+-I local-module=./modules} \
+${OVERLAY_MODE:+-I iops=./iops} \
 "
 
 if test ! -f ${nixops}
