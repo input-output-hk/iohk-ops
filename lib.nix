@@ -90,6 +90,7 @@ in lib // (rec {
   inherit (iohkNix) nixpkgs;
   inherit mkIohkNix fetchProjectPackages pkgs;
   inherit iohkNix iohkNixGoguen goguenNixpkgs;
+  inherit fetchPinAuto fetchGitWithSubmodules;
 
   ## nodeElasticIP :: Node -> EIP
   nodeElasticIP = node:
