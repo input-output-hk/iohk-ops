@@ -34,7 +34,7 @@ in
     services.monitoring-services = {
       enable = true;
       oauth = {
-        enable = false;
+        enable = true;
         emailDomain = "iohk.io";
       } // (import ../static/oauth.nix);
       monitoredNodes = map (h: h.name) (lib.filter (h: !h.withNginx) hostList);
