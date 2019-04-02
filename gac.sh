@@ -132,6 +132,13 @@ nix_build=${nix_out}/bin/nix-build
 nix_inst=${nix_out}/bin/nix-instantiate
 nixops=${nixops_out}/bin/nixops
 
+## Are we in overlay mode?
+if test "$(pwd)" != "${gacroot}"
+then log "overlay mode ON"
+     OVERLAY_MODE=yes
+else OVERLAY_MODE=
+fi
+
 nix_opts="\
 --max-jobs 4 --cores 0 --show-trace \
 -I nixpkgs=${nixpkgs_out} \
@@ -143,6 +150,7 @@ nixops_nix_opts="${nix_opts} \
 -I module=${gacroot}/modules \
 -I static=./static \
 -I goguen=${gacroot}/goguen \
+${OVERLAY_MODE:+-I local-module=./modules} \
 "
 
 if test ! -f ${nixops}
