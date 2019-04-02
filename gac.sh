@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
+gacroot="$(dirname $0)"
 usage() {
         echo "$(basename $0) [--verbose] COMMAND ARGS.." >&2
         echo
@@ -70,7 +71,7 @@ EOF
         $0           list-cluster-components
         if test "${CLUSTER_TYPE}" = "mantis"
         then log "generating node keys.."
-             $0.sh   generate-node-keys
+             $0      generate-node-keys
         fi
         log "creating the Nixops deployment.."
         nixops       create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/*.nix
@@ -130,6 +131,7 @@ nix=${nix_out}/bin/nix
 nix_build=${nix_out}/bin/nix-build
 nix_inst=${nix_out}/bin/nix-instantiate
 nixops=${nixops_out}/bin/nixops
+
 nix_opts="\
 --max-jobs 4 --cores 0 --show-trace \
 -I nixpkgs=${nixpkgs_out} \
@@ -138,9 +140,9 @@ nixops_nix_opts="${nix_opts} \
 -I nixops=${nixops_out}/share/nix/nixops \
 -I config=./configs/${CONFIG}.nix \
 -I configs=./configs \
--I module=./modules \
+-I module=${gacroot}/modules \
 -I static=./static \
--I goguen=./goguen \
+-I goguen=${gacroot}/goguen \
 "
 
 if test ! -f ${nixops}
@@ -335,7 +337,7 @@ deploy | d | update-and-deploy ) # Doc:
 "" | "" ) # Doc:
         ;;
 update-pin | update | pin | update-a-goguen-package-pin ) # Doc:
-        $(dirname $0)/goguen/update-pin.sh "$@";;
+        ${gacroot}/goguen/update-pin.sh "$@";;
 build | b | build-goguen-package ) # Doc:
         pkg=$1; shift
         ${nix_build} ${nix_opts} -A ${pkg} './default.nix' "$@";;
