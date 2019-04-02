@@ -325,7 +325,6 @@ deploy | d | update-and-deploy ) # Doc:
 		log "recreating the Nixops deployment.."
 		${nixops} create ${nixops_subopts} "clusters/${CLUSTER_TYPE}"/*.nix
 	fi
-        $self     configure-nixops-deployment-arguments
         $self     components
         ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER_TYPE}/*.nix
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
