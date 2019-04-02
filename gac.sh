@@ -67,17 +67,17 @@ CLUSTER_TYPE=${CLUSTER_TYPE}
 CLUSTER_NAME=${CLUSTER_NAME}
 CONFIG=default
 EOF
-        ./gac.sh     list-cluster-components
+        $0           list-cluster-components
         if test "${CLUSTER_TYPE}" = "mantis"
         then log "generating node keys.."
-             ./gac.sh     generate-node-keys
+             $0.sh   generate-node-keys
         fi
         log "creating the Nixops deployment.."
         nixops       create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/*.nix
-        ./gac.sh     configure-nixops-deployment-arguments
+        $0           configure-nixops-deployment-arguments
         log "cluster has been set up, but not deployed;  Next steps:"
         log "  1. cd ${CLUSTER_NAME}"
-        log "  2. ./gac.sh deploy"
+        log "  2. gac deploy"
         exit 0
 fi
 
@@ -325,7 +325,7 @@ deploy | d | update-and-deploy ) # Doc:
 		log "recreating the Nixops deployment.."
 		${nixops} create ${nixops_subopts} "clusters/${CLUSTER_TYPE}"/*.nix
 	fi
-        ./gac.sh     configure-nixops-deployment-arguments
+        $self     configure-nixops-deployment-arguments
         $self     components
         ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER_TYPE}/*.nix
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
