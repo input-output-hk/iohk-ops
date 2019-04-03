@@ -360,7 +360,7 @@ deploy-one | one | deploy-one-machine ) # Doc:
 deploy | d | update-and-deploy ) # Doc:
 	if ! ${nixops} info ${nixops_subopts} &>/dev/null; then
 		log "recreating the Nixops deployment.."
-		${nixops} create ${nixops_subopts} "clusters/${CLUSTER_TYPE}"/*.nix
+		$self create
 	fi
         $self     components
         ${nixops} check    ${nixops_subopts} || true # <- nixops check returns non-zero status when resources are missing but it still updates the state. so we don't want this to stop us.
