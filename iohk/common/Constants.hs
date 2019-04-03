@@ -100,7 +100,6 @@ envSettings env =
                                , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-staging.nix")
                                , (ReportServer,   All, "deployments/report-server-env-staging.nix")
-                               , (Monitoring,     All, "deployments/monitoring.nix")
                                , (Monitoring,     All, "deployments/monitoring-env-staging.nix")
                                , (Infra,          All, "deployments/infrastructure-env-staging.nix")
                                ] <> deplAgnosticFiles}
@@ -116,7 +115,6 @@ envSettings env =
                                , (Nodes,          All, "deployments/cardano-nodes-env-production.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-production.nix")
                                , (ReportServer,   All, "deployments/report-server-env-production.nix")
-                               , (Monitoring,     All, "deployments/monitoring.nix")
                                , (Monitoring,     All, "deployments/monitoring-env-production.nix")
                                , (Infra,          All, "deployments/infrastructure-env-production.nix")
                                ] <> deplAgnosticFiles}
@@ -132,7 +130,6 @@ envSettings env =
                                , (Nodes,          All, "deployments/cardano-nodes-env-testnet.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-testnet.nix")
                                , (Faucet,         All, "deployments/cardano-faucet-env-testnet.nix")
-                               , (Monitoring,     All, "deployments/monitoring.nix")
                                , (Monitoring,     All, "deployments/monitoring-env-testnet.nix")
                                ] <> deplAgnosticFiles}
     Development -> EnvSettings

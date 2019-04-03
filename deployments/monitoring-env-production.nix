@@ -1,10 +1,5 @@
-{ ... }:
 {
-  monitoring = { ... }: 
-  {
-    imports = [
-      ../modules/production.nix
-    ];
-  };
+  require = [ ./monitoring.nix ];
+  monitoring = import ../modules/production.nix;
 }
 

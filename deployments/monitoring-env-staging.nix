@@ -1,10 +1,4 @@
-{ ... }:
 {
-  monitoring = { ... }: 
-  {
-    imports = [
-      ../modules/staging.nix
-    ];
-  };
+  require = [ ./monitoring.nix ];
+  monitoring = import ../modules/staging.nix;
 }
-

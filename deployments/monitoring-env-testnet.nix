@@ -1,10 +1,4 @@
-{ ... }:
 {
-  monitoring = { ... }: 
-  {
-    imports = [
-      ../modules/testnet.nix
-    ];
-  };
+  require = [ ./monitoring.nix ];
+  monitoring = import ../modules/testnet.nix;
 }
-
