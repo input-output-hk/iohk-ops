@@ -1,9 +1,5 @@
 with (import ../lib.nix);
 
-let
-  iohk-pkgs = import ../default.nix {};
-in
-
 { config, pkgs, ... }: {
   imports = [ ./common.nix ];
 
@@ -14,10 +10,7 @@ in
 
   services.dd-agent.tags = [ "role:deployer" "depl:${config.deployment.name}" ];
 
-  environment.systemPackages = (with iohk-pkgs; [
-    terraform
-    mfa
-  ]) ++ (with pkgs; [
+  environment.systemPackages = (with pkgs; [
     awscli
     gnupg
     htop

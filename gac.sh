@@ -108,6 +108,9 @@ DEFAULT_NODE=${CLUSTER_KIND}-a-0
 NODE_SERVICE=${CLUSTER_KIND}
 NODE_DB_PATH=/data/${CLUSTER_KIND}
 ALL_NODES="${DEFAULT_NODE} ${CLUSTER_KIND}-a-1 ${CLUSTER_KIND}-b-0 ${CLUSTER_KIND}-b-1 ${CLUSTER_KIND}-c-0 "
+TLS_CERT_DIR="$(pwd)/tls-cert"
+TLS_CERT="${TLS_CERT_DIR}/cert.pem"
+TLS_CERT_KEY="${TLS_CERT_DIR}/key.pem"
 
 while test -n "$1"
 do case "$1" in
@@ -214,6 +217,14 @@ generate_node_keys () {
         echo "}" >> "$NODE_IDS"
 }
 
+generate_self_signed_tls_cert () {
+    rm -rf ${TLS_CERT_DIR}
+    mkdir -p ${TLS_CERT_DIR}
+    openssl=$(nix-build --no-out-link -E '(import ./. {}).pkgs.openssl' | xargs echo)/bin/openssl
+    ${openssl} req -x509 -newkey rsa:4096 -nodes -keyout "${TLS_CERT_KEY}" -out \
+               "${TLS_CERT}" -days 365 -subj '/CN=localhost'
+}
+
 region_tagged_instances() {
         local region="$1"
         local tags="$2"
@@ -307,11 +318,21 @@ configure | conf | configure-nixops-deployment-arguments ) # Doc:
                 guessedAKID="$(grep aws_access_key_id ~/.aws/credentials | cut -d= -f2 | xargs echo)"
                 read -ei "${guessedAKID}" -p "Use AWS access key ID: " AKID
         }
+        if ! ( [ -f "${TLS_CERT}" ] || [ -f "${TLS_CERT_KEY}" ] )
+           then log "generating self-signed TLS certificate"
+                generate_self_signed_tls_cert
+        fi
         ${nixops} set-args ${nixops_subopts} \
                   --argstr accessKeyId "${AKID}" \
                   --argstr deployerIP "${deployerIP}" \
 	          --argstr clusterName "${CLUSTER_NAME}" \
-		  --arg config "import ./config.nix { clusterName = \"${CLUSTER_NAME}\"; deployerIP = \"${deployerIP}\"; accessKeyId = \"${AKID}\"; }"
+		  --arg config "import ./config.nix { \
+                                  clusterName = \"${CLUSTER_NAME}\"; \
+                                  deployerIP = \"${deployerIP}\"; \
+                                  accessKeyId = \"${AKID}\"; \
+                                  tlsCert = /. + \"${TLS_CERT}\"; \
+                                  tlsCertKey = /. + \"${TLS_CERT_KEY}\";
+                                }"
                 ;;
 genkey | g | generate-node-keys ) # Doc:
         generate_node_keys;;
@@ -337,6 +358,7 @@ deploy | d | update-and-deploy ) # Doc:
 		${nixops} create ${nixops_subopts} "clusters/${CLUSTER_TYPE}"/*.nix
 	fi
         $self     components
+        ${nixops} check    ${nixops_subopts} || true # <- nixops check returns non-zero status when resources are missing but it still updates the state. so we don't want this to stop us.
         ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER_TYPE}/*.nix
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
 "" | "" ) # Doc:

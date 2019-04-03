@@ -19,6 +19,11 @@
             description = "Access key ID.  Must be set (use deployments/config.nix).";
             default = null;
           };
+          fqdn = mkOption {
+            type = str;
+            description = "Node's FQDN.";
+            default = "";
+          };
           ##
           ## Non-mandatory configuration:
           instanceType = mkOption {
@@ -31,17 +36,15 @@
             description = "Organisation.";
             default = "IOHK";
           };
+          spotInstancePrice = mkOption {
+            type = int;
+            description = "Price (in dollar cents per hour) to use for spot instances request for the machine. If the value is equal to 0 (default), then spot instances are not used.";
+            default = config.cluster.spotInstancePrice;
+          };
           allocateElasticIP = mkOption {
             type = bool;
             description = "Node-specific EIP allocation override.  You must provide <name>-ip.";
             default = config.cluster.allocateElasticIP;
-          };
-          fqdn = let
-            fqdn' = with config.cluster; "${name}.${config.cluster.name}.${toplevelDomain}";
-          in mkOption {
-            type = nullOr str;
-            description = "Node's FQDN, which defaults to ${fqdn'}";
-            default = "${fqdn'}";
           };
         };
       };
@@ -65,6 +68,21 @@
             description = "Deployer machine IP.  Must be set (use deployments/config.nix).";
             default = null;
           };
+          generateLetsEncryptCert = mkOption {
+            type = bool;
+            description = "Use let's encrypt to generate a proper TLS certificate.";
+            default = false;
+          };
+          tlsCert = mkOption {
+            type = nullOr path;
+            description = "Custom TLS cert. Will use ACME to generate one if null";
+            default = null;
+          };
+          tlsCertKey = mkOption {
+            type = nullOr path;
+            description = "Custom TLS cert dir key. Will use ACME to generate one if null";
+            default = null;
+          };
           ##
           ## Non-mandatory configuration:
           toplevelDomain = mkOption {
@@ -84,10 +102,37 @@
             description = "Cluster-wide EIP allocation policy.";
             default = false;
           };
+          spotInstancePrice = mkOption {
+            type = int;
+            description = "Price (in dollar cents per hour) to use for spot instances request for the machine. If the value is equal to 0 (default), then spot instances are not used.";
+            default = 0;
+          };
+          subDomain = mkOption {
+            type = nullOr str;
+            description = "Subdomain to use. Defaults to `cluster.name`.";
+            default = config.cluster.name;
+          };
           oauthEnable = mkOption {
             type = bool;
             description = "Configure oauth proxy.";
             default = true;
+          };
+        };
+      };
+    };
+    ##
+    ##
+    hydra = mkOption {
+      description = "Hydra-specific parameters.";
+      default = {};
+      type = submodule {
+        options = {
+          ##
+          ## Non-mandatory configuration:
+          s3Bucket = mkOption {
+            type = nullOr str;
+            description = "Specify a bucket name to use an existing bucket to upload docker images to. If set to null (default) a bucket will be created.";
+            default = null;
           };
         };
       };

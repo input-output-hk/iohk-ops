@@ -86,9 +86,21 @@ let
           gitrev = src-phase2.rev;
         });
     in pkgs;
+  javaOverrideNixpkgsConfig = {
+    overlays = [ oracleJdkOverlay ];
+    config.allowUnfree = true;
+  };
+  oracleJdkOverlay =  self : super: {
+    oraclejdk8 = super.callPackage ./goguen/jdk-override/jdk8cpu-linux.nix {
+      installjdk = true;
+      pluginSupport = false;
+      licenseAccepted = true;
+    };
+  };
+  graalvm8 = (import iohkNixGoguen.nixpkgs javaOverrideNixpkgsConfig).graalvm8;
 in lib // (rec {
   inherit (iohkNix) nixpkgs;
-  inherit mkIohkNix fetchProjectPackages pkgs;
+  inherit mkIohkNix fetchProjectPackages pkgs graalvm8;
   inherit iohkNix iohkNixGoguen goguenNixpkgs;
   inherit fetchPinAuto fetchGitWithSubmodules;
 
