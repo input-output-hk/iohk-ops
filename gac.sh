@@ -314,10 +314,15 @@ configure | conf | configure-nixops-deployment-arguments ) # Doc:
         deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
         log "setting up the AWS access key.."
         set +u; AKID="$1"; set -u
-        test -z "$AKID" && {
-                guessedAKID="$(grep aws_access_key_id ~/.aws/credentials | cut -d= -f2 | xargs echo)"
-                read -ei "${guessedAKID}" -p "Use AWS access key ID: " AKID
-        }
+
+	if [[ -z $AKID ]]; then
+		AKID="$(grep aws_access_key_id ~/.aws/credentials | cut -d= -f2 | xargs)"
+	fi
+
+	if [[ -z $AKID ]]; then
+                read -ep "Use AWS access key ID: " AKID
+	fi
+
         if ! ( [ -f "${TLS_CERT}" ] || [ -f "${TLS_CERT_KEY}" ] )
            then log "generating self-signed TLS certificate"
                 generate_self_signed_tls_cert
