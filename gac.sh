@@ -331,7 +331,7 @@ configure | conf | configure-nixops-deployment-arguments ) # Doc:
                   --argstr accessKeyId "${AKID}" \
                   --argstr deployerIP "${deployerIP}" \
 	          --argstr clusterName "${CLUSTER_NAME}" \
-		  --arg config "import ./config.nix { \
+		  --arg config "import ${gacroot}/config.nix { \
                                   clusterName = \"${CLUSTER_NAME}\"; \
                                   deployerIP = \"${deployerIP}\"; \
                                   accessKeyId = \"${AKID}\"; \
