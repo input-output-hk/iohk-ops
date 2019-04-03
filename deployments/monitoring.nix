@@ -6,6 +6,14 @@ in
 
 {
   monitoring = { config, lib, pkgs, resources, nodes, ... }: 
+  let
+    hostList = lib.mapAttrsToList 
+      (nodeName: node: {
+        name = "${nodeName}";
+        withNginx = node.config.services.nginx.enable;
+      }) nodes;
+    hostName = "monitoring.${config.global.dnsDomainname}";
+  in
   {
     imports = [
       ../modules/common.nix
@@ -18,19 +26,7 @@ in
       organisation = monitoring.org;
       dnsHostname  = mkForce "monitoring";
     };
-  } // (let
-    hostList = lib.mapAttrsToList 
-      (nodeName: node: {
-        name = "${nodeName}.cardano";
-        ip = node.config.networking.publicIPv4;
-        withNginx = node.config.services.nginx.enable;
-      }) nodes;
-      hostName = "monitoring.${config.global.dnsDomainname}";
-  in {
-    networking.extraHosts = ''
-      ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}") hostList)}
-    '';
-
+ 
     services.monitoring-services = {
       enable = true;
       oauth = {
@@ -50,7 +46,7 @@ in
     deployment.ec2.securityGroups = [
       resources.ec2SecurityGroups."allow-to-monitoring-${config.deployment.ec2.region}"
     ];
-  });
+  };
       
   resources.elasticIPs = nodesElasticIPs nodeMap;
 }
