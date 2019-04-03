@@ -2,7 +2,7 @@
 
 The ~gac.sh~ script is used to configure a Goguen cluster and control its lifecyle.
 
-Use 
+Use
 : ./gac.sh --help
 to see all available commands.
 
@@ -29,14 +29,172 @@ Then ask devops for ssh config fragment to use for connection.
    deployment checkout directories.  The types are subdirectory names in
    https://github.com/input-output-hk/iohk-ops/tree/master/clusters
 
+   The default type for Mantis clusters is =mantis=.
+
 3. Use the =gac.sh= script available in =~= to create a new deployment checkout:
 : ./gac.sh new --help
-: ./gac.sh new CLUSTER-NAME [CLUSTER-TYPE] 
+: ./gac.sh new CLUSTER-NAME [CLUSTER-TYPE]
+
+Example: let's say we want to deploy a new mantis cluster named
+=adam-workspace=, you'll need to run:
+
+: ./gac.sh new adam-workspace
 
 4. Deploy the new cluster:
 
 : cd CLUSTER-NAME
 : ./gac.sh deploy
+
+*** Using a Mantis cluster
+
+Your mantis cluster has been deployed, it's time to use it.
+
+When using =./gac.sh=, your favorite command will soon be:
+
+: ./gac.sh info
+
+This command prints the current status of your cluster. You can see
+what has been deployed, your nodes names and their associated IPs.
+
+#+BEGIN_SRC
+
+./gac.sh info
+This command is going to display some basic information about your cluster.
+Network name: felix-workspace
+Network UUID: 48d23773-5456-11e9-9eb4-06578c8a1b06
+Network description: Mantis
+Nix expressions: /home/dev/felix-workspace/clusters/mantis/defaults-shared-resources.nix /home/dev/felix-workspace/clusters/mantis/mantis.nix /home/dev/felix-workspace/clusters/mantis/mantis-target-aws.nix
+Nix arguments: clusterName = "felix-workspace", deployerIP = "52.57.22.47", config = import ./config.nix { clusterName = "felix-workspace"; deployerIP = "52.57.22.47"; accessKeyId = "AKIAIIHUU6R5SKXZMJJQ"; }, accessKeyId = "AKIAIIHUU6R5SKXZMJJQ"
+
++-----------------------------------------+-----------------+-----------------------------------+-------------------------------------------------------------------------------------+---------------+
+| Name                                    |      Status     | Type                              | Resource Id                                                                         | IP address    |
++-----------------------------------------+-----------------+-----------------------------------+-------------------------------------------------------------------------------------+---------------+
+| explorer-a                              |  Up / Outdated  | ec2 [eu-central-1c; t2.large]     | i-089797d96a637b0ba                                                                 | 18.184.18.82  |
+| mantis-a-0                            | Up / Up-to-date | ec2 [eu-central-1c; t2.large]     | i-08f17d8c04ba5cc38                                                                 | 3.120.150.137 |
+| mantis-a-1                            | Up / Up-to-date | ec2 [eu-central-1c; t2.large]     | i-033f96120b51693ab                                                                 | 18.185.13.218 |
+| mantis-b-0                            | Up / Up-to-date | ec2 [eu-central-1c; t2.large]     | i-0030c014342862586                                                                 | 35.158.104.2  |
+| mantis-b-1                            | Up / Up-to-date | ec2 [eu-central-1c; t2.large]     | i-02a72efd3a5c1744c                                                                 | 3.123.0.236   |
+| mantis-c-0                            | Up / Up-to-date | ec2 [eu-central-1c; t2.large]     | i-0956cb89a26a1687c                                                                 | 3.122.107.127 |
+| cardano-keypair-IOHK-eu-central-1       | Up / Up-to-date | ec2-keypair [eu-central-1]        | charon-48d23773-5456-11e9-9eb4-06578c8a1b06-cardano-keypair-IOHK-eu-central-1       |               |
+| allow-deployer-ssh-eu-central-1-IOHK    | Up / Up-to-date | ec2-security-group [eu-central-1] | charon-48d23773-5456-11e9-9eb4-06578c8a1b06-allow-deployer-ssh-eu-central-1-IOHK    |               |
+| allow-explorer-public-eu-central-1-IOHK | Up / Up-to-date | ec2-security-group [eu-central-1] | charon-48d23773-5456-11e9-9eb4-06578c8a1b06-allow-explorer-public-eu-central-1-IOHK |               |
+| allow-mantis-public-eu-central-1-IOHK | Up / Up-to-date | ec2-security-group [eu-central-1] | charon-48d23773-5456-11e9-9eb4-06578c8a1b06-allow-mantis-public-eu-central-1-IOHK |               |
++-----------------------------------------+-----------------+-----------------------------------+-------------------------------------------------------------------------------------+---------------+
+#+END_SRC
+
+**** Reaching the nodes
+
+Alright, you now have a running cluster, how are you supposed to
+access the various nodes?
+
+First of all, every node is associated to a domain name in the form of
+=CLUSTER_NAME.project42.iohkdev.io= where =CLUSTER_NAME= is your
+workspace name previously defined.
+
+It would be =adam-workspace.project42.iohkdev.io= for the previous
+section example.
+
+You can access to the mantis logs of a specific node, for instance
+mantis-a-0 by running:
+
+: ./gac.sh journal-on mantis-a-0
+
+You can retrieve the logs of all of the deployed nodes in a single
+command by running:
+
+: ./gac.sh journal
+
+You can also get a direct ssh session with a cluster node:
+
+: ./gac.sh ssh mantis-a-0
+
+**** Updating the cluster
+
+If you want to update your cluster after the devops team made some
+changes in their git repository, nothing complicated, just update the
+local git checkout and re-deploy the cluster.
+
+: git pull && ./gac.sh deploy
+
+**** Destroying the cluster
+
+If you want to destroy the cluster machines/resources, just run:
+
+: ./gac.sh delete
+
+If you want to re-deploy the same cluster afterward, you need to
+call:
+
+: ./gac.sh create
+
+*** Troubleshooting
+**** Let's encrypt cannot generate a cert for explorer
+
+This trancient error will occur the first time you deploy your cluster.
+
+It will look like this:
+
+#+BEGIN_SRC
+
+explorer-a.............................> error: Traceback (most recent call last):
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/lib/python2.7/site-packages/nixops/deployment.py", line 731, in worker
+    raise Exception("unable to activate new configuration")
+Exception: unable to activate new configuration
+Traceback (most recent call last):
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/bin/..nixops-wrapped-wrapped", line 985, in <module>
+    args.op()
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/bin/..nixops-wrapped-wrapped", line 407, in op_deploy
+    max_concurrent_activate=args.max_concurrent_activate)
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/lib/python2.7/site-packages/nixops/deployment.py", line 1051, in deploy
+    self.run_with_notify('deploy', lambda: self._deploy(**kwargs))
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/lib/python2.7/site-packages/nixops/deployment.py", line 1040, in run_with_notify
+    f()
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/lib/python2.7/site-packages/nixops/deployment.py", line 1051, in <lambda>
+    self.run_with_notify('deploy', lambda: self._deploy(**kwargs))
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/lib/python2.7/site-packages/nixops/deployment.py", line 1007, in _deploy
+    dry_activate=dry_activate, max_concurrent_activate=max_concurrent_activate)
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/lib/python2.7/site-packages/nixops/deployment.py", line 763, in activate_configs
+    .format(len(failed), len(res), ", ".join(["‘{0}’".format(x) for x in failed])))
+Exception: activation of 1 of 6 machines failed (namely on ‘explorer-a’)
+#+END_SRC
+
+The problem here is simple: the domain name has not been propagated
+yet and let's encrypt is unable to verify the node's hostname.
+
+This is a trancient error, running =./gac.sh deploy= again will fix
+the issue.
+
+**** gac.sh info after deleting the cluster
+
+#+BEGIN_SRC
+
+./gac.sh info
+Traceback (most recent call last):
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/bin/..nixops-wrapped-wrapped", line 985, in <module>
+    args.op()
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/bin/..nixops-wrapped-wrapped", line 203, in op_info
+    depl = open_deployment()
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/bin/..nixops-wrapped-wrapped", line 72, in open_deployment
+    depl = sf.open_deployment(uuid=args.deployment)
+  File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/lib/python2.7/site-packages/nixops/statefile.py", line 153, in open_deployment
+    raise Exception("could not find specified deployment in state file ‘{0}’".format(self.db_file))
+Exception: could not find specified deployment in state file ‘/home/dev/.nixops/deployments.nixops’
+
+#+END_SRC
+
+=gac.sh delete= is deleting the =nixops= state. You need a =nixops= state to re-deploy/query a cluster.
+
+You can easily create a new cluster state by running:
+
+: ./gac.sh create
+
+You can then either re-deploy the cluster:
+
+: ./gac.sh deploy
+
+Or query the current cluster state:
+
+: ./gac.sh info
 
 *** Cluster composition
 

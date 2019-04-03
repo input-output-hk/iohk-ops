@@ -22,7 +22,8 @@ in {
     userConfig     = mapAttrsRecursive (_: mkForce)         cfg.userConfig;
     mergedConfig   = builtins.deepSeq [optionDefaults userConfig ] recursiveUpdate optionDefaults userConfig;
   in {
-      node = mergedConfig.node;
+      node    = mergedConfig.node;
       cluster = mergedConfig.cluster;
+      hydra   = mergedConfig.hydra;
   };
 }

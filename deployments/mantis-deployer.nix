@@ -53,6 +53,6 @@ in {
       usernames = attrNames (csl-developers // devOps // mantis-devOps);
       list-developers = pkgs.writeShellScriptBin "list-developers"
         (concatMapStringsSep "\n" (u: "echo ${u}") usernames);
-    in [ list-developers ];
+    in [ list-developers ] ++ ( with iohk-pkgs; [ terraform mfa ]);
   };
 }

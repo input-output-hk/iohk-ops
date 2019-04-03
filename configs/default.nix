@@ -34,5 +34,8 @@
 
     ## Do not use oauth proxy by default as it requires a domain and additional setup.
     oauthEnable                = false;
+
+    ## Use spot instances priced up to $1 (100c)
+    spotInstancePrice = 100;
   };
 }

@@ -6,10 +6,12 @@
 { config, lib, name, resources, ... }:
 
 {
-  node.fqdn = with config.cluster; lib.mkDefault "${name}.${config.cluster.name}.${toplevelDomain}";
+  node.fqdn = let
+    inherit (config.cluster) subDomain toplevelDomain;
+  in lib.mkDefault "${name}.${lib.optionalString (subDomain != null) "${subDomain}."}${toplevelDomain}";
 
   deployment.ec2 = {
-    inherit (config.node) accessKeyId region instanceType;
+    inherit (config.node) accessKeyId region instanceType spotInstancePrice;
   } // lib.optionalAttrs config.node.allocateElasticIP {
     elasticIPv4 = resources.elasticIPs."${name}-ip";
   };
