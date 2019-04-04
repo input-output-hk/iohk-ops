@@ -23,10 +23,7 @@ in {
     port = 8080;
     useSubstitutes = true;
     notificationSender = "hi@iohk.io";
-    logo = (pkgs.fetchurl {
-      url    = "https://iohk.io/images/iohk-share-logo.jpg";
-      sha256 = "0pg2igski35wf1y4gn8dxw6444kx1107mg4ns5xj29ays2c1j5sl";
-    });
+    logo = ./iohk-logo.png;
   };
 
   services.postgresql = {
