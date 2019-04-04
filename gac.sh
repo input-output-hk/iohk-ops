@@ -22,12 +22,6 @@ export RUNNING_GAC=yes
 log() {
         echo "==(  $*" >&2
 }
-logtop() {
-        test -z "${RECURSING_GAC}" && echo "==(  $*" >&2
-}
-logn() {
-        echo -n "==(  $*" >&2
-}
 
 OPS_REPO='git@github.com:input-output-hk/iohk-ops'
 DEFAULT_OPS_BRANCH='master'
@@ -223,44 +217,6 @@ generate_self_signed_tls_cert () {
     openssl=$(nix-build --no-out-link -E '(import ./. {}).pkgs.openssl' | xargs echo)/bin/openssl
     ${openssl} req -x509 -newkey rsa:4096 -nodes -keyout "${TLS_CERT_KEY}" -out \
                "${TLS_CERT}" -days 365 -subj '/CN=localhost'
-}
-
-region_tagged_instances() {
-        local region="$1"
-        local tags="$2"
-        aws=$(nix-build --no-out-link -E '(import ./. {}).pkgs.awscli' | xargs echo)/bin/aws
-        ${aws} ec2 describe-instances --filters "Name=${tags}" --region  ${region} --output json
-}
-region_tagged_instances_property() {
-        local region="$1"
-        local tags="$2"
-        local prop="$3"
-        jq=$( nix-build --no-out-link -E '(import ./. {}).pkgs.jq'     | xargs echo)/bin/jq
-        region_tagged_instances ${region} ${tags} | ${jq} ".Reservations${prop}"
-}
-count_region_tagged_instances() {
-        local region="$1"
-        local tags="$2"
-        region_tagged_instances_property ${region} ${tags} "| length"
-}
-has_region_tagged_instances() {
-        test "$(count_region_tagged_instances $*)" != 0
-}
-wait_region_tagged_instances() {
-        local region="$1"
-        local tags="$2"
-        logn "Waiting for $region/$tags to appear: "
-        while ! has_region_tagged_instances "$region" "$tags"
-        do echo -n "."
-        done
-        echo " ok."
-}
-wait_host_ssh() {
-        local host="$1"
-
-        logn "Waiting for ssh pong from ${host}: "
-        while ! ssh -tt -o ConnectionAttempts=20 ${host} -o ConnectTimeout=10 -o KbdInteractiveAuthentication=no -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o StrictHostKeyChecking=no -o HashKnownHosts=no -o CheckHostIP=no "echo pong." 2>/dev/null
-        do true; done
 }
 
 case ${cmd} in
@@ -523,122 +479,6 @@ drop-dbs | remove-all-blockchain-data-on-all-nodes ) # Doc:
 get-funds | faucet | money-please | withdraw-funds-from-faucet ) # Doc:
         to_addr=${1:-805932097ab26cc1061424ddcae9f4cd54a09c7b}
         curl -X POST "http://faucet-a.${CLUSTER_NAME}.dev-mantis.iohkdev.io:8099/faucet?address=0x${to_addr}";;
-"" | "" ) # Doc:
-        ;;
-"" | deployer-bootstrap ) # Doc:
-        ;;
-"" | "" ) # Doc:
-        ;;
-describe-image | describe-deployer-nixops-image ) # Doc:
-        nixos_ver="18.09"
-        region="eu-central-1"
-        export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
-        ami="$(nix-instantiate --eval -E "(import ${nixpkgs_out}/nixos/modules/virtualisation/ec2-amis.nix).\"${nixos_ver}\".${region}.hvm-ebs" | xargs echo)"
-        aws=$(nix-build --no-out-link -E '(import ./. {}).pkgs.awscli' | xargs echo)/bin/aws
-        ${aws} ec2 describe-images --image-id ${ami} --region ${region}
-        ;;
-create-deployer | create-and-maybe-deploy-new-deployer ) # Doc:
-        nixos_ver="18.09"
-        region="eu-central-1"
-        az=${region}b
-        org=IOHK
-        ec2type=t2.large
-        depl_ssh_sg="allow-public-ssh-${region}-${org}"
-        deployer_tags="tag:deployment,Values=${CLUSTER_KIND},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
-        export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
-        aws=$(nix-build --no-out-link -E '(import ./. {}).pkgs.awscli' | xargs echo)/bin/aws
-
-        if ! ${aws} ec2  describe-security-groups        --group-names ${depl_ssh_sg}
-        then ${aws} ec2    create-security-group         --group-name  ${depl_ssh_sg} --description "${depl_ssh_sg}"
-             ${aws} ec2 authorize-security-group-ingress --group-name  ${depl_ssh_sg} --protocol tcp --port 22 --cidr 0.0.0.0/0
-        fi
-
-        if has_region_tagged_instances ${region} ${deployer_tags}
-        then log "ERROR:  deployer already exist."; exit 1
-        fi
-        log "creating a deployer.."
-        ami="$(nix-instantiate --eval -E "(import ${nixpkgs_out}/nixos/modules/virtualisation/ec2-amis.nix).\"${nixos_ver}\".${region}.hvm-ebs" | xargs echo)"
-        ${aws}      ec2 run-instances                                                \
-                    --image-id ${ami}                                                \
-                    --security-groups ${depl_ssh_sg}                                 \
-                    --instance-type ${ec2type}                                       \
-                    --placement AvailabilityZone=${az}                               \
-                    --block-device-mappings DeviceName=/dev/sda1,Ebs={VolumeSize=200} \
-                    --tag-specifications "ResourceType=instance,Tags=[{Key=deployment,Value=${CLUSTER_KIND}},{Key=role,Value=deployer}]" \
-                    --user-data file://terraform/deployer/configuration-bootstrap.nix
-
-        wait_region_tagged_instances ${region} ${deployer_tags}
-        deployer_ip=$(region_tagged_instances_property ${region} ${deployer_tags} '[0].Instances[0].PublicIpAddress' | xargs echo)
-        log "new deployer IP: ${deployer_ip}"
-
-        wait_host_ssh "deployer@${deployer_ip}"
-
-        cat <<EOF
-Access the new deployer as:
--------------------- 8< ----------------------
-Host ${CLUSTER_KIND}-deployer
-  User     deployer
-  Hostname ${deployer_ip}
-EOF
-        if test "$1" = "--full"
-        then shift
-             log "full setup requested, proceeding to set up deployer."
-             $0 setup-deployer "$@"
-        fi;;
-setup-deployer | finalise-deployer-nixops-bootstrap ) # Doc:
-        test -d ./clusters/${CLUSTER_KIND} || {
-                log "ERROR: unknown cluster ${CLUSTER_KIND} -- to see available clusters:  ls clusters"
-                exit 1
-        }
-        cluster_config="${CONFIG}"
-        while test ! -f "${cluster_config}"
-        do read -ei "./configs/default.nix" -p "Enter path to configuration file (one of ./config/*.nix):  " cluster_config
-           test -f "${cluster_config}" || log "ERROR: ${cluster_config} is not a readable file"
-        done
-
-        region="eu-central-1"
-        export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
-        deployer_tags="tag:deployment,Values=${CLUSTER_KIND},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
-
-        log "setting up AWS.."
-        deployer_ip=$(region_tagged_instances_property ${region} ${deployer_tags} '[0].Instances[0].PublicIpAddress' | xargs echo)
-
-        set +u
-        ops_url="$1"
-        ops_branch="$2"
-        test -z "$1" && read -ei "http://github.com/input-output-hk/iohk-ops"       -p "Ops git repository URL: "    ops_url
-        test -z "$2" && read -ei "$(git symbolic-ref HEAD | sed 's|refs/heads/||')" -p "Ops git repository branch: " ops_branch
-        set -u
-
-        log "setting up AWS credentials.."
-        AKID="$(sed -n "/\\[${CLUSTER_KIND}\\]/,/^\\[.*/ p" < ~/.aws/credentials | grep aws_access_key_id     | cut -d= -f2 | xargs echo)"
-        ssh "deployer@${deployer_ip}" sh -c "\"mkdir -p ~/.aws && cat > ~/.aws/credentials && chmod -R go-rwx ~/.aws\"" <<EOF
-[default]
-aws_access_key_id = ${AKID}
-aws_secret_access_key = $(sed -n "/\\[${CLUSTER_KIND}\\]/,/^\\[.*/ p" < ~/.aws/credentials | grep aws_secret_access_key | cut -d= -f2 | xargs echo)
-region = ${region}
-EOF
-        log "generating SSH key and setting up ops checkout.."
-        setup_cmd="\
-ssh-keygen  -t ed25519 -b 2048 -f ~/.ssh/id_ed25519 -N ''; \
-ssh-keyscan -t rsa     github.com >> ~/.ssh/known_hosts && \
-ssh-keyscan -t ed25519 localhost  >> ~/.ssh/known_hosts && \
-cat ~/.ssh/id_ed25519.pub && \
-echo 'Please authorise this key and press Enter: ' && \
-read foo && \
-git clone ${ops_url} infra && \
-cd infra && \
-echo CLUSTER_KIND=${CLUSTER_KIND} > .config.sh && \
-echo CLUSTER_TYPE=${CLUSTER_KIND}-infra > .config.sh && \
-echo CLUSTER_NAME=infra > .config.sh && \
-echo CONFIG=${cluster_config} >> .config.sh && \
-git checkout ${ops_branch} && \
-git config --replace-all receive.denyCurrentBranch updateInstead"
-        ssh "deployer@${deployer_ip}" sh -c "\"${setup_cmd}\""
-
-        echo "Deploying infra cluster.." >&2
-        ssh -A "deployer@${deployer_ip}" sh -c "\"cd infra && ./gac.sh ${verbose} create-deployment-from-cluster-components ${AKID} \""
-        ;;
 "" | "" ) # Doc:
         ;;
 help | show-this-help-message ) # Doc: Show this help message
