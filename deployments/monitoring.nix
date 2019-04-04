@@ -9,7 +9,8 @@ in
   let
     hostList = lib.mapAttrsToList 
       (nodeName: node: {
-        name = "${nodeName}";
+        name = "${nodeName}.staging";
+        ip = node.config.networking.publicIPv4;
         withNginx = node.config.services.nginx.enable;
       }) nodes;
     hostName = "monitoring.${config.global.dnsDomainname}";
@@ -26,6 +27,10 @@ in
       organisation = monitoring.org;
       dnsHostname  = mkForce "monitoring";
     };
+
+    networking.extraHosts = ''
+      ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}") hostList)}
+    '';
  
     services.monitoring-services = {
       enable = true;
