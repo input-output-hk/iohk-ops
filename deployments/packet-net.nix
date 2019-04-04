@@ -4,7 +4,6 @@ with (import ../lib.nix);
 let
   mkPacketNet = hostname: module: extraopts: { config, name, pkgs, resources, ... }: {
     deployment.targetHost = hostname + ".aws.iohkdev.io";
-    services.dd-agent.tags = ["group:linux"];
     imports = [ ../modules/common.nix
                 module
               ] ++

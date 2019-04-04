@@ -152,18 +152,6 @@ in {
       '';
     };
 
-    # TODO, merge with the monitor in modules/cardano.nix
-    services.dd-agent.processConfig = ''
-    init_config:
-
-    instances:
-    - name:            cardano-report-server
-      search_string: ['cardano-report-server']
-      exact_match: True
-      thresholds:
-        critical: [1, 1]
-    '';
-
     assertions = [
       { assertion =
           (cfg.zendesk.email != "" && cfg.zendesk.tokenFile != null && cfg.zendesk.accountName != "") ||

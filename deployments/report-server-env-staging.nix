@@ -6,7 +6,6 @@ let nodeMap = { inherit (globals.fullMap) report-server; }; in
   report-server = { config, resources, lib, ...}: {
     imports = [
       ../modules/staging.nix
-      ../modules/datadog.nix
       ../modules/papertrail.nix
     ];
 

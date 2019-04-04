@@ -4,7 +4,6 @@ with (import ./../lib.nix);
 
 {
   imports = [
-    #./extra-statsd.nix
     ./monitoring-exporters.nix
   ];
   boot.kernel.sysctl = {

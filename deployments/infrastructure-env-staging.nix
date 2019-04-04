@@ -4,15 +4,10 @@ with (import ./../lib.nix);
 {
   network.description = "IOHK infrastructure staging";
 
-  defaults = {
-    services.dd-agent.tags = ["env:staging" ];
-  };
-
   hydra = { config, pkgs, resources, ... }: {
 
     imports = [
       ./../modules/papertrail.nix
-      ./../modules/datadog.nix
     ];
 
     ##
@@ -23,7 +18,6 @@ with (import ./../lib.nix);
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ./../modules/datadog.nix
       ./../modules/papertrail.nix
     ];
 
@@ -62,7 +56,6 @@ with (import ./../lib.nix);
     hostName = "bors-ng.awstest2.iohkdev.io";
   in {
     imports = [
-      ../modules/datadog.nix
       ../modules/papertrail.nix
     ];
 

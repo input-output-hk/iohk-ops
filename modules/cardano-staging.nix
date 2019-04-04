@@ -4,7 +4,7 @@ params:
 { name, config, pkgs, resources, ... }: {
   imports = [
     ./staging.nix
-    ./datadog.nix
+    ./monitoring-exporters.nix
     ./papertrail.nix
   ];
   

@@ -4,7 +4,6 @@ params:
 { name, config, pkgs, resources, ... }: {
   imports = [
     ./production.nix
-    ./datadog.nix
     ./papertrail.nix
   ];
 
