@@ -29,8 +29,7 @@ files:
 - deployments/cardano-explorer-env-production.nix
 - deployments/report-server.nix
 - deployments/report-server-env-production.nix
-- deployments/monitoring.nix
-- deployments/monitoring-env-staging.nix
+- deployments/monitoring-env-production.nix
 elements:
 - Nodes
 - Explorer
