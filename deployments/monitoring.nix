@@ -9,7 +9,7 @@ in
   let
     hostList = lib.mapAttrsToList 
       (nodeName: node: {
-        name = "${nodeName}.staging";
+        name = "${nodeName}.${node.config.deployment.name}"; 
         ip = node.config.networking.publicIPv4;
         withNginx = node.config.services.nginx.enable;
       }) nodes;
