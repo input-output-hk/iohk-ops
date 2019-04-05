@@ -27,8 +27,8 @@ in {
       };
 
       applicationDashboards = mkOption {
-        type = types.listOf types.path;
-        default = [];
+        type = types.path;
+        default = null;
         description = ''
           Application specific dashboards.
         '';
@@ -229,9 +229,13 @@ in {
             ];
             dashboards = [
               {
-                options.path = ./grafana/node-system-dashboard.json;
-              }
-            ] ++ (map (d: {options.path = d;}) cfg.applicationDashboards);
+                name = "generic";
+                options.path = ./grafana/generic;
+              }] ++ (if (cfg.applicationDashboards != null) then [
+              {
+                name = "application";
+                options.path = cfg.applicationDashboards;
+              }] else []);
           };
         };
         prometheus.exporters = {
