@@ -26,6 +26,14 @@ in {
         '';
       };
 
+      applicationDashboards = mkOption {
+        type = types.listOf types.path;
+        default = [];
+        description = ''
+          Application specific dashboards.
+        '';
+      };
+
       monitoredNodes = mkOption {
         type = types.listOf types.str;
         default = [];
@@ -223,7 +231,7 @@ in {
               {
                 options.path = ./grafana/node-system-dashboard.json;
               }
-            ];
+            ] ++ (map (d: {options.path = d;}) cfg.applicationDashboards);
           };
         };
         prometheus.exporters = {
