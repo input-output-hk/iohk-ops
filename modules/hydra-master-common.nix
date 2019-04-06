@@ -8,7 +8,7 @@ in {
   nix = {
     extraOptions = ''
       auto-optimise-store = true
-      allowed-uris = https://github.com/NixOS/nixpkgs/archive https://github.com/input-output-hk
+      allowed-uris = https://github.com/NixOS/nixpkgs/archive https://github.com/input-output-hk https://static.rust-lang.org
     '';
     binaryCaches = mkForce [ "https://cache.nixos.org" ];
   };
