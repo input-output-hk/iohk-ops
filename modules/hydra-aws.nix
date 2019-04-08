@@ -11,9 +11,5 @@ in
       resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
       resources.ec2SecurityGroups."allow-hydra-${region}-${org}"
     ];
-
-    # We decided not to use NixOps for provisioning instance roles since it
-    # does not handle it very well. Therefore this *must* pre-exist!
-    instanceProfile = "Hydra";
   };
 }
