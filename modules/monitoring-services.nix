@@ -473,6 +473,18 @@ in {
                         description = "{{$labels.alias}} is using 80% of its swap space for at least 10 minutes now.";
                       };
                     }
+                    {
+                      alert = "node_time_unsync";
+                      expr = "abs(node_timex_offset_seconds) > 0.0001 or node_timex_sync_status != 1";
+                      for = "10m";
+                      labels = {
+                        severity = "page";
+                      };
+                      annotations = {
+                        summary = "{{$labels.alias}}: Clock out of sync with NTP";
+                        description = "{{$labels.alias}} Local clock offset is too large or out of sync with NTP";
+                      };
+                    }
                   ];
                 }
                 {
