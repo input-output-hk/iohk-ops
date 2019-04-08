@@ -27,7 +27,7 @@ in {
       };
 
       applicationDashboards = mkOption {
-        type = types.path;
+        type = types.nullOr types.path;
         default = null;
         description = ''
           Application specific dashboards.
