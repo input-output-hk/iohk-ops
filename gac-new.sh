@@ -1,8 +1,5 @@
 #!/bin/sh
 
-OPS_REPO='git@github.com:input-output-hk/iohk-ops'
-DEFAULT_OPS_BRANCH='master'
-
 case "$1" in
 -h | --help | help )
         cat <<EOF
@@ -23,9 +20,9 @@ EOF
 esac;
 
 CLUSTER_NAME="$1";                            test -n "$1" && shift
-BRANCH_NAME="${1:-$DEFAULT_OPS_BRANCH}";      test -n "$1" && shift
-CLUSTER_TYPE="${1:-mantis}";                  test -n "$1" && shift
-CLUSTER_KIND="${1:-mantis}";                  test -n "$1" && shift
+BRANCH_NAME="${1:-${DEFAULT_OPS_BRANCH}}";    test -n "$1" && shift
+CLUSTER_TYPE="${1:-${CLUSTER_TYPE}}";         test -n "$1" && shift
+CLUSTER_KIND="${1:-${CLUSTER_KIND}}";         test -n "$1" && shift
 
 set -u
 while test -d "${CLUSTER_NAME}" -o -z "${CLUSTER_NAME}" || nixops info -d "${CLUSTER_NAME}" >/dev/null 2>/dev/null
@@ -41,14 +38,14 @@ CLUSTER_TYPE=${CLUSTER_TYPE}
 CLUSTER_NAME=${CLUSTER_NAME}
 CONFIG=default
 EOF
-$0           list-cluster-components
+$GAC_CENTRAL list-cluster-components
 if test "${CLUSTER_TYPE}" = "mantis"
 then log "generating node keys.."
-     $0      generate-node-keys
+     $GAC_CENTRAL generate-node-keys
 fi
 log "creating the Nixops deployment.."
 nixops       create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/*.nix
-$0           configure-nixops-deployment-arguments
+$GAC_CENTRAL configure-nixops-deployment-arguments
 log "cluster has been set up, but not deployed;  Next steps:"
 log "  1. cd ${CLUSTER_NAME}"
 log "  2. gac deploy"

@@ -33,7 +33,15 @@ self="$0 ${verbose}"
 cmd=${1:-doit}; test -n "$1"; shift
 
 ###
-### Process overlay-defined overrides: ${PWD}/gac-${cmd}.sh defines 'gac ${cmd}'
+### Overlay/defaults: ${PWD}/.defaults
+###
+if test -f "${PWD}/.gac.defaults"
+then .     "${PWD}/.gac.defaults"
+else . "${gacroot}/.gac.defaults"
+fi
+
+###
+### Overlay/command overrides: ${PWD}/gac-${cmd}.sh defines 'gac ${cmd}'
 ###
 local_override="${PWD}/gac-${cmd}.sh"
 central_override="${gacroot}/gac-${cmd}.sh"
@@ -45,8 +53,8 @@ else override=
 fi
 if test -x "${override}"
 then log "running an override for 'gac ${cmd}':  ${override}"
-     export GAC_CENTRAL=$0
-     ${override} "$@"
+     GAC_CENTRAL=$0
+     . ${override} "$@"
      exit $? ## set -e does this already, so adding just for clarity.
 fi
 
