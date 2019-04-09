@@ -15,10 +15,10 @@ usage() {
                 done
         }
 }
-if test -n "RUNNING_GAC"
-then RECURSIVE_GAC=yes
+if test -n "GAC_RUNNING"
+then GAC_RECURSIVE=yes
 fi
-export RUNNING_GAC=yes
+export GAC_RUNNING=yes
 log() {
         echo "==(  $*" >&2
 }
@@ -42,6 +42,14 @@ the Nixops deployment.
 Available cluster types:  $(if test ! -d clusters; then cd .seed; fi && ls clusters | xargs echo)
 
 Generals documentation: https://github.com/input-output-hk/iohk-ops/blob/goguen-ala-cardano/docs/Goguen-clusters-HOWTO.org
+while test -n "$1"
+do case "$1" in
+           --verbose | -v ) set -x; verbose="--verbose";;
+           --help | "--"* ) usage; exit 1;;
+           * ) break;;
+   esac; shift; done
+self="$0 ${verbose}"
+cmd=${1:-doit}; test -n "$1"; shift
 
 EOF
                                     exit 1;; esac;
@@ -74,6 +82,22 @@ EOF
         log "  1. cd ${CLUSTER_NAME}"
         log "  2. gac deploy"
         exit 0
+###
+### Process overlay-defined overrides: ${PWD}/gac-${cmd}.sh defines 'gac ${cmd}'
+###
+local_override="${PWD}/gac-${cmd}.sh"
+central_override="${gacroot}/gac-${cmd}.sh"
+if    test -x "${local_override}"
+then override="${local_override}"
+elif  test -x "${central_override}"
+then override="${central_override}"
+else override=
+fi
+if test -x "${override}"
+then log "running an override for 'gac ${cmd}':  ${override}"
+     export GAC_CENTRAL=$0
+     ${override} "$@"
+     exit $? ## set -e does this already, so adding just for clarity.
 fi
 
 verbose=""
@@ -86,7 +110,7 @@ then
         exit 1
 fi
 . ./.config.sh
-if test -z "${RECURSIVE_GAC}"
+if test -z "${GAC_RECURSIVE}"
 then log ".config.sh settings:"
      cat <<EOF
 CLUSTER_KIND=${CLUSTER_KIND}
@@ -95,7 +119,6 @@ CLUSTER_NAME=${CLUSTER_NAME}
 CONFIG=${CONFIG}
 EOF
 fi
-OPS_REPO='git@github.com:input-output-hk/iohk-ops'
 NODE_DERIVATION=${CLUSTER_KIND}
 NODE_EXECUTABLE=${CLUSTER_KIND}
 DEFAULT_NODE=${CLUSTER_KIND}-a-0
@@ -106,14 +129,6 @@ TLS_CERT_DIR="$(pwd)/tls-cert"
 TLS_CERT="${TLS_CERT_DIR}/cert.pem"
 TLS_CERT_KEY="${TLS_CERT_DIR}/key.pem"
 
-while test -n "$1"
-do case "$1" in
-           --verbose | -v ) set -x; verbose="--verbose";;
-           --help | "--"* ) usage; exit 1;;
-           * ) break;;
-   esac; shift; done
-self="$0 ${verbose}"
-cmd=${1:-doit}; test -n "$1"; shift
 set -u
 
 ###
