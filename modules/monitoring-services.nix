@@ -391,7 +391,7 @@ in {
                     }
                     {
                       alert = "node_filesystem_full_90percent";
-                      expr = "sort(node_filesystem_free{device!=\"ramfs\"} < node_filesystem_size{device!=\"ramfs\"} * 0.1) / 1024^3";
+                      expr = "sort(node_filesystem_free_bytes{device!=\"ramfs\"} < node_filesystem_size_bytes{device!=\"ramfs\"} * 0.1) / 1024^3";
                       for = "5m";
                       labels = {
                         severity = "page";
@@ -403,7 +403,7 @@ in {
                     }
                     {
                       alert = "node_filesystem_full_in_4h";
-                      expr = "predict_linear(node_filesystem_free{device!=\"ramfs\"}[1h], 4*3600) <= 0";
+                      expr = "predict_linear(node_filesystem_free_bytes{device!=\"ramfs\"}[1h], 4*3600) <= 0";
                       for = "5m";
                       labels = {
                         severity = "page";
@@ -427,7 +427,7 @@ in {
                     }
                     {
                       alert = "node_load1_90percent";
-                      expr = "node_load1 / on(alias) count(node_cpu{mode=\"system\"}) by (alias) >= 0.9";
+                      expr = "node_load1 / on(alias) count(node_cpu_seconds_total{mode=\"system\"}) by (alias) >= 0.9";
                       for = "1h";
                       labels = {
                         severity = "page";
@@ -439,7 +439,7 @@ in {
                     }
                     {
                       alert = "node_cpu_util_90percent";
-                      expr = "100 - (avg by (alias) (irate(node_cpu{mode=\"idle\"}[5m])) * 100) >= 90";
+                      expr = "100 - (avg by (alias) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) >= 90";
                       for = "1h";
                       labels = {
                         severity = "page";
@@ -451,7 +451,7 @@ in {
                     }
                     {
                       alert = "node_ram_using_99percent";
-                      expr = "node_memory_MemFree + node_memory_Buffers + node_memory_Cached < node_memory_MemTotal * 0.01";
+                      expr = "node_memory_MemFree_bytes + node_memory_Buffers_bytes + node_memory_Cached_bytes < node_memory_MemTotal_bytes * 0.01";
                       for = "30m";
                       labels = {
                         severity = "page";
@@ -463,7 +463,7 @@ in {
                     }
                     {
                       alert = "node_swap_using_80percent";
-                      expr = "node_memory_SwapTotal - (node_memory_SwapFree + node_memory_SwapCached) > node_memory_SwapTotal * 0.8";
+                      expr = "node_memory_SwapTotal_bytes - (node_memory_SwapFree_bytes + node_memory_SwapCached_bytes) > node_memory_SwapTotal_bytes * 0.8";
                       for = "10m";
                       labels = {
                         severity = "page";
