@@ -485,6 +485,18 @@ in {
                         description = "{{$labels.alias}} Local clock offset is too large or out of sync with NTP";
                       };
                     }
+                    {
+                      alert = "http_high_internal_error_rate";
+                      expr = "rate(nginx_vts_server_requests_total{code=\"5xx\"}[5m]) * 50 > on(alias, host) rate(nginx_vts_server_requests_total{code=\"2xx\"}[5m])";
+                      for = "5m";
+                      labels = {
+                        severity = "page";
+                      };
+                      annotations = {
+                        summary = "{{$labels.alias}}: High http internal error (code 5xx) rate";
+                        description = "{{$labels.alias}}  number of correctly served requests is less than 50 times the number of requests aborted due to an internal server error";
+                      };
+                    }
                   ];
                 }
                 {
