@@ -293,6 +293,13 @@ let
     iohk-ops = mkNixops "master" nixpkgs-src.rev;
     iohk-ops-bors-staging = highPrio (mkNixops "bors-staging" nixpkgs-src.rev);
     iohk-ops-bors-trying = mkNixops "bors-trying" nixpkgs-src.rev;
+    rust-cardano = mkJobset {
+      name = "rust-cardano";
+      input = "rust-cardano";
+      description = "Cardano Rust Library";
+      url = "https://github.com/input-output-hk/rust-cardano.git";
+      branch = "master";
+    };
   } // nixopsPrJobsets);
 
   ##########################################################################
