@@ -82,7 +82,9 @@ NODE_EXECUTABLE=${CLUSTER_KIND}
 DEFAULT_NODE=${CLUSTER_KIND}-a-0
 NODE_SERVICE=${CLUSTER_KIND}
 NODE_DB_PATH=/data/${CLUSTER_KIND}
-ALL_NODES="${DEFAULT_NODE} ${CLUSTER_KIND}-a-1 ${CLUSTER_KIND}-b-0 ${CLUSTER_KIND}-b-1 ${CLUSTER_KIND}-c-0 "
+ALL_NODES_LIST=$(nix-instantiate --argstr cluster ${CLUSTER_KIND} --eval -E '{ cluster }: builtins.attrNames (builtins.removeAttrs (import (./. + "/clusters/${cluster}/${cluster}.nix")) [ "network" ])')
+# Removing list leading and trailing brackets. Removing quotes around component names.
+ALL_NODES=$(echo ${ALL_NODES_LIST:1:${#ALL_NODES_LIST}-2} | sed 's/"//g')
 TLS_CERT_DIR="$(pwd)/tls-cert"
 TLS_CERT="${TLS_CERT_DIR}/cert.pem"
 TLS_CERT_KEY="${TLS_CERT_DIR}/key.pem"
