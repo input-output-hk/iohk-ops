@@ -18,13 +18,4 @@ let nodeMap = { inherit (globals.fullMap) report-server; }; in
   };
 
   resources.elasticIPs = nodesElasticIPs nodeMap;
-  resources.datadogMonitors = with import ../modules/datadog-monitors.nix; {
-    cardano_report_proccess = mkMonitor (recursiveUpdate cardano_report_process_monitor {
-      monitorOptions.thresholds = {
-        warning = 3;
-        critical = 4;
-        ok = 1;
-      };
-    });
-  };
 }
