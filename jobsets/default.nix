@@ -144,6 +144,7 @@ let
       url = "https://github.com/input-output-hk/cardano-shell.git";
       branch = "develop";
       prs = shellPrsJSON;
+      bors = true;
     };
   };
 
