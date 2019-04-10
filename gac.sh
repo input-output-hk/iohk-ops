@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-gacroot="$(dirname $0)"
 usage() {
         echo "$(basename $0) [--verbose] COMMAND ARGS.." >&2
         echo
@@ -33,17 +32,26 @@ self="$0 ${verbose}"
 cmd=${1:-doit}; test -n "$1"; shift
 
 ###
-### Overlay/defaults: ${PWD}/.defaults
+### Overlay root detection: ${PWD}, $(dirname $0)
 ###
-if test -f "${PWD}/.gac.defaults"
-then .     "${PWD}/.gac.defaults"
-else . "${gacroot}/.gac.defaults"
+gacroot="$(dirname $0)"
+if test -d "${PWD}/clusters"
+then overlayroot="${PWD}"
+else overlayroot="${gacroot}"
 fi
 
 ###
-### Overlay/command overrides: ${PWD}/gac-${cmd}.sh defines 'gac ${cmd}'
+### Overlay/defaults: ${PWD}/.defaults
 ###
-local_override="${PWD}/gac-${cmd}.sh"
+if test -f "${overlayroot}/.gac.defaults"
+then .     "${overlayroot}/.gac.defaults"
+else .         "${gacroot}/.gac.defaults"
+fi
+
+###
+### Overlay/command overrides: ${overlayroot}/gac-${cmd}.sh defines 'gac ${cmd}'
+###
+local_override="${overlayroot}/gac-${cmd}.sh"
 central_override="${gacroot}/gac-${cmd}.sh"
 if    test -x "${local_override}"
 then override="${local_override}"
