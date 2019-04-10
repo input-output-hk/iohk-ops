@@ -11,7 +11,7 @@ in {
 
         set -eo pipefail
 
-        PATH=${lib.makeSearchPath "bin" [ jq awscli gnutar ]}
+        PATH=${lib.makeSearchPath "bin" [ awscli coreutils gnutar gzip jq ]}
 
         # Sample contents of $HYDRA_JSON:
         # {
