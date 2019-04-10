@@ -30,8 +30,8 @@ let
   pinIsPrivate  = dir: name: let pin = builtins.fromJSON (builtins.readFile (pinFile dir name));
                              in pin.url != builtins.replaceStrings ["git@github.com"] [""] pin.url;
   addPinName = name: pin: pin // { name = name+"-git-${pin.rev}"; };
-  getPinFetchgit = dir: name: removeAttrs     (readPinTraced dir name)  ["ref"];
-  getPinFetchGit = dir: name: addPinName name (readPinTraced dir name); ## 'submodules' to be removed later
+  getPinFetchgit = dir: name: removeAttrs     (readPin dir name)  ["ref"];
+  getPinFetchGit = dir: name: addPinName name (readPin dir name); ## 'submodules' to be removed later
   fetchGitPin = name: pinJ:
     builtins.fetchGit (pinJ // { name = name; });
 
@@ -42,7 +42,7 @@ let
     let subRepoCmd = repo: ''
         chmod -R u+w $(dirname $out/${repo.subdir})
         rmdir $out/${repo.subdir}
-        cp -R  ${trace "processing subrepo ${repo.subdir}" repo.src} $out/${repo.subdir}
+        cp -R  ${repo.src} $out/${repo.subdir}
         '';
         cmd = ''
 
