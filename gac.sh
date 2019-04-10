@@ -180,6 +180,7 @@ generate_node_keys () {
         node=`nix-build --no-out-link -E  "(import ./. {}).${NODE_DERIVATION}"`
         NODE_IDS="static/node-ids.nix"
 
+        mkdir -p "static"
         echo "{" > "$NODE_IDS"
         for n in $ALL_NODES; do
                 KEY_FILE="static/$n.key"
