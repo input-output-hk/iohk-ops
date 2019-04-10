@@ -53,7 +53,7 @@ in {
         #                                                                                                      ^- package:version   ^- only take the first   ^- package-version
         echo "Pushing '$output' to '$target'"
         trap "echo Push failed 🤬" ERR
-        aws s3 cp $output $target
+        aws s3 cp --only-show-errors $output $target
         echo "Push successful"
         ''}
     </runcommand>
