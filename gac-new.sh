@@ -19,6 +19,8 @@ EOF
         exit 1;;
 esac;
 
+curl="$(nix-build --no-out-link -I overlay=${overlayroot} -E "(import <overlay> {}).pkgs.curl" | xargs echo)"/bin/curl
+
 CLUSTER_NAME="$1";                            test -n "$1" && shift
 BRANCH_NAME="${1:-${DEFAULT_OPS_BRANCH}}";    test -n "$1" && shift
 CLUSTER_TYPE="${1:-${CLUSTER_TYPE}}";         test -n "$1" && shift
@@ -38,11 +40,10 @@ CLUSTER_TYPE=${CLUSTER_TYPE}
 CLUSTER_NAME=${CLUSTER_NAME}
 CONFIG=default
 EOF
-$GAC_CENTRAL list-cluster-components
-if test "${CLUSTER_TYPE}" = "mantis"
-then log "generating node keys.."
-     $GAC_CENTRAL generate-node-keys
-fi
+$GAC_CENTRAL            list-cluster-components
+log "Generating node keys"
+$GAC_CENTRAL ${verbose} generate-node-keys
+
 log "creating the Nixops deployment.."
 nixops       create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/*.nix
 $GAC_CENTRAL configure-nixops-deployment-arguments
