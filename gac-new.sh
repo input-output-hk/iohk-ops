@@ -28,7 +28,11 @@ CLUSTER_KIND="${1:-${CLUSTER_KIND}}";         test -n "$1" && shift
 
 set -u
 while test -d "${CLUSTER_NAME}" -o -z "${CLUSTER_NAME}" || nixops info -d "${CLUSTER_NAME}" >/dev/null 2>/dev/null
-do read -ei "${CLUSTER_NAME}" -p "Cluster '${CLUSTER_NAME}' already exists, please choose another name: " CLUSTER_NAME
+do if test -z "${CLUSTER_NAME}"
+   then message="Please enter cluster name: "
+   else message="Cluster '${CLUSTER_NAME}' already exists, please choose another name: "
+   fi
+   read -ei "${CLUSTER_NAME}" -p "${message}" CLUSTER_NAME
 done
 
 git clone "${OPS_REPO}" "${CLUSTER_NAME}"
