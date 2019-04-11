@@ -28,11 +28,11 @@ do case "$1" in
            --help | "--"* ) usage; exit 1;;
            * ) break;;
    esac; shift; done
-self="$0 ${verbose}"
+self="$(realpath $0) ${verbose}"
 cmd=${1:-doit}; test -n "$1"; shift
 
 ###
-### Overlay root detection: ${PWD}, $(dirname $0)
+### Overlay root detection: ${PWD}, $(dirname $self)
 ###
 gacroot="$(realpath $0 | xargs dirname | xargs echo)"
 if test -d "${PWD}/clusters"
@@ -61,7 +61,7 @@ else override=
 fi
 if test -x "${override}"
 then log "running an override for 'gac ${cmd}':  ${override}"
-     GAC_CENTRAL=$0
+     GAC_CENTRAL=$self
      . ${override} "$@"
      exit $? ## set -e does this already, so adding just for clarity.
 fi
@@ -351,17 +351,17 @@ ssh-all | parallel-ssh-on-all-nodes ) # Doc:
 stop | stop-all-node-services ) # Doc:
         on=${1:+--include $*}
         log "stopping node services on:  ${on}"
-        $0        ssh-all ${on} -- systemctl    stop ${NODE_SERVICE};;
+        $self        ssh-all ${on} -- systemctl    stop ${NODE_SERVICE};;
 start | start-all-node-services ) # Doc:
         on=${1:+--include $*}
         log "starting node services on:  ${on}"
-        $0        ssh-all ${on} -- systemctl   start ${NODE_SERVICE}; log "new start date:  $($0 since ${DEFAULT_NODE})";;
+        $self        ssh-all ${on} -- systemctl   start ${NODE_SERVICE}; log "new start date:  $($self since ${DEFAULT_NODE})";;
 restart | restart-all-node-services ) # Doc:
         on=${1:+--include $*}
-        $0        ssh-all ${on} -- systemctl restart ${NODE_SERVICE}; log "new start date:  $($0 since ${DEFAULT_NODE})";;
+        $self        ssh-all ${on} -- systemctl restart ${NODE_SERVICE}; log "new start date:  $($self since ${DEFAULT_NODE})";;
 statuses | ss | all-node-service-statuses ) # Doc:
         on=${1:+--include $*}
-        $0        ssh-all ${on} -- systemctl  status ${NODE_SERVICE};;
+        $self        ssh-all ${on} -- systemctl  status ${NODE_SERVICE};;
 "" | "" ) # Doc:
         ;;
 "" | journald-logs-and-grepping ) # Doc:
@@ -373,46 +373,46 @@ since | node-service-start-date-on ) # Doc:
         ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show ${NODE_SERVICE} --value --property WatchdogTimestamp 2>&1 | cut -d' ' -f3;;
 journal-on | jo | node-service-journal-on-node-since-start ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        set +u; since=${2:-$($0 since ${node})}; set -u
+        set +u; since=${2:-$($self since ${node})}; set -u
         if test -z "${since}"; then since='3 hours ago'; fi
         ${nixops} ssh          ${nixops_subopts} ${node} -- journalctl  -u ${NODE_SERVICE} --since "'${since}'" 2>&1;;
 pretty-journal-on | pj | node-service-journal-on-node-since-its-start-prettified-version ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        $0 node-service-journal-on-node-since-start ${node} | fgrep -v ',"state": "ok","service": "' | cut -c92- | less;;
+        $self node-service-journal-on-node-since-start ${node} | fgrep -v ',"state": "ok","service": "' | cut -c92- | less;;
 journal    | jall | j | all-node-service-journals ) # Doc:
         start_sample_node=${DEFAULT_NODE}
-        since=${1:-$($0 since ${start_sample_node})}
+        since=${1:-$($self since ${start_sample_node})}
         if test -z "${since}"; then since='3 hours ago'; fi
         log "journal since:  ${since}"
-        $0        ssh-all      -- journalctl -u ${NODE_SERVICE} --since "'${since}'" 2>&1;;
+        $self        ssh-all      -- journalctl -u ${NODE_SERVICE} --since "'${since}'" 2>&1;;
 system-journal | sysj | system-journal-on-node ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        $0        ssh ${node}  -- journalctl -xe 2>&1;;
+        $self        ssh ${node}  -- journalctl -xe 2>&1;;
 follow | f | follow-node-service-journal-on ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        $0        ssh ${node}  -- journalctl -fu ${NODE_SERVICE} 2>&1;;
+        $self        ssh ${node}  -- journalctl -fu ${NODE_SERVICE} 2>&1;;
 follow-all | fa | follow-all-node-service-journals ) # Doc:
-        $0        ssh-all      -- journalctl -fu ${NODE_SERVICE} "$@" 2>&1;;
+        $self        ssh-all      -- journalctl -fu ${NODE_SERVICE} "$@" 2>&1;;
 grep-on | gro | grep-node-service-journals-since-start ) # Doc:
         node=$1; shift
         log "node:           ${node}"
         log "filter:         ag $*"
         ag=$( nix-build --no-out-link -E '(import ./. {}).pkgs.ag'     | xargs echo)/bin/ag
-        $0        journal-on ${node} 2>&1 | ${ag} "$@";;
+        $self        journal-on ${node} 2>&1 | ${ag} "$@";;
 grep-since | gras | grep-all-node-service-journals-since-timestamp ) # Doc:
         since=$1; shift
         log "journal since:  ${since}"
         log "filter:         ag $*"
         ag=$( nix-build --no-out-link -E '(import ./. {}).pkgs.ag'     | xargs echo)/bin/ag
-        $0        journal "${since}" 2>&1 | ${ag} "$@";;
+        $self        journal "${since}" 2>&1 | ${ag} "$@";;
 grep | g | grep-all-node-service-journals-since-last-restart ) # Doc:
         start_sample_node=${DEFAULT_NODE}
-        since=$($0 since ${start_sample_node})
+        since=$($self since ${start_sample_node})
         if test -z "${since}"; then since='3 hours ago'; fi
-        $0        grep-since ${since} "$@";;
+        $self        grep-since ${since} "$@";;
 watch-for | w | watch-all-node-service-journals-for-regex-occurence ) # Doc:
         ag=$( nix-build --no-out-link -E '(import ./. {}).pkgs.ag'     | xargs echo)/bin/ag
-        $0        follow-all 2>&1 | ${ag} "$@";;
+        $self        follow-all 2>&1 | ${ag} "$@";;
 
 "" | "" ) # Doc:
         ;;
@@ -421,23 +421,23 @@ watch-for | w | watch-all-node-service-journals-for-regex-occurence ) # Doc:
 "" | "" ) # Doc:
         ;;
 blocks | bs |  node-recent-block-numbers ) # Doc:
-        $0        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' -f5,14-;;
+        $self        grep-since "'30 seconds ago'" 'Best Block: ' | cut -d' ' -f5,14-;;
 roles | rs | node-roles-since-start ) # Doc:
-        $0        grep 'role changed|LEADER';;
+        $self        grep 'role changed|LEADER';;
 exceptions | ex | node-exceptions-since-start ) # Doc:
-        $0        grep -i exception | ag -v 'RiemannBatchClient|exception.counter';;
+        $self        grep -i exception | ag -v 'RiemannBatchClient|exception.counter';;
 watch-blocks | wb | watch-node-current-block-number-stream ) # Doc:
-        $0        watch-for 'Best Block: ' | cut -d' ' -f5,14-;;
+        $self        watch-for 'Best Block: ' | cut -d' ' -f5,14-;;
 watch-roles | wr | watch-node-current-role-stream ) # Doc:
-        $0        watch-for 'role changed|LEADER';;
+        $self        watch-for 'role changed|LEADER';;
 watch-roles-pretty | wrp | watch-node-current-role-stream-prettified ) # Doc:
-        $0        watch-roles | sed 's/^\([^\.]*\)\..*oldRole","value": "\([A-Z]*\)".*newRole","value": "\([A-Z]*\).*$/\1: \2 -> \3/';;
+        $self        watch-roles | sed 's/^\([^\.]*\)\..*oldRole","value": "\([A-Z]*\)".*newRole","value": "\([A-Z]*\).*$/\1: \2 -> \3/';;
 watch-exceptions | we | watch-node-current-exception-stream ) # Doc:
-        $0        watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
+        $self        watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
 troubleshoot | tro | troubleshoot-node-logs-for-known-problems ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        $0        grep-node-service-journals-since-start ${node} 'Genesis data present in the database does not match genesis block from file.' && echo 'PROBLEM FOUND!' || true
-        $0        grep-node-service-journals-since-start ${node} 'candidate is not known to the local member' && echo 'PROBLEM FOUND!' || true
+        $self        grep-node-service-journals-since-start ${node} 'Genesis data present in the database does not match genesis block from file.' && echo 'PROBLEM FOUND!' || true
+        $self        grep-node-service-journals-since-start ${node} 'candidate is not known to the local member' && echo 'PROBLEM FOUND!' || true
         ;;
 "" | "" ) # Doc:
         ;;
@@ -450,10 +450,10 @@ drop-dbs | remove-all-blockchain-data-on-all-nodes ) # Doc:
         read -ei "No!" -p "Really? Type 'yes' to confirm:  " disaster
         test "${disaster}" == "yes" || { log "disaster averted"; exit 1; }
         log "disaster considered authorized"
-        $0        stop
+        $self        stop
         log "nuking.."
-        $0        ssh-all      -- rm -rf ${NODE_DB_PATH}
-        $0        start;;
+        $self        ssh-all      -- rm -rf ${NODE_DB_PATH}
+        $self        start;;
 "" | "" ) # Doc:
         ;;
 "" | blockchain-level-interaction ) # Doc:
