@@ -34,6 +34,7 @@ done
 git clone "${OPS_REPO}" "${CLUSTER_NAME}"
 cd "${CLUSTER_NAME}"
 git checkout "${BRANCH_NAME}"
+git submodule update --init
 cat > .config.sh <<EOF
 CLUSTER_KIND=${CLUSTER_KIND}
 CLUSTER_TYPE=${CLUSTER_TYPE}
