@@ -73,8 +73,8 @@ cmd=${1:-doit}; test -n "$1"; shift
 ### Overlay root detection: ${PWD}, $(dirname $self)
 ###
 gacroot="$(realpath $0 | xargs dirname | xargs echo)"
-if test -d "${PWD}/clusters"
-then overlayroot="${PWD}"
+if test -d "$(dirname $0)/clusters"
+then overlayroot="$(dirname $0)"
 else overlayroot="${gacroot}"
 fi
 
