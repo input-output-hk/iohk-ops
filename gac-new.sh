@@ -54,4 +54,5 @@ nixops       create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/*.nix
 $GAC_CENTRAL configure-nixops-deployment-arguments
 log "cluster has been set up, but not deployed;  Next steps:"
 log "  1. cd ${CLUSTER_NAME}"
-log "  2. gac deploy"
+log "  2. ./enter.sh"
+log "  3. gac deploy"
