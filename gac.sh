@@ -60,6 +60,7 @@ log() {
         echo "==(  $*" >&2
 }
 
+verbose=
 while test -n "$1"
 do case "$1" in
            --verbose | -v ) set -x; verbose="--verbose";;
