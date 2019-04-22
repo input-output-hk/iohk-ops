@@ -142,6 +142,19 @@ envSettings env =
                                , (Faucet,         All, "deployments/cardano-faucet-env-development.nix")
                                , (ReportServer,   All, "deployments/report-server-env-development.nix")
                                ] <> deplAgnosticFiles}
+    DevOps -> EnvSettings
+      { envDeployerUser      = "staging"
+      , envDefaultConfigurationKey = "devnet"
+      , envDefaultConfig     = "config.yaml"
+      , envDefaultTopology   = "topology-devops.yaml"
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
+                               , (Explorer,       All, "deployments/security-groups.nix")
+                               , (Faucet,         All, "deployments/security-groups.nix")
+                               , (Nodes,          All, "deployments/cardano-nodes-env-devops.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer-env-devops.nix")
+                               , (Faucet,         All, "deployments/cardano-faucet-env-devops.nix")
+                               , (Monitoring,     All, "deployments/monitoring-env-devops.nix")
+                               ] <> deplAgnosticFiles}
     Benchmark -> EnvSettings
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "bench"

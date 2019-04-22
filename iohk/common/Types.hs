@@ -142,6 +142,7 @@ data Environment
   | Staging
   | Testnet
   | Development
+  | DevOps
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Environment
 
