@@ -131,6 +131,7 @@ data Deployment
   | Infra
   | Nodes
   | ReportServer
+  | Monitoring
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Deployment
 
@@ -141,6 +142,7 @@ data Environment
   | Staging
   | Testnet
   | Development
+  | DevOps
   deriving (Bounded, Eq, Enum, Generic, Read, Show)
 instance FromJSON Environment
 

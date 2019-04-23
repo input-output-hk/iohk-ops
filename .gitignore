@@ -25,6 +25,7 @@ static/buildkite_token
 static/id_buildfarm
 static/recaptcha_secret_key
 static/recaptcha_site_key
+static/bors-ng*
 github_token
 
 image

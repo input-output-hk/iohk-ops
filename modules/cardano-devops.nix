@@ -3,7 +3,7 @@ with (import ./../lib.nix);
 params:
 { name, config, pkgs, resources, ... }: {
   imports = [
-    ./testnet.nix
+    ./devops.nix
     ./papertrail.nix
   ];
 

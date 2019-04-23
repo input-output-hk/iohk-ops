@@ -6,17 +6,10 @@ let
 
       imports = [
         ../modules/papertrail.nix
-        ../modules/datadog.nix
       ];
-
-      services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}"];
     };
 in {
   network.description = "IOHK infrastructure production";
-
-  defaults = {
-    services.dd-agent.tags = ["env:production" ];
-  };
 
   hydra        = mkHydra "hydra";
   faster-hydra = mkHydra "faster-hydra";
@@ -24,7 +17,6 @@ in {
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ../modules/datadog.nix
       ../modules/papertrail.nix
       ../modules/deployer.nix
     ];
@@ -72,7 +64,6 @@ in {
     keysDir = "/var/lib/keys";
   in {
     imports = [
-      ../modules/datadog.nix
       ../modules/papertrail.nix
     ];
 
@@ -117,7 +108,6 @@ in {
     keysDir = "/var/lib/keys";
   in {
     imports = [
-      ../modules/datadog.nix
       ../modules/papertrail.nix
       ../modules/log-classifier.nix
       ../modules/common.nix

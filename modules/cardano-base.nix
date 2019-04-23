@@ -7,7 +7,6 @@ with import ../lib.nix;
       ./common.nix
       ./amazon-base.nix
       ./network-wide.nix
-      ./dd-process-monitor.nix
     ];
 
     global.organisation = config.params.org;
@@ -35,8 +34,4 @@ with import ../lib.nix;
               then [ "allow-all-${config.params.region}-${config.params.org}" ]
               else sgNames);
 
-    services.dd-agent.processMonitor =
-      if config.params.typeIsExplorer then "cardano-explorer"
-      else if config.params.typeIsFaucet then "cardano-faucet"
-      else "cardano-node-simple";
   }

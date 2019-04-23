@@ -13,11 +13,12 @@ WITH_TESTNET=true
 WITH_DEVELOPMENT=true
 WITH_EXPLORER=true
 WITH_REPORT_SERVER=true
+WITH_MONITORING=true
 WITH_INFRA_PRODUCTION=true
 WITH_INFRA_STAGING=true
 WITH_BENCHMARK=true
 
-while getopts o:c:s:p:t:d:e:r:i:j:b: option
+while getopts o:c:s:p:t:d:e:r:m:i:j:b: option
 do
   case "${option}" in
     o) IOHK_OPS=${OPTARG};;
@@ -28,6 +29,7 @@ do
     d) WITH_DEVELOPMENT=${OPTARG};;
     e) WITH_EXPLORER=${OPTARG};;
     r) WITH_REPORT_SERVER=${OPTARG};;
+    m) WITH_MONITORING=${OPTARG};;
     i) WITH_INFRA_PRODUCTION=${OPTARG};;
     j) WITH_INFRA_STAGING=${OPTARG};;
     b) WITH_BENCHMARK=${OPTARG};;
@@ -59,6 +61,23 @@ touch static/datadog-api.secret static/datadog-application.secret
 
 test -f static/tarsnap-cardano-deployer.secret ||
         { echo "secret" > static/tarsnap-cardano-deployer.secret; }
+
+test -f static/oauth.nix ||
+        { echo "{
+  clientID = \"test.apps.googleusercontent.com\";
+  clientSecret = \"test\";
+  cookie.secret = \"test\";
+}" > static/oauth.nix; }
+
+test -f static/pager-duty.nix ||
+        { echo "{
+  serviceKey = \"test\";
+}" > static/pager-duty.nix; }
+
+test -f static/dead-mans-snitch.nix ||
+        { echo "{
+  pingUrl = \"http://example.com/test\";
+}" > static/dead-mans-snitch.nix; }
 
 mkdir -p keys
 for i in $(seq 0 9)
@@ -96,7 +115,7 @@ banner() {
 
 GENERAL_OPTIONS=(--verbose --deployer 0.0.0.0)
 COMMON_OPTIONS=( --topology topology-min.yaml )
-CARDANO_COMPONENTS=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} )
+CARDANO_COMPONENTS=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} ${WITH_MONITORING:+Monitoring} )
 
 nix-build default.nix -A cardano-sl-tools -o cardano-sl-tools
 
