@@ -251,7 +251,6 @@ dry | full-new-cluster-create-and-deploy-dry-run ) # Doc:
 create | create-cluster-nixops-deployment ) # Doc:
         set +u; AKID="$1"; test -n "$1" && shift; set -u
         ${nixops}    create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/*.nix
-        ${self}      configure-nixops-deployment-arguments
         ;;
 
 components | ls | list-cluster-components ) # Doc:
@@ -311,6 +310,7 @@ deploy | d | update-and-deploy ) # Doc:
 		$self create
 	fi
         $self     components
+        $self     configure-nixops-deployment-arguments
         ${nixops} check    ${nixops_subopts} || true # <- nixops check returns non-zero status when resources are missing but it still updates the state. so we don't want this to stop us.
         ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER_TYPE}/*.nix
         ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
