@@ -475,7 +475,7 @@ in {
                     }
                     {
                       alert = "node_time_unsync";
-                      expr = "abs(node_timex_offset_seconds) > 0.010 or node_timex_sync_status != 1";
+                      expr = "abs(node_timex_offset_seconds) > 0.050 or node_timex_sync_status != 1";
                       for = "1m";
                       labels = {
                         severity = "page";
