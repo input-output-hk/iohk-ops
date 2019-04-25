@@ -256,7 +256,7 @@ create | create-cluster-nixops-deployment ) # Doc:
 components | ls | list-cluster-components ) # Doc:
         log "components of cluster ${CLUSTER_NAME}:"
         echo ${nixops_constituents} | tr " " "\n" | sort | sed 's,^,   ,';;
-configure | conf | configure-nixops-deployment-arguments ) # Doc:
+configure | config | cfg | conf | configure-nixops-deployment-arguments ) # Doc:
         log "querying own IP.."
         deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
         log "setting up the AWS access key.."
