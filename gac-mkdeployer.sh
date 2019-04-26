@@ -28,7 +28,8 @@ region_tagged_instances() {
         local region="$1"
         local tags="$2"
         aws=$(nix-build --no-out-link -E '(import ./. {}).pkgs.awscli' | xargs echo)/bin/aws
-        ${aws} ec2 describe-instances --filters "Name=${tags}" --region  ${region} --output json
+        1>&2 echo ${aws} ec2 describe-instances --filters "${tags}" --region  ${region} --output json
+        ${aws} ec2 describe-instances --filters "${tags}" --region  ${region} --output json
 }
 region_tagged_instances_property() {
         local region="$1"
@@ -116,7 +117,8 @@ create | create-and-maybe-deploy-new-deployer ) # Doc:
         done
         set -u
 
-        deployer_tags="tag:deployment,Values=${CLUSTER_NAME},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
+        #deployer_tags="tag:deployment,Values=${CLUSTER_NAME},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
+	deployer_tags="Name=instance-state-name,Values=running,Name=tag:role,Values=deployer,Name=tag:deployment,Values=${CLUSTER_TYPE}"
         
         export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
         nixpkgs_out=$(nix-instantiate  --eval -E '(import ./. {}).nixpkgs'     | xargs echo)
@@ -137,7 +139,7 @@ create | create-and-maybe-deploy-new-deployer ) # Doc:
                     --instance-type ${ec2type}                                       \
                     --placement AvailabilityZone=${az}                               \
                     --block-device-mappings DeviceName=/dev/sda1,Ebs={VolumeSize=200} \
-                    --tag-specifications "ResourceType=instance,Tags=[{Key=deployment,Value=${CLUSTER_KIND}},{Key=role,Value=deployer}]" \
+                    --tag-specifications "ResourceType=instance,Tags=[{Key=deployment,Value=${CLUSTER_NAME}},{Key=role,Value=deployer}]" \
                     --user-data file://$(dirname $0 | xargs realpath)/modules/deployer-bootstrap.nix
         fi
 
@@ -163,8 +165,8 @@ setup | finalise-deployer-nixops-bootstrap ) # Doc:
         CLUSTER_KIND="$1"
         CLUSTER_TYPE="$2"
         CLUSTER_NAME="$3"
-        test -d ./clusters/${CLUSTER_KIND} || {
-                log "ERROR: unknown cluster ${CLUSTER_KIND} -- to see available clusters:  ls clusters"
+        test -d ./clusters/${CLUSTER_TYPE} || {
+                log "ERROR: unknown cluster ${CLUSTER_TYPE} -- to see available clusters:  ls clusters"
                 exit 1
         }
         cluster_config="./configs/${CLUSTER_TYPE}.nix"
@@ -175,7 +177,7 @@ setup | finalise-deployer-nixops-bootstrap ) # Doc:
 
         region="eu-central-1"
         export AWS_PROFILE=${CLUSTER_KIND} AWS_REGION=${region}
-        deployer_tags="tag:deployment,Values=${CLUSTER_KIND},Name=tag:role,Values=deployer,Name=instance-state-name,Values=running"
+        deployer_tags="Name=instance-state-name,Values=running,Name=tag:role,Values=deployer,Name=tag:deployment,Values=${CLUSTER_TYPE}"
 
         log "setting up AWS.."
         deployer_ip=$(region_tagged_instances_property ${region} ${deployer_tags} '[0].Instances[0].PublicIpAddress' | xargs echo)
@@ -196,6 +198,7 @@ ssh-keyscan -t ed25519 localhost  >> ~/.ssh/known_hosts && \
 cat ~/.ssh/id_ed25519.pub && \
 echo 'Please authorise this key and press Enter: ' && \
 read foo && \
+rm -rf infra
 if test ! -d infra; then git clone ${ops_url} infra; fi && \
 cd infra && \
 echo CLUSTER_KIND=${CLUSTER_KIND} > .config.sh && \
@@ -204,10 +207,10 @@ echo CLUSTER_NAME=infra >> .config.sh && \
 echo CONFIG=${CLUSTER_KIND}-infra >> .config.sh && \
 git checkout ${ops_branch} && \
 git config --replace-all receive.denyCurrentBranch updateInstead"
-        ssh "deployer@${deployer_ip}" sh -c "\"${setup_cmd}\""
+        ssh -o ForwardAgent=yes "deployer@${deployer_ip}" sh -c "\"${setup_cmd}\""
 
         echo "Deploying infra cluster.." >&2
-        ssh -A "deployer@${deployer_ip}" sh -c "\"cd infra && ./enter.sh gac ${verbose} create-deployment-from-cluster-components ${AKID} \"";;
+        ssh -o ForwardAgent=yes -A "deployer@${deployer_ip}" sh -c "\"cd infra && ./enter.sh gac ${verbose} create-deployment-from-cluster-components ${AKID} \"";;
 * )
         fail "unknown command: ${cmd}";;
 esac
