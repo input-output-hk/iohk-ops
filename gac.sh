@@ -136,6 +136,7 @@ nixops_nix_opts="${nix_opts} \
 -I config=./configs/${CONFIG}.nix \
 -I configs=./configs \
 -I module=${gacroot}/modules \
+-I overlay=${gacroot}/overlays \
 -I static=./static \
 -I goguen=${gacroot}/goguen \
 ${OVERLAY_MODE:+-I local-module=./modules} \
