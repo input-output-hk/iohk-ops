@@ -1,0 +1,44 @@
+diff --git a/src/Stack/Config/Nix.hs b/src/Stack/Config/Nix.hs
+index 04243ceaa..00307cee3 100644
+--- a/src/Stack/Config/Nix.hs
++++ b/src/Stack/Config/Nix.hs
+@@ -27,8 +27,7 @@ nixOptsFromMonoid
+     -> OS
+     -> RIO env NixOpts
+ nixOptsFromMonoid NixOptsMonoid{..} os = do
+-    let nixEnable0 = fromFirst False nixMonoidEnable
+-        defaultPure = case os of
++    let defaultPure = case os of
+           OSX -> False
+           _ -> True
+         nixPureShell = fromFirst defaultPure nixMonoidPureShell
+@@ -38,14 +37,14 @@ nixOptsFromMonoid NixOptsMonoid{..} os = do
+                           ++ prefixAll (T.pack "-I") (fromFirst [] nixMonoidPath)
+         nixAddGCRoots   = fromFirst False nixMonoidAddGCRoots
+ 
++    -- Enable Nix-mode by default on NixOS, unless Docker-mode was specified
+     osIsNixOS <- isNixOS
++    let nixEnable0 = fromFirst osIsNixOS nixMonoidEnable
++
+     nixEnable <- case () of _
+                                 | nixEnable0 && osIsWindows -> do
+                                       logInfo "Note: Disabling nix integration, since this is being run in Windows"
+                                       return False
+-                                | not nixEnable0 && osIsNixOS -> do
+-                                      logInfo "Note: Enabling Nix integration, as it is required under NixOS"
+-                                      return True
+                                 | otherwise                 -> return nixEnable0
+ 
+     when (not (null nixPackages) && isJust nixInitFile) $
+diff --git a/stack.yaml b/stack.yaml
+index 5808aa6e0..e6696b14e 100644
+--- a/stack.yaml
++++ b/stack.yaml
+@@ -9,7 +9,6 @@ resolver: lts-11.6
+ #       name: "fpco/stack-test"
+ nix:
+   # --nix on the command-line to enable.
+-  enable: false
+   packages:
+     - zlib
+     - unzip

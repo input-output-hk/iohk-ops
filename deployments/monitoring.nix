@@ -55,4 +55,3 @@ in
 
   resources.elasticIPs = nodesElasticIPs nodeMap;
 }
-

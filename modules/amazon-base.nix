@@ -9,5 +9,5 @@ with (import ./../lib.nix);
  deployment.ec2.keyPair = let keypairName = orgRegionKeyPairName "IOHK" "${config.deployment.ec2.region}";
                           in mkDefault (resources.ec2KeyPairs."${keypairName}");
  deployment.ec2.ebsInitialRootDiskSize = mkDefault 30;
- networking.hostName = "${config.deployment.name}.${config.deployment.targetEnv}.${name}";
+ networking.hostName = mkDefault "${config.deployment.name}.${config.deployment.targetEnv}.${name}";
 }

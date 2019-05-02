@@ -5,6 +5,7 @@
 keys/*.key
 /test-*.yaml
 config.yaml
+.config.sh
 
 .stack-work
 /cardano-sl/
@@ -19,13 +20,7 @@ logs-analyze/
 /nixops
 /update-proposals/
 
-static/*.secret
-static/github_token
-static/buildkite_token
-static/id_buildfarm
-static/recaptcha_secret_key
-static/recaptcha_site_key
-static/bors-ng*
+/static
 github_token
 
 image

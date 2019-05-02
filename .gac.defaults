@@ -1,0 +1,4 @@
+CLUSTER_KIND=mantis
+CLUSTER_TYPE=mantis
+OPS_REPO='git@github.com:input-output-hk/iohk-ops'
+DEFAULT_OPS_BRANCH='master'

@@ -1,0 +1,1 @@
+../../deployments/mantis/goguen-ala-cardano-target-aws.nix

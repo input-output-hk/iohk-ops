@@ -1,0 +1,18 @@
+{
+    "enabled": 1,
+    "hidden": false,
+    "description": "Jobsets",
+    "nixexprinput": "src",
+    "nixexprpath": "goguen/jobsets/default.nix",
+    "checkinterval": 60,
+    "schedulingshares": 420,
+    "enableemail": true,
+    "emailoverride": "",
+    "keepnr": 3,
+    "inputs":
+    {
+        "src": { "type": "git", "value": "git@github.com:input-output-hk/iohk-ops.git goguen-ala-cardano", "emailresponsible": false }
+        ,"nixpkgs": { "type": "git", "value": "https://github.com/NixOS/nixpkgs-channels.git nixos-18.09", "emailresponsible": false }
+        ,"mantisPrsJSON": { "type": "githubpulls", "value": "input-output-hk mantis", "emailresponsible": false }
+    }
+}

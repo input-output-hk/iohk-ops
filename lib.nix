@@ -2,31 +2,119 @@
 # nix-repl lib.nix
 
 let
-  application = "iohk-ops";
   # iohk-nix can be overridden for debugging purposes by setting
   # NIX_PATH=iohk_nix=/path/to/iohk-nix
-  iohkNix = import (
+  mkIohkNix = { iohkNixJsonOverride ? ./iohk-nix.json, ... }@iohkNixArgs: import (
     let try = builtins.tryEval <iohk_nix>;
     in if try.success
     then builtins.trace "using host <iohk_nix>" try.value
     else
       let
-        spec = builtins.fromJSON (builtins.readFile ./iohk-nix.json);
+        spec = builtins.fromJSON (builtins.readFile iohkNixJsonOverride);
       in builtins.fetchTarball {
         url = "${spec.url}/archive/${spec.rev}.tar.gz";
         inherit (spec) sha256;
-      }) { inherit application; };
+      }) (removeAttrs iohkNixArgs ["iohkNixJsonOverride"]);
+  iohkNix       = mkIohkNix { application = "iohk-ops"; };
+  iohkNixGoguen = mkIohkNix { application = "goguen"
+                            ; nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json
+                            ; iohkNixJsonOverride = ./goguen/pins/iohk-nix-src.json
+                            ; config = { allowUnfree = true; }
+                            ; };
+  goguenNixpkgs = iohkNixGoguen.nixpkgs;
+
+  pinFile       = dir: name: dir + "/${name}-src.json";
+  readPin       = dir: name: builtins.fromJSON (builtins.readFile (pinFile dir name));
+  readPinTraced = dir: name: let json = builtins.readFile (pinFile dir name); in
+                             builtins.fromJSON (builtins.trace json json);
+  pinIsPrivate  = dir: name: let pin = builtins.fromJSON (builtins.readFile (pinFile dir name));
+                             in pin.url != builtins.replaceStrings ["git@github.com"] [""] pin.url;
+  addPinName = name: pin: pin // { name = name+"-git-${pin.rev}"; };
+  getPinFetchgit = dir: name: removeAttrs     (readPin dir name)  ["ref"];
+  getPinFetchGit = dir: name: addPinName name (readPin dir name); ## 'submodules' to be removed later
+  fetchGitPin = name: pinJ:
+    builtins.fetchGit (pinJ // { name = name; });
+
+  ## repoSpec                = RepoSpec { name :: String, subdir :: FilePath, src :: Drv }
+  ## fetchGitWithSubmodules :: Name -> Drv -> Map String RepoSpec -> Drv
+  fetchGitWithSubmodules = mainName: mainRev: mainSrc: subRepos:
+    with builtins; with pkgs;
+    let subRepoCmd = repo: ''
+        chmod -R u+w $(dirname $out/${repo.subdir})
+        rmdir $out/${repo.subdir}
+        cp -R  ${repo.src} $out/${repo.subdir}
+        '';
+        cmd = ''
+
+        cp -R ${mainSrc} $out
+
+        '' + concatStringsSep "\n" (map subRepoCmd (attrValues subRepos));
+    in runCommand "fetchGit-composite-src-${mainName}-${mainRev}" { buildInputs = []; } cmd;
+
+  fetchGitPinWithSubmodules = pinRoot: name: { submodules ? {}, ... }@pin:
+    let fetchSubmodule = subName: subDir: { subdir = subDir; src = pkgs.fetchgit (getPinFetchgit pinRoot subName); };
+    in fetchGitWithSubmodules name pin.rev
+       (builtins.fetchGit (removeAttrs pin ["submodules"]))
+       (lib.mapAttrs fetchSubmodule submodules);
+
+  ## Depending on whether the repo is private (URL has 'git@github' in it), we need to use fetchGit*
+  fetchPinAuto = pinRoot: name:
+    if pinIsPrivate pinRoot name
+    then fetchGitPinWithSubmodules pinRoot name (getPinFetchGit pinRoot name)
+    else pkgs.fetchgit                          (getPinFetchgit pinRoot name);
 
   # nixpkgs can be overridden for debugging purposes by setting
   # NIX_PATH=custom_nixpkgs=/path/to/nixpkgs
   pkgs = iohkNix.pkgs;
   lib = pkgs.lib;
+  fetchProjectPackages = name: host: pinRoot: revOverride: args:
+    let
+      args' = args // {
+        enableDebugging = args.enableDebugging or false;
+        enableProfiling = args.enableProfiling or false;
+      };
+      src = let try = builtins.tryEval host;
+        in if try.success
+           then builtins.trace "using search host <${name}>" try.value
+           else fetchPinAuto pinRoot name;
+      src-phase2 = let
+        localOverride = {
+          ### XXX: not really workable right now, for obvious reasons.  Left for uniformity with CSL definition above/future refactoring.
+          outPath = builtins.fetchTarball "https://github.com/input-output-hk/${name}/archive/${revOverride}.tar.gz";
+          rev = revOverride;
+        };
+        in if (revOverride != null) then localOverride else src;
+      pkgs = import src-phase2 ({
+          inherit (args') enableDebugging enableProfiling;
+        } // lib.optionalAttrs (src-phase2 ? rev) {
+          gitrev = src-phase2.rev;
+        });
+    in pkgs;
+  javaOverrideNixpkgsConfig = {
+    overlays = [ oracleJdkOverlay ];
+    config.allowUnfree = true;
+  };
+  oracleJdkOverlay =  self : super: {
+    oraclejdk8 = super.callPackage ./goguen/jdk-override/jdk8cpu-linux.nix {
+      installjdk = true;
+      pluginSupport = false;
+      licenseAccepted = true;
+    };
+  };
+  graalvm8 = (import iohkNixGoguen.nixpkgs javaOverrideNixpkgsConfig).graalvm8;
 in lib // (rec {
+  inherit (iohkNix) nixpkgs;
+  inherit mkIohkNix fetchProjectPackages pkgs graalvm8;
+  inherit iohkNix iohkNixGoguen goguenNixpkgs;
+  inherit fetchPinAuto fetchGitWithSubmodules readPin;
+
   ## nodeElasticIP :: Node -> EIP
   nodeElasticIP = node:
     { name = "${node.name}-ip";
       value = { inherit (node) region accessKeyId; };
     };
+  nodeDryRunnablePrivateIP = node: if node.options.networking.privateIPv4.isDefined then node.config.networking.privateIPv4 else "DRYRUN-PLACEHOLDER";
+  nodeDryRunnablePublicIP  = node: if node.options.networking.publicIPv4.isDefined  then node.config.networking.publicIPv4  else "DRYRUN-PLACEHOLDER";
 
   centralRegion = "eu-central-1";
   centralZone   = "eu-central-1b";
@@ -38,9 +126,6 @@ in lib // (rec {
   resolveSGName = resources: name: resources.ec2SecurityGroups.${name};
 
   orgRegionKeyPairName = org: region: "cardano-keypair-${org}-${region}";
-
-  inherit (iohkNix) nixpkgs;
-  inherit pkgs;
 
   traceF   = f: x: builtins.trace                         (f x)  x;
   traceSF  = f: x: builtins.trace (builtins.seq     (f x) (f x)) x;
