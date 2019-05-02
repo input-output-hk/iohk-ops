@@ -11,7 +11,7 @@ with import <nixpkgs/lib>;
     ec2SecurityGroups = {
       "allow-hydra-${region}-${org}" = { resources, ...}: {
         inherit region accessKeyId;
-        description = "SSH";
+        description = "Hydra Ingress";
         rules = [
           {
             protocol = "tcp"; # TCP

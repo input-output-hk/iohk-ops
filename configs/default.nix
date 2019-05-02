@@ -27,7 +27,7 @@
 
   cluster = {
     ## Do not allocate hosted zones by default.
-    hostedZone                 = "project42.iohkdev.io";
+    hostedZone                 = "iohkdev.io";
 
     ## Do not allocate EIPs by default.
     allocateElasticIP          = false;

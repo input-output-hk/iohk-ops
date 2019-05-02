@@ -2,7 +2,7 @@
 
 let lib = import ../lib.nix; in
 with lib;
-with (import ../lib/ssh-keys.nix { inherit lib; });
+with import ../lib/ssh-keys.nix { inherit lib; };
 
 let
   iohk-pkgs = import ../default.nix {};
@@ -28,7 +28,6 @@ in {
       "hydra.iohk.io-1:E8yDJv2SBXM6PQPVbhCWK7VvitistFYSH2u3AuwCiu4="
     ];
 
-    services.dd-agent.tags = ["env:production" "depl:${config.deployment.name}" "role:deployer"];
     networking.hostName = "devMantis-deployer";
 
     users.groups.developers = {};

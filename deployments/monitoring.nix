@@ -5,11 +5,11 @@ let
 in
 
 {
-  monitoring = { config, lib, pkgs, resources, nodes, ... }: 
+  monitoring = { config, lib, pkgs, resources, nodes, ... }:
   let
-    hostList = lib.mapAttrsToList 
+    hostList = lib.mapAttrsToList
       (nodeName: node: {
-        name = "${nodeName}.${node.config.deployment.name}"; 
+        name = "${nodeName}.${node.config.deployment.name}";
         ip = node.config.networking.publicIPv4;
         withNginx = node.config.services.nginx.enable;
       }) nodes;
@@ -31,7 +31,7 @@ in
     networking.extraHosts = ''
       ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}") hostList)}
     '';
- 
+
     services.monitoring-services = {
       enable = true;
       oauth = {
@@ -55,4 +55,3 @@ in
 
   resources.elasticIPs = nodesElasticIPs nodeMap;
 }
-

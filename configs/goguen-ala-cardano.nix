@@ -5,7 +5,7 @@
   };
 
   cluster = {
-    hostedZone           = "project42.iohkdev.io";
+    hostedZone           = "iohkdev.io";
     allocateElasticIP    = true;
     oauthEnable          = true;
   };

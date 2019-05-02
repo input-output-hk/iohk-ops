@@ -8,8 +8,6 @@ with (import ../lib.nix);
   security.sudo.enable = true;
   security.sudo.wheelNeedsPassword = false;
 
-  services.dd-agent.tags = [ "role:deployer" "depl:${config.deployment.name}" ];
-
   environment.systemPackages = (with pkgs; [
     awscli
     gnupg

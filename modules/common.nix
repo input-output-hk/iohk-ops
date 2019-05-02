@@ -64,12 +64,11 @@ with (import ./../lib.nix);
 
     # use our hydra builds
     # XXX: if there are any objections for adding mantis-hydra (potential security issues), let's discuss them
-    trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" "https://hydra.project42.iohkdev.io/" ];
+    trustedBinaryCaches = [ "https://cache.nixos.org" "https://hydra.iohk.io" ];
     binaryCaches = trustedBinaryCaches;
     binaryCachePublicKeys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-      "hydra.iohk.io-1:chtUuea0mkt7j3Q3ESvfJUeqTNNPspSO//Yl6O00p/Y="
     ];
   };
   system.extraSystemBuilderCmds = ''

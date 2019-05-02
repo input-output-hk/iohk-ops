@@ -3,7 +3,7 @@ with import ../../lib.nix;
 
 let
   mkExplorer = mantisNodeName: {
-    imports = [ <module/exporer-remix-solidity-services.nix> ];
+    imports = [ <module/explorer-remix-solidity-services.nix> ];
     config.services.mantis-explorer.mantis-node = mantisNodeName;
   };
 
