@@ -8,7 +8,6 @@
 
     nixpkgs.overlays = [
       (import ../overlays/monitoring-exporters.nix)
-      (import ../overlays/prometheus-bump.nix)
     ];
   };
 }
