@@ -2,32 +2,42 @@
 set -e
 
 usage() {
-        echo "$(basename $0) [--verbose] COMMAND ARGS.." >&2
+        echo "$(basename "$0") [--verbose] COMMAND ARGS.." >&2
         echo
         echo "                new  CLUSTER-NAME [OPS-BRANCH-NAME] [CLUSTER-TYPE] [CLUSTER-KIND]"
-        grep ' ) # Doc:' $0 | sed 's,^\([^ ]*\) .* \([^ ]*\) ) # Doc:\(.*\)$,"\1" "\2",' | tail -n +2 | {
-                read a b
+        grep ' ) # Doc:' "$0" | sed 's,^\([^ ]*\) .* \([^ ]*\) ) # Doc:\(.*\)$,"\1" "\2",' | tail -n +2 | {
+                read -r a b
                 while test -n "$a"
                 do
-                        printf "%20s  %s\n" "$(echo $a | xargs echo)" "$(echo $b | sed 's,-, ,g; s/\b\(.\)/\u\1/' | xargs echo)"
-                        read a b
+                        printf '%20s  %s\n' "$(echo "$a" | xargs)" "$(echo "$b" | sed 's,-, ,g; s/\b\(.\)/\u\1/' | xargs)"
+                        read -r a b
                 done
         }
 }
 
 load_config() {
-    if [ ! "$CONFIGURED" = "true" ]
+
+    if [[ ! "$CONFIGURED" = "true" ]]
        then
             log "Loading .config.sh"
             verbose=""
+
+            if ! [[ -f ./.config.sh ]]; then
+                    log "ERROR:  .config.sh does not exist; please create it."
+                    exit 1
+            fi
+
             if ! grep -q CLUSTER_KIND ./.config.sh || \
-            ! grep -q CLUSTER_TYPE ./.config.sh || \
-            ! grep -q CLUSTER_NAME ./.config.sh || \
-            ! grep -q CONFIG       ./.config.sh
+               ! grep -q CLUSTER_TYPE ./.config.sh || \
+               ! grep -q CLUSTER_NAME ./.config.sh || \
+               ! grep -q CONFIG       ./.config.sh
             then
                     log "ERROR:  malformed .config.sh -- missing one of CLUSTER_{KIND,TYPE,NAME} or CONFIG"
                     exit 1
             fi
+            # Shellcheck complains that `.config.sh` is not present; however,
+            # at the time we run Shellcheck, it's not supposed to be present.
+            # shellcheck disable=SC1091
             . ./.config.sh
             if test -z "${GAC_RECURSIVE}"
             then log ".config.sh settings:"
@@ -67,21 +77,22 @@ do case "$1" in
            --help | "--"* ) usage; exit 1;;
            * ) break;;
    esac; shift; done
-self="$(realpath $0) ${verbose}"
+self="$(realpath "$0") ${verbose}"
 cmd=${1:-doit}; test -n "$1"; shift
 
 ###
 ### Overlay root detection: ${PWD}, $(dirname $self)
 ###
-gacroot="$(realpath $0 | xargs dirname | xargs echo)"
-if test -d "$(dirname $0)/clusters"
-then overlayroot="$(dirname $0)"
+gacroot="$(realpath "$0" | xargs dirname | xargs echo)"
+if test -d "$(dirname "$0")/clusters"
+then overlayroot="$(dirname "$0")"
 else overlayroot="${gacroot}"
 fi
 
 ###
 ### Overlay/defaults: ${PWD}/.defaults
 ###
+# shellcheck disable=SC1090
 if test -f "${overlayroot}/.gac.defaults"
 then .     "${overlayroot}/.gac.defaults"
 else .         "${gacroot}/.gac.defaults"
@@ -100,7 +111,12 @@ else override=
 fi
 if test -x "${override}"
 then log "running an override for 'gac ${cmd}':  ${override}"
+     # Shellcheck complains that `GAC_CENTRAL` is unused; however,
+     # it is used by `gac-new.sh` (which is sourced in here whenever `gac new` is called)
+     # shellcheck disable=SC2034
      GAC_CENTRAL=$self
+     # Shellcheck can't follow non-constant source. Too bad.
+     # shellcheck disable=SC1090
      . ${override} "$@"
      exit $? ## set -e does this already, so adding just for clarity.
 fi
@@ -143,18 +159,20 @@ ${OVERLAY_MODE:+-I local-module=./modules} \
 ${OVERLAY_MODE:+-I iops=./iops} \
 "
 
-if test ! -f ${nixops}
-then nix-store --realise ${nixops}
+if test ! -f "${nixops}"
+then nix-store --realise "${nixops}"
 fi
 
 export NIX_PATH="nixpkgs=${nixpkgs_out}"
 
 nixops_subopts="--deployment ${CLUSTER_NAME} ${nixops_nix_opts}"
 nixops_subopts_deploy="${nixops_subopts} --max-concurrent-copy=50"
-nixops_bincaches="https://cache.nixos.org https://hydra.iohk.io https://mantis-hydra.aws.iohkdev.io"
 
-nixops_constituents="$(ls ./clusters/${CLUSTER_TYPE}/*.nix)"
-nixops_constituents_quoted="$(echo ${nixops_constituents} | sed 's,\\b,\",g')"
+nixops_constituents="$(ls "./clusters/${CLUSTER_TYPE}"/*.nix)"
+# We're using `ls -Q` here to quote; make sure we have the GNU version of `ls`
+# because the Darwin/BSD version does *not* support this option.
+PATH=$(nix-build -E "(import ./. {}).pkgs.coreutils" --no-out-link)/bin:$PATH
+nixops_constituents_quoted="$(echo "${nixops_constituents}" | xargs ls -Q)"
 nixops_deplArgs="{ accessKeyId = \"AKID\"; deployerIP = \"127.0.0.1\"; }"
 nixops_network_expr="import <nixops/eval-machine-info.nix> { \
     networkExprs = [ ${nixops_constituents_quoted} ]; \
@@ -165,8 +183,9 @@ nixops_network_expr="import <nixops/eval-machine-info.nix> { \
   }"
 
 generate_faucet_keys () {
-        export JAVA_HOME=`nix-build -E    "(import ./. {}).pkgs.openjdk8"  --no-out-link`
-        node=`nix-build --no-out-link -E  "(import ./. {}).${NODE_DERIVATION}"`
+        JAVA_HOME=$(nix-build -E    "(import ./. {}).pkgs.openjdk8"  --no-out-link)
+        export JAVA_HOME
+        node=$(nix-build --no-out-link -E  "(import ./. {}).${NODE_DERIVATION}")
         FAUCETS="faucet-a"
         FAUCET_ADDRS="static/faucet-addresses.nix"
         FAUCET_KEYGEN_CONF="static/faucet-keygen.conf"
@@ -176,7 +195,7 @@ generate_faucet_keys () {
         echo '{'                          > ${FAUCET_ADDRS}
         for f in $FAUCETS; do
                 rm -f ~/.mallet/*
-                ${node}/bin/${NODE_EXECUTABLE} -Dconfig.file=${FAUCET_KEYGEN_CONF} mallet "http://127.0.0.1" --command newAccount --password ""
+                "${node}/bin/${NODE_EXECUTABLE}" -Dconfig.file=${FAUCET_KEYGEN_CONF} mallet "http://127.0.0.1" --command newAccount --password ""
                 cat   ~/.mallet/*         >> "static/mallet-${f}.json"
                 addr="$(jq ".address" ~/.mallet/*)"
                 echo "${f} = ${addr};"    >> ${FAUCET_ADDRS}
@@ -185,8 +204,9 @@ generate_faucet_keys () {
 }
 
 generate_node_keys () {
-        export JAVA_HOME=`nix-build   -E  "(import ./. {}).pkgs.openjdk8"  --no-out-link`
-        node=`nix-build --no-out-link -E  "(import ./. {}).${NODE_DERIVATION}"`
+        JAVA_HOME=$(nix-build   -E  "(import ./. {}).pkgs.openjdk8"  --no-out-link)
+        export JAVA_HOME
+        node=$(nix-build --no-out-link -E  "(import ./. {}).${NODE_DERIVATION}")
         NODE_IDS="static/node-ids.nix"
 
         mkdir -p "static"
@@ -194,24 +214,25 @@ generate_node_keys () {
         for n in $ALL_NODES; do
                 KEY_FILE="static/$n.key"
 
-                if [ ! -f "$KEY_FILE" ]; then
-                        ${node}/bin/eckeygen > "$KEY_FILE"
+                if [[ ! -f "$KEY_FILE" ]]; then
+                        "${node}/bin/eckeygen" > "$KEY_FILE"
                 fi
 
-                NODE_ID="`sed -n 2p \"$KEY_FILE\"`"
+                NODE_ID="$(sed -n 2p \""$KEY_FILE"\")"
                 echo "  $n = { id = \"$NODE_ID\"; };" >> "$NODE_IDS"
         done
         echo "}" >> "$NODE_IDS"
 }
 
 generate_self_signed_tls_cert () {
-    rm -rf ${TLS_CERT_DIR}
-    mkdir -p ${TLS_CERT_DIR}
+    rm -rf "${TLS_CERT_DIR}"
+    mkdir -p "${TLS_CERT_DIR}"
     openssl=$(nix-build --no-out-link -E '(import ./. {}).pkgs.openssl' | xargs echo)/bin/openssl
     ${openssl} req -x509 -newkey rsa:4096 -nodes -keyout "${TLS_CERT_KEY}" -out \
                "${TLS_CERT}" -days 365 -subj '/CN=localhost'
 }
 
+# shellcheck disable=SC2221,SC2222
 case ${cmd} in
 "" | "" ) # Doc:
         ;;
@@ -220,28 +241,28 @@ case ${cmd} in
 "" | "" ) # Doc:
         ;;
 eval | evaluate-nixops-machine-definition ) # Doc:
-        nix-instantiate ${nixops_nix_opts} --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"${DEFAULT_NODE}\"]; }";;
+        nix-instantiate "${nixops_nix_opts}" --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"${DEFAULT_NODE}\"]; }";;
 repl | repl-with-machine-definition ) # Doc:
         nixver="$(nix --version | cut -d ' ' -f3)"
-        if test ${nixver} != 2.2 -a ${nixver} != 2.3 -a ${nixver} != 2.4 -a ${nixver} != 2.5
+        if test "${nixver}" != 2.2 -a "${nixver}" != 2.3 -a "${nixver}" != 2.4 -a "${nixver}" != 2.5
         then log "ERROR:  nix version 2.2 required for 'gac repl'"
         fi
-        nix repl     ${nixops_nix_opts} --arg    depl       "${nixops_network_expr}" ./network.nix \
+        nix repl     "${nixops_nix_opts}" --arg    depl       "${nixops_network_expr}" ./network.nix \
                                         --argstr nixpkgsSrc "${nixpkgs_out}";;
 dry | full-new-cluster-create-and-deploy-dry-run ) # Doc:
         export AWS_PROFILE=default AWS_ACCESS_KEY_ID=AKIASDADFLKJDFJDJFDJ AWS_SECRET_ACCESS_KEY=Hlkjdflsjfjlnrmnsiuhfskjhkshfiuurrfsd/Rp
-        if ${nixops} info  ${nixops_subopts} >/dev/null 2>&1
+        if ${nixops} info  "${nixops_subopts}" >/dev/null 2>&1
         then op=modify
         else op=create; generate_node_keys; fi
-        ${nixops} ${op}    ${nixops_subopts} ${nixops_constituents}
+        ${nixops} ${op}    "${nixops_subopts}" "${nixops_constituents}"
         deployerIP="127.0.0.1"
         AKID=someBoringAKID # "(pow 2.71828 . (3.1415 *) . sqrt) -1 = -1"
-        ${nixops} set-args ${nixops_subopts} \
+        ${nixops} set-args "${nixops_subopts}" \
 		  --argstr accessKeyId "${AKID}" \
 		  --argstr deployerIP "${deployerIP}" \
-	          --argstr clusterName "${CLUSTER_NAME}" \
+          --argstr clusterName "${CLUSTER_NAME}" \
 		  --arg config "import ./config.nix { clusterName = \"${CLUSTER_NAME}\"; deployerIP = \"${deployerIP}\"; accessKeyId = \"${AKID}\"; }"
-        ${nixops} deploy   ${nixops_subopts_deploy} --dry-run "$@"
+        ${nixops} deploy   "${nixops_subopts_deploy}" --dry-run "$@"
         ;;
 "" | "" ) # Doc:
         ;;
@@ -256,7 +277,7 @@ create | create-cluster-nixops-deployment ) # Doc:
 
 components | ls | list-cluster-components ) # Doc:
         log "components of cluster ${CLUSTER_NAME}:"
-        echo ${nixops_constituents} | tr " " "\n" | sort | sed 's,^,   ,';;
+        echo "${nixops_constituents}" | tr " " '\n' | sort | sed 's,^,   ,';;
 configure | config | cfg | conf | configure-nixops-deployment-arguments ) # Doc:
         log "querying own IP.."
         deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
@@ -268,14 +289,14 @@ configure | config | cfg | conf | configure-nixops-deployment-arguments ) # Doc:
 	fi
 
 	if [[ -z $AKID ]]; then
-                read -ep "Use AWS access key ID: " AKID
+                read -rep "Use AWS access key ID: " AKID
 	fi
 
-        if ! ( [ -f "${TLS_CERT}" ] || [ -f "${TLS_CERT_KEY}" ] )
+        if ! [[ -f "${TLS_CERT}" || -f "${TLS_CERT_KEY}" ]]
            then log "generating self-signed TLS certificate"
                 generate_self_signed_tls_cert
         fi
-        ${nixops} set-args ${nixops_subopts} \
+        ${nixops} set-args "${nixops_subopts}" \
                   --argstr accessKeyId "${AKID}" \
                   --argstr deployerIP "${deployerIP}" \
 	          --argstr clusterName "${CLUSTER_NAME}" \
@@ -291,12 +312,12 @@ genkey | g | generate-node-keys ) # Doc:
         generate_node_keys;;
 
 delete | destroy | terminate | abolish | eliminate | demolish | delete-nixops-deployment ) # Doc:
-        ${nixops} destroy  ${nixops_subopts} --confirm
-        ${nixops} delete   ${nixops_subopts};;
+        ${nixops} destroy  "${nixops_subopts}" --confirm
+        ${nixops} delete   "${nixops_subopts}";;
 fromscratch | re | redeploy-cluster-from-scrach ) # Doc:
         $self delete && $self create && $self deploy;;
 info   | i | nixops-info ) # Doc:
-        ${nixops} info     ${nixops_subopts};;
+        ${nixops} info     "${nixops_subopts}";;
 "" | "" ) # Doc:
         ;;
 "" | cluster-deployment ) # Doc:
@@ -304,17 +325,17 @@ info   | i | nixops-info ) # Doc:
 "" | "" ) # Doc:
         ;;
 deploy-one | one | deploy-one-machine ) # Doc:
-        $self     deploy --include ${DEFAULT_NODE};;
+        $self     deploy --include "${DEFAULT_NODE}";;
 deploy | d | update-and-deploy ) # Doc:
-	if ! ${nixops} info ${nixops_subopts} &>/dev/null; then
+	if ! ${nixops} info "${nixops_subopts}" &>/dev/null; then
 		log "recreating the Nixops deployment.."
 		$self create
 	fi
         $self     components
         $self     configure-nixops-deployment-arguments
-        ${nixops} check    ${nixops_subopts} || true # <- nixops check returns non-zero status when resources are missing but it still updates the state. so we don't want this to stop us.
-        ${nixops} modify   ${nixops_subopts} clusters/${CLUSTER_TYPE}/*.nix
-        ${nixops} deploy   ${nixops_subopts_deploy} "$@";;
+        ${nixops} check    "${nixops_subopts}" || true # <- nixops check returns non-zero status when resources are missing but it still updates the state. so we don't want this to stop us.
+        ${nixops} modify   "${nixops_subopts}" "clusters/${CLUSTER_TYPE}"/*.nix
+        ${nixops} deploy   "${nixops_subopts_deploy}" "$@";;
 "" | "" ) # Doc:
         ;;
 "" | building-derivations ) # Doc:
@@ -322,23 +343,23 @@ deploy | d | update-and-deploy ) # Doc:
 "" | "" ) # Doc:
         ;;
 update-pin | update | pin | update-a-goguen-package-pin ) # Doc:
-        ${gacroot}/goguen/update-pin.sh "$@";;
+        "${gacroot}/goguen/update-pin.sh" "$@";;
 build | b | build-goguen-package ) # Doc:
         pkg=$1; shift
-        ${nix_build} ${nix_opts} -A ${pkg} './default.nix' "$@";;
+        ${nix_build} "${nix_opts}" -A "${pkg}" './default.nix' "$@";;
 build-ala-hydra | build-goguen-package-like-hydra-does ) # Doc:
         #pkg=$1
         log "building Hydra"
         hydra_drv="$(   nix-instantiate -E '(import ./. {}).pkgs.hydra')"
-        hydra=$(${nix_build} ${nix_opts} ${hydra_drv})
+        hydra=$(${nix_build} "${nix_opts}" "${hydra_drv}")
         log "using Hydra to evaluate goguen/release.nix"
-        ${hydra}/bin/hydra-eval-jobs -I ${nixpkgs_out} -I . -I https://github.com/input-output-hk/iohk-nix/archive/25225e9e23d8fe73663c1e958d41d481b0a4e0f0.tar.gz goguen/release.nix "$@";;
+        "${hydra}/bin/hydra-eval-jobs" -I "${nixpkgs_out}" -I . -I https://github.com/input-output-hk/iohk-nix/archive/25225e9e23d8fe73663c1e958d41d481b0a4e0f0.tar.gz goguen/release.nix "$@";;
 drv | goguen-derivation ) # Doc:
         pkg=$1
-        ${nix_inst}  ${nix_opts} -A ${pkg} goguen/release.nix;;
+        ${nix_inst}  "${nix_opts}" -A "${pkg}" goguen/release.nix;;
 drv-show | prettyprint-goguen-derivation ) # Doc:
         pkg=$1
-        ${nix_inst}  ${nix_opts} -A ${pkg} goguen/release.nix | xargs ${nix} show-derivation;;
+        ${nix_inst}  "${nix_opts}" -A "${pkg}" goguen/release.nix | xargs "${nix}" show-derivation;;
 "" | "" ) # Doc:
         ;;
 "" | basic-node-ssh ) # Doc:
@@ -348,9 +369,9 @@ drv-show | prettyprint-goguen-derivation ) # Doc:
 ssh | ssh-to-node ) # Doc:
         machine="${1:-${DEFAULT_NODE}}";
         set +u; test -n "$1" && shift; set -u
-        ${nixops} ssh          ${nixops_subopts} ${machine} "$@";;
+        ${nixops} ssh          "${nixops_subopts}" "${machine}" "$@";;
 ssh-all | parallel-ssh-on-all-nodes ) # Doc:
-        ${nixops} ssh-for-each ${nixops_subopts} --parallel --include ${ALL_NODES} -- "$@";;
+        ${nixops} ssh-for-each "${nixops_subopts}" --parallel --include "${ALL_NODES}" -- "$@";;
 "" | "" ) # Doc:
         ;;
 "" | systemd-service-control ) # Doc:
@@ -360,17 +381,17 @@ ssh-all | parallel-ssh-on-all-nodes ) # Doc:
 stop | stop-all-node-services ) # Doc:
         on=${1:+--include $*}
         log "stopping node services on:  ${on}"
-        $self        ssh-all ${on} -- systemctl    stop ${NODE_SERVICE};;
+        $self        ssh-all "${on}" -- systemctl    stop "${NODE_SERVICE}";;
 start | start-all-node-services ) # Doc:
         on=${1:+--include $*}
         log "starting node services on:  ${on}"
-        $self        ssh-all ${on} -- systemctl   start ${NODE_SERVICE}; log "new start date:  $($self since ${DEFAULT_NODE})";;
+        $self        ssh-all "${on}" -- systemctl   start "${NODE_SERVICE}"; log "new start date:  $($self since "${DEFAULT_NODE}")";;
 restart | restart-all-node-services ) # Doc:
         on=${1:+--include $*}
-        $self        ssh-all ${on} -- systemctl restart ${NODE_SERVICE}; log "new start date:  $($self since ${DEFAULT_NODE})";;
+        $self        ssh-all "${on}" -- systemctl restart "${NODE_SERVICE}"; log "new start date:  $($self since "${DEFAULT_NODE}")";;
 statuses | ss | all-node-service-statuses ) # Doc:
         on=${1:+--include $*}
-        $self        ssh-all ${on} -- systemctl  status ${NODE_SERVICE};;
+        $self        ssh-all "${on}" -- systemctl  status "${NODE_SERVICE}";;
 "" | "" ) # Doc:
         ;;
 "" | journald-logs-and-grepping ) # Doc:
@@ -379,35 +400,35 @@ statuses | ss | all-node-service-statuses ) # Doc:
         ;;
 since | node-service-start-date-on ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        ${nixops} ssh          ${nixops_subopts} ${node} -- systemctl show ${NODE_SERVICE} --value --property WatchdogTimestamp 2>&1 | cut -d' ' -f3;;
+        ${nixops} ssh          "${nixops_subopts}" "${node}" -- systemctl show "${NODE_SERVICE}" --value --property WatchdogTimestamp 2>&1 | cut -d' ' -f3;;
 journal-on | jo | node-service-journal-on-node-since-start ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        set +u; since=${2:-$($self since ${node})}; set -u
+        set +u; since=${2:-$($self since "${node}")}; set -u
         if test -z "${since}"; then since='3 hours ago'; fi
-        ${nixops} ssh          ${nixops_subopts} ${node} -- journalctl  -u ${NODE_SERVICE} --since "'${since}'" 2>&1;;
+        ${nixops} ssh          "${nixops_subopts}" "${node}" -- journalctl  -u "${NODE_SERVICE}" --since "'${since}'" 2>&1;;
 pretty-journal-on | pj | node-service-journal-on-node-since-its-start-prettified-version ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        $self node-service-journal-on-node-since-start ${node} | fgrep -v ',"state": "ok","service": "' | cut -c92- | less;;
+        $self node-service-journal-on-node-since-start "${node}" | grep --fixed-strings --invert-match ',"state": "ok","service": "' | cut -c92- | less;;
 journal    | jall | j | all-node-service-journals ) # Doc:
         start_sample_node=${DEFAULT_NODE}
-        since=${1:-$($self since ${start_sample_node})}
+        since=${1:-$($self since "${start_sample_node}")}
         if test -z "${since}"; then since='3 hours ago'; fi
         log "journal since:  ${since}"
-        $self        ssh-all      -- journalctl -u ${NODE_SERVICE} --since "'${since}'" 2>&1;;
+        $self        ssh-all      -- journalctl -u "${NODE_SERVICE}" --since "'${since}'" 2>&1;;
 system-journal | sysj | system-journal-on-node ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        $self        ssh ${node}  -- journalctl -xe 2>&1;;
+        $self        ssh "${node}"  -- journalctl -xe 2>&1;;
 follow | f | follow-node-service-journal-on ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        $self        ssh ${node}  -- journalctl -fu ${NODE_SERVICE} 2>&1;;
+        $self        ssh "${node}"  -- journalctl -fu "${NODE_SERVICE}" 2>&1;;
 follow-all | fa | follow-all-node-service-journals ) # Doc:
-        $self        ssh-all      -- journalctl -fu ${NODE_SERVICE} "$@" 2>&1;;
+        $self        ssh-all      -- journalctl -fu "${NODE_SERVICE}" "$@" 2>&1;;
 grep-on | gro | grep-node-service-journals-since-start ) # Doc:
         node=$1; shift
         log "node:           ${node}"
         log "filter:         ag $*"
         ag=$( nix-build --no-out-link -E '(import ./. {}).pkgs.ag'     | xargs echo)/bin/ag
-        $self        journal-on ${node} 2>&1 | ${ag} "$@";;
+        $self        journal-on "${node}" 2>&1 | ${ag} "$@";;
 grep-since | gras | grep-all-node-service-journals-since-timestamp ) # Doc:
         since=$1; shift
         log "journal since:  ${since}"
@@ -416,9 +437,9 @@ grep-since | gras | grep-all-node-service-journals-since-timestamp ) # Doc:
         $self        journal "${since}" 2>&1 | ${ag} "$@";;
 grep | g | grep-all-node-service-journals-since-last-restart ) # Doc:
         start_sample_node=${DEFAULT_NODE}
-        since=$($self since ${start_sample_node})
+        since=$($self since "${start_sample_node}")
         if test -z "${since}"; then since='3 hours ago'; fi
-        $self        grep-since ${since} "$@";;
+        $self        grep-since "${since}" "$@";;
 watch-for | w | watch-all-node-service-journals-for-regex-occurence ) # Doc:
         ag=$( nix-build --no-out-link -E '(import ./. {}).pkgs.ag'     | xargs echo)/bin/ag
         $self        follow-all 2>&1 | ${ag} "$@";;
@@ -445,8 +466,8 @@ watch-exceptions | we | watch-node-current-exception-stream ) # Doc:
         $self        watch-for -i exception | ag -v 'RiemannBatchClient|exception.counter';;
 troubleshoot | tro | troubleshoot-node-logs-for-known-problems ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        $self        grep-node-service-journals-since-start ${node} 'Genesis data present in the database does not match genesis block from file.' && echo 'PROBLEM FOUND!' || true
-        $self        grep-node-service-journals-since-start ${node} 'candidate is not known to the local member' && echo 'PROBLEM FOUND!' || true
+        ($self        grep-node-service-journals-since-start "${node}" 'Genesis data present in the database does not match genesis block from file.' && echo 'PROBLEM FOUND!') || true
+        ($self        grep-node-service-journals-since-start "${node}" 'candidate is not known to the local member' && echo 'PROBLEM FOUND!') || true
         ;;
 "" | "" ) # Doc:
         ;;
@@ -456,12 +477,12 @@ troubleshoot | tro | troubleshoot-node-logs-for-known-problems ) # Doc:
         ;;
 drop-dbs | remove-all-blockchain-data-on-all-nodes ) # Doc:
         log "about to nuke blockchain DB and leadership consensus DB, globally.."
-        read -ei "No!" -p "Really? Type 'yes' to confirm:  " disaster
+        read -rei "No!" -p "Really? Type 'yes' to confirm:  " disaster
         test "${disaster}" == "yes" || { log "disaster averted"; exit 1; }
         log "disaster considered authorized"
         $self        stop
         log "nuking.."
-        $self        ssh-all      -- rm -rf ${NODE_DB_PATH}
+        $self        ssh-all      -- rm -rf "${NODE_DB_PATH}"
         $self        start;;
 "" | "" ) # Doc:
         ;;
