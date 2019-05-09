@@ -5,7 +5,6 @@ with lib;
 
 let
   cfg = config.services.monitoring-services;
-
 in {
 
   options = {
@@ -14,7 +13,7 @@ in {
         type = types.bool;
         default = true;
         description = ''
-          Enable prometheus, alert available exporters.
+          Enable prometheus, alertmangaer, grafana and graylog.
         '';
       };
 
@@ -53,7 +52,7 @@ in {
       webhost = mkOption {
         type = types.str;
         description = ''
-          Public web host used for prometheus, grafana and the alertmanager.
+          Public web host used for prometheus, grafana, alertmanager and graylog.
         '';
         example = "monitoring.lan";
       };
@@ -154,6 +153,7 @@ in {
       };
     })
     {
+      environment.systemPackages = with pkgs; [ curl gnugrep jq ];
       networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
       services = let
         oauthProxyConfig = if (cfg.oauth.enable) then ''
@@ -205,8 +205,6 @@ in {
                 '';
                 "/graylog/".extraConfig = ''
                   ${oauthProxyConfig}
-                  rewrite ^/graylog/(.*)$ /$1 break;
-                  proxy_pass http://localhost:9000/;
                   proxy_set_header Host $http_host;
                   proxy_set_header REMOTE_ADDR $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -214,6 +212,8 @@ in {
                   proxy_set_header X-Graylog-Server-URL https://${cfg.webhost}/graylog;
                   proxy_set_header X-Forward-Host $host;
                   proxy_set_header X-Forwarded-Server $host;
+                  rewrite ^/graylog/(.*)$ /$1 break;
+                  proxy_pass http://localhost:9000/;
                 '';
               };
             };
@@ -231,6 +231,7 @@ in {
         # Elasticsearch config below is for a single node deployment
           extraConfig = ''
             http_bind_address = 0.0.0.0:9000
+            http_external_uri = https://monitoring.aws.iohkdev.io/
             elasticsearch_shards = 1
             elasticsearch_replicas = 0
           '';
@@ -580,6 +581,26 @@ in {
               in map makeNodeConfig cfg.nginxMonitoredNodes;
             }
           ];
+        };
+      };
+      systemd.services.graylog-preload = let
+        graylogConfig = ./graylog/graylogConfig.json;
+        graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh"
+          (import ./graylog/graylogPreload.nix { inherit graylogConfig; });
+      in {
+        description = "Graylog Content Pack Preload Service";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "graylog.service elasticsearch.service mongodb.service" ];
+        path = with pkgs; [ curl gnugrep jq ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = "${config.services.graylog.user}";
+          ExecStartPre= ''
+            -+${pkgs.coreutils}/bin/chmod 0644 /var/lib/graylog/.graylogConfigured*
+            ExecStartPre=-+${pkgs.coreutils}/bin/chown graylog:nogroup /var/lib/graylog/.graylogConfigured*
+            ExecStartPre=${pkgs.coreutils}/bin/sleep 60
+          '';
+          ExecStart="${graylogPreload}/bin/graylogPreload.sh install";
         };
       };
     }
