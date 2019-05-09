@@ -207,9 +207,11 @@ in {
                   proxy_set_header X-Graylog-Server-URL https://${cfg.webhost}/graylog;
                   proxy_set_header X-Forward-Host $host;
                   proxy_set_header X-Forwarded-Server $host;
-                  rewrite ^ $request_uri;                       # Required to partially fix the API browser
+
+                  # Required to partially fix the API Browser, but also breaks the streaming page
+                  # rewrite ^ $request_uri;
                   rewrite ^/graylog/(.*)$ /$1 break;
-                  return 400;                                   # https://stackoverflow.com/q/28684300
+                  # return 400;                                   # https://stackoverflow.com/q/28684300
                   proxy_pass http://localhost:9000/;
                 '';
               };
