@@ -219,11 +219,89 @@ in {
         graylog = {
           enable = true;
           nodeIdFile = "/var/lib/graylog/node-id";
-        # TODO: Randomize per cluster deployment
-          passwordSecret = "D20DSOp6Q4RJNiRuv4W6ZhLtUQzoAogLpRjZlS1RJMqJDbrBX4GQpMAWd4JGzF3OfwTLPbF9HHBFJKuE3Ifqvdhqk9X8QxLu";
+          passwordSecret = (
+            if pathExists ../static/graylog-cluster-secret then
+              readFile ../static/graylog-cluster-secret
+            else
+              builtins.trace ''
+                ***********************************************************************************
+                ******
+                ******
+                ****** GRAYLOG CLUSTER PEPPER SECRET NEEDED
+                ******
+                ******
+                ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
+                ******              a cluster specific pepper secret must be created.
+                ******
+                ****** ACTION:      Create a file relative to the iohk-ops git clone root folder of:
+                ******
+                ******
+                ******              static/graylog-cluster-secret
+                ******
+                ******
+                ****** CONTENT:     The file must contain a single unquoted string of at least 64
+                ******              random alphanumeric characters.  The command described below is
+                ******              an example of how to generate such a string and file.
+                ******
+                ****** COMMAND:     The following example command would be run from the iohk-ops git
+                ******              clone root folder:
+                ******
+                ******
+                ******              tr -cd '[:alnum:]' < /dev/urandom | head -c 96 > static/graylog-cluster-secret
+                ******
+                ******
+                ****** OUTCOME:     Redeploy your cluster once this file has been created.
+                ******              If the pepper secret needs to be updated in the future, the same
+                ******              method can be used followed by re-running the deploy command.
+                ******
+                ******
+                ******
+                ******
+              '' 1
+          );
           rootUsername = "admin";
-        # Default password = "admin"; Hash generated with `echo -n admin | shasum -a 256`
-          rootPasswordSha2 = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
+          rootPasswordSha2 = (
+            if pathExists ../static/graylog-root-secret then
+              readFile ../static/graylog-root-secret
+            else
+              builtins.trace ''
+                ***********************************************************************************
+                ******
+                ******
+                ****** GRAYLOG ROOT HASH SECRET NEEDED
+                ******
+                ******
+                ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
+                ******              a root user SHA256 password hash secret must be created.
+                ******
+                ****** ACTION:      Create a file relative to the iohk-ops git clone root folder of:
+                ******
+                ******
+                ******              static/graylog-root-secret
+                ******
+                ******
+                ****** CONTENT:     The file must contain a single unquoted SHA256 hash of a password
+                ******              which will be used for the root user where the root user is
+                ******              defined as "admin" by default.  The command described below is
+                ******              an example of how to generate such a string and file.
+                ******
+                ****** COMMAND:     The following example command would be run from the iohk-ops git
+                ******              clone root folder and where <password> is a parameter
+                ******              representing a password of your choice:
+                ******
+                ******
+                ******              echo -n <password> | shasum -a 256 | sed -z 's/  -\n//g' > static/graylog-root-secret
+                ******
+                ******
+                ****** OUTCOME:     Redeploy your cluster once this file has been created.
+                ******              If the hash secret needs to be updated in the future, the same
+                ******              method can be used followed by re-running the deploy command.
+                ******
+                ******
+                ******
+                ******
+              '' 1
+          );
           elasticsearchHosts = [ "http://localhost:9200" ];
         # Elasticsearch config below is for a single node deployment
           extraConfig = ''

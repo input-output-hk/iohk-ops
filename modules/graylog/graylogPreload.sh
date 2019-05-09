@@ -21,7 +21,7 @@ graylogApiUrl="http://localhost:9000/api"
 curlH="curl -s -w \"\\\\napiRc: %{http_code}\" -u $user:$password -H 'X-Requested-By: $user' $graylogApiUrl"
 jsonH="-H 'Content-Type: application/json'"
 jsonComment="-d '{ \"comment\": \"$cpComment\" }'"
-jsonData=""                            # Set dynamically based on the contentPath variable
+jsonData=""                            # Set dynamically based on the contentPack variable
 
 # Other globals, used dynamically
 cmd=""                                 # Command string used dynamically for evaluations
@@ -253,7 +253,7 @@ fi
 
 # Load any pre-existing state info
 print "Checking script history for a pre-existing installed default monitoring content pack..."
-if [[ -e $installSuccess ]]; then
+if [[ -r $installSuccess ]]; then
   flagScriptInstalled="true"
   preCpName="$(cut -f 1 -d ' ' $installSuccess)"
   preCpId="$(cut -f 2 -d ' ' $installSuccess)"
