@@ -22,8 +22,6 @@ let
       };
       groups.staging = {};
     };
-    ## Disabled due to build failures:
-    documentation.nixos.enable = false;
     # services.extra-statsd = mkForce false;
   } // extraopts;
 in
