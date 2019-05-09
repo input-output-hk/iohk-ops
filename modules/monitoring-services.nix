@@ -456,7 +456,7 @@ in {
           enable = true;
           webExternalUrl = "https://${cfg.webhost}/prometheus/";
           extraFlags = [
-            "--storage.tsdb.retention.time=8760h"
+            "--storage.tsdb.retention=8760h"
           ];
 
           alertmanagerURL = [ "localhost:9093" ];
