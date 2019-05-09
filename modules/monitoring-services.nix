@@ -154,7 +154,7 @@ in {
       };
     })
     {
-      networking.firewall.allowedTCPPorts = [ 80 443 ];
+      networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
       services = let
         oauthProxyConfig = if (cfg.oauth.enable) then ''
           auth_request /oauth2/auth;
@@ -203,9 +203,48 @@ in {
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
                 '';
+                "/graylog/".extraConfig = ''
+                  ${oauthProxyConfig}
+                  rewrite ^/graylog/(.*)$ /$1 break;
+                  proxy_pass http://localhost:9000/;
+                  proxy_set_header Host $http_host;
+                  proxy_set_header REMOTE_ADDR $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto https;
+                  proxy_set_header X-Graylog-Server-URL https://${cfg.webhost}/graylog;
+                  proxy_set_header X-Forward-Host $host;
+                  proxy_set_header X-Forwarded-Server $host;
+                '';
               };
             };
           };
+        };
+        graylog = {
+          enable = true;
+          nodeIdFile = "/var/lib/graylog/node-id";
+        # TODO: Randomize per cluster deployment
+          passwordSecret = "D20DSOp6Q4RJNiRuv4W6ZhLtUQzoAogLpRjZlS1RJMqJDbrBX4GQpMAWd4JGzF3OfwTLPbF9HHBFJKuE3Ifqvdhqk9X8QxLu";
+          rootUsername = "admin";
+        # Default password = "admin"; Hash generated with `echo -n admin | shasum -a 256`
+          rootPasswordSha2 = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
+          elasticsearchHosts = [ "http://localhost:9200" ];
+        # Elasticsearch config below is for a single node deployment
+          extraConfig = ''
+            http_bind_address = 0.0.0.0:9000
+            elasticsearch_shards = 1
+            elasticsearch_replicas = 0
+          '';
+        };
+        elasticsearch = {
+          enable = true;
+          package = pkgs.elasticsearch6-oss;
+        # Prevent graylog deflector indexing by turning off auto create index option
+          extraConf = ''
+            action.auto_create_index: false
+          '';
+        };
+        mongodb = {
+          enable = true;
         };
         grafana = {
           enable = true;

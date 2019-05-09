@@ -19,7 +19,8 @@ in {
 
       graylogHost = mkOption {
         type = types.nullOr types.str;
-        default = null;
+      # TODO: import globals to define the hostname default
+        default = "monitoring-ip:5044";
         example = "graylog:5044";
         description = ''
           The host port under which Graylog is externally reachable.

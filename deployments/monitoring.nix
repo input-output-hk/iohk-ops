@@ -50,6 +50,7 @@ in
     deployment.ec2.keyPair        = resources.ec2KeyPairs.${monitoring.keyPairName};
     deployment.ec2.securityGroups = [
       resources.ec2SecurityGroups."allow-to-monitoring-${config.deployment.ec2.region}"
+      resources.ec2SecurityGroups."allow-monitoring-static-peers-${config.deployment.ec2.region}-${monitoring.org}"
     ];
   };
 
