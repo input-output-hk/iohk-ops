@@ -33,6 +33,27 @@ in {
         '';
       };
 
+      graylogRootUsername = mkOption {
+        type = types.str;
+        default = "admin";
+        description = ''
+          Name of the default administrator user in graylog.
+        '';
+      };
+
+      graylogRootPassword = mkOption {
+        type = types.str;
+        default = "admin";
+        description = ''
+          Plaintext password for graylog web UI.  A corresponding SHA256 hash
+          needs to be generated for this password and stored in static/graylog-root-secret
+          relative to the iohk-ops git clone root folder.  As an example, this can be
+          done with the following command:
+
+          echo -n <graylogRootPassword> | shasum -a 256 | sed -z 's/  -\n//g' > static/graylog-root-secret
+        '';
+      };
+
       monitoredNodes = mkOption {
         type = types.listOf types.str;
         default = [];
@@ -229,6 +250,7 @@ in {
                 ***********************************************************************************
                 ******
                 ******
+                ******
                 ****** GRAYLOG CLUSTER PEPPER SECRET NEEDED
                 ******
                 ******
@@ -261,13 +283,14 @@ in {
                 ******
               '' 1
           );
-          rootUsername = "admin";
+          rootUsername = cfg.graylogRootUsername;
           rootPasswordSha2 = (
             if pathExists ../static/graylog-root-secret then
               readFile ../static/graylog-root-secret
             else
               builtins.trace ''
                 ***********************************************************************************
+                ******
                 ******
                 ******
                 ****** GRAYLOG ROOT HASH SECRET NEEDED
@@ -283,16 +306,17 @@ in {
                 ******
                 ******
                 ****** CONTENT:     The file must contain a single unquoted SHA256 hash of a password
-                ******              which will be used for the root user where the root user is
-                ******              defined as "admin" by default.  The command described below is
-                ******              an example of how to generate such a string and file.
+                ******              which will be used for the root graylog.  The command described
+                ******              below is an example of how to generate such a string and file.
                 ******
                 ****** COMMAND:     The following example command would be run from the iohk-ops git
-                ******              clone root folder and where <password> is a parameter
-                ******              representing a password of your choice:
+                ******              clone root folder and where <graylogRootPassword> is a parameter
+                ******              representing the password the nix configuration string
+                ******              ${config.services.monitoring-services.graylogRootPassword} is set to
+                ******              in deployments/monitoring.nix:
                 ******
                 ******
-                ******              echo -n <password> | shasum -a 256 | sed -z 's/  -\n//g' > static/graylog-root-secret
+                ******              echo -n <graylogRootPassword> | shasum -a 256 | sed -z 's/  -\n//g' > static/graylog-root-secret
                 ******
                 ******
                 ****** OUTCOME:     Redeploy your cluster once this file has been created.
@@ -661,7 +685,12 @@ in {
       };
       systemd.services.graylog-preload = let
         graylogConfig = ./graylog/graylogConfig.json;
-        graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh" (readFile ./graylog/graylogPreload.sh);
+        graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh" (readFile (
+          pkgs.substituteAll {
+            src = ./graylog/graylogPreload.sh;
+            inherit (cfg) graylogRootUsername graylogRootPassword;
+          })
+        );
       in {
         description = "Graylog Content Pack Preload Service";
         wantedBy = [ "multi-user.target" ];

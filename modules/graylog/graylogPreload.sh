@@ -15,8 +15,8 @@ cpComment="monitorContentPack"         # Must remain set to "monitorContentPack"
 cpVendor="IOHK"                        # Must remain set to "IOHK" for proper script logic
 
 # Curl Definitions
-user="admin"
-password="admin"
+user="@graylogRootUsername@"
+password="@graylogRootPassword@"
 graylogApiUrl="http://localhost:9000/api"
 curlH="curl -s -w \"\\\\napiRc: %{http_code}\" -u $user:$password -H 'X-Requested-By: $user' $graylogApiUrl"
 jsonH="-H 'Content-Type: application/json'"
@@ -96,8 +96,8 @@ apiCpLoadedCheck () {
     print "No content packs are loaded"
     return 0
   fi
-  mapfile -t loadedCpNames < <( echo "$body" | jq -r '.content_packs[].name' )
-  mapfile -t loadedCpVendors < <( echo "$body" | jq -r '.content_packs[].vendor')
+  mapfile -t loadedCpNames < <(echo "$body" | jq -r '.content_packs[].name' )
+  mapfile -t loadedCpVendors < <(echo "$body" | jq -r '.content_packs[].vendor')
   mapfile -t loadedCpIds < <(echo "$body" | jq -r '.content_packs[].id')
   mapfile -t loadedCpVers < <(echo "$body" | jq -r '.content_packs[].v')
   mapfile -t loadedCpRevs < <(echo "$body" | jq -r '.content_packs[].rev')
@@ -152,7 +152,7 @@ apiInstallCheck () {
   elif [[ $installTotal == 0 ]]; then
     print "Existing installation not found for content pack id: $cpId"
   else
-    mapfile -t installIds < <( echo "$body" | jq -r '.installations[]._id' )
+    mapfile -t installIds < <(echo "$body" | jq -r '.installations[]._id')
     if [[ $installTotal == 1 ]]; then
       print "Verified one default monitoring content pack installation:"
       print "  Install id: \"${installIds[0]}\""
@@ -195,7 +195,7 @@ apiUninstall () {
   elif [[ $uninstallTotal == 0 ]]; then
     print "No content pack installations for Id: $uninstallCpId, proceeding with deletion."
   else
-    mapfile -t uninstallIds < <( echo "$body" | jq -r '.installations[]._id' )
+    mapfile -t uninstallIds < <(echo "$body" | jq -r '.installations[]._id')
     for (( j=0; j < uninstallTotal; j++ )); do
       print "Uninstalling content pack Id: $uninstallCpId, install Id: ${uninstallIds[$j]}"
       cmd="$curlH/system/content_packs/$uninstallCpId/installations/${uninstallIds[$j]} -XDELETE"

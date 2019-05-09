@@ -38,6 +38,8 @@ in
         enable = true;
         emailDomain = "iohk.io";
       } // (import ../static/oauth.nix);
+      graylogRootUsername = "admin";
+      graylogRootPassword = "admin";
       monitoredNodes = map (h: h.name) (lib.filter (h: !h.withNginx) hostList);
       nginxMonitoredNodes = map (h: h.name) (lib.filter (h: h.withNginx) hostList);
       webhost = hostName;
