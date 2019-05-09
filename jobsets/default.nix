@@ -34,6 +34,7 @@
 , walletPrsJSON ? ./simple-pr-dummy.json
 , iohkNixPrsJSON ? ./simple-pr-dummy.json
 , haskellNixPrsJSON ? ./simple-pr-dummy.json
+, toolsPrsJSON ? ./simple-pr-dummy.json
 }:
 
 let pkgs = import nixpkgs {}; in
@@ -145,6 +146,13 @@ let
       branch = "develop";
       prs = shellPrsJSON;
       bors = true;
+    };
+
+    tools = {
+      description = "Loony Tools";
+      url = "https://github.com/input-output-hk/tools.git";
+      branch = "master";
+      prs = toolsPrsJSON;
     };
   };
 

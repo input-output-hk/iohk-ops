@@ -107,6 +107,7 @@ in {
         { jobset = "ouroboros-network"; inputs = "ouroboros-network"; }
         { jobset = "iohk-monitoring"; inputs = "iohk-monitoring"; }
         { jobset = "haskell-nix"; inputs = "haskell-nix"; }
+        { jobset = "tools"; inputs = "tools"; }
       ]}
 
       # DEVOPS-1208 This CI status for cardano-sl is needed while the
