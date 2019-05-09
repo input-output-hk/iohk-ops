@@ -6,10 +6,9 @@ in
 , config ? {}
 , pkgs ? (import (localLib.nixpkgs) { inherit system crossSystem config; })
 , compiler ? pkgs.haskellPackages
-, enableDebugging ? false
-, enableProfiling ? false
 , cardanoRevOverride ? null
-}:
+, ...
+}@args:
 
 with pkgs.lib;
 with pkgs.haskell.lib;
@@ -35,25 +34,10 @@ let
     coreutils
     gnupg
   ];
-  # we allow on purpose for cardano-sl to have it's own nixpkgs to avoid rebuilds
-  cardano-sl-src = let
-    try = builtins.tryEval <cardano-sl>;
-    cfg = builtins.fromJSON (builtins.readFile ./cardano-sl-src.json);
-    fixedSrc = pkgs.fetchgit cfg;
-  in if try.success then
-    builtins.trace "using search host <cardano-sl>" try.value
-  else fixedSrc;
-  cardano-sl-src-phase2 = let
-    localOverride = {
-      outPath = builtins.fetchTarball "https://github.com/input-output-hk/cardano-sl/archive/${cardanoRevOverride}.tar.gz";
-      rev = cardanoRevOverride;
-    };
-  in if (cardanoRevOverride != null) then localOverride else cardano-sl-src;
-  cardano-sl-pkgs = import cardano-sl-src-phase2 ({
-    inherit enableDebugging enableProfiling;
-  } // optionalAttrs (cardano-sl-src-phase2 ? rev) {
-    gitrev = cardano-sl-src-phase2.rev;
-  });
+
+  cardano-sl-pkgs = localLib.fetchProjectPackages "cardano-sl" <cardano-sl> ./.             cardanoRevOverride args;
+  mantis-pkgs     = localLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
+
   github-webhook-util = pkgs.callPackage ./github-webhook-util { };
 
   iohk-ops = pkgs.haskell.lib.overrideCabal
