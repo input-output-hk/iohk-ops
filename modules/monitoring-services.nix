@@ -596,8 +596,8 @@ in {
           Type = "oneshot";
           User = "${config.services.graylog.user}";
           ExecStartPre= ''
-            -+${pkgs.coreutils}/bin/chmod 0644 /var/lib/graylog/.graylogConfigured*
-            ExecStartPre=-+${pkgs.coreutils}/bin/chown graylog:nogroup /var/lib/graylog/.graylogConfigured*
+            +-/bin/sh -c 'chmod 0644 /var/lib/graylog/.graylogConfigured*'
+            ExecStartPre=+-/bin/sh -c 'chown graylog:nogroup /var/lib/graylog/.graylogConfigured*'
             ExecStartPre=${pkgs.coreutils}/bin/sleep 60
           '';
           ExecStart="${graylogPreload}/bin/graylogPreload.sh install";
