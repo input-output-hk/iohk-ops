@@ -1,5 +1,3 @@
-{ graylogConfig, ... }:
-''
 # Shell shebang prepended by nix
 set -e
 
@@ -8,11 +6,11 @@ installSuccess="/var/lib/graylog/.graylogConfigured"
 installLog="/var/lib/graylog/.graylogConfigured.log"
 
 # Content Pack Definitions
-contentPack="${graylogConfig}"
-cpName="$(jq -r .name $contentPack)"   # Must parse to "monitorContentPack" for proper script logic
-cpId="$(jq -r .id $contentPack)"
-cpVer="$(jq -r .v $contentPack)"
-cpRev="$(jq -r .rev $contentPack)"
+contentPack=""                         # Content pack file, passed as arg 2
+cpName=""                              # Must parse to "monitorContentPack" for proper script logic
+cpId=""                                # Content pack name as parsed from the content pack file
+cpVer=""                               # Content pack version as parsed from the content pack file
+cpRev=""                               # Content pack revision as parsed from the content pack file
 cpComment="monitorContentPack"         # Must remain set to "monitorContentPack" for proper script logic
 cpVendor="IOHK"                        # Must remain set to "IOHK" for proper script logic
 
@@ -22,10 +20,10 @@ password="admin"
 graylogApiUrl="http://localhost:9000/api"
 curlH="curl -s -w \"\\\\napiRc: %{http_code}\" -u $user:$password -H 'X-Requested-By: $user' $graylogApiUrl"
 jsonH="-H 'Content-Type: application/json'"
-jsonData="-d '@$contentPack'"
 jsonComment="-d '{ \"comment\": \"$cpComment\" }'"
+jsonData=""                            # Set dynamically based on the contentPath variable
 
-# Globals, used dynamically
+# Other globals, used dynamically
 cmd=""                                 # Command string used dynamically for evaluations
 rsp=""                                 # Generic API body response plus return code
 body=""                                # Parsed JSON response body from last API call
@@ -53,9 +51,10 @@ uninstallTotal=""                      # Total installations to purge for a give
 # Functions
 usage () {
   echo -e "Usage:\\n"
-  echo "graylogPreload.sh [install | remove]"
-  echo "  install = install default monitoring graylog content pack"
-  echo "  remove  = remove default monitoring graylog content pack"
+  echo "graylogPreload.sh <install | remove> <content_pack>"
+  echo "  install      = install default monitoring graylog content pack"
+  echo "  remove       = remove default monitoring graylog content pack"
+  echo "  content_pack = path to content pack to install or remove"
   echo ""
   echo "Comments:"
   echo "This script will install or remove one content pack as specified"
@@ -75,7 +74,7 @@ usage () {
   echo ""
   echo "These key-value definitions must stay static, otherwise, the"
   echo "script logic will no longer work."
-  exit 0
+  exit 1
 }
 
 parseRsp () {
@@ -103,21 +102,21 @@ apiCpLoadedCheck () {
   mapfile -t loadedCpVers < <(echo "$body" | jq -r '.content_packs[].v')
   mapfile -t loadedCpRevs < <(echo "$body" | jq -r '.content_packs[].rev')
   for (( i=0; i < loadedTotal; i++ )) do
-    print "  Evaluating content pack: \"''${loadedCpNames[$i]}\""
-    if [[ ''${loadedCpNames[$i]} == "$cpName" ]] && [[ ''${loadedCpVendors[$i]} == "$cpVendor" ]]; then
-      print "    Found default: \"''${loadedCpNames[$i]}\" Vendor: \"''${loadedCpVendors[$i]}\" Id: \"''${loadedCpIds[$i]}\" Ver: \"''${loadedCpVers[$i]}\" Rev: \"''${loadedCpRevs[$i]}\""
-      if [[ ''${loadedCpIds[$i]} == "$cpId" ]] && [[ ''${loadedCpVers[$i]} == "$cpVer" ]] && \
-        [[ ''${loadedCpRevs[$i]} == "$cpRev" ]]; then
+    print "  Evaluating content pack: \"${loadedCpNames[$i]}\""
+    if [[ ${loadedCpNames[$i]} == "$cpName" ]] && [[ ${loadedCpVendors[$i]} == "$cpVendor" ]]; then
+      print "    Found default: \"${loadedCpNames[$i]}\" Vendor: \"${loadedCpVendors[$i]}\" Id: \"${loadedCpIds[$i]}\" Ver: \"${loadedCpVers[$i]}\" Rev: \"${loadedCpRevs[$i]}\""
+      if [[ ${loadedCpIds[$i]} == "$cpId" ]] && [[ ${loadedCpVers[$i]} == "$cpVer" ]] && \
+        [[ ${loadedCpRevs[$i]} == "$cpRev" ]]; then
         print "    The loaded default monitoring content pack is already the correct spec, Id: \"$cpId\", Ver: \"$cpVer\", Rev: \"$cpRev\""
         flagApiLoaded="true"
       else
         print "    The loaded default monitoring content pack is not the expected:"
         print "      Expected Id: \"$cpId\" Ver: \"$cpVer\" Rev: \"$cpRev\""
-        print "      Found Id:    \"''${loadedCpIds[$i]}\" Ver: \"''${loadedCpVers[$i]}\" Rev: \"''${loadedCpRevs[$i]}\""
+        print "      Found Id:    \"${loadedCpIds[$i]}\" Ver: \"${loadedCpVers[$i]}\" Rev: \"${loadedCpRevs[$i]}\""
         print ""
-        print "Removing old default monitoring content pack with Id: \"''${loadedCpIds[$i]}\" Ver: \"''${loadedCpVers[$i]}\" Rev: \"''${loadedCpRevs[$i]}\""
-        if apiUninstall "''${loadedCpIds[$i]}"; then
-          apiDelete "''${loadedCpIds[$i]}" || return 1
+        print "Removing old default monitoring content pack with Id: \"${loadedCpIds[$i]}\" Ver: \"${loadedCpVers[$i]}\" Rev: \"${loadedCpRevs[$i]}\""
+        if apiUninstall "${loadedCpIds[$i]}"; then
+          apiDelete "${loadedCpIds[$i]}" || return 1
         else
           print "Failed to parse loaded content packs"
           return 1
@@ -156,12 +155,12 @@ apiInstallCheck () {
     mapfile -t installIds < <( echo "$body" | jq -r '.installations[]._id' )
     if [[ $installTotal == 1 ]]; then
       print "Verified one default monitoring content pack installation:"
-      print "  Install id: \"''${installIds[0]}\""
+      print "  Install id: \"${installIds[0]}\""
       flagApiInstalled="true"
     else
       print "Multiple installations, $installTotal, found for the default monitoring content pack:"
       for (( i=0; i < installTotal; i++ )); do
-        print "  Install id: \"''${installIds[$i]}\""
+        print "  Install id: \"${installIds[$i]}\""
       done
       print "Uninstalling the installations to ensure the proper install is the one in use"
       apiUninstall "$cpId" || return 1
@@ -198,13 +197,13 @@ apiUninstall () {
   else
     mapfile -t uninstallIds < <( echo "$body" | jq -r '.installations[]._id' )
     for (( j=0; j < uninstallTotal; j++ )); do
-      print "Uninstalling content pack Id: $uninstallCpId, install Id: ''${uninstallIds[$j]}"
-      cmd="$curlH/system/content_packs/$uninstallCpId/installations/''${uninstallIds[$j]} -XDELETE"
+      print "Uninstalling content pack Id: $uninstallCpId, install Id: ${uninstallIds[$j]}"
+      cmd="$curlH/system/content_packs/$uninstallCpId/installations/${uninstallIds[$j]} -XDELETE"
       parseRsp "$(eval "$cmd")"
       print "  $body"
       print "  ApiRC: $code"
       if [[ $code != "200" ]]; then
-        print "Failed uninstall of install Id: ''${uninstallIds[$j]}"
+        print "Failed uninstall of install Id: ${uninstallIds[$j]}"
         return 1
       fi
     done
@@ -227,13 +226,29 @@ apiDelete () {
 }
 
 print () {
-  echo -e "$(date): $1\\n" | tee -a $installLog
+  echo -e "$(date): $1" | tee -a $installLog
 }
 
 ### MAIN
 
-if [[ $# -ne 1 ]] || { [[ $1 != install ]] && [[ $1 != remove ]]; }; then
+# Process command cli args and preload content pack required key values
+if [[ $# -ne 2 ]] || { [[ $1 != install ]] && [[ $1 != remove ]]; }; then
   usage
+elif ! [[ -r $2 ]]; then
+  echo "Content pack file specified does not exist or cannot be read: \"$2\""
+  exit 1
+else
+  contentPack="$2"
+  # cpName must parse to "monitorContentPack" for proper script logic
+  cpName="$(jq -e -r .name "$contentPack")" || { print "Failed to obtain cpName from <content_pack> file"; exit 1; }
+  cpId="$(jq -e -r .id "$contentPack")"     || { print "Failed to obtain cpId from <content_pack> file"; exit 1; }
+  cpVer="$(jq -e -r .v "$contentPack")"     || { print "Failed to obtain cpVer from <content_pack> file"; exit 1; }
+  cpRev="$(jq -e -r .rev "$contentPack")"   || { print "Failed to obtain cpRev from <content_pack> file"; exit 1; }
+  jsonData="-d '@$contentPack'"
+  print "Specified content pack to install or remove is:"
+  print "  Path: \"$contentPack\""
+  print "  Name: \"$cpName\", Id: \"$cpId\", Ver: \"$cpVer\", Rev: \"$cpRev\""
+  print ""
 fi
 
 # Load any pre-existing state info
@@ -277,9 +292,8 @@ if [[ $1 == install ]]; then
     exit 0
   elif [[ $flagScriptInstalled == "true" ]] && [[ $preCpName == "$cpName" ]]; then
     print "A different version of the default monitoring content pack is installed:"
-    print "Pre-existing Id: $preCpId; New Id: $cpId"
-    print "Pre-existing Ver: $preCpVer; New Ver: $cpVer"
-    print "Pre-existing Rev: $preCpRev; New Rev: $cpRev"
+    print "Specified New Id: \"$cpId\", Ver: \"$cpVer\", Rev: \"$cpRev\""
+    print "Pre-existing Id:  \"$preCpId\", Ver: \"$preCpVer\", Rev: \"$preCpRev\""
     print ""
   fi
 
@@ -347,4 +361,3 @@ elif [[ $1 == remove ]]; then
     exit 1
   fi
 fi
-''

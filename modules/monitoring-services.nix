@@ -143,12 +143,7 @@ in {
           nginx.virtualHosts = [ "${cfg.webhost}" ];
         };
         nginx.virtualHosts."${cfg.webhost}".locations."/".extraConfig = ''
-          proxy_pass http://localhost:5601/;
-          proxy_http_version 1.1;
-          proxy_set_header Upgrade $http_upgrade;
-          proxy_set_header Connection 'upgrade';
-          proxy_set_header Host $host;
-          proxy_cache_bypass $http_upgrade;
+          return 301 https://${cfg.webhost}/graylog/;
         '';
       };
     })
@@ -212,7 +207,9 @@ in {
                   proxy_set_header X-Graylog-Server-URL https://${cfg.webhost}/graylog;
                   proxy_set_header X-Forward-Host $host;
                   proxy_set_header X-Forwarded-Server $host;
+                  rewrite ^ $request_uri;                       # Required to partially fix the API browser
                   rewrite ^/graylog/(.*)$ /$1 break;
+                  return 400;                                   # https://stackoverflow.com/q/28684300
                   proxy_pass http://localhost:9000/;
                 '';
               };
@@ -231,7 +228,6 @@ in {
         # Elasticsearch config below is for a single node deployment
           extraConfig = ''
             http_bind_address = 0.0.0.0:9000
-            http_external_uri = https://monitoring.aws.iohkdev.io/
             elasticsearch_shards = 1
             elasticsearch_replicas = 0
           '';
@@ -585,8 +581,7 @@ in {
       };
       systemd.services.graylog-preload = let
         graylogConfig = ./graylog/graylogConfig.json;
-        graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh"
-          (import ./graylog/graylogPreload.nix { inherit graylogConfig; });
+        graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh" (readFile ./graylog/graylogPreload.sh);
       in {
         description = "Graylog Content Pack Preload Service";
         wantedBy = [ "multi-user.target" ];
@@ -595,12 +590,12 @@ in {
         serviceConfig = {
           Type = "oneshot";
           User = "${config.services.graylog.user}";
-          ExecStartPre= ''
+          ExecStartPre = ''
             +-/bin/sh -c 'chmod 0644 /var/lib/graylog/.graylogConfigured*'
             ExecStartPre=+-/bin/sh -c 'chown graylog:nogroup /var/lib/graylog/.graylogConfigured*'
             ExecStartPre=${pkgs.coreutils}/bin/sleep 60
           '';
-          ExecStart="${graylogPreload}/bin/graylogPreload.sh install";
+          ExecStart = "${graylogPreload}/bin/graylogPreload.sh install ${graylogConfig}";
         };
       };
     }
