@@ -143,21 +143,21 @@ then log "overlay mode ON"
 else OVERLAY_MODE=
 fi
 
-nix_opts="\
---max-jobs 4 --cores 0 --show-trace \
--I nixpkgs=${nixpkgs_out} \
-"
-nixops_nix_opts="${nix_opts} \
--I nixops=${nixops_out}/share/nix/nixops \
--I config=./configs/${CONFIG}.nix \
--I configs=./configs \
--I module=${gacroot}/modules \
--I overlay=${gacroot}/overlays \
--I static=./static \
--I goguen=${gacroot}/goguen \
-${OVERLAY_MODE:+-I local-module=./modules} \
-${OVERLAY_MODE:+-I iops=./iops} \
-"
+nix_opts=(--max-jobs 4
+          --cores 0
+          --show-trace
+	      -I "nixpkgs=${nixpkgs_out}")
+
+nixops_nix_opts=("${nix_opts[@]}"
+                 -I "nixops=${nixops_out}/share/nix/nixops"
+                 -I "config=./configs/${CONFIG}.nix"
+                 -I "configs=./configs"
+                 -I "module=${gacroot}/modules"
+                 -I "overlay=${gacroot}/overlays"
+                 -I "static=./static"
+                 -I "goguen=${gacroot}/goguen"
+                 ${OVERLAY_MODE:+-I local-module=./modules}
+                 ${OVERLAY_MODE:+-I iops=./iops})
 
 if test ! -f "${nixops}"
 then nix-store --realise "${nixops}"
@@ -165,8 +165,8 @@ fi
 
 export NIX_PATH="nixpkgs=${nixpkgs_out}"
 
-nixops_subopts="--deployment ${CLUSTER_NAME} ${nixops_nix_opts}"
-nixops_subopts_deploy="${nixops_subopts} --max-concurrent-copy=50"
+nixops_subopts=(--deployment "${CLUSTER_NAME}" "${nixops_nix_opts[@]}")
+nixops_subopts_deploy=("${nixops_subopts[@]}" "--max-concurrent-copy=50")
 
 nixops_constituents="$(ls "./clusters/${CLUSTER_TYPE}"/*.nix)"
 # We're using `ls -Q` here to quote; make sure we have the GNU version of `ls`
@@ -241,28 +241,28 @@ case ${cmd} in
 "" | "" ) # Doc:
         ;;
 eval | evaluate-nixops-machine-definition ) # Doc:
-        nix-instantiate "${nixops_nix_opts}" --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"${DEFAULT_NODE}\"]; }";;
+        nix-instantiate "${nixops_nix_opts[@]}" --eval -E  "let depl = ${nixops_network_expr}; in depl.machines { names = [\"${DEFAULT_NODE}\"]; }";;
 repl | repl-with-machine-definition ) # Doc:
         nixver="$(nix --version | cut -d ' ' -f3)"
         if test "${nixver}" != 2.2 -a "${nixver}" != 2.3 -a "${nixver}" != 2.4 -a "${nixver}" != 2.5
         then log "ERROR:  nix version 2.2 required for 'gac repl'"
         fi
-        nix repl     "${nixops_nix_opts}" --arg    depl       "${nixops_network_expr}" ./network.nix \
+        nix repl     "${nixops_nix_opts[@]}" --arg    depl       "${nixops_network_expr}" ./network.nix \
                                         --argstr nixpkgsSrc "${nixpkgs_out}";;
 dry | full-new-cluster-create-and-deploy-dry-run ) # Doc:
         export AWS_PROFILE=default AWS_ACCESS_KEY_ID=AKIASDADFLKJDFJDJFDJ AWS_SECRET_ACCESS_KEY=Hlkjdflsjfjlnrmnsiuhfskjhkshfiuurrfsd/Rp
-        if ${nixops} info  "${nixops_subopts}" >/dev/null 2>&1
+        if ${nixops} info  "${nixops_subopts[@]}" >/dev/null 2>&1
         then op=modify
         else op=create; generate_node_keys; fi
-        ${nixops} ${op}    "${nixops_subopts}" "${nixops_constituents}"
+        ${nixops} ${op}    "${nixops_subopts[@]}" "${nixops_constituents}"
         deployerIP="127.0.0.1"
         AKID=someBoringAKID # "(pow 2.71828 . (3.1415 *) . sqrt) -1 = -1"
-        ${nixops} set-args "${nixops_subopts}" \
+        ${nixops} set-args "${nixops_subopts[@]}" \
 		  --argstr accessKeyId "${AKID}" \
 		  --argstr deployerIP "${deployerIP}" \
           --argstr clusterName "${CLUSTER_NAME}" \
 		  --arg config "import ./config.nix { clusterName = \"${CLUSTER_NAME}\"; deployerIP = \"${deployerIP}\"; accessKeyId = \"${AKID}\"; }"
-        ${nixops} deploy   "${nixops_subopts_deploy}" --dry-run "$@"
+        ${nixops} deploy   "${nixops_subopts_deploy[@]}" --dry-run "$@"
         ;;
 "" | "" ) # Doc:
         ;;
@@ -296,7 +296,7 @@ configure | config | cfg | conf | configure-nixops-deployment-arguments ) # Doc:
            then log "generating self-signed TLS certificate"
                 generate_self_signed_tls_cert
         fi
-        ${nixops} set-args "${nixops_subopts}" \
+        ${nixops} set-args "${nixops_subopts[@]}" \
                   --argstr accessKeyId "${AKID}" \
                   --argstr deployerIP "${deployerIP}" \
 	          --argstr clusterName "${CLUSTER_NAME}" \
@@ -312,12 +312,12 @@ genkey | g | generate-node-keys ) # Doc:
         generate_node_keys;;
 
 delete | destroy | terminate | abolish | eliminate | demolish | delete-nixops-deployment ) # Doc:
-        ${nixops} destroy  "${nixops_subopts}" --confirm
-        ${nixops} delete   "${nixops_subopts}";;
+        ${nixops} destroy  "${nixops_subopts[@]}" --confirm
+        ${nixops} delete   "${nixops_subopts[@]}";;
 fromscratch | re | redeploy-cluster-from-scrach ) # Doc:
         $self delete && $self create && $self deploy;;
 info   | i | nixops-info ) # Doc:
-        ${nixops} info     "${nixops_subopts}";;
+        ${nixops} info     "${nixops_subopts[@]}";;
 "" | "" ) # Doc:
         ;;
 "" | cluster-deployment ) # Doc:
@@ -327,15 +327,15 @@ info   | i | nixops-info ) # Doc:
 deploy-one | one | deploy-one-machine ) # Doc:
         $self     deploy --include "${DEFAULT_NODE}";;
 deploy | d | update-and-deploy ) # Doc:
-	if ! ${nixops} info "${nixops_subopts}" &>/dev/null; then
+	if ! ${nixops} info "${nixops_subopts[@]}" &>/dev/null; then
 		log "recreating the Nixops deployment.."
 		$self create
 	fi
         $self     components
         $self     configure-nixops-deployment-arguments
-        ${nixops} check    "${nixops_subopts}" || true # <- nixops check returns non-zero status when resources are missing but it still updates the state. so we don't want this to stop us.
-        ${nixops} modify   "${nixops_subopts}" "clusters/${CLUSTER_TYPE}"/*.nix
-        ${nixops} deploy   "${nixops_subopts_deploy}" "$@";;
+        ${nixops} check    "${nixops_subopts[@]}" || true # <- nixops check returns non-zero status when resources are missing but it still updates the state. so we don't want this to stop us.
+        ${nixops} modify   "${nixops_subopts[@]}" "clusters/${CLUSTER_TYPE}"/*.nix
+        ${nixops} deploy   "${nixops_subopts_deploy[@]}" "$@";;
 "" | "" ) # Doc:
         ;;
 "" | building-derivations ) # Doc:
@@ -346,20 +346,20 @@ update-pin | update | pin | update-a-goguen-package-pin ) # Doc:
         "${gacroot}/goguen/update-pin.sh" "$@";;
 build | b | build-goguen-package ) # Doc:
         pkg=$1; shift
-        ${nix_build} "${nix_opts}" -A "${pkg}" './default.nix' "$@";;
+        ${nix_build} "${nix_opts[@]}" -A "${pkg}" './default.nix' "$@";;
 build-ala-hydra | build-goguen-package-like-hydra-does ) # Doc:
         #pkg=$1
         log "building Hydra"
         hydra_drv="$(   nix-instantiate -E '(import ./. {}).pkgs.hydra')"
-        hydra=$(${nix_build} "${nix_opts}" "${hydra_drv}")
+        hydra=$(${nix_build} "${nix_opts[@]}" "${hydra_drv}")
         log "using Hydra to evaluate goguen/release.nix"
         "${hydra}/bin/hydra-eval-jobs" -I "${nixpkgs_out}" -I . -I https://github.com/input-output-hk/iohk-nix/archive/25225e9e23d8fe73663c1e958d41d481b0a4e0f0.tar.gz goguen/release.nix "$@";;
 drv | goguen-derivation ) # Doc:
         pkg=$1
-        ${nix_inst}  "${nix_opts}" -A "${pkg}" goguen/release.nix;;
+        ${nix_inst}  "${nix_opts[@]}" -A "${pkg}" goguen/release.nix;;
 drv-show | prettyprint-goguen-derivation ) # Doc:
         pkg=$1
-        ${nix_inst}  "${nix_opts}" -A "${pkg}" goguen/release.nix | xargs "${nix}" show-derivation;;
+        ${nix_inst}  "${nix_opts[@]}" -A "${pkg}" goguen/release.nix | xargs "${nix}" show-derivation;;
 "" | "" ) # Doc:
         ;;
 "" | basic-node-ssh ) # Doc:
@@ -369,9 +369,9 @@ drv-show | prettyprint-goguen-derivation ) # Doc:
 ssh | ssh-to-node ) # Doc:
         machine="${1:-${DEFAULT_NODE}}";
         set +u; test -n "$1" && shift; set -u
-        ${nixops} ssh          "${nixops_subopts}" "${machine}" "$@";;
+        ${nixops} ssh          "${nixops_subopts[@]}" "${machine}" "$@";;
 ssh-all | parallel-ssh-on-all-nodes ) # Doc:
-        ${nixops} ssh-for-each "${nixops_subopts}" --parallel --include "${ALL_NODES}" -- "$@";;
+        ${nixops} ssh-for-each "${nixops_subopts[@]}" --parallel --include "${ALL_NODES}" -- "$@";;
 "" | "" ) # Doc:
         ;;
 "" | systemd-service-control ) # Doc:
@@ -400,12 +400,12 @@ statuses | ss | all-node-service-statuses ) # Doc:
         ;;
 since | node-service-start-date-on ) # Doc:
         node=${1:-${DEFAULT_NODE}}
-        ${nixops} ssh          "${nixops_subopts}" "${node}" -- systemctl show "${NODE_SERVICE}" --value --property WatchdogTimestamp 2>&1 | cut -d' ' -f3;;
+        ${nixops} ssh          "${nixops_subopts[@]}" "${node}" -- systemctl show "${NODE_SERVICE}" --value --property WatchdogTimestamp 2>&1 | cut -d' ' -f3;;
 journal-on | jo | node-service-journal-on-node-since-start ) # Doc:
         node=${1:-${DEFAULT_NODE}}
         set +u; since=${2:-$($self since "${node}")}; set -u
         if test -z "${since}"; then since='3 hours ago'; fi
-        ${nixops} ssh          "${nixops_subopts}" "${node}" -- journalctl  -u "${NODE_SERVICE}" --since "'${since}'" 2>&1;;
+        ${nixops} ssh          "${nixops_subopts[@]}" "${node}" -- journalctl  -u "${NODE_SERVICE}" --since "'${since}'" 2>&1;;
 pretty-journal-on | pj | node-service-journal-on-node-since-its-start-prettified-version ) # Doc:
         node=${1:-${DEFAULT_NODE}}
         $self node-service-journal-on-node-since-start "${node}" | grep --fixed-strings --invert-match ',"state": "ok","service": "' | cut -c92- | less;;
