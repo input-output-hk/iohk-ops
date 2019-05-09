@@ -59,6 +59,12 @@ touch static/github_token{,_mantis_hydra}
 touch static/id_buildfarm{,2} static/id_buildfarm{,2}.pub
 touch static/datadog-api.secret static/datadog-application.secret
 
+test -f static/graylog-cluster-secret ||
+       { echo -n "1234567890123456789012345678901234567890123456789012345678901234" > static/graylog-cluster-secret; }
+
+test -f static/graylog-root-secret ||
+       { echo -n "1234567890123456789012345678901234567890123456789012345678901234" > static/graylog-root-secret; }
+
 test -f static/tarsnap-cardano-deployer.secret ||
         { echo "secret" > static/tarsnap-cardano-deployer.secret; }
 

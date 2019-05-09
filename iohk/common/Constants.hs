@@ -129,6 +129,7 @@ envSettings env =
                                , (Monitoring,     All, "deployments/security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-testnet.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-testnet.nix")
+                               , (ReportServer,   All, "deployments/report-server-env-testnet.nix")
                                , (Faucet,         All, "deployments/cardano-faucet-env-testnet.nix")
                                , (Monitoring,     All, "deployments/monitoring-env-testnet.nix")
                                ] <> deplAgnosticFiles}

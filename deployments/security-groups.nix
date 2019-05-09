@@ -16,7 +16,7 @@ with import ../lib.nix;
           ++  concatMap  regionSGNames         globals.allRegions
           ++  concatMap  orgXRegionSGNames     globals.orgXRegions
           ++  concatMap  coreSGNames           globals.cores
-          ++  concatMap  monitorSGNames        globals.orgXRegions
+          ++  concatMap  monitorSGNames        [ globals.monitoringNV ]
           );
         eIPsSecurityGroups = { config, resources, nodes }:
           (fold (x: y: x // y) {}
@@ -108,8 +108,8 @@ with import ../lib.nix;
               }];
             };
           };
-        monitorSGNames = { org, region }:
-            [ "allow-monitoring-static-peers-${region}-${org}" ];
+        monitorSGNames = monitor:
+            [ "allow-monitoring-static-peers-${monitor.value.region}-${monitor.value.org}" ];
         monitorSGs     = { config, nodes }: { nodePort }: ips: monitor:
           let
             neighbourNames =
