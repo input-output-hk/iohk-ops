@@ -28,6 +28,7 @@ with import ../lib.nix;
         ++ optionals typeIsCore                  [ "allow-cardano-static-peers-${config.params.name}-${config.params.region}-${config.params.org}" ]
         ++ optionals typeIsRelay                 [ "allow-kademlia-public-udp-${config.params.region}"
                                                    "allow-cardano-public-tcp-${config.params.region}" ]
+        ++ optionals typeIsMonitoring            [ "allow-monitoring-static-peers-${config.params.region}-${config.params.org}" ]
         ++ optionals config.global.enableEkgWeb  [ "allow-ekg-public-tcp-${config.params.region}-${config.params.org}" ];
       in map (resolveSGName resources)
              (if config.global.omitDetailedSecurityGroups

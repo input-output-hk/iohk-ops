@@ -87,7 +87,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                      typeIsFaucet = name == "faucet";
                 typeIsRunsCardano = typeIsCore || typeIsRelay || typeIsExplorer || typeIsFaucet;
                typeIsReportServer = name == "report-server";
-               typeIsMonitoring = name == "monitoring";
+                 typeIsMonitoring = name == "monitoring";
                       accessKeyId = if elem org allOrgs
                                     then orgAccessKeys.${org}
                                     else throw "Node '${name}' has invalid org '${org}' specified -- must be one of: ${toString allOrgs}.";
@@ -122,6 +122,7 @@ in
   inherit allOrgs defaultOrg;
   inherit orgXRegions;
   inherit orgAccessKeys;
+  inherit monitoringNV;
   ###
   inherit deployerIP systemStart environment;
 }

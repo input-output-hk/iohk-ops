@@ -2,7 +2,6 @@
 ##
 ## Remaining ones are:
 ##  - 'allow-all-*' for the development environment
-##  - 'allow-deployer-ssh-*' for the infrastructure
 
 { globals, ... }:
 
@@ -11,14 +10,15 @@ with import ../lib.nix;
   resources.ec2SecurityGroups =
     let sgs               = flip map securityGroupNames
                             (name: { name = name;
-                                    value = { config, resources, ... }: (eIPsSecurityGroups { inherit config resources; })."${name}"; });
+                                    value = { config, resources, nodes, ... }: (eIPsSecurityGroups { inherit config resources nodes; })."${name}"; });
         securityGroupNames =
-         (              (centralRegionSGNames  centralRegion)
+          (             (centralRegionSGNames  centralRegion)
           ++  concatMap  regionSGNames         globals.allRegions
           ++  concatMap  orgXRegionSGNames     globals.orgXRegions
           ++  concatMap  coreSGNames           globals.cores
-         );
-        eIPsSecurityGroups = { config, resources }:
+          ++  concatMap  monitorSGNames        [ globals.monitoringNV ]
+          );
+        eIPsSecurityGroups = { config, resources, nodes }:
           (fold (x: y: x // y) {}
           (         (centralRegionSGs  centralRegion)
 
@@ -30,8 +30,11 @@ with import ../lib.nix;
 
            ++  map  (coreSGs           3000 resources.elasticIPs) # TODO: config for port
                     globals.cores
+
+           ++  map  (monitorSGs { inherit config nodes; } { nodePort = 5044; } resources.elasticIPs)
+                    [ globals.monitoringNV ]
           ));
-        accessKeyId   = globals.orgAccessKeys.IOHK; # Design decision with regard to AWS SGs.
+        accessKeyId = globals.orgAccessKeys.IOHK; # Design decision with regard to AWS SGs.
         ##
         ## SG names and definitions
         ##
@@ -64,7 +67,7 @@ with import ../lib.nix;
               "allow-ekg-public-tcp-${region}-${org}"
               "allow-monitoring-collection-${region}-${org}"
             ];
-        orgXRegionSGs     = ips: { org, region}: {
+        orgXRegionSGs     = ips: { org, region }: {
             "allow-deployer-ssh-${region}-${org}" = {
               inherit region;
               accessKeyId = globals.orgAccessKeys.${org};
@@ -103,6 +106,27 @@ with import ../lib.nix;
                 fromPort = 9113; toPort = 9113; # nginx exporter
                 sourceIp = monitoringSourceIp;
               }];
+            };
+          };
+        monitorSGNames = monitor:
+            [ "allow-monitoring-static-peers-${monitor.value.region}-${monitor.value.org}" ];
+        monitorSGs     = { config, nodes }: { nodePort }: ips: monitor:
+          let
+            neighbourNames =
+              let monitorPeers = builtins.attrNames nodes;
+              in  traceF (p: "${monitor.name} peers: " + concatStringsSep ", " monitorPeers) monitorPeers;
+            neighbours = map (name: globals.fullMap.${name}) neighbourNames;
+            neighGrant = neigh:
+              let ip = ips."${toString neigh.name}-ip";
+              in {
+                  fromPort = nodePort; toPort = nodePort; # graylog journalbeat input = TCP port 5044
+                  sourceIp = ip;
+              };
+          in {
+            "allow-monitoring-static-peers-${monitor.value.region}-${monitor.value.org}" = {
+              inherit (monitor.value) accessKeyId region;
+              description = "Monitoring TCP static peers of ${monitor.name}";
+              rules = map neighGrant neighbours;
             };
           };
         coreSGNames = core:

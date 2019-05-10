@@ -38,6 +38,21 @@ in
         enable = true;
         emailDomain = "iohk.io";
       } // (import ../static/oauth.nix);
+
+
+      # Change the Grafana root default username and password for your deployment
+      # NOTE: These two Grafana settings only take effect on the initial deployment.
+      #
+      grafanaRootUsername = "changeme";
+      grafanaRootPassword = "changeme";
+
+
+      # Change the Graylog root default username and password for your deployment
+      #
+      graylogRootUsername = "changeme";
+      graylogRootPassword = "changeme";
+
+
       monitoredNodes = map (h: h.name) (lib.filter (h: !h.withNginx) hostList);
       nginxMonitoredNodes = map (h: h.name) (lib.filter (h: h.withNginx) hostList);
       webhost = hostName;
@@ -50,6 +65,7 @@ in
     deployment.ec2.keyPair        = resources.ec2KeyPairs.${monitoring.keyPairName};
     deployment.ec2.securityGroups = [
       resources.ec2SecurityGroups."allow-to-monitoring-${config.deployment.ec2.region}"
+      resources.ec2SecurityGroups."allow-monitoring-static-peers-${config.deployment.ec2.region}-${monitoring.org}"
     ];
   };
 

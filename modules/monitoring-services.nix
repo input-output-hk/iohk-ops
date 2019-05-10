@@ -5,7 +5,6 @@ with lib;
 
 let
   cfg = config.services.monitoring-services;
-
 in {
 
   options = {
@@ -14,7 +13,7 @@ in {
         type = types.bool;
         default = true;
         description = ''
-          Enable prometheus, alert available exporters.
+          Enable prometheus, alertmangaer, grafana and graylog.
         '';
       };
 
@@ -31,6 +30,43 @@ in {
         default = null;
         description = ''
           Application specific dashboards.
+        '';
+      };
+
+      grafanaRootUsername = mkOption {
+        type = types.str;
+        default = "changeme";
+        description = ''
+          Name of the default administrator user in grafana.
+        '';
+      };
+
+      grafanaRootPassword = mkOption {
+        type = types.str;
+        default = "changeme";
+        description = ''
+          Plaintext password for the default administrator user in grafana.
+        '';
+      };
+
+      graylogRootUsername = mkOption {
+        type = types.str;
+        default = "changeme";
+        description = ''
+          Name of the default administrator user in graylog.
+        '';
+      };
+
+      graylogRootPassword = mkOption {
+        type = types.str;
+        default = "changeme";
+        description = ''
+          Plaintext password for the default administrator user in graylog.  A corresponding SHA256 hash
+          needs to be generated for this password and stored in static/graylog-root-secret
+          relative to the iohk-ops git clone root folder.  As an example, this can be
+          done with the following command:
+
+          echo -n <graylogRootPassword> | shasum -a 256 | sed -z 's/  -\n//g' > static/graylog-root-secret
         '';
       };
 
@@ -53,7 +89,7 @@ in {
       webhost = mkOption {
         type = types.str;
         description = ''
-          Public web host used for prometheus, grafana and the alertmanager.
+          Public web host used for prometheus, grafana, alertmanager and graylog.
         '';
         example = "monitoring.lan";
       };
@@ -133,7 +169,6 @@ in {
       };
     };
   };
-
   config = mkIf cfg.enable (mkMerge [
     (lib.mkIf cfg.oauth.enable {
       services = {
@@ -144,17 +179,15 @@ in {
           nginx.virtualHosts = [ "${cfg.webhost}" ];
         };
         nginx.virtualHosts."${cfg.webhost}".locations."/".extraConfig = ''
-          proxy_pass http://localhost:5601/;
-          proxy_http_version 1.1;
-          proxy_set_header Upgrade $http_upgrade;
-          proxy_set_header Connection 'upgrade';
-          proxy_set_header Host $host;
-          proxy_cache_bypass $http_upgrade;
+          return 301 https://${cfg.webhost}/graylog/;
         '';
       };
     })
     {
-      networking.firewall.allowedTCPPorts = [ 80 443 ];
+      # The following Graylog warning matches a similar Grafana auto-generated warning
+      warnings = [ "Graylog passwords will be stored as plaintext in the Nix store!" ];
+      environment.systemPackages = with pkgs; [ curl gnugrep jq ];
+      networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
       services = let
         oauthProxyConfig = if (cfg.oauth.enable) then ''
           auth_request /oauth2/auth;
@@ -203,9 +236,143 @@ in {
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
                 '';
+                "/graylog/".extraConfig = ''
+                  ${oauthProxyConfig}
+                  proxy_set_header Host $http_host;
+                  proxy_set_header REMOTE_ADDR $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto https;
+                  proxy_set_header X-Graylog-Server-URL https://${cfg.webhost}/graylog;
+                  proxy_set_header X-Forward-Host $host;
+                  proxy_set_header X-Forwarded-Server $host;
+
+                  # Required to partially fix the API Browser, but also breaks the streaming page
+                  # rewrite ^ $request_uri;
+                  rewrite ^/graylog/(.*)$ /$1 break;
+                  # return 400;                                   # https://stackoverflow.com/q/28684300
+                  proxy_pass http://localhost:9000/;
+                '';
               };
             };
           };
+        };
+        graylog = {
+          enable = true;
+          nodeIdFile = "/var/lib/graylog/node-id";
+          passwordSecret = (
+            if pathExists ../static/graylog-cluster-secret then
+              readFile ../static/graylog-cluster-secret
+            else
+              builtins.trace ''
+                ***********************************************************************************
+                ******
+                ******
+                ******
+                ****** GRAYLOG CLUSTER PEPPER SECRET NEEDED
+                ******
+                ******
+                ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
+                ******              a cluster specific pepper secret must be created.
+                ******
+                ****** ACTION:      Create a file relative to the iohk-ops git clone root folder of:
+                ******
+                ******
+                ******              static/graylog-cluster-secret
+                ******
+                ******
+                ****** CONTENT:     The file must contain a single unquoted string of at least 64
+                ******              random alphanumeric characters.  The command described below is
+                ******              an example of how to generate such a string and file.
+                ******
+                ****** COMMAND:     The following example command would be run from the iohk-ops git
+                ******              clone root folder:
+                ******
+                ******
+                ******              tr -cd '[:alnum:]' < /dev/urandom | head -c 96 > static/graylog-cluster-secret
+                ******
+                ******
+                ****** OUTCOME:     Redeploy your cluster once this file has been created.
+                ******              If the pepper secret needs to be updated in the future, the same
+                ******              method can be used followed by re-running the deploy command.
+                ******
+                ******
+                ******
+                ******
+              '' 1
+          );
+          rootUsername = traceValFn (x:
+            if x == "changeme" then ''
+              *
+              *********************************************************************
+              WARNING: The grayalog default root user account name is "${x}".
+                       Please customize this in the deployment/monitoring.nix file
+                       relative to the iohk-ops git clone root folder and redeploy.
+              *********************************************************************
+            '' else ''
+                Graylog root user account name successfully changed from default in deployment/monitoring.nix'')
+            cfg.graylogRootUsername;
+          rootPasswordSha2 = (
+            if pathExists ../static/graylog-root-secret then
+              readFile ../static/graylog-root-secret
+            else
+              builtins.trace ''
+                ***********************************************************************************
+                ******
+                ******
+                ******
+                ****** GRAYLOG ROOT HASH SECRET NEEDED
+                ******
+                ******
+                ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
+                ******              a root user SHA256 password hash secret must be created.
+                ******
+                ****** ACTION:      Create a file relative to the iohk-ops git clone root folder of:
+                ******
+                ******
+                ******              static/graylog-root-secret
+                ******
+                ******
+                ****** CONTENT:     The file must contain a single unquoted SHA256 hash of a password
+                ******              which will be used for the root graylog user.  The command described
+                ******              below is an example of how to generate such a string and file.
+                ******
+                ****** COMMAND:     The following example command would be run from the iohk-ops git
+                ******              clone root folder and where <graylogRootPassword> is a parameter
+                ******              representing the password the nix configuration string
+                ******              ${config.services.monitoring-services.graylogRootPassword} is set to
+                ******              in deployments/monitoring.nix:
+                ******
+                ******
+                ******              echo -n <graylogRootPassword> | shasum -a 256 | sed -z 's/  -\n//g' > static/graylog-root-secret
+                ******
+                ******
+                ****** OUTCOME:     Redeploy your cluster once this file has been created.
+                ******              If the hash secret needs to be updated in the future, the same
+                ******              method can be used followed by re-running the deploy command.
+                ******
+                ******
+                ******
+                ******
+              '' 1
+          );
+          elasticsearchHosts = [ "http://localhost:9200" ];
+        # Elasticsearch config below is for a single node deployment
+          extraConfig = ''
+            http_bind_address = 0.0.0.0:9000
+            elasticsearch_shards = 1
+            elasticsearch_replicas = 0
+          '';
+        };
+        elasticsearch = {
+          enable = true;
+          package = pkgs.elasticsearch6-oss;
+        # Prevent graylog deflector indexing by turning off auto create index option
+          extraConf = ''
+            action.auto_create_index: false
+          '';
+        };
+        mongodb = {
+          enable = true;
         };
         grafana = {
           enable = true;
@@ -236,6 +403,30 @@ in {
                 name = "application";
                 options.path = cfg.applicationDashboards;
               }] else []);
+          };
+          security = {
+            adminPassword = traceValFn (x:
+              if x == "changeme" then ''
+                *
+                *********************************************************************
+                WARNING: The grafana default root user password is "${x}".
+                         Please customize this in the deployment/monitoring.nix file
+                         relative to the iohk-ops git clone root folder and redeploy.
+                *********************************************************************
+              '' else ''
+                Grafana root user password successfully changed from default in deployment/monitoring.nix'')
+              cfg.grafanaRootPassword;
+            adminUser = traceValFn (x:
+              if x == "changeme" then ''
+                *
+                *********************************************************************
+                WARNING: The grafana default root user account name is "${x}".
+                         Please customize this in the deployment/monitoring.nix file
+                         relative to the iohk-ops git clone root folder and redeploy.
+                *********************************************************************
+              '' else ''
+                Grafana root user account name successfully changed from default in deployment/monitoring.nix'')
+              cfg.grafanaRootUsername;
           };
         };
         prometheus.exporters = {
@@ -340,7 +531,7 @@ in {
           enable = true;
           webExternalUrl = "https://${cfg.webhost}/prometheus/";
           extraFlags = [
-            "--storage.tsdb.retention.time=8760h"
+            "--storage.tsdb.retention=8760h"
           ];
 
           alertmanagerURL = [ "localhost:9093" ];
@@ -541,6 +732,42 @@ in {
               in map makeNodeConfig cfg.nginxMonitoredNodes;
             }
           ];
+        };
+      };
+      systemd.services.graylog-preload = let
+        graylogConfig = ./graylog/graylogConfig.json;
+        graylogRootPassword = traceValFn (x:
+          if x == "changeme" then ''
+            *
+            *********************************************************************
+            WARNING: The graylog default root user password is "${x}".
+                     Please customize this in the deployment/monitoring.nix file
+                     relative to the iohk-ops git clone root folder and redeploy.
+            *********************************************************************
+          '' else ''
+            Graylog root user password successfully changed from default in deployment/monitoring.nix'')
+          cfg.graylogRootPassword;
+        graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh" (readFile (
+          pkgs.substituteAll {
+            src = ./graylog/graylogPreload.sh;
+            inherit (cfg) graylogRootUsername;
+            inherit graylogRootPassword;
+          })
+        );
+      in {
+        description = "Graylog Content Pack Preload Service";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "graylog.service elasticsearch.service mongodb.service" ];
+        path = with pkgs; [ curl gnugrep jq ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = "${config.services.graylog.user}";
+          ExecStartPre = ''
+            +-/bin/sh -c 'chmod 0644 /var/lib/graylog/.graylogConfigured*'
+            ExecStartPre=+-/bin/sh -c 'chown graylog:nogroup /var/lib/graylog/.graylogConfigured*'
+            ExecStartPre=${pkgs.coreutils}/bin/sleep 60
+          '';
+          ExecStart = "${graylogPreload}/bin/graylogPreload.sh install ${graylogConfig}";
         };
       };
     }
