@@ -33,9 +33,25 @@ in {
         '';
       };
 
+      grafanaRootUsername = mkOption {
+        type = types.str;
+        default = "changeme";
+        description = ''
+          Name of the default administrator user in grafana.
+        '';
+      };
+
+      grafanaRootPassword = mkOption {
+        type = types.str;
+        default = "changeme";
+        description = ''
+          Plaintext password for the default administrator user in grafana.
+        '';
+      };
+
       graylogRootUsername = mkOption {
         type = types.str;
-        default = "admin";
+        default = "changeme";
         description = ''
           Name of the default administrator user in graylog.
         '';
@@ -43,9 +59,9 @@ in {
 
       graylogRootPassword = mkOption {
         type = types.str;
-        default = "admin";
+        default = "changeme";
         description = ''
-          Plaintext password for graylog web UI.  A corresponding SHA256 hash
+          Plaintext password for the default administrator user in graylog.  A corresponding SHA256 hash
           needs to be generated for this password and stored in static/graylog-root-secret
           relative to the iohk-ops git clone root folder.  As an example, this can be
           done with the following command:
@@ -153,7 +169,6 @@ in {
       };
     };
   };
-
   config = mkIf cfg.enable (mkMerge [
     (lib.mkIf cfg.oauth.enable {
       services = {
@@ -169,6 +184,8 @@ in {
       };
     })
     {
+      # The following Graylog warning matches a similar Grafana auto-generated warning
+      warnings = [ "Graylog passwords will be stored as plaintext in the Nix store!" ];
       environment.systemPackages = with pkgs; [ curl gnugrep jq ];
       networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
       services = let
@@ -283,7 +300,17 @@ in {
                 ******
               '' 1
           );
-          rootUsername = cfg.graylogRootUsername;
+          rootUsername = traceValFn (x:
+            if x == "changeme" then ''
+              *
+              *********************************************************************
+              WARNING: The grayalog default root user account name is "${x}".
+                       Please customize this in the deployment/monitoring.nix file
+                       relative to the iohk-ops git clone root folder and redeploy.
+              *********************************************************************
+            '' else ''
+                Graylog root user account name successfully changed from default in deployment/monitoring.nix'')
+            cfg.graylogRootUsername;
           rootPasswordSha2 = (
             if pathExists ../static/graylog-root-secret then
               readFile ../static/graylog-root-secret
@@ -306,7 +333,7 @@ in {
                 ******
                 ******
                 ****** CONTENT:     The file must contain a single unquoted SHA256 hash of a password
-                ******              which will be used for the root graylog.  The command described
+                ******              which will be used for the root graylog user.  The command described
                 ******              below is an example of how to generate such a string and file.
                 ******
                 ****** COMMAND:     The following example command would be run from the iohk-ops git
@@ -376,6 +403,30 @@ in {
                 name = "application";
                 options.path = cfg.applicationDashboards;
               }] else []);
+          };
+          security = {
+            adminPassword = traceValFn (x:
+              if x == "changeme" then ''
+                *
+                *********************************************************************
+                WARNING: The grafana default root user password is "${x}".
+                         Please customize this in the deployment/monitoring.nix file
+                         relative to the iohk-ops git clone root folder and redeploy.
+                *********************************************************************
+              '' else ''
+                Grafana root user password successfully changed from default in deployment/monitoring.nix'')
+              cfg.grafanaRootPassword;
+            adminUser = traceValFn (x:
+              if x == "changeme" then ''
+                *
+                *********************************************************************
+                WARNING: The grafana default root user account name is "${x}".
+                         Please customize this in the deployment/monitoring.nix file
+                         relative to the iohk-ops git clone root folder and redeploy.
+                *********************************************************************
+              '' else ''
+                Grafana root user account name successfully changed from default in deployment/monitoring.nix'')
+              cfg.grafanaRootUsername;
           };
         };
         prometheus.exporters = {
@@ -685,10 +736,22 @@ in {
       };
       systemd.services.graylog-preload = let
         graylogConfig = ./graylog/graylogConfig.json;
+        graylogRootPassword = traceValFn (x:
+          if x == "changeme" then ''
+            *
+            *********************************************************************
+            WARNING: The graylog default root user password is "${x}".
+                     Please customize this in the deployment/monitoring.nix file
+                     relative to the iohk-ops git clone root folder and redeploy.
+            *********************************************************************
+          '' else ''
+            Graylog root user password successfully changed from default in deployment/monitoring.nix'')
+          cfg.graylogRootPassword;
         graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh" (readFile (
           pkgs.substituteAll {
             src = ./graylog/graylogPreload.sh;
-            inherit (cfg) graylogRootUsername graylogRootPassword;
+            inherit (cfg) graylogRootUsername;
+            inherit graylogRootPassword;
           })
         );
       in {
