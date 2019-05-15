@@ -4,8 +4,6 @@ with lib;
 
 let
   cfg = config.services.monitoring-exporters;
-  monitoring = config.deployment.arguments.globals.monitoringNV;
-
 in {
 
   options = {
@@ -20,7 +18,7 @@ in {
 
       graylogHost = mkOption {
         type = types.nullOr types.str;
-        default = "${monitoring.name}-ip:5044";
+        default = null;
         example = "graylog:5044";
         description = ''
           The host port under which Graylog is externally reachable.
