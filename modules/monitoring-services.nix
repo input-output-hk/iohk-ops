@@ -70,6 +70,22 @@ in {
         '';
       };
 
+      graylogClusterSecretFile = mkOption {
+        type = types.path;
+        default = ../static/graylog-cluster-secret;
+        description = ''
+          A cluster specific pepper secret for graylog
+        '';
+      };
+
+      graylogRootSecretFile = mkOption {
+        type = types.path;
+        default = ../static/graylog-root-secret;
+        description = ''
+          Graylog root user SHA256 password hash secret.
+        '';
+      };
+
       monitoredNodes = mkOption {
         type = types.listOf types.str;
         default = [];
@@ -260,8 +276,8 @@ in {
           enable = true;
           nodeIdFile = "/var/lib/graylog/node-id";
           passwordSecret = (
-            if pathExists ../static/graylog-cluster-secret then
-              readFile ../static/graylog-cluster-secret
+            if pathExists cfg.graylogClusterSecretFile then
+              readFile cfg.graylogClusterSecretFile
             else
               builtins.trace ''
                 ***********************************************************************************
@@ -276,8 +292,10 @@ in {
                 ******
                 ****** ACTION:      Create a file relative to the iohk-ops git clone root folder of:
                 ******
-                ******
                 ******              static/graylog-cluster-secret
+                ******
+                ******              and use its path as value for the
+                ******              service.monitoring-service.graylogClusterSecretFile option.
                 ******
                 ******
                 ****** CONTENT:     The file must contain a single unquoted string of at least 64
@@ -312,8 +330,8 @@ in {
                 Graylog root user account name successfully changed from default in deployment/monitoring.nix'')
             cfg.graylogRootUsername;
           rootPasswordSha2 = (
-            if pathExists ../static/graylog-root-secret then
-              readFile ../static/graylog-root-secret
+            if pathExists cfg.graylogRootSecretFile then
+              readFile cfg.graylogRootSecretFile
             else
               builtins.trace ''
                 ***********************************************************************************
@@ -328,8 +346,10 @@ in {
                 ******
                 ****** ACTION:      Create a file relative to the iohk-ops git clone root folder of:
                 ******
-                ******
                 ******              static/graylog-root-secret
+                ******
+                ******              and use its path as value for the
+                ******              service.monitoring-service.graylogRootSecretFile option.
                 ******
                 ******
                 ****** CONTENT:     The file must contain a single unquoted SHA256 hash of a password
