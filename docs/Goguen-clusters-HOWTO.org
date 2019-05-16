@@ -1,6 +1,6 @@
 * Goguen deployment HOWTO
 
-The ~gac~ script is used to configure a Goguen cluster and control its lifecyle.
+The ~gac~ script is used to configure a Goguen cluster and control its lifecycle.
 
 Use
 
