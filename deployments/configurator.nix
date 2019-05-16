@@ -11,6 +11,10 @@ with (import <nixpkgs> {}).lib;
     # for NixOS configs however, we need to make a distinction between defaults and and user-supplied parameters.
     imports = [ <module/configurator.nix> ];
 
+    nixpkgs.overlays = [
+      (import <overlay/monitoring-exporters.nix>)
+    ];
+
     # The configurator *module* basically just changes the precedence of everything in `optionDefaults` and `userConfig` and merges them
     # together. The reason we have to send it off to a NixOS module is because we literally can't do it here in nixops. Trust, I tried. There be dragons and hydrae 🐉🐲.
     configurator = {
