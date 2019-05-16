@@ -1,9 +1,12 @@
 * Goguen deployment HOWTO
 
-The ~gac.sh~ script is used to configure a Goguen cluster and control its lifecyle.
+The ~gac~ script is used to configure a Goguen cluster and control its lifecyle.
 
 Use
-: ./gac.sh --help
+
+: ./enter.sh
+: gac --help
+
 to see all available commands.
 
 *** Topology
@@ -31,34 +34,39 @@ Then ask devops for ssh config fragment to use for connection.
 
    The default type for Mantis clusters is =mantis=.
 
-3. Use the =gac.sh= script available in =~= to create a new deployment checkout:
-: ./gac.sh new --help
-: ./gac.sh new CLUSTER-NAME [CLUSTER-TYPE]
+3. Use the =gac= CLI available in =~= to create a new deployment checkout:
+: gac new --help
+: gac new CLUSTER-NAME [CLUSTER-TYPE]
 
 Example: let's say we want to deploy a new mantis cluster named
 =adam-workspace=, you'll need to run:
 
-: ./gac.sh new adam-workspace
+: gac new adam-workspace
 
 4. Deploy the new cluster:
 
 : cd CLUSTER-NAME
-: ./gac.sh deploy
+: ./enter.sh
+: gac deploy
 
 *** Using a Mantis cluster
 
 Your mantis cluster has been deployed, it's time to use it.
 
-When using =./gac.sh=, your favorite command will soon be:
+First of all, you need to fetch all the ~gac~-related commands in scope:
 
-: ./gac.sh info
+: ./enter.sh
+
+When using =gac=, your favorite command will soon be:
+
+: gac info
 
 This command prints the current status of your cluster. You can see
 what has been deployed, your nodes names and their associated IPs.
 
 #+BEGIN_SRC
 
-./gac.sh info
+gac info
 This command is going to display some basic information about your cluster.
 Network name: felix-workspace
 Network UUID: 48d23773-5456-11e9-9eb4-06578c8a1b06
@@ -97,16 +105,16 @@ section example.
 You can access to the mantis logs of a specific node, for instance
 mantis-a-0 by running:
 
-: ./gac.sh journal-on mantis-a-0
+: gac journal-on mantis-a-0
 
 You can retrieve the logs of all of the deployed nodes in a single
 command by running:
 
-: ./gac.sh journal
+: gac journal
 
 You can also get a direct ssh session with a cluster node:
 
-: ./gac.sh ssh mantis-a-0
+: gac ssh mantis-a-0
 
 **** Updating the cluster
 
@@ -114,18 +122,18 @@ If you want to update your cluster after the devops team made some
 changes in their git repository, nothing complicated, just update the
 local git checkout and re-deploy the cluster.
 
-: git pull && ./gac.sh deploy
+: git pull && gac deploy
 
 **** Destroying the cluster
 
 If you want to destroy the cluster machines/resources, just run:
 
-: ./gac.sh delete
+: gac delete
 
 If you want to re-deploy the same cluster afterward, you need to
 call:
 
-: ./gac.sh create
+: gac create
 
 *** Troubleshooting
 **** Let's encrypt cannot generate a cert for explorer
@@ -161,14 +169,14 @@ Exception: activation of 1 of 6 machines failed (namely on ‘explorer-a’)
 The problem here is simple: the domain name has not been propagated
 yet and let's encrypt is unable to verify the node's hostname.
 
-This is a trancient error, running =./gac.sh deploy= again will fix
+This is a trancient error, running =gac deploy= again will fix
 the issue.
 
 **** gac.sh info after deleting the cluster
 
 #+BEGIN_SRC
 
-./gac.sh info
+gac info
 Traceback (most recent call last):
   File "/nix/store/66b4lviimp8s988a6znf7kibmmh8fvf9-nixops-1.6/bin/..nixops-wrapped-wrapped", line 985, in <module>
     args.op()
@@ -186,15 +194,15 @@ Exception: could not find specified deployment in state file ‘/home/dev/.nixop
 
 You can easily create a new cluster state by running:
 
-: ./gac.sh create
+: gac create
 
 You can then either re-deploy the cluster:
 
-: ./gac.sh deploy
+: gac deploy
 
 Or query the current cluster state:
 
-: ./gac.sh info
+: gac info
 
 *** Cluster composition
 
@@ -208,7 +216,7 @@ To define a new type, you can take one as basis (eg. ~mantis~) and copy its conf
 : cp -a ./clusters/mantis ./clusters/CLUSTER-TYPE
 
 The type of a cluster is specified to the =gac,sh new= subcommand, and is recorded
-as =CLUSTER_TYPE= variable in ~.config.sh~.  ~./gac.sh components~ essentially
+as =CLUSTER_TYPE= variable in ~.config.sh~.  ~gac components~ essentially
 lists de-facto components of that cluster (as =nixops info -d CLUSTER-NAME= would).
 
 *** Cluster Management
@@ -216,7 +224,7 @@ lists de-facto components of that cluster (as =nixops info -d CLUSTER-NAME= woul
 
 On your dev machine, you can locally dry-test the deployment (as specified by your
 local =.config.sh=), without touching AWS:
-: ./gac.sh dry
+: gac dry
 
 Note that this mutates the Nixops state for the deployment specified by
 =.config.sh=, so be careful not to run this in a _real_ depployment checkout!
