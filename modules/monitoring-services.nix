@@ -754,7 +754,7 @@ in {
             inherit graylogRootPassword;
           })
         );
-      in {
+      in lib.mkIf config.services.graylog.enable {
         description = "Graylog Content Pack Preload Service";
         wantedBy = [ "multi-user.target" ];
         after = [ "graylog.service elasticsearch.service mongodb.service" ];
