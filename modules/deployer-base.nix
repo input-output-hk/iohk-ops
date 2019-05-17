@@ -17,27 +17,29 @@ in
   security.sudo.enable = true;
   security.sudo.wheelNeedsPassword = false;
 
-  environment.systemPackages = (with iohk-pkgs; [
-    iohk-ops
-    terraform
-    mfa
-  ]) ++ (with pkgs; [
-    psmisc
-    gnupg
-    nixops
-    awscli
-    jq
-    yq
-    python3
-    htop
-  ]);
+  environment = mkDefault {
+    systemPackages = (with iohk-pkgs; [
+        iohk-ops
+        terraform
+        mfa
+      ]) ++ (with pkgs; [
+        psmisc
+        gnupg
+        nixops
+        awscli
+        jq
+        yq
+        python3
+        htop
+      ]);
+  };
 
   users.groups.deployers = {};
 
   users.users = {
     # Re-deploy the deployer host itself,
     # and apply global terraform.
-    deployer = {
+    deployer = mkDefault {
       isNormalUser = true;
       description  = "Deploy the deployer";
       group        = "deployers";
