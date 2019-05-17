@@ -108,6 +108,12 @@ in lib // (rec {
   inherit iohkNix iohkNixGoguen goguenNixpkgs;
   inherit fetchPinAuto fetchGitWithSubmodules readPin;
 
+  makeCreds = service: default:
+    if
+      (builtins.pathExists (./static + "/${service}-creds.nix"))
+    then (import (./static + "/${service}-creds.nix"))
+    else default;
+
   ## nodeElasticIP :: Node -> EIP
   nodeElasticIP = node:
     { name = "${node.name}-ip";

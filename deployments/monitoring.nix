@@ -40,18 +40,9 @@ in
       } // (import ../static/oauth.nix);
 
 
-      # Change the Grafana root default username and password for your deployment
-      # NOTE: These two Grafana settings only take effect on the initial deployment.
-      #
-      grafanaRootUsername = "changeme";
-      grafanaRootPassword = "changeme";
-
-
-      # Change the Graylog root default username and password for your deployment
-      #
-      graylogRootUsername = "changeme";
-      graylogRootPassword = "changeme";
-
+      # NOTE: The Grafana user and password settings only take effect on the initial deployment.
+      grafanaCreds = makeCreds "grafana" { user = "changeme"; password = "changeme"; };
+      graylogCreds = makeCreds "graylog" { user = "changeme"; password = "changeme"; };
 
       monitoredNodes = map (h: h.name) (lib.filter (h: !h.withNginx) hostList);
       nginxMonitoredNodes = map (h: h.name) (lib.filter (h: h.withNginx) hostList);

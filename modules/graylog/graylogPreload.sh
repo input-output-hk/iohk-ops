@@ -15,8 +15,8 @@ cpComment="monitorContentPack"         # Must remain set to "monitorContentPack"
 cpVendor="IOHK"                        # Must remain set to "IOHK" for proper script logic
 
 # Curl Definitions
-user="@graylogRootUsername@"
-password="@graylogRootPassword@"
+user="@user@"
+password="@password@"
 graylogApiUrl="http://localhost:9000/api"
 curlH="curl -s -w \"\\\\napiRc: %{http_code}\" -u $user:$password -H 'X-Requested-By: $user' $graylogApiUrl"
 jsonH="-H 'Content-Type: application/json'"

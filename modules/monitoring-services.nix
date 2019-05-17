@@ -1,4 +1,3 @@
-
 { config, pkgs, lib, ... }:
 
 with lib;
@@ -33,40 +32,19 @@ in {
         '';
       };
 
-      grafanaRootUsername = mkOption {
-        type = types.str;
-        default = "changeme";
+      grafanaCreds = mkOption {
+        type = types.attrs;
+        default = null;
         description = ''
-          Name of the default administrator user in grafana.
+          Name and password of the default administator user in grafana.
         '';
       };
 
-      grafanaRootPassword = mkOption {
-        type = types.str;
-        default = "changeme";
+      graylogCreds = mkOption {
+        type = types.attrs;
+        default = null;
         description = ''
-          Plaintext password for the default administrator user in grafana.
-        '';
-      };
-
-      graylogRootUsername = mkOption {
-        type = types.str;
-        default = "changeme";
-        description = ''
-          Name of the default administrator user in graylog.
-        '';
-      };
-
-      graylogRootPassword = mkOption {
-        type = types.str;
-        default = "changeme";
-        description = ''
-          Plaintext password for the default administrator user in graylog.  A corresponding SHA256 hash
-          needs to be generated for this password and stored in static/graylog-root-secret
-          relative to the iohk-ops git clone root folder.  As an example, this can be
-          done with the following command:
-
-          echo -n <graylogRootPassword> | shasum -a 256 | sed -z 's/  -\n//g' > static/graylog-root-secret
+          Name and password of the default administator user in graylog.
         '';
       };
 
@@ -260,100 +238,71 @@ in {
           enable = true;
           nodeIdFile = "/var/lib/graylog/node-id";
           passwordSecret = (
-            if pathExists ../static/graylog-cluster-secret then
-              readFile ../static/graylog-cluster-secret
+            if cfg.graylogCreds ? clusterSecret then
+              cfg.graylogCreds.clusterSecret
             else
               builtins.trace ''
                 ***********************************************************************************
                 ******
                 ******
                 ******
-                ****** GRAYLOG CLUSTER PEPPER SECRET NEEDED
+                ****** GRAYLOG CLUSTER SECRET NEEDED
                 ******
                 ******
                 ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
-                ******              a cluster specific pepper secret must be created.
+                ******              a cluster specific pepper secret must be declared.
                 ******
-                ****** ACTION:      Create a file relative to the iohk-ops git clone root folder of:
+                ****** ACTION:      Create a clusterSecret string attribute in the static
+                ******              graylog credentials file.
                 ******
-                ******
-                ******              static/graylog-cluster-secret
-                ******
-                ******
-                ****** CONTENT:     The file must contain a single unquoted string of at least 64
-                ******              random alphanumeric characters.  The command described below is
-                ******              an example of how to generate such a string and file.
-                ******
-                ****** COMMAND:     The following example command would be run from the iohk-ops git
-                ******              clone root folder:
+                ****** COMMAND:     The following example command generates such a string:
                 ******
                 ******
-                ******              tr -cd '[:alnum:]' < /dev/urandom | head -c 96 > static/graylog-cluster-secret
-                ******
-                ******
-                ****** OUTCOME:     Redeploy your cluster once this file has been created.
-                ******              If the pepper secret needs to be updated in the future, the same
-                ******              method can be used followed by re-running the deploy command.
+                ******              tr -cd '[:alnum:]' < /dev/urandom | head -c 96
                 ******
                 ******
                 ******
-                ******
-              '' 1
+              '' (abort "Graylog cluster secret required")
           );
           rootUsername = traceValFn (x:
             if x == "changeme" then ''
               *
-              *********************************************************************
-              WARNING: The grayalog default root user account name is "${x}".
-                       Please customize this in the deployment/monitoring.nix file
-                       relative to the iohk-ops git clone root folder and redeploy.
-              *********************************************************************
+              **********************************************************************
+              WARNING: The graylog default administrative user name is "${x}".
+                       Please customize this in the static graylog credentials file.
+              **********************************************************************
             '' else ''
-                Graylog root user account name successfully changed from default in deployment/monitoring.nix'')
-            cfg.graylogRootUsername;
+                Graylog custom administrative user name declared'')
+            cfg.graylogCreds.user;
           rootPasswordSha2 = (
-            if pathExists ../static/graylog-root-secret then
-              readFile ../static/graylog-root-secret
+            if cfg.graylogCreds ? passwordHash then
+              cfg.graylogCreds.passwordHash
             else
               builtins.trace ''
                 ***********************************************************************************
                 ******
                 ******
                 ******
-                ****** GRAYLOG ROOT HASH SECRET NEEDED
+                ****** GRAYLOG PASSWORD HASH NEEDED
                 ******
                 ******
                 ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
-                ******              a root user SHA256 password hash secret must be created.
+                ******              an administrative user SHA256 password hash created from
+                ******              the plaintext password must be provided.
                 ******
-                ****** ACTION:      Create a file relative to the iohk-ops git clone root folder of:
+                ****** ACTION:      Create a passwordHash string attribute in the static
+                ******              graylog credentials file by hashing the administrative user's
+                ******              plaintext password as input.
                 ******
+                ****** COMMAND:     The following example command generates such a string, where
+                ******              <password> is the plaintext password string of the administrative
+                ******              user, also defined in the static graylog credentials file:
                 ******
-                ******              static/graylog-root-secret
-                ******
-                ******
-                ****** CONTENT:     The file must contain a single unquoted SHA256 hash of a password
-                ******              which will be used for the root graylog user.  The command described
-                ******              below is an example of how to generate such a string and file.
-                ******
-                ****** COMMAND:     The following example command would be run from the iohk-ops git
-                ******              clone root folder and where <graylogRootPassword> is a parameter
-                ******              representing the password the nix configuration string
-                ******              ${config.services.monitoring-services.graylogRootPassword} is set to
-                ******              in deployments/monitoring.nix:
-                ******
-                ******
-                ******              echo -n <graylogRootPassword> | shasum -a 256 | sed -z 's/  -\n//g' > static/graylog-root-secret
-                ******
-                ******
-                ****** OUTCOME:     Redeploy your cluster once this file has been created.
-                ******              If the hash secret needs to be updated in the future, the same
-                ******              method can be used followed by re-running the deploy command.
+                ******              echo -n <password> | shasum -a 256 | sed -z 's/  -\n//g'
                 ******
                 ******
                 ******
-                ******
-              '' 1
+              '' (abort "Graylog password hash required")
           );
           elasticsearchHosts = [ "http://localhost:9200" ];
         # Elasticsearch config below is for a single node deployment
@@ -408,25 +357,23 @@ in {
             adminPassword = traceValFn (x:
               if x == "changeme" then ''
                 *
-                *********************************************************************
-                WARNING: The grafana default root user password is "${x}".
-                         Please customize this in the deployment/monitoring.nix file
-                         relative to the iohk-ops git clone root folder and redeploy.
-                *********************************************************************
+                **********************************************************************
+                WARNING: The grafana default administrative password is "${x}".
+                         Please customize this in the static grafana credentials file.
+                **********************************************************************
               '' else ''
-                Grafana root user password successfully changed from default in deployment/monitoring.nix'')
-              cfg.grafanaRootPassword;
+                Grafana custom administrative password declared'')
+              cfg.grafanaCreds.password;
             adminUser = traceValFn (x:
               if x == "changeme" then ''
                 *
-                *********************************************************************
-                WARNING: The grafana default root user account name is "${x}".
-                         Please customize this in the deployment/monitoring.nix file
-                         relative to the iohk-ops git clone root folder and redeploy.
-                *********************************************************************
+                **********************************************************************
+                WARNING: The grafana default administative user name is "${x}".
+                         Please customize this in the static grafana credentials file.
+                **********************************************************************
               '' else ''
-                Grafana root user account name successfully changed from default in deployment/monitoring.nix'')
-              cfg.grafanaRootUsername;
+                Grafana custom administrative user name declared'')
+              cfg.grafanaCreds.user;
           };
         };
         prometheus.exporters = {
@@ -736,22 +683,21 @@ in {
       };
       systemd.services.graylog-preload = let
         graylogConfig = ./graylog/graylogConfig.json;
-        graylogRootPassword = traceValFn (x:
+        password = traceValFn (x:
           if x == "changeme" then ''
             *
-            *********************************************************************
-            WARNING: The graylog default root user password is "${x}".
-                     Please customize this in the deployment/monitoring.nix file
-                     relative to the iohk-ops git clone root folder and redeploy.
-            *********************************************************************
+            **********************************************************************
+            WARNING: The graylog default administrative password is "${x}".
+                     Please customize this in the static graylog credentials file.
+            **********************************************************************
           '' else ''
-            Graylog root user password successfully changed from default in deployment/monitoring.nix'')
-          cfg.graylogRootPassword;
+            Graylog custom administrative password declared'')
+          cfg.graylogCreds.password;
         graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh" (readFile (
           pkgs.substituteAll {
             src = ./graylog/graylogPreload.sh;
-            inherit (cfg) graylogRootUsername;
-            inherit graylogRootPassword;
+            inherit (cfg.graylogCreds) user;
+            inherit password;
           })
         );
       in lib.mkIf config.services.graylog.enable {
