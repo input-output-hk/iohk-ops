@@ -218,7 +218,7 @@ generate_node_keys () {
                         "${node}/bin/eckeygen" > "$KEY_FILE"
                 fi
 
-                NODE_ID="$(sed -n 2p \""$KEY_FILE"\")"
+                NODE_ID="$(sed -n 2p "$KEY_FILE")"
                 echo "  $n = { id = \"$NODE_ID\"; };" >> "$NODE_IDS"
         done
         echo "}" >> "$NODE_IDS"
