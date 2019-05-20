@@ -14,7 +14,7 @@ in {
     imports = [
       ../modules/common.nix
       ../modules/datadog.nix
-      ../modules/papertrail.nix
+      ../modules/monitoring-exporters.nix
       ../modules/deployer-base.nix
     ];
 

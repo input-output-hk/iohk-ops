@@ -5,7 +5,7 @@ let
     mkHydra = hostname: { config, pkgs, resources, ... }: {
 
       imports = [
-        ../modules/papertrail.nix
+        ../modules/monitoring-exporters.nix
       ];
     };
 in {
@@ -17,7 +17,7 @@ in {
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ../modules/papertrail.nix
+      ../modules/monitoring-exporters.nix
       ../modules/deployer.nix
     ];
 
@@ -64,7 +64,7 @@ in {
     keysDir = "/var/lib/keys";
   in {
     imports = [
-      ../modules/papertrail.nix
+      ../modules/monitoring-exporters.nix
     ];
 
     services.bors-ng = {
@@ -108,7 +108,7 @@ in {
     keysDir = "/var/lib/keys";
   in {
     imports = [
-      ../modules/papertrail.nix
+      ../modules/monitoring-exporters.nix
       ../modules/log-classifier.nix
       ../modules/common.nix
     ];

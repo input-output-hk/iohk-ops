@@ -11,7 +11,7 @@ in {
   testnet-deployer = { config, pkgs, resources, ... }: {
     imports = [
       ../modules/common.nix
-      ../modules/papertrail.nix
+      ../modules/monitoring-exporters.nix
       ../modules/deployer-base.nix
     ];
 
