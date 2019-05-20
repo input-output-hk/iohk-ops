@@ -1,6 +1,7 @@
 *~
 *#
 .#*
+*.swp
 *prof
 keys/*.key
 /test-*.yaml
