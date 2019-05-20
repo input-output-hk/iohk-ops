@@ -25,7 +25,7 @@ with import ../lib.nix;
            ++  map  (regionSGs         { nodePort = 3000; }) # TODO: 'config' is mostly empty here.
                     globals.allRegions
 
-           ++  map  (orgXRegionSGs resources.elasticIPs)
+           ++  map  (orgXRegionSGs { inherit (globals) monitoringNV; inherit nodes; } resources.elasticIPs)
                     globals.orgXRegions
 
            ++  map  (coreSGs           3000 resources.elasticIPs) # TODO: config for port
@@ -67,7 +67,7 @@ with import ../lib.nix;
               "allow-ekg-public-tcp-${region}-${org}"
               "allow-monitoring-collection-${region}-${org}"
             ];
-        orgXRegionSGs     = ips: { org, region }: {
+        orgXRegionSGs     = { monitoringNV, nodes }: ips: { org, region }: {
             "allow-deployer-ssh-${region}-${org}" = {
               inherit region;
               accessKeyId = globals.orgAccessKeys.${org};
@@ -92,8 +92,9 @@ with import ../lib.nix;
               inherit region;
               accessKeyId = globals.orgAccessKeys.${org};
               description = "Monitoring collection";
-              rules = let monitoringSourceIp = ips."monitoring-ip"; in
-              [{
+              rules = if nodes ? "${monitoringNV.name}" then
+                (let monitoringSourceIp = ips."${monitoringNV.name}-ip";
+              in [{
                 protocol = "tcp";
                 fromPort = 9100; toPort = 9100; # prometheus exporters
                 sourceIp = monitoringSourceIp;
@@ -105,16 +106,16 @@ with import ../lib.nix;
                 protocol = "tcp";
                 fromPort = 9113; toPort = 9113; # nginx exporter
                 sourceIp = monitoringSourceIp;
-              }];
+              }]) else [];
             };
           };
-        monitorSGNames = monitor:
-            [ "allow-monitoring-static-peers-${monitor.value.region}-${monitor.value.org}" ];
-        monitorSGs     = { config, nodes }: { nodePort }: ips: monitor:
+        monitorSGNames = monitoringNV:
+            [ "allow-monitoring-static-peers-${monitoringNV.value.region}-${monitoringNV.value.org}" ];
+        monitorSGs     = { config, nodes }: { nodePort }: ips: monitoringNV:
           let
             neighbourNames =
               let monitorPeers = builtins.attrNames nodes;
-              in  traceF (p: "${monitor.name} peers: " + concatStringsSep ", " monitorPeers) monitorPeers;
+              in  traceF (p: "${monitoringNV.name} peers: " + concatStringsSep ", " monitorPeers) monitorPeers;
             neighbours = map (name: globals.fullMap.${name}) neighbourNames;
             neighGrant = neigh:
               let ip = ips."${toString neigh.name}-ip";
@@ -123,10 +124,10 @@ with import ../lib.nix;
                   sourceIp = ip;
               };
           in {
-            "allow-monitoring-static-peers-${monitor.value.region}-${monitor.value.org}" = {
-              inherit (monitor.value) accessKeyId region;
-              description = "Monitoring TCP static peers of ${monitor.name}";
-              rules = map neighGrant neighbours;
+            "allow-monitoring-static-peers-${monitoringNV.value.region}-${monitoringNV.value.org}" = {
+              inherit (monitoringNV.value) accessKeyId region;
+              description = "Monitoring TCP static peers of ${monitoringNV.name}";
+              rules = if nodes ? "${monitoringNV.name}" then (map neighGrant neighbours) else [];
             };
           };
         coreSGNames = core:
