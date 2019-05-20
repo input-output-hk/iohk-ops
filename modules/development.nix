@@ -16,6 +16,11 @@ with import ./../lib.nix;
       # DEVOPS-64: disable log bursting
       journald.rateLimitBurst    = 0;
       journald.extraConfig       = "SystemMaxUse=50M";
+
+      monitoring-exporters.enable = true;
+      monitoring-exporters.metrics = true;
+      # Monitoring server currently not enabled in the development environment
+      monitoring-exporters.logging = false;
     };
 
   };
