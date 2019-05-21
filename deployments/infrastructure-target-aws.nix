@@ -145,6 +145,13 @@ in rec {
           sourceIp = "0.0.0.0/0";
         }];
       };
+      "allow-monitoring-all-${region}-${org}" = {
+        inherit region accessKeyId;
+        description = "graylog temporary hole";
+        rules = [
+          { protocol = "tcp"; fromPort = 5044; toPort = 5044; sourceIp = "0.0.0.0/0"; }
+        ];
+      };
     };
     elasticIPs = {
       hydra-ip        = { inherit region accessKeyId; };
@@ -152,6 +159,7 @@ in rec {
       mantis-hydra-ip = { inherit region accessKeyId; };
       cardanod-ip     = { inherit region accessKeyId; };
       bors-ng-ip      = { inherit region accessKeyId; };
+      monitoring-ip      = { inherit region accessKeyId; };
       log-classifier-ip      = { inherit region accessKeyId; };
     };
     datadogMonitors = (with (import ../modules/datadog-monitors.nix); {
@@ -178,9 +186,13 @@ in rec {
         resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
         resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
         resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
+        resources.ec2SecurityGroups."allow-monitoring-all-${region}-${org}"
       ];
     };
     deployment.route53.accessKeyId = route53accessKeyId;
     deployment.route53.hostName = hostName;
+    services.monitoring-services = {
+      webhost = hostName;
+    };
   };
 }

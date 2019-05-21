@@ -29,6 +29,11 @@ let
     ];
   };
 in {
+  defaults = {
+    nixpkgs.overlays = [
+      (import ../overlays/monitoring-exporters.nix)
+    ];
+  };
   hydra        = mkHydra ../modules/hydra-master-main.nix;
   faster-hydra = mkHydra ../modules/hydra-master-main.nix;
   mantis-hydra = mkHydra ../modules/hydra-master-mantis.nix;

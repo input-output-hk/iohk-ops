@@ -11,7 +11,10 @@ in {
       ../modules/monitoring-exporters.nix
     ];
 
-    services.monitoring-exporters.papertrail.enable = true;
+    services.monitoring-exporters = {
+      papertrail.enable = true;
+      graylogHost = "monitoring-ip:5044";
+    };
   };
 
   hydra        = mkHydra "hydra";
@@ -119,6 +122,17 @@ in {
       ../modules/monitoring-services.nix
     ];
 
-    services.monitoring-services.enable = true;
+    services.monitoring-services = {
+      enable = true;
+      oauth = {
+        enable = true;
+        emailDomain = "iohk.io";
+      } // (import ../static/oauth.nix);
+      # NOTE: The Grafana user and password settings only take effect on the initial deployment.
+      grafanaCreds = makeCreds "grafana" { user = "changeme"; password = "changeme"; };
+      graylogCreds = makeCreds "graylog" { user = "changeme"; password = "changeme"; };
+      pagerDuty = import ../static/pager-duty.nix;
+      deadMansSnitch = import ../static/dead-mans-snitch.nix;
+    };
   };
 }
