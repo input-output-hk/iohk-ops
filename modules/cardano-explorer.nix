@@ -15,7 +15,6 @@ in
   networking.firewall.allowedTCPPorts = [
     80 443 # nginx
   ];
-  security.acme.production = false;
   services.nginx = {
     enable = true;
     virtualHosts =

@@ -38,8 +38,6 @@ in
       logging = true;
       monitoringProject = "Cardano";
       monitoringProjectUrl = "https://iohk.io/projects/cardano";
-      monitoringLargeImgFile = "monitoringLargeImg-Cardano.html";
-      monitoringSmallImgFile = "monitoringSmallImg-Cardano.html";
       oauth = {
         enable = true;
         emailDomain = "iohk.io";

@@ -20,6 +20,11 @@ in {
         '';
       };
 
+      enableACME = mkOption {
+        type = types.bool;
+        default = true;
+      };
+
       metrics = mkOption {
         type = types.bool;
         default = true;
@@ -64,23 +69,23 @@ in {
       };
 
       monitoringLargeImgFile = mkOption {
-        type = types.str;
-        default = "monitoringLargeImg-Cardano.html";
+        type = types.path;
+        default = ./nginx/cardano-large.svg;
         description = ''
           The file in the modules/nginx directory which contains the html image
           tag and embedded image for the monitoring splash page large image
         '';
-        example = "monitoringLargeImg-Cardano.html";
+        example = "./nginx/cardano-large.svg";
       };
 
       monitoringSmallImgFile = mkOption {
-        type = types.str;
-        default = "monitoringSmallImg-Cardano.html";
+        type = types.path;
+        default = ./nginx/cardano-small.svg;
         description = ''
           The file in the modules/nginx directory which contains the html image
           tag and embedded image for the monitoring splash page small image
         '';
-        example = "monitoringSmallImg-Cardano.html";
+        example = "./nginx/cardano-small.svg";
       };
 
       monitoringTemplateHtmlFile = mkOption {
@@ -240,108 +245,116 @@ in {
 
   config = mkIf cfg.enable (mkMerge [
 
-    (lib.mkIf cfg.oauth.enable {
-      networking.firewall.allowedTCPPorts = [ 80 443 ];
+    (lib.mkIf cfg.oauth.enable (let
+      oauthProxyConfig = ''
+        auth_request /oauth2/auth;
+        error_page 401 = /oauth2/sign_in;
 
-      services = let
-        oauthProxyConfig = if (cfg.oauth.enable) then ''
-          auth_request /oauth2/auth;
-          error_page 401 = /oauth2/sign_in;
+        # pass information via X-User and X-Email headers to backend,
+        # requires running with --set-xauthrequest flag
+        auth_request_set $user   $upstream_http_x_auth_request_user;
+        auth_request_set $email  $upstream_http_x_auth_request_email;
+        proxy_set_header X-User  $user;
+        proxy_set_header X-Email $email;
 
-          # pass information via X-User and X-Email headers to backend,
-          # requires running with --set-xauthrequest flag
-          auth_request_set $user   $upstream_http_x_auth_request_user;
-          auth_request_set $email  $upstream_http_x_auth_request_email;
-          proxy_set_header X-User  $user;
-          proxy_set_header X-Email $email;
-
-          # if you enabled --cookie-refresh, this is needed for it to work with auth_request
-          auth_request_set $auth_cookie $upstream_http_set_cookie;
-          add_header Set-Cookie $auth_cookie;
-        '' else "";
-      in {
+        # if you enabled --cookie-refresh, this is needed for it to work with auth_request
+        auth_request_set $auth_cookie $upstream_http_set_cookie;
+        add_header Set-Cookie $auth_cookie;
+      '';
+    in {
+      services = {
         oauth2_proxy = {
           enable = true;
           inherit (cfg.oauth) clientID clientSecret cookie provider;
           email.domains = [ "${cfg.oauth.emailDomain}" ];
           nginx.virtualHosts = [ "${cfg.webhost}" ];
         };
+        nginx.virtualHosts."${cfg.webhost}".locations = {
+          "/grafana/".extraConfig = oauthProxyConfig;
+          "/prometheus/".extraConfig = oauthProxyConfig;
+          "/alertmanager/".extraConfig = oauthProxyConfig;
+          "/graylog/".extraConfig = oauthProxyConfig;
+        };
+      };
+    }))
+    {
+      networking.firewall.allowedTCPPorts = [ 80 ];
 
+      services = {
         nginx = {
           enable = true;
           virtualHosts = {
             "${cfg.webhost}" = {
-              enableACME = true;
-              forceSSL = true;
               locations = {
                 "/" = let
                   monitoringHtml = ''
                     ${cfg.monitoringProject} Monitoring<br>
                     ${if cfg.metrics then ''
-                      <span style=font-size:65%><a href=https://${cfg.webhost}/grafana/ target=_blank class=cardano style="color: #ddc6f2">Grafana</a></span><br>
-                      <span style=font-size:65%><a href=https://${cfg.webhost}/alertmanager/ target=_blank class=cardano style="color: #ddc6f2">Alertmanager</a></span><br>
-                      <span style=font-size:65%><a href=https://${cfg.webhost}/prometheus/ target=_blank class=cardano style="color: #ddc6f2">Prometheus</a></span><br>
+                      <span style=font-size:65%><a href=/grafana/ target=_blank class=cardano style="color: #ddc6f2">Grafana</a></span><br>
+                      <span style=font-size:65%><a href=/prometheus/ target=_blank class=cardano style="color: #ddc6f2">Prometheus</a></span><br>
                     '' else ''
                       <span style=font-size:65%>Grafana (Disabled)</span><br>
-                      <span style=font-size:65%>Alertmanager (Disabled)</span><br>
                       <span style=font-size:65%>Prometheus (Disabled)</span><br>
                     ''}
+                    ${if config.services.prometheus.alertmanager.enable then ''
+                      <span style=font-size:65%><a href=/alertmanager/ target=_blank class=cardano style="color: #ddc6f2">Alertmanager</a></span><br>
+                    '' else ''
+                      <span style=font-size:65%>Alertmanager (Disabled)</span><br>
+                    ''}
                     ${if cfg.logging then ''
-                      <span style=font-size:65%><a href=https://${cfg.webhost}/graylog/ target=_blank class=cardano style="color: #ddc6f2">Graylog</a></span><br>
+                      <span style=font-size:65%><a href=/graylog/ target=_blank class=cardano style="color: #ddc6f2">Graylog</a></span><br>
                     '' else ''
                       <span style=font-size:65%>Graylog (Disabled)<span><br>
                     ''}
                   '';
-                  monitoringLargeImg = if (builtins.pathExists (./nginx + "/${cfg.monitoringLargeImgFile}"))
-                    then (readFile (./nginx + "/${cfg.monitoringLargeImgFile}"))
-                    else "";
-                  monitoringSmallImg = if (builtins.pathExists (./nginx + "/${cfg.monitoringSmallImgFile}"))
-                    then (readFile (./nginx + "/${cfg.monitoringSmallImgFile}"))
-                    else "";
-                  indexFile = pkgs.writeTextDir "index.html" (readFile (
-                    pkgs.substituteAll {
+                  indexFile = pkgs.substituteAll {
                       src = ./nginx + "/${cfg.monitoringTemplateHtmlFile}";
                       inherit (cfg) monitoringProject monitoringProjectUrl;
-                      inherit monitoringHtml monitoringLargeImg monitoringSmallImg;
-                    }));
+                      inherit monitoringHtml;
+                      monitoringSmallImg = ''src="${builtins.baseNameOf cfg.monitoringSmallImgFile}" width="138" height="40"'';
+                      monitoringLargeImg = ''src="${builtins.baseNameOf cfg.monitoringLargeImgFile}" width="100"'';
+                    };
+                  rootDir = pkgs.runCommand "nginx-root-dir" {} ''
+                    mkdir $out
+                    cd $out
+                    cp -v "${cfg.monitoringSmallImgFile}" "${builtins.baseNameOf cfg.monitoringSmallImgFile}"
+                    cp -v "${cfg.monitoringLargeImgFile}" "${builtins.baseNameOf cfg.monitoringLargeImgFile}"
+                    cp -v ${indexFile} index.html
+                  '';
                 in {
                   extraConfig = ''
                     etag off;
-                    add_header etag "\"${builtins.substring 11 32 indexFile}\"";
-                    root ${indexFile};
+                    add_header etag "\"${builtins.substring 11 32 rootDir}\"";
+                    root ${rootDir};
                   '';
                 };
                 "/grafana/".extraConfig = mkIf cfg.metrics ''
-                  ${oauthProxyConfig}
                   proxy_pass http://localhost:3000/;
-                  proxy_set_header Host $http_host;
+                  proxy_set_header Host $host;
                   proxy_set_header REMOTE_ADDR $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
                 '';
                 "/prometheus/".extraConfig = mkIf cfg.metrics ''
-                  ${oauthProxyConfig}
                   proxy_pass http://localhost:9090/prometheus/;
-                  proxy_set_header Host $http_host;
+                  proxy_set_header Host $host;
                   proxy_set_header REMOTE_ADDR $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
                 '';
                 "/alertmanager/".extraConfig = mkIf cfg.metrics ''
-                  ${oauthProxyConfig}
                   proxy_pass http://localhost:9093/;
-                  proxy_set_header Host $http_host;
+                  proxy_set_header Host $host;
                   proxy_set_header REMOTE_ADDR $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
                 '';
                 "/graylog/".extraConfig = mkIf cfg.logging ''
-                  ${oauthProxyConfig}
-                  proxy_set_header Host $http_host;
+                  proxy_set_header Host $host;
                   proxy_set_header REMOTE_ADDR $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
-                  proxy_set_header X-Graylog-Server-URL https://${cfg.webhost}/graylog;
+                  proxy_set_header X-Graylog-Server-URL /graylog;
                   proxy_set_header X-Forward-Host $host;
                   proxy_set_header X-Forwarded-Server $host;
 
@@ -355,6 +368,13 @@ in {
             };
           };
         };
+      };
+    }
+    (lib.mkIf cfg.enableACME {
+      networking.firewall.allowedTCPPorts = [ 443 ];
+      services.nginx.virtualHosts."${cfg.webhost}" = {
+        enableACME = true;
+        forceSSL = true;
       };
     })
 
@@ -723,8 +743,27 @@ in {
     (lib.mkIf cfg.logging {
       # The following Graylog warning matches a similar Grafana auto-generated warning
       warnings = [ "Graylog passwords will be stored as plaintext in the Nix store!" ];
-      environment.systemPackages = with pkgs; [ curl gnugrep jq ];
       networking.firewall.allowedTCPPorts = [ 5044 ];
+      systemd.services.graylog = {
+        environment = {
+          JAVA_HOME = lib.mkForce pkgs.jre_headless; # until fix gets upstreamed
+        };
+        serviceConfig = {
+          TimeoutStartSec = "10m";
+          # maybe upstream the post-start?
+          ExecStartPost = pkgs.writeScript "graylog-post-start" ''
+            #!${pkgs.stdenv.shell}
+            export PATH=${pkgs.netcat}/bin:$PATH
+
+            for x in {1..100}; do
+              echo loop $x
+              nc -z localhost 9000 && break
+              echo "waiting 10 sec"
+              sleep 10
+            done
+          '';
+        };
+      };
       services = {
         graylog = {
           enable = true;
@@ -828,13 +867,6 @@ in {
           '' else ''
             Graylog custom administrative password declared'')
           cfg.graylogCreds.password;
-        graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh" (readFile (
-          pkgs.substituteAll {
-            src = ./graylog/graylogPreload.sh;
-            inherit (cfg.graylogCreds) user;
-            inherit password;
-          })
-        );
       in {
         description = "Graylog Content Pack Preload Service";
         wantedBy = [ "multi-user.target" ];
@@ -843,12 +875,22 @@ in {
         serviceConfig = {
           Type = "oneshot";
           User = "${config.services.graylog.user}";
-          ExecStartPre = ''
-            +-/bin/sh -c 'chmod 0644 /var/lib/graylog/.graylogConfigured*'
-            ExecStartPre=+-/bin/sh -c 'chown graylog:nogroup /var/lib/graylog/.graylogConfigured*'
-            ExecStartPre=${pkgs.coreutils}/bin/sleep 60
+          ExecStartPre = pkgs.writeScript "graylog-preload-prestart" ''
+            #!${pkgs.stdenv.shell}
+            chmod 0644 /var/lib/graylog/.graylogConfigured* || true
+            chown graylog:nogroup /var/lib/graylog/.graylogConfigured* || true
           '';
-          ExecStart = "${graylogPreload}/bin/graylogPreload.sh install ${graylogConfig}";
+          ExecStart = let
+            graylogPreload = pkgs.substituteAll {
+              src = ./graylog/graylogPreload.sh;
+              inherit (cfg.graylogCreds) user;
+              inherit password;
+              isExecutable = true;
+            };
+          in pkgs.writeScript "graylog-start" ''
+            #!${pkgs.stdenv.shell}
+            ${graylogPreload} install ${graylogConfig}
+          '';
         };
       };
     })
