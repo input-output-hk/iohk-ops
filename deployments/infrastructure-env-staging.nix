@@ -7,7 +7,7 @@ with (import ./../lib.nix);
   hydra = { config, pkgs, resources, ... }: {
 
     imports = [
-      ./../modules/papertrail.nix
+      ./../modules/monitoring-exporters.nix
     ];
 
     ##
@@ -18,7 +18,7 @@ with (import ./../lib.nix);
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ./../modules/papertrail.nix
+      ./../modules/monitoring-exporters.nix
     ];
 
     deployment.keys.tarsnap = {
@@ -56,7 +56,7 @@ with (import ./../lib.nix);
     hostName = "bors-ng.awstest2.iohkdev.io";
   in {
     imports = [
-      ../modules/papertrail.nix
+      ../modules/monitoring-exporters.nix
     ];
 
     services.bors-ng = let

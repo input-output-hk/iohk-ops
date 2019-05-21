@@ -12,8 +12,90 @@ in {
         type = types.bool;
         default = true;
         description = ''
-          Enable prometheus, alertmangaer, grafana and graylog.
+          Enable monitoring services.  Metrics collection, analysis
+          and alerting is available via prometheus, grafana and alertmanager
+          by default.  Logging is available via graylog by default.
+          Metrics can be selectively disabled with the metrics option.
+          Logging can be selectively disabled with the logging option.
         '';
+      };
+
+      enableACME = mkOption {
+        type = types.bool;
+        default = true;
+      };
+
+      metrics = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Enable metrics collection, analysis and alerting via
+          prometheus, grafana and alertmanager.
+          See also the corresponding metrics exporter option in
+          the monitoring-exporters.nix module:
+          config.services.monitoring-exporters.metrics
+        '';
+      };
+
+      logging = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Enable log collection via graylog and journalbeat.
+          This option installs graylog, elasticsearch, mongodb and
+          a journalbeat graylog input.
+          See also the corresponding journalbeat exporter option in
+          the monitoring-exporters.nix module:
+          config.services.monitoring-exporters.logging
+        '';
+      };
+
+      monitoringProject = mkOption {
+        type = types.str;
+        default = "Cardano";
+        description = ''
+          The project name using the monitoring services.
+        '';
+        example = "Cardano";
+      };
+
+      monitoringProjectUrl = mkOption {
+        type = types.str;
+        default = "https://iohk.io/projects/cardano/";
+        description = ''
+          The URL for the project using the monitoring services.
+        '';
+        example = "https://iohk.io/projects/cardano/";
+      };
+
+      monitoringLargeImgFile = mkOption {
+        type = types.path;
+        default = ./nginx/cardano-large.svg;
+        description = ''
+          The file in the modules/nginx directory which contains the html image
+          tag and embedded image for the monitoring splash page large image
+        '';
+        example = "./nginx/cardano-large.svg";
+      };
+
+      monitoringSmallImgFile = mkOption {
+        type = types.path;
+        default = ./nginx/cardano-small.svg;
+        description = ''
+          The file in the modules/nginx directory which contains the html image
+          tag and embedded image for the monitoring splash page small image
+        '';
+        example = "./nginx/cardano-small.svg";
+      };
+
+      monitoringTemplateHtmlFile = mkOption {
+        type = types.str;
+        default = "monitoring-index-template.html";
+        description = ''
+          The file in the modules/nginx directory which contains the splash
+          page monitoring template html.
+        '';
+        example = "monitoring-index-template.html";
       };
 
       applicationRules = mkOption {
@@ -36,7 +118,13 @@ in {
         type = types.attrs;
         default = null;
         description = ''
-          Name and password of the default administator user in grafana.
+          An attribute set containing the username and password of the
+          default administative user in grafana.  This attribute set
+          is read from a file defined by the makeCreds function
+          called in monitoring.nix.  If no such file exists, a
+          default user name and password are returned by makeCreds.
+          Expected attributes for this set are: "user", "password"
+          with string values.
         '';
       };
 
@@ -44,7 +132,14 @@ in {
         type = types.attrs;
         default = null;
         description = ''
-          Name and password of the default administator user in graylog.
+          An attribute set containing the username, password and
+          SHA256 password hash of the default administative user
+          in graylog as well as a graylog cluster secret.  This attribute set
+          is read from a file defined by the makeCreds function
+          called in monitoring.nix.  If no such file exists, a
+          default user name and password are returned by makeCreds.
+          Expected attributes for this set are: "user", "password",
+          "passwordHash" and "clusterSecret", all with with string values.
         '';
       };
 
@@ -67,11 +162,11 @@ in {
       webhost = mkOption {
         type = types.str;
         description = ''
-          Public web host used for prometheus, grafana, alertmanager and graylog.
+          Public web host used for prometheus, grafana, alertmanager
+          and graylog monitoring services.
         '';
         example = "monitoring.lan";
       };
-
 
       oauth = mkOption {
         type = types.submodule {
@@ -147,8 +242,26 @@ in {
       };
     };
   };
+
   config = mkIf cfg.enable (mkMerge [
-    (lib.mkIf cfg.oauth.enable {
+
+    (lib.mkIf cfg.oauth.enable (let
+      oauthProxyConfig = ''
+        auth_request /oauth2/auth;
+        error_page 401 = /oauth2/sign_in;
+
+        # pass information via X-User and X-Email headers to backend,
+        # requires running with --set-xauthrequest flag
+        auth_request_set $user   $upstream_http_x_auth_request_user;
+        auth_request_set $email  $upstream_http_x_auth_request_email;
+        proxy_set_header X-User  $user;
+        proxy_set_header X-Email $email;
+
+        # if you enabled --cookie-refresh, this is needed for it to work with auth_request
+        auth_request_set $auth_cookie $upstream_http_set_cookie;
+        add_header Set-Cookie $auth_cookie;
+      '';
+    in {
       services = {
         oauth2_proxy = {
           enable = true;
@@ -156,71 +269,92 @@ in {
           email.domains = [ "${cfg.oauth.emailDomain}" ];
           nginx.virtualHosts = [ "${cfg.webhost}" ];
         };
-        nginx.virtualHosts."${cfg.webhost}".locations."/".extraConfig = ''
-          return 301 https://${cfg.webhost}/graylog/;
-        '';
+        nginx.virtualHosts."${cfg.webhost}".locations = {
+          "/grafana/".extraConfig = oauthProxyConfig;
+          "/prometheus/".extraConfig = oauthProxyConfig;
+          "/alertmanager/".extraConfig = oauthProxyConfig;
+          "/graylog/".extraConfig = oauthProxyConfig;
+        };
       };
-    })
+    }))
     {
-      # The following Graylog warning matches a similar Grafana auto-generated warning
-      warnings = [ "Graylog passwords will be stored as plaintext in the Nix store!" ];
-      environment.systemPackages = with pkgs; [ curl gnugrep jq ];
-      networking.firewall.allowedTCPPorts = [ 80 443 5044 ];
-      services = let
-        oauthProxyConfig = if (cfg.oauth.enable) then ''
-          auth_request /oauth2/auth;
-          error_page 401 = /oauth2/sign_in;
+      networking.firewall.allowedTCPPorts = [ 80 ];
 
-          # pass information via X-User and X-Email headers to backend,
-          # requires running with --set-xauthrequest flag
-          auth_request_set $user   $upstream_http_x_auth_request_user;
-          auth_request_set $email  $upstream_http_x_auth_request_email;
-          proxy_set_header X-User  $user;
-          proxy_set_header X-Email $email;
-
-          # if you enabled --cookie-refresh, this is needed for it to work with auth_request
-          auth_request_set $auth_cookie $upstream_http_set_cookie;
-          add_header Set-Cookie $auth_cookie;
-        '' else "";
-      in {
+      services = {
         nginx = {
           enable = true;
           virtualHosts = {
             "${cfg.webhost}" = {
-              enableACME = true;
-              forceSSL = true;
               locations = {
-                "/grafana/".extraConfig = ''
-                  ${oauthProxyConfig}
+                "/" = let
+                  monitoringHtml = ''
+                    ${cfg.monitoringProject} Monitoring<br>
+                    ${if cfg.metrics then ''
+                      <span style=font-size:65%><a href=/grafana/ target=_blank class=cardano style="color: #ddc6f2">Grafana</a></span><br>
+                      <span style=font-size:65%><a href=/prometheus/ target=_blank class=cardano style="color: #ddc6f2">Prometheus</a></span><br>
+                    '' else ''
+                      <span style=font-size:65%>Grafana (Disabled)</span><br>
+                      <span style=font-size:65%>Prometheus (Disabled)</span><br>
+                    ''}
+                    ${if config.services.prometheus.alertmanager.enable then ''
+                      <span style=font-size:65%><a href=/alertmanager/ target=_blank class=cardano style="color: #ddc6f2">Alertmanager</a></span><br>
+                    '' else ''
+                      <span style=font-size:65%>Alertmanager (Disabled)</span><br>
+                    ''}
+                    ${if cfg.logging then ''
+                      <span style=font-size:65%><a href=/graylog/ target=_blank class=cardano style="color: #ddc6f2">Graylog</a></span><br>
+                    '' else ''
+                      <span style=font-size:65%>Graylog (Disabled)<span><br>
+                    ''}
+                  '';
+                  indexFile = pkgs.substituteAll {
+                      src = ./nginx + "/${cfg.monitoringTemplateHtmlFile}";
+                      inherit (cfg) monitoringProject monitoringProjectUrl;
+                      inherit monitoringHtml;
+                      monitoringSmallImg = ''src="${builtins.baseNameOf cfg.monitoringSmallImgFile}" width="138" height="40"'';
+                      monitoringLargeImg = ''src="${builtins.baseNameOf cfg.monitoringLargeImgFile}" width="100"'';
+                    };
+                  rootDir = pkgs.runCommand "nginx-root-dir" {} ''
+                    mkdir $out
+                    cd $out
+                    cp -v "${cfg.monitoringSmallImgFile}" "${builtins.baseNameOf cfg.monitoringSmallImgFile}"
+                    cp -v "${cfg.monitoringLargeImgFile}" "${builtins.baseNameOf cfg.monitoringLargeImgFile}"
+                    cp -v ${indexFile} index.html
+                  '';
+                in {
+                  extraConfig = ''
+                    etag off;
+                    add_header etag "\"${builtins.substring 11 32 rootDir}\"";
+                    root ${rootDir};
+                  '';
+                };
+                "/grafana/".extraConfig = mkIf cfg.metrics ''
                   proxy_pass http://localhost:3000/;
-                  proxy_set_header Host $http_host;
+                  proxy_set_header Host $host;
                   proxy_set_header REMOTE_ADDR $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
                 '';
-                "/prometheus/".extraConfig = ''
-                  ${oauthProxyConfig}
+                "/prometheus/".extraConfig = mkIf cfg.metrics ''
                   proxy_pass http://localhost:9090/prometheus/;
-                  proxy_set_header Host $http_host;
+                  proxy_set_header Host $host;
                   proxy_set_header REMOTE_ADDR $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
                 '';
-                "/alertmanager/".extraConfig = ''
-                  ${oauthProxyConfig}
+                "/alertmanager/".extraConfig = mkIf cfg.metrics ''
                   proxy_pass http://localhost:9093/;
-                  proxy_set_header Host $http_host;
+                  proxy_set_header Host $host;
                   proxy_set_header REMOTE_ADDR $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
                 '';
-                "/graylog/".extraConfig = ''
-                  ${oauthProxyConfig}
-                  proxy_set_header Host $http_host;
+                "/graylog/".extraConfig = mkIf cfg.logging ''
+                  proxy_set_header Host $host;
                   proxy_set_header REMOTE_ADDR $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto https;
-                  proxy_set_header X-Graylog-Server-URL https://${cfg.webhost}/graylog;
+                  proxy_set_header X-Graylog-Server-URL /graylog;
                   proxy_set_header X-Forward-Host $host;
                   proxy_set_header X-Forwarded-Server $host;
 
@@ -234,95 +368,18 @@ in {
             };
           };
         };
-        graylog = {
-          enable = true;
-          nodeIdFile = "/var/lib/graylog/node-id";
-          passwordSecret = (
-            if cfg.graylogCreds ? clusterSecret then
-              cfg.graylogCreds.clusterSecret
-            else
-              builtins.trace ''
-                ***********************************************************************************
-                ******
-                ******
-                ******
-                ****** GRAYLOG CLUSTER SECRET NEEDED
-                ******
-                ******
-                ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
-                ******              a cluster specific pepper secret must be declared.
-                ******
-                ****** ACTION:      Create a clusterSecret string attribute in the static
-                ******              graylog credentials file.
-                ******
-                ****** COMMAND:     The following example command generates such a string:
-                ******
-                ******
-                ******              tr -cd '[:alnum:]' < /dev/urandom | head -c 96
-                ******
-                ******
-                ******
-              '' (abort "Graylog cluster secret required")
-          );
-          rootUsername = traceValFn (x:
-            if x == "changeme" then ''
-              *
-              **********************************************************************
-              WARNING: The graylog default administrative user name is "${x}".
-                       Please customize this in the static graylog credentials file.
-              **********************************************************************
-            '' else ''
-                Graylog custom administrative user name declared'')
-            cfg.graylogCreds.user;
-          rootPasswordSha2 = (
-            if cfg.graylogCreds ? passwordHash then
-              cfg.graylogCreds.passwordHash
-            else
-              builtins.trace ''
-                ***********************************************************************************
-                ******
-                ******
-                ******
-                ****** GRAYLOG PASSWORD HASH NEEDED
-                ******
-                ******
-                ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
-                ******              an administrative user SHA256 password hash created from
-                ******              the plaintext password must be provided.
-                ******
-                ****** ACTION:      Create a passwordHash string attribute in the static
-                ******              graylog credentials file by hashing the administrative user's
-                ******              plaintext password as input.
-                ******
-                ****** COMMAND:     The following example command generates such a string, where
-                ******              <password> is the plaintext password string of the administrative
-                ******              user, also defined in the static graylog credentials file:
-                ******
-                ******              echo -n <password> | shasum -a 256 | sed -z 's/  -\n//g'
-                ******
-                ******
-                ******
-              '' (abort "Graylog password hash required")
-          );
-          elasticsearchHosts = [ "http://localhost:9200" ];
-        # Elasticsearch config below is for a single node deployment
-          extraConfig = ''
-            http_bind_address = 0.0.0.0:9000
-            elasticsearch_shards = 1
-            elasticsearch_replicas = 0
-          '';
-        };
-        elasticsearch = {
-          enable = true;
-          package = pkgs.elasticsearch6-oss;
-        # Prevent graylog deflector indexing by turning off auto create index option
-          extraConf = ''
-            action.auto_create_index: false
-          '';
-        };
-        mongodb = {
-          enable = true;
-        };
+      };
+    }
+    (lib.mkIf cfg.enableACME {
+      networking.firewall.allowedTCPPorts = [ 443 ];
+      services.nginx.virtualHosts."${cfg.webhost}" = {
+        enableACME = true;
+        forceSSL = true;
+      };
+    })
+
+    (lib.mkIf cfg.metrics {
+      services = {
         grafana = {
           enable = true;
           users.allowSignUp = false;
@@ -681,6 +738,123 @@ in {
           ];
         };
       };
+    })
+
+    (lib.mkIf cfg.logging {
+      # The following Graylog warning matches a similar Grafana auto-generated warning
+      warnings = [ "Graylog passwords will be stored as plaintext in the Nix store!" ];
+      networking.firewall.allowedTCPPorts = [ 5044 ];
+      systemd.services.graylog = {
+        environment = {
+          JAVA_HOME = lib.mkForce pkgs.jre_headless; # until fix gets upstreamed
+        };
+        serviceConfig = {
+          TimeoutStartSec = "10m";
+          # maybe upstream the post-start?
+          ExecStartPost = pkgs.writeScript "graylog-post-start" ''
+            #!${pkgs.stdenv.shell}
+            export PATH=${pkgs.netcat}/bin:$PATH
+
+            for x in {1..100}; do
+              echo loop $x
+              nc -z localhost 9000 && break
+              echo "waiting 10 sec"
+              sleep 10
+            done
+          '';
+        };
+      };
+      services = {
+        graylog = {
+          enable = true;
+          nodeIdFile = "/var/lib/graylog/node-id";
+          passwordSecret = (
+            if cfg.graylogCreds ? clusterSecret then
+              cfg.graylogCreds.clusterSecret
+            else
+              builtins.trace ''
+                ***********************************************************************************
+                ******
+                ******
+                ******
+                ****** GRAYLOG CLUSTER SECRET NEEDED
+                ******
+                ******
+                ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
+                ******              a cluster specific pepper secret must be declared.
+                ******
+                ****** ACTION:      Create a clusterSecret string attribute in the static
+                ******              graylog credentials file.
+                ******
+                ****** COMMAND:     The following example command generates such a string:
+                ******
+                ******
+                ******              tr -cd '[:alnum:]' < /dev/urandom | head -c 96
+                ******
+                ******
+                ******
+              '' (abort "Graylog cluster secret required")
+          );
+          rootUsername = traceValFn (x:
+            if x == "changeme" then ''
+              *
+              **********************************************************************
+              WARNING: The graylog default administrative user name is "${x}".
+                       Please customize this in the static graylog credentials file.
+              **********************************************************************
+            '' else ''
+                Graylog custom administrative user name declared'')
+            cfg.graylogCreds.user;
+          rootPasswordSha2 = (
+            if cfg.graylogCreds ? passwordHash then
+              cfg.graylogCreds.passwordHash
+            else
+              builtins.trace ''
+                ***********************************************************************************
+                ******
+                ******
+                ******
+                ****** GRAYLOG PASSWORD HASH NEEDED
+                ******
+                ******
+                ****** REQUIREMENT: To enable a monitoring deployment which includes Graylog,
+                ******              an administrative user SHA256 password hash created from
+                ******              the plaintext password must be provided.
+                ******
+                ****** ACTION:      Create a passwordHash string attribute in the static
+                ******              graylog credentials file by hashing the administrative user's
+                ******              plaintext password as input.
+                ******
+                ****** COMMAND:     The following example command generates such a string, where
+                ******              <password> is the plaintext password string of the administrative
+                ******              user, also defined in the static graylog credentials file:
+                ******
+                ******              echo -n <password> | shasum -a 256 | sed -z 's/  -\n//g'
+                ******
+                ******
+                ******
+              '' (abort "Graylog password hash required")
+            );
+          elasticsearchHosts = [ "http://localhost:9200" ];
+          # Elasticsearch config below is for a single node deployment
+          extraConfig = ''
+            http_bind_address = 0.0.0.0:9000
+            elasticsearch_shards = 1
+            elasticsearch_replicas = 0
+          '';
+        };
+        elasticsearch = {
+          enable = true;
+          package = pkgs.elasticsearch6-oss;
+          # Prevent graylog deflector indexing by turning off auto create index option
+          extraConf = ''
+            action.auto_create_index: false
+          '';
+        };
+        mongodb = {
+          enable = true;
+        };
+      };
       systemd.services.graylog-preload = let
         graylogConfig = ./graylog/graylogConfig.json;
         password = traceValFn (x:
@@ -693,14 +867,7 @@ in {
           '' else ''
             Graylog custom administrative password declared'')
           cfg.graylogCreds.password;
-        graylogPreload = pkgs.writeShellScriptBin "graylogPreload.sh" (readFile (
-          pkgs.substituteAll {
-            src = ./graylog/graylogPreload.sh;
-            inherit (cfg.graylogCreds) user;
-            inherit password;
-          })
-        );
-      in lib.mkIf config.services.graylog.enable {
+      in {
         description = "Graylog Content Pack Preload Service";
         wantedBy = [ "multi-user.target" ];
         after = [ "graylog.service elasticsearch.service mongodb.service" ];
@@ -708,14 +875,24 @@ in {
         serviceConfig = {
           Type = "oneshot";
           User = "${config.services.graylog.user}";
-          ExecStartPre = ''
-            +-/bin/sh -c 'chmod 0644 /var/lib/graylog/.graylogConfigured*'
-            ExecStartPre=+-/bin/sh -c 'chown graylog:nogroup /var/lib/graylog/.graylogConfigured*'
-            ExecStartPre=${pkgs.coreutils}/bin/sleep 60
+          ExecStartPre = pkgs.writeScript "graylog-preload-prestart" ''
+            #!${pkgs.stdenv.shell}
+            chmod 0644 /var/lib/graylog/.graylogConfigured* || true
+            chown graylog:nogroup /var/lib/graylog/.graylogConfigured* || true
           '';
-          ExecStart = "${graylogPreload}/bin/graylogPreload.sh install ${graylogConfig}";
+          ExecStart = let
+            graylogPreload = pkgs.substituteAll {
+              src = ./graylog/graylogPreload.sh;
+              inherit (cfg.graylogCreds) user;
+              inherit password;
+              isExecutable = true;
+            };
+          in pkgs.writeScript "graylog-start" ''
+            #!${pkgs.stdenv.shell}
+            ${graylogPreload} install ${graylogConfig}
+          '';
         };
       };
-    }
+    })
   ]);
 }

@@ -4,8 +4,10 @@ params:
 { name, config, pkgs, resources, ... }: {
   imports = [
     ./production.nix
-    ./papertrail.nix
+    ./monitoring-exporters.nix
   ];
+
+  services.monitoring-exporters.papertrail.enable = true;
 
   global.dnsHostname = if params.typeIsRelay then "cardano-node-${toString params.relayIndex}" else null;
 

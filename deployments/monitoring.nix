@@ -34,6 +34,10 @@ in
 
     services.monitoring-services = {
       enable = true;
+      metrics = true;
+      logging = true;
+      monitoringProject = "Cardano";
+      monitoringProjectUrl = "https://iohk.io/projects/cardano";
       oauth = {
         enable = true;
         emailDomain = "iohk.io";

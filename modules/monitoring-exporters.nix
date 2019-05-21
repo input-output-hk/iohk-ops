@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, nodes, ... }:
 
 with lib;
 
@@ -12,7 +12,34 @@ in {
         type = types.bool;
         default = true;
         description = ''
-          Enable all available exporters.
+          Enable monitoring exporters.  Metrics exporters are
+          prometheus, statsd and nginx by default.  Log exporting is
+          available via journalbeat by default.
+          Metrics export can be selectively disabled with the metrics option.
+          Log export be selectively disabled with the logging option.
+        '';
+      };
+
+      metrics = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Enable metrics exporters via prometheus, statsd
+          and nginx.
+          See also the corresponding metrics server option in
+          the monitoring-services.nix module:
+          config.services.monitoring-services.metrics
+        '';
+      };
+
+      logging = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Enable logging exporter via journalbeat to graylog.
+          See also the corresponding logging server option in
+          the monitoring-services.nix module:
+          config.services.monitoring-services.logging
         '';
       };
 
@@ -24,31 +51,20 @@ in {
           The host port under which Graylog is externally reachable.
         '';
       };
+
+      papertrail.enable = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Enable papertrail.
+        '';
+      };
     };
   };
 
   config = mkIf cfg.enable (mkMerge [
 
-    (mkIf (cfg.graylogHost != null ) {
-      services.journalbeat = {
-        enable = true;
-        extraConfig = ''
-        journalbeat:
-          seek_position: cursor
-          cursor_seek_fallback: tail
-          write_cursor_state: true
-          cursor_flush_period: 5s
-          clean_field_names: true
-          convert_to_numbers: false
-          move_metadata_to_field: journal
-          default_type: journal
-        output.logstash:
-          hosts: ["${cfg.graylogHost}"]
-        '';
-      };
-    })
-
-    (mkIf config.services.nginx.enable {
+    (mkIf (config.services.nginx.enable && cfg.metrics) {
       services.nginx = {
         appendHttpConfig = ''
           vhost_traffic_status_zone;
@@ -64,8 +80,7 @@ in {
       networking.firewall.allowedTCPPorts = [ 9113 ];
     })
 
-    {
-
+    (mkIf cfg.metrics {
       systemd.services."statd-exporter" = {
         wantedBy = [ "multi-user.target" ];
         requires = [ "network.target" ];
@@ -103,6 +118,44 @@ in {
         };
       };
       networking.firewall.allowedTCPPorts = [ 9100 9102 ];
-  }
+    })
+
+    # Leaving the "monitoring" attribute name as static rather than
+    # referencing monitoringNV due to atala globals.nix usage conflict.
+    (mkIf ((nodes ? monitoring) && cfg.logging && (cfg.graylogHost != null)) {
+      services.journalbeat = {
+        enable = true;
+        extraConfig = ''
+        journalbeat:
+          seek_position: cursor
+          cursor_seek_fallback: tail
+          write_cursor_state: true
+          cursor_flush_period: 5s
+          clean_field_names: true
+          convert_to_numbers: false
+          move_metadata_to_field: journal
+          default_type: journal
+        output.logstash:
+          hosts: ["${cfg.graylogHost}"]
+        '';
+      };
+    })
+
+    (mkIf cfg.papertrail.enable {
+      systemd.services.papertrail = {
+        description = "Papertrail.com log aggregation";
+        after = [ "network.target" ];
+        wantedBy = [ "multi-user.target" ];
+        script = ''
+          ${pkgs.systemd}/bin/journalctl -f | ${pkgs.nmap}/bin/ncat --ssl logs5.papertrailapp.com 43689
+        '';
+        serviceConfig = {
+          Restart = "on-failure";
+          RestartSec = "5s";
+          TimeoutStartSec = 0;
+          KillSignal = "SIGINT";
+        };
+      };
+    })
   ]);
 }

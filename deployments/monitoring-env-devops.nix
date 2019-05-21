@@ -5,6 +5,7 @@
     imports = [
       ../modules/devops.nix
     ];
+
     services.monitoring-services.applicationDashboards = ../modules/grafana/cardano;
     services.monitoring-services.applicationRules = [
       {

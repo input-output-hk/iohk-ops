@@ -6,7 +6,7 @@ let nodeMap = { inherit (globals.fullMap) report-server; }; in
   report-server = { config, resources, lib, ...}: {
     imports = [
       ../modules/staging.nix
-      ../modules/papertrail.nix
+      ../modules/monitoring-exporters.nix
     ];
 
     services.report-server.zendesk = {
