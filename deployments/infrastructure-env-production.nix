@@ -2,14 +2,17 @@
 
 with (import ../lib.nix);
 let
-    mkHydra = hostname: { config, pkgs, resources, ... }: {
-
-      imports = [
-        ../modules/monitoring-exporters.nix
-      ];
-    };
+  mkHydra = hostname: { config, pkgs, resources, ... }: { };
 in {
   network.description = "IOHK infrastructure production";
+
+  defaults = {
+    imports = [
+      ../modules/monitoring-exporters.nix
+    ];
+
+    services.monitoring-exporters.papertrail.enable = true;
+  };
 
   hydra        = mkHydra "hydra";
   faster-hydra = mkHydra "faster-hydra";
@@ -17,7 +20,6 @@ in {
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
-      ../modules/monitoring-exporters.nix
       ../modules/deployer.nix
     ];
 
@@ -63,9 +65,6 @@ in {
     hostName = "bors-ng.aws.iohkdev.io";
     keysDir = "/var/lib/keys";
   in {
-    imports = [
-      ../modules/monitoring-exporters.nix
-    ];
 
     services.bors-ng = {
       publicHost = hostName;
@@ -108,11 +107,18 @@ in {
     keysDir = "/var/lib/keys";
   in {
     imports = [
-      ../modules/monitoring-exporters.nix
       ../modules/log-classifier.nix
       ../modules/common.nix
     ];
 
     services.log-classifier.domain = "log-classifier.aws.iohkdev.io";
+  };
+
+  monitoring = { config, pkgs, resources, ... }: {
+    imports = [
+      ../modules/monitoring-services.nix
+    ];
+
+    services.monitoring-services.enable = true;
   };
 }
