@@ -61,6 +61,9 @@ data NodeMetadata = NodeMetadata
     { -- | Node type
       nmType    :: !NodeType
 
+      -- | Node implementation
+    , nmImpl    :: !NodeImpl
+
       -- | Region
     , nmRegion  :: !NodeRegion
 
@@ -191,6 +194,7 @@ extractNodeAddr mkA obj = do
 instance FromJSON NodeMetadata where
   parseJSON = A.withObject "NodeMetadata" $ \obj -> do
       nmType     <- obj .: "type"
+      nmImpl     <- obj .:? "impl" .!= Legacy
       nmRegion   <- obj .: "region"
       nmZone     <- obj .: "zone"
       nmRoutes   <- obj .:? "static-routes" .!= NodeRoutes []

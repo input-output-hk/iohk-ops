@@ -109,6 +109,9 @@ instance ToJSON NodeOrg
 data NodeType = NodeCore | NodeRelay | NodeEdge
   deriving (Show)
 
+data NodeImpl = Legacy | Haskell | Rust
+  deriving (Show)
+
 newtype NodeRegion = NodeRegion Text
     deriving (Show, Ord, Eq, IsString)
 
@@ -120,6 +123,13 @@ instance FromJSON NodeType where
         "relay"    -> return NodeRelay
         _otherwise -> fail $ "Invalid NodeType " ++ show typ
 
+instance FromJSON NodeImpl where
+  parseJSON = AE.withText "NodeImpl" $ \typ -> do
+      case unpack typ of
+        "legacy"   -> return Legacy
+        "haskell"  -> return Haskell
+        "rust"     -> return Rust
+        _otherwise -> fail $ "Invalid NodeImpl " ++ show typ
 
 -- * Domain
 --
@@ -212,6 +222,7 @@ newtype SimpleTopo
 data SimpleNode
   =  SimpleNode
      { snType     :: NodeType
+     , snImpl     :: NodeImpl
      , snRegion   :: NodeRegion
      , snZone     :: NodeZone
      , snOrg      :: NodeOrg
