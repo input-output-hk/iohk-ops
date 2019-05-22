@@ -1,4 +1,4 @@
-{ resources, config, pkgs, lib, nodes, ... }:
+{ resources, config, pkgs, lib, ... }:
 
 with lib;
 
@@ -21,10 +21,6 @@ let
     sshUser = "builder";
     supportedFeatures = [];
   };
-  cleanIp = host: let
-      ip1 = if nodes.${host}.options.networking.publicIPv4.isDefined then nodes.${host}.config.networking.publicIPv4 else "0.0.0.0";
-    in
-      if ip1 == null then "0.0.0.0" else ip1;
   mkGithubStatus = { jobset, inputs }: ''
     <githubstatus>
       jobs = Cardano:${jobset}.*:required
@@ -167,7 +163,7 @@ in {
           proxy_set_header Host $http_host;
           proxy_set_header REMOTE_ADDR $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto https;
+          proxy_set_header X-Forwarded-Proto $scheme;
         '';
         locations."~ /(nix-cache-info|.*\\.narinfo|nar/*)".extraConfig = ''
           return 301 https://iohk-nix-cache.s3-eu-central-1.amazonaws.com$request_uri;

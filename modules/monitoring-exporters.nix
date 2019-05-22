@@ -1,4 +1,4 @@
-{ config, pkgs, lib, nodes, ... }:
+{ config, pkgs, lib, ... }:
 
 with lib;
 
@@ -122,7 +122,7 @@ in {
 
     # Leaving the "monitoring" attribute name as static rather than
     # referencing monitoringNV due to atala globals.nix usage conflict.
-    (mkIf ((nodes ? monitoring) && cfg.logging && (cfg.graylogHost != null)) {
+    (mkIf (cfg.logging && (cfg.graylogHost != null)) {
       services.journalbeat = {
         enable = true;
         extraConfig = ''

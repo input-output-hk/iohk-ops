@@ -6,6 +6,7 @@ let org = "IOHK";
     accessKeyId = IOHKaccessKeyId;
     route53accessKeyId = IOHKroute53accessKeyId;
     mkHydra = hostname: itype: ddtags: { config, pkgs, resources, ... }: {
+      # TODO, use ddtags in prometheus
       imports = [
         ../modules/amazon-base.nix
       ];
