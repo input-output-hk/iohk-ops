@@ -106,9 +106,8 @@ with import ../lib.nix;
             neighbourNames =
               let monitorPeers = builtins.attrNames nodes;
               in  traceF (p: "${monitoringNV.name} peers: " + concatStringsSep ", " monitorPeers) monitorPeers;
-            neighbours = map (name: globals.fullMap.${name}) neighbourNames;
             neighGrant = neigh:
-              let ip = ips."${toString neigh.name}-ip";
+              let ip = ips."${toString neigh}-ip";
               in {
                   fromPort = nodePort; toPort = nodePort; # graylog journalbeat input = TCP port 5044
                   sourceIp = ip;
@@ -117,7 +116,7 @@ with import ../lib.nix;
             "allow-monitoring-static-peers-${monitoringNV.value.region}-${monitoringNV.value.org}" = {
               inherit (monitoringNV.value) accessKeyId region;
               description = "Monitoring TCP static peers of ${monitoringNV.name}";
-              rules = if nodes ? "${monitoringNV.name}" then (map neighGrant neighbours) else [];
+              rules = if nodes ? "${monitoringNV.name}" then (map neighGrant neighbourNames) else [];
             };
           };
         coreSGNames = core:
