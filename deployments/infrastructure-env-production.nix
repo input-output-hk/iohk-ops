@@ -3,6 +3,12 @@
 with (import ../lib.nix);
 let
   mkHydra = hostname: { config, pkgs, resources, ... }: { };
+  mkUplink = mkMkUplink {
+    central = "192.168.20.1";
+    subnet = "192.168.20";
+    # TODO, `monitoring-ip` will be wrong if monitoring isnt using an elastic ip by that name
+    endpoint = "monitoring-ip:51820";
+  };
 in {
   network.description = "IOHK infrastructure production";
 
@@ -117,13 +123,41 @@ in {
     services.log-classifier.domain = "log-classifier.aws.iohkdev.io";
   };
 
-  monitoring = { config, pkgs, resources, ... }: {
+  monitoring = { lib, config, pkgs, resources, ... }: {
     imports = [
       ../modules/monitoring-services.nix
     ];
 
+    deployment.keys."monitoring.wgprivate" = {
+      destDir = "/etc/wireguard";
+      keyFile = ../static/monitoring.wgprivate;
+    };
+    networking.wireguard.interfaces.wg0 = {
+      peers = let
+        genPeer = n: path: {
+          allowedIPs = [ "192.168.20.${toString n}/32" ];
+          publicKey = lib.strings.removeSuffix "\n" (builtins.readFile path);
+        };
+      in [
+        # main hydra build-slaves
+        (genPeer 11 ../static/builder-packet-c1-small-x86.wgpublic)
+        (genPeer 12 ../static/builder-packet-c1-small-x86-2.wgpublic)
+        (genPeer 13 ../static/builder-packet-c1-small-x86-3.wgpublic)
+        (genPeer 14 ../static/builder-packet-c1-small-x86-4.wgpublic)
+        (genPeer 15 ../static/builder-packet-c1-small-x86-5.wgpublic)
+        # buildkite agents
+        (genPeer 31 ../static/buildkite-packet-1.wgpublic)
+        (genPeer 32 ../static/buildkite-packet-2.wgpublic)
+        (genPeer 33 ../static/buildkite-packet-3.wgpublic)
+        # mantis hydra build-slaves
+        (genPeer 51 ../static/mantis-slave-packet-1.wgpublic)
+        (genPeer 52 ../static/mantis-slave-packet-2.wgpublic)
+      ];
+    };
+
     services.monitoring-services = {
       enable = true;
+      enableWireguard = true;
       oauth = {
         enable = true;
         emailDomain = "iohk.io";
@@ -135,4 +169,17 @@ in {
       deadMansSnitch = import ../static/dead-mans-snitch.nix;
     };
   };
+
+  builder-packet-c1-small-x86 = mkUplink 11 ../static/builder-packet-c1-small-x86.wgprivate;
+  builder-packet-c1-small-x86-2 = mkUplink 12 ../static/builder-packet-c1-small-x86-2.wgprivate;
+  builder-packet-c1-small-x86-3 = mkUplink 13 ../static/builder-packet-c1-small-x86-3.wgprivate;
+  builder-packet-c1-small-x86-4 = mkUplink 14 ../static/builder-packet-c1-small-x86-4.wgprivate;
+  builder-packet-c1-small-x86-5 = mkUplink 15 ../static/builder-packet-c1-small-x86-5.wgprivate;
+
+  buildkite-packet-1 = mkUplink 31 ../static/buildkite-packet-1.wgprivate;
+  buildkite-packet-2 = mkUplink 32 ../static/buildkite-packet-2.wgprivate;
+  buildkite-packet-3 = mkUplink 33 ../static/buildkite-packet-3.wgprivate;
+
+  mantis-slave-packet-1 = mkUplink 51 ../static/mantis-slave-packet-1.wgprivate;
+  mantis-slave-packet-2 = mkUplink 52 ../static/mantis-slave-packet-2.wgprivate;
 }
