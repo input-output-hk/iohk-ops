@@ -1,11 +1,5 @@
 {
   require = [ ./monitoring.nix ];
-  defaults = {
-    services.monitoring-exporters = {
-      # TODO monitoring-ip should come from monitoring-target-aws.nix
-      graylogHost = "monitoring-ip:5044";
-    };
-  };
   monitoring = { pkgs, lib, ... }:
   {
     imports = [

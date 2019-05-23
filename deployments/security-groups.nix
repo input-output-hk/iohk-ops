@@ -70,6 +70,7 @@ with import ../lib.nix;
         orgXRegionSGs     = { monitoringNV, nodes }: ips: { org, region }: {
             "allow-deployer-ssh-${region}-${org}" = {
               inherit region;
+              _file = ./security-groups.nix;
               accessKeyId = globals.orgAccessKeys.${org};
               description = "SSH";
               rules = [{

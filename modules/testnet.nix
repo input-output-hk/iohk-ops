@@ -1,6 +1,6 @@
 { name, config, resources, ... }:
 
-with import ./../lib.nix;
+with import ../lib.nix;
 {
   config = {
 
@@ -18,8 +18,6 @@ with import ./../lib.nix;
       monitoring-exporters.enable = true;
       monitoring-exporters.metrics = true;
       monitoring-exporters.logging = true;
-      monitoring-exporters.graylogHost = "${config.deployment.arguments.globals.monitoringNV.name}-ip:5044";
     };
-
   };
 }

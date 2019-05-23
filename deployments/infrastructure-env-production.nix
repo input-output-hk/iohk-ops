@@ -13,6 +13,7 @@ in {
   network.description = "IOHK infrastructure production";
 
   defaults = {
+    _file = ./infrastructure-env-production.nix;
     imports = [
       ../modules/monitoring-exporters.nix
     ];

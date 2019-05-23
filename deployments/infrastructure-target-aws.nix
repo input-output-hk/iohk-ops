@@ -102,6 +102,7 @@ in rec {
   resources = {
     ec2SecurityGroups = {
       "allow-deployer-ssh-${region}-${org}" = {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "SSH";
         rules = [{
@@ -170,30 +171,27 @@ in rec {
       ntp  = mkMonitor ntp_monitor;
     });
   };
-  monitoring = { config, pkgs, resources, ... }: let
-    hostName = "monitoring.aws.iohkdev.io";
-  in {
-    imports = [ ../modules/amazon-base.nix ];
+  monitoring = { config, pkgs, resources, ... }:
+  {
+    imports = [
+      ../modules/amazon-base.nix
+      ../modules/monitoring-services.nix
+    ];
 
     boot.loader.grub.device = mkForce "/dev/nvme0n1"; # t3.xlarge has an nvme disk, and amazon-image.nix isnt handling it right yet
     deployment.ec2 = {
-      inherit accessKeyId;
       instanceType = "t3.xlarge";
       ebsInitialRootDiskSize = 1000;
 
       associatePublicIpAddress = true;
-      elasticIPv4 = resources.elasticIPs.monitoring-ip;
       securityGroups = [
-        resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
         resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
         resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
         resources.ec2SecurityGroups."allow-monitoring-all-${region}-${org}"
       ];
     };
-    deployment.route53.accessKeyId = route53accessKeyId;
-    deployment.route53.hostName = hostName;
     services.monitoring-services = {
-      webhost = hostName;
+      webhost = config.deployment.route53.hostName;
     };
   };
 }

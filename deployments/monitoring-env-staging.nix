@@ -6,10 +6,6 @@
       ../modules/staging.nix
     ];
 
-    deployment.ec2.instanceType = "t3.xlarge";
-    boot.loader.grub.device = lib.mkForce "/dev/nvme0n1"; # t3.xlarge has an nvme disk, and amazon-image.nix isnt handling it right yet
-    deployment.ec2.ebsInitialRootDiskSize = 1000;
-
     systemd.services.graylog.environment = { JAVA_OPTS = ''
       -Djava.library.path=${pkgs.graylog}/lib/sigar -Xms3g -Xmx3g -XX:NewRatio=1 -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow
     ''; };

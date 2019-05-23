@@ -28,6 +28,7 @@ with (import <nixpkgs> {}).lib;
 
   resources.ec2SecurityGroups = {
     "allow-deployer-ssh-${config.node.region}-${config.node.org}" = {
+      _file = ./configurator.nix;
       inherit accessKeyId; inherit (config.node) region;
       description = "SSH";
       rules = [{

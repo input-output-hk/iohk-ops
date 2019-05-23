@@ -124,13 +124,20 @@ banner() {
 GENERAL_OPTIONS=(--verbose --deployer 0.0.0.0)
 COMMON_OPTIONS=( --topology topology-min.yaml )
 CARDANO_COMPONENTS=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} ${WITH_MONITORING:+Monitoring} )
+CARDANO_COMPONENTS_WITHOUT_MONITORING=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} )
 
+
+echo '~~~ pre-building cardano-sl-tools'
 nix-build default.nix -A cardano-sl-tools -o cardano-sl-tools
+
+echo '~~~ generating wireguard tests'
+nix-shell modules/gen-wireguard-keys.nix --arg hosts '[ "monitoring" "builder-packet-c1-small-x86" "builder-packet-c1-small-x86-2" "builder-packet-c1-small-x86-3" "builder-packet-c1-small-x86-4" "builder-packet-c1-small-x86-5" "buildkite-packet-1" "buildkite-packet-2" "buildkite-packet-3" "mantis-slave-packet-1" "mantis-slave-packet-2" ]'
 
 PATH=$PATH:./cardano-sl-tools/bin/
 export PATH
 
 if [[ ${WITH_STAGING} == true ]]; then
+  echo '~~~ testing staging'
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-stag"
 ${IOHK_OPS}               new  --config 'test-stag.yaml'   --environment staging    "${COMMON_OPTIONS[@]}" 'test-stag'    "${CARDANO_COMPONENTS[@]}"
 ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-stag.yaml'   create deploy --dry-run --initial-heap-size 4
@@ -138,6 +145,7 @@ banner 'Staging env evaluated'
 fi
 
 if [[ ${WITH_PRODUCTION} == true ]]; then
+  echo '~~~ testing production'
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-prod"
 ${IOHK_OPS}               new  --config 'test-prod.yaml'   --environment production "${COMMON_OPTIONS[@]}" 'test-prod'    "${CARDANO_COMPONENTS[@]}"
 ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-prod.yaml'   create deploy --dry-run --initial-heap-size 4
@@ -145,6 +153,7 @@ banner 'Production env evaluated'
 fi
 
 if [[ ${WITH_TESTNET} == true ]]; then
+  echo '~~~ testing testnet'
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-stag"
 ${IOHK_OPS}               new  --config 'test-stag.yaml'   --environment testnet    "${COMMON_OPTIONS[@]}" 'test-stag'    "${CARDANO_COMPONENTS[@]}"
 ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-stag.yaml'   create deploy --dry-run --initial-heap-size 4
@@ -152,13 +161,15 @@ banner 'Testnet env evaluated'
 fi
 
 if [[ ${WITH_DEVELOPMENT} == true ]]; then
+  echo '~~~ testing development'
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-devo"
-${IOHK_OPS}               new  --config 'test-devo.yaml'                            "${COMMON_OPTIONS[@]}" 'test-devo'    "${CARDANO_COMPONENTS[@]}"
+${IOHK_OPS}               new  --config 'test-devo.yaml'                            "${COMMON_OPTIONS[@]}" 'test-devo'    "${CARDANO_COMPONENTS_WITHOUT_MONITORING[@]}"
 ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-devo.yaml'   create deploy --dry-run --initial-heap-size 4
 banner 'Development env evaluated'
 fi
 
 if [[ ${WITH_INFRA_PRODUCTION} == true ]]; then
+  echo '~~~ testing production-infra'
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
 ${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment production "${COMMON_OPTIONS[@]}" 'test-infra'   Infra
 ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-infra.yaml'  create deploy --dry-run --initial-heap-size 4
@@ -166,13 +177,15 @@ banner 'Production infra evaluated'
 fi
 
 if [[ ${WITH_INFRA_STAGING} == true ]]; then
+  echo '~~~ testing staging-infra'
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
-${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment staging   "${COMMON_OPTIONS[@]}" 'test-infra'   Infra
+${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment staging   "${COMMON_OPTIONS[@]}" 'test-infra'   Infra Monitoring
 ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-infra.yaml'  create deploy --dry-run --initial-heap-size 4
 banner 'Staging infra evaluated'
 fi
 
 echo "BENCHMARK ENABLED: ${WITH_BENCHMARK}"
+  echo '~~~ testing benchmarking'
 if [[ ${WITH_BENCHMARK} == true ]]; then
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-bench"
 ${IOHK_OPS}               new  --config 'test-bench.yaml'   --environment benchmark    "${COMMON_OPTIONS[@]}" 'test-bench'    "${CARDANO_COMPONENTS[@]}"
@@ -180,10 +193,10 @@ ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-bench.yaml'   create deploy -
 banner 'Benchmark env evaluated'
 fi
 
-echo "Validating terraform"
+echo '~~~ Validating terraform'
 nix-shell --run "terraform validate -check-variables=false terraform/appveyor-s3-cache"
 
-echo "Git commit ids:"
+echo '~~~ Git commit ids:'
 ./scripts/find-all-revisions.sh
 
-echo "All OK."
+echo '~~~ All OK.'
