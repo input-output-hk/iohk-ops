@@ -86,7 +86,9 @@ envSettings env =
                                , (Nodes,          All, "deployments/cardano-nodes.nix")
                                , (Infra,          All, "deployments/infrastructure.nix")
                                , (Infra,          All, "deployments/packet-net.nix")
-                               , (Infra,          AWS, "deployments/infrastructure-target-aws.nix") ]
+                               , (Infra,          AWS, "deployments/infrastructure-target-aws.nix")
+                               , (Monitoring,     AWS, "deployments/monitoring-aws.nix")
+                               ]
   in case env of
     Staging      -> EnvSettings
       { envDeployerUser      = "staging"
