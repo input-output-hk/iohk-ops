@@ -7,6 +7,7 @@
 
 with import ../lib.nix;
 {
+  require = [ ./security-groups/allow-deployer-ssh.nix ];
   resources.ec2SecurityGroups =
     let sgs               = flip map securityGroupNames
                             (name: { name = name;
@@ -63,22 +64,10 @@ with import ../lib.nix;
             };
           };
         orgXRegionSGNames = { org, region }:
-            [ "allow-deployer-ssh-${region}-${org}"
-              "allow-ekg-public-tcp-${region}-${org}"
+            [ "allow-ekg-public-tcp-${region}-${org}"
               "allow-monitoring-collection-${region}-${org}"
             ];
         orgXRegionSGs     = { monitoringNV, nodes }: ips: { org, region }: {
-            "allow-deployer-ssh-${region}-${org}" = {
-              inherit region;
-              _file = ./security-groups.nix;
-              accessKeyId = globals.orgAccessKeys.${org};
-              description = "SSH";
-              rules = [{
-                protocol = "tcp"; # TCP
-                fromPort = 22; toPort = 22;
-                sourceIp = globals.deployerIP + "/32";
-              }];
-            };
             "allow-ekg-public-tcp-${region}-${org}" = {
               inherit region;
               accessKeyId = globals.orgAccessKeys.${org};

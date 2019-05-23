@@ -28,6 +28,7 @@ let org = "IOHK";
       deployment.route53.hostName = "${hostname}.aws.iohkdev.io";
     };
 in rec {
+  require = [ ./security-groups/allow-deployer-ssh.nix ];
   hydra               = mkHydra "hydra" "r3.2xlarge" ["role:hydra"];
   mantis-hydra        = mkHydra "mantis-hydra" "r3.2xlarge" ["role:hydra"];
   faster-hydra        = mkHydra "faster-hydra" "c5.4xlarge" ["role:hydra"];
@@ -101,16 +102,6 @@ in rec {
 
   resources = {
     ec2SecurityGroups = {
-      "allow-deployer-ssh-${region}-${org}" = {
-        _file = ./infrastructure-target-aws.nix;
-        inherit region accessKeyId;
-        description = "SSH";
-        rules = [{
-          protocol = "tcp"; # TCP
-          fromPort = 22; toPort = 22;
-          sourceIp = deployerIP + "/32";
-        }];
-      };
       "allow-hydra-ssh-${region}-${org}" = { resources, ...}: {
         inherit region accessKeyId;
         description = "SSH";
