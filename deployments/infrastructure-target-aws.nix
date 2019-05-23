@@ -103,6 +103,7 @@ in rec {
   resources = {
     ec2SecurityGroups = {
       "allow-hydra-ssh-${region}-${org}" = { resources, ...}: {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "SSH";
         rules = [{
@@ -112,6 +113,7 @@ in rec {
         }];
       };
       "allow-all-ssh-${region}-${org}" = {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "SSH";
         rules = [{
@@ -121,6 +123,7 @@ in rec {
         }];
       };
       "allow-public-www-https-${region}-${org}" = {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "WWW-https";
         rules = [{
@@ -130,6 +133,7 @@ in rec {
         }];
       };
       "allow-public-www-http-${region}-${org}" = {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "WWW-http";
         rules = [{
@@ -139,6 +143,7 @@ in rec {
         }];
       };
       "allow-monitoring-all-${region}-${org}" = {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "graylog temporary hole";
         rules = [
@@ -146,14 +151,15 @@ in rec {
         ];
       };
     };
-    elasticIPs = {
-      hydra-ip        = { inherit region accessKeyId; };
-      faster-hydra-ip = { inherit region accessKeyId; };
-      mantis-hydra-ip = { inherit region accessKeyId; };
-      cardanod-ip     = { inherit region accessKeyId; };
-      bors-ng-ip      = { inherit region accessKeyId; };
-      monitoring-ip      = { inherit region accessKeyId; };
-      log-classifier-ip      = { inherit region accessKeyId; };
+    elasticIPs = let
+      _file = ./infrastructure-target-aws.nix;
+    in {
+      hydra-ip        = { inherit region accessKeyId _file; };
+      faster-hydra-ip = { inherit region accessKeyId _file; };
+      mantis-hydra-ip = { inherit region accessKeyId _file; };
+      cardanod-ip     = { inherit region accessKeyId _file; };
+      bors-ng-ip      = { inherit region accessKeyId _file; };
+      log-classifier-ip      = { inherit region accessKeyId _file; };
     };
     datadogMonitors = (with (import ../modules/datadog-monitors.nix); {
       disk       = mkMonitor (disk_monitor "!group:hydra-and-slaves,!group:buildkite-agents" "0.8"  "0.9");
@@ -180,9 +186,6 @@ in rec {
         resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
         resources.ec2SecurityGroups."allow-monitoring-all-${region}-${org}"
       ];
-    };
-    services.monitoring-services = {
-      webhost = config.deployment.route53.hostName;
     };
   };
 }

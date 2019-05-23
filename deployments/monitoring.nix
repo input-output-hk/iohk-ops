@@ -10,6 +10,7 @@ in
   # configure all machines in the cluster so they can find graylog
   defaults = { config, lib, ... }: {
     _file = ./monitoring.nix;
+    imports = [ ../modules/monitoring-exporters.nix ];
     services.monitoring-exporters = {
       # TODO, `monitoring-ip` will be wrong if monitoring isnt using an elastic ip by that name
       graylogHost = "monitoring-ip:5044";

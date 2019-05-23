@@ -14,13 +14,9 @@ in {
 
   defaults = {
     _file = ./infrastructure-env-production.nix;
-    imports = [
-      ../modules/monitoring-exporters.nix
-    ];
 
     services.monitoring-exporters = {
       papertrail.enable = true;
-      graylogHost = "monitoring-ip:5044";
     };
   };
 
@@ -159,15 +155,9 @@ in {
     services.monitoring-services = {
       enable = true;
       enableWireguard = true;
-      oauth = {
-        enable = true;
-        emailDomain = "iohk.io";
-      } // (import ../static/oauth.nix);
       # NOTE: The Grafana user and password settings only take effect on the initial deployment.
       grafanaCreds = makeCreds "grafana" { user = "changeme"; password = "changeme"; };
       graylogCreds = makeCreds "graylog" { user = "changeme"; password = "changeme"; };
-      pagerDuty = import ../static/pager-duty.nix;
-      deadMansSnitch = import ../static/dead-mans-snitch.nix;
     };
   };
 

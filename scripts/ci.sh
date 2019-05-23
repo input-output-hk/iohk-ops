@@ -171,7 +171,7 @@ fi
 if [[ ${WITH_INFRA_PRODUCTION} == true ]]; then
   echo '~~~ testing production-infra'
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
-${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment production "${COMMON_OPTIONS[@]}" 'test-infra'   Infra
+${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment production "${COMMON_OPTIONS[@]}" 'test-infra'   Infra Monitoring
 ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-infra.yaml'  create deploy --dry-run --initial-heap-size 4
 banner 'Production infra evaluated'
 fi

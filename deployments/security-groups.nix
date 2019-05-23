@@ -104,16 +104,19 @@ with import ../lib.nix;
         monitorSGs     = { config, nodes }: { nodePort }: ips: monitoringNV:
           let
             neighbourNames =
-              let monitorPeers = builtins.attrNames nodes;
-              in  traceF (p: "${monitoringNV.name} peers: " + concatStringsSep ", " monitorPeers) monitorPeers;
-            neighGrant = neigh:
-              let ip = ips."${toString neigh}-ip";
-              in {
+              let
+                monitorPeers = builtins.attrNames nodes;
+                getIP = nodeName: ips."${nodeName}-ip" or null;
+                neighborIPs = builtins.filter (ip: ip != null) (map getIP monitorPeers);
+              in  traceF (p: "${monitoringNV.name} peers: " + concatStringsSep ", " monitorPeers) neighborIPs;
+            neighGrant = ip:
+              {
                   fromPort = nodePort; toPort = nodePort; # graylog journalbeat input = TCP port 5044
                   sourceIp = ip;
               };
           in {
             "allow-monitoring-static-peers-${monitoringNV.value.region}-${monitoringNV.value.org}" = {
+              _file = ./security-groups.nix;
               inherit (monitoringNV.value) accessKeyId region;
               description = "Monitoring TCP static peers of ${monitoringNV.name}";
               rules = if nodes ? "${monitoringNV.name}" then (map neighGrant neighbourNames) else [];
