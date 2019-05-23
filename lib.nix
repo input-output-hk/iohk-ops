@@ -114,6 +114,26 @@ in lib // (rec {
     then (import (./static + "/${service}-creds.nix"))
     else default;
 
+  mkMkUplink = { central, subnet, endpoint }: n: path: { lib, config, ... }: {
+    deployment.keys."uplink.wgprivate" = {
+      destDir = "/etc/wireguard";
+      keyFile = path;
+    };
+    services.monitoring-exporters = {
+      graylogHost = lib.mkForce "${central}:5044";
+      ownIp = lib.mkForce "${subnet}.${toString n}";
+    };
+    boot.extraModulePackages = [ config.boot.kernelPackages.wireguard ];
+    networking.wireguard.interfaces.wg0 = {
+      ips = [ "${subnet}.${toString n}/32" ];
+      listenPort = 51820;
+      privateKeyFile = "/etc/wireguard/uplink.wgprivate";
+      peers = [
+        { allowedIPs = [ "${central}/32" ]; publicKey = lib.strings.removeSuffix "\n" (builtins.readFile ./static/monitoring.wgpublic); endpoint = endpoint; }
+      ];
+    };
+  };
+
   ## nodeElasticIP :: Node -> EIP
   nodeElasticIP = node:
     { name = "${node.name}-ip";
