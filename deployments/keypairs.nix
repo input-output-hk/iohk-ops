@@ -1,6 +1,7 @@
 { globals, ... }:
 
 with import ../lib.nix;
+
 {
   resources.ec2KeyPairs =
     (listToAttrs (flip map globals.orgXRegions

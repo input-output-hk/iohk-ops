@@ -1,6 +1,7 @@
 { name, config, resources, ... }:
 
-with import ./../lib.nix;
+with import ../lib.nix;
+
 {
   config = {
 
