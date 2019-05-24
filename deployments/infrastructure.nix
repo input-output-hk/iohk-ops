@@ -30,12 +30,6 @@ let
     ];
   };
 in {
-  defaults = {
-    _file = ./infrastructure.nix;
-    nixpkgs.overlays = [
-      (import ../overlays/monitoring-exporters.nix)
-    ];
-  };
   hydra        = mkHydra ../modules/hydra-master-main.nix;
   mantis-hydra = mkHydra ../modules/hydra-master-mantis.nix;
 

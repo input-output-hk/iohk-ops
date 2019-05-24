@@ -26,8 +26,5 @@ let
         enableACME = lib.mkForce false;
       };
     };
-    nixpkgs.overlays = [
-      (import ../overlays/monitoring-exporters.nix)
-    ];
   };
 in eval.vm

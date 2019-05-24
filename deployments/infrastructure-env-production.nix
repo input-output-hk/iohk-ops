@@ -123,6 +123,7 @@ in {
   monitoring = { lib, config, pkgs, resources, ... }: {
     imports = [
       ../modules/monitoring-services.nix
+      ../modules/exchange-monitor.nix
     ];
 
     deployment.keys."monitoring.wgprivate" = {
@@ -152,12 +153,15 @@ in {
       ];
     };
 
-    services.monitoring-services = {
-      enable = true;
-      enableWireguard = true;
-      # NOTE: The Grafana user and password settings only take effect on the initial deployment.
-      grafanaCreds = makeCreds "grafana" { user = "changeme"; password = "changeme"; };
-      graylogCreds = makeCreds "graylog" { user = "changeme"; password = "changeme"; };
+    services = {
+      exchange-monitor.binance = true;
+      monitoring-services = {
+        enable = true;
+        enableWireguard = true;
+        # NOTE: The Grafana user and password settings only take effect on the initial deployment.
+        grafanaCreds = makeCreds "grafana" { user = "changeme"; password = "changeme"; };
+        graylogCreds = makeCreds "graylog" { user = "changeme"; password = "changeme"; };
+      };
     };
   };
 

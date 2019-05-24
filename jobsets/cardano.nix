@@ -32,6 +32,7 @@ in pkgs.lib.fix (jobsets: {
   inherit (iohkpkgs) checks;
   inherit tests;
   cardano-linux = cardanoRelease.all-cardano-sl.x86_64-linux;
+  exchange-monitor = pkgs.callPackage ../modules/exchange-monitor {};
   required = pkgs.lib.hydraJob (pkgs.releaseTools.aggregate {
     name = "iohk-ops-required-checks";
     constituents =
