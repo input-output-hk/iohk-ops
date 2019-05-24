@@ -65,7 +65,14 @@ in {
 
   services.hydra = {
     hydraURL = "https://hydra.iohk.io";
-    package = pkgs.callPackage ./hydra-fork.nix { nixpkgsPath = pkgs.path;
+    package = pkgs.callPackage ./hydra-fork.nix {
+      nixpkgsPath = pkgs.path;
+      patches = [
+        (pkgs.fetchpatch {
+          url = "https://github.com/NixOS/hydra/pull/648/commits/4171ab4c4fd576c516dc03ba64d1c7945f769af0.patch";
+          sha256 = "1fxa2459kdws6qc419dv4084c1ssmys7kqg4ic7n643kybamsgrx";
+        })
+      ];
       src = pkgs.fetchFromGitHub {
         owner = "input-output-hk";
         repo = "hydra";
@@ -160,7 +167,7 @@ in {
         enableACME = true;
         locations."/".extraConfig = ''
           proxy_pass http://127.0.0.1:8080;
-          proxy_set_header Host $http_host;
+          proxy_set_header Host $host;
           proxy_set_header REMOTE_ADDR $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;

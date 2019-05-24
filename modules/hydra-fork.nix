@@ -1,4 +1,4 @@
-{ fetchFromGitHub, nixpkgsPath, src }:
+{ fetchFromGitHub, nixpkgsPath, src, patches }:
 
 let
   hydraRelease = (import (src + "/release.nix") {
@@ -11,4 +11,4 @@ let
   });
 
 in
-  hydraRelease.build.x86_64-linux
+  hydraRelease.build.x86_64-linux.overrideAttrs (drv: { inherit patches; })

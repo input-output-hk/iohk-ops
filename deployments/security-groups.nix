@@ -7,6 +7,7 @@
 
 with import ../lib.nix;
 {
+  require = [ ./security-groups/allow-deployer-ssh.nix ];
   resources.ec2SecurityGroups =
     let sgs               = flip map securityGroupNames
                             (name: { name = name;
@@ -63,21 +64,10 @@ with import ../lib.nix;
             };
           };
         orgXRegionSGNames = { org, region }:
-            [ "allow-deployer-ssh-${region}-${org}"
-              "allow-ekg-public-tcp-${region}-${org}"
+            [ "allow-ekg-public-tcp-${region}-${org}"
               "allow-monitoring-collection-${region}-${org}"
             ];
         orgXRegionSGs     = { monitoringNV, nodes }: ips: { org, region }: {
-            "allow-deployer-ssh-${region}-${org}" = {
-              inherit region;
-              accessKeyId = globals.orgAccessKeys.${org};
-              description = "SSH";
-              rules = [{
-                protocol = "tcp"; # TCP
-                fromPort = 22; toPort = 22;
-                sourceIp = globals.deployerIP + "/32";
-              }];
-            };
             "allow-ekg-public-tcp-${region}-${org}" = {
               inherit region;
               accessKeyId = globals.orgAccessKeys.${org};
@@ -114,20 +104,22 @@ with import ../lib.nix;
         monitorSGs     = { config, nodes }: { nodePort }: ips: monitoringNV:
           let
             neighbourNames =
-              let monitorPeers = builtins.attrNames nodes;
-              in  traceF (p: "${monitoringNV.name} peers: " + concatStringsSep ", " monitorPeers) monitorPeers;
-            neighbours = map (name: globals.fullMap.${name}) neighbourNames;
-            neighGrant = neigh:
-              let ip = ips."${toString neigh.name}-ip";
-              in {
+              let
+                monitorPeers = builtins.attrNames nodes;
+                getIP = nodeName: ips."${nodeName}-ip" or null;
+                neighborIPs = builtins.filter (ip: ip != null) (map getIP monitorPeers);
+              in  traceF (p: "${monitoringNV.name} peers: " + concatStringsSep ", " monitorPeers) neighborIPs;
+            neighGrant = ip:
+              {
                   fromPort = nodePort; toPort = nodePort; # graylog journalbeat input = TCP port 5044
                   sourceIp = ip;
               };
           in {
             "allow-monitoring-static-peers-${monitoringNV.value.region}-${monitoringNV.value.org}" = {
+              _file = ./security-groups.nix;
               inherit (monitoringNV.value) accessKeyId region;
               description = "Monitoring TCP static peers of ${monitoringNV.name}";
-              rules = if nodes ? "${monitoringNV.name}" then (map neighGrant neighbours) else [];
+              rules = if nodes ? "${monitoringNV.name}" then (map neighGrant neighbourNames) else [];
             };
           };
         coreSGNames = core:

@@ -59,6 +59,11 @@ in {
           Enable papertrail.
         '';
       };
+
+      ownIp = mkOption {
+        type = types.str;
+        description = "the address a remote prometheus node will use to contact this machine";
+      };
     };
   };
 

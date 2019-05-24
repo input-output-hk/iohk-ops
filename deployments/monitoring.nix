@@ -1,16 +1,32 @@
-{ globals, ... }: with (import ./../lib.nix);
+{ globals, ... }:
+
+with import ../lib.nix;
 let
   nodeMap = { inherit (globals.fullMap) monitoring; };
   monitoring = nodeMap.monitoring;
 in
 
 {
+  # configure all machines in the cluster so they can find graylog
+  defaults = { config, lib, ... }: {
+    _file = ./monitoring.nix;
+    imports = [ ../modules/monitoring-exporters.nix ];
+    services.monitoring-exporters = {
+      # TODO, `monitoring-ip` will be wrong if monitoring isnt using an elastic ip by that name
+      graylogHost = "monitoring-ip:5044";
+      #graylogHost = "${config.deployment.arguments.globals.monitoringNV.name}-ip:5044";
+      ownIp = let
+        ip = config.networking.publicIPv4;
+      in if ip == null then "0.0.0.0" else ip;
+    };
+  };
   monitoring = { config, lib, pkgs, resources, nodes, ... }:
   let
+    # a list of { name=; ip=; withNginx=; } for every node in the deployment
     hostList = lib.mapAttrsToList
       (nodeName: node: {
         name = "${nodeName}.${node.config.deployment.name}";
-        ip = node.config.networking.publicIPv4;
+        ip = node.config.services.monitoring-exporters.ownIp;
         withNginx = node.config.services.nginx.enable;
       }) nodes;
     hostName = "monitoring.${config.global.dnsDomainname}";
@@ -28,6 +44,8 @@ in
       dnsHostname  = mkForce "monitoring";
     };
 
+    # add everything from hostList to /etc/hosts
+    # if a machine is using wireguard, the `services.monitoring-exporters.ownIp` will be the WG ip, and this will point to that
     networking.extraHosts = ''
       ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}") hostList)}
     '';
@@ -54,15 +72,5 @@ in
       pagerDuty = import ../static/pager-duty.nix;
       deadMansSnitch = import ../static/dead-mans-snitch.nix;
     };
-
-    deployment.ec2.region         = mkForce monitoring.region;
-    deployment.ec2.accessKeyId    = monitoring.accessKeyId;
-    deployment.ec2.keyPair        = resources.ec2KeyPairs.${monitoring.keyPairName};
-    deployment.ec2.securityGroups = [
-      resources.ec2SecurityGroups."allow-to-monitoring-${config.deployment.ec2.region}"
-      resources.ec2SecurityGroups."allow-monitoring-static-peers-${config.deployment.ec2.region}-${monitoring.org}"
-    ];
   };
-
-  resources.elasticIPs = nodesElasticIPs nodeMap;
 }
