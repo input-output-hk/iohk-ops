@@ -4,6 +4,7 @@ with (import ../lib.nix);
 let
   iohk-pkgs = import ../default.nix {};
   mkHydra = extraImport: { config, pkgs, ... }: {
+    _file = ./infrastructure.nix;
     # On first setup:
 
     # Locally: $ ssh-keygen -C "hydra@hydra.example.org" -N "" -f static/id_buildfarm
@@ -29,6 +30,12 @@ let
     ];
   };
 in {
+  defaults = {
+    _file = ./infrastructure.nix;
+    nixpkgs.overlays = [
+      (import ../overlays/monitoring-exporters.nix)
+    ];
+  };
   hydra        = mkHydra ../modules/hydra-master-main.nix;
   faster-hydra = mkHydra ../modules/hydra-master-main.nix;
   mantis-hydra = mkHydra ../modules/hydra-master-mantis.nix;

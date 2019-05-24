@@ -25,6 +25,11 @@ in {
         default = true;
       };
 
+      enableWireguard = mkOption {
+        type = types.bool;
+        default = false;
+      };
+
       metrics = mkOption {
         type = types.bool;
         default = true;
@@ -244,7 +249,17 @@ in {
   };
 
   config = mkIf cfg.enable (mkMerge [
-
+    (lib.mkIf cfg.enableWireguard {
+      boot.extraModulePackages = [ config.boot.kernelPackages.wireguard ];
+      networking.firewall.allowedUDPPorts = [ 51820 ];
+      networking.wireguard.interfaces = {
+        wg0 = {
+          ips = [ "192.168.20.1/24" ];
+          listenPort = 51820;
+          privateKeyFile = "/etc/wireguard/monitoring.wgprivate";
+        };
+      };
+    })
     (lib.mkIf cfg.oauth.enable (let
       oauthProxyConfig = ''
         auth_request /oauth2/auth;

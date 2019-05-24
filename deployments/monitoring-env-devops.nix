@@ -1,11 +1,42 @@
-{
+{ IOHKaccessKeyId, ... }:
+let
+  iohklib = import ../lib.nix;
+  mkUplink = iohklib.mkMkUplink {
+    central = "192.168.20.1";
+    subnet = "192.168.20";
+    # TODO, `monitoring-ip` will be wrong if monitoring isnt using an elastic ip by that name
+    endpoint = "monitoring-ip:51820";
+  };
+in {
   require = [ ./monitoring.nix ];
-  monitoring = { ... }:
+  a1 = mkUplink 10 ../static/a1.wgprivate;
+  b1 = mkUplink 11 ../static/b1.wgprivate;
+  c1 = mkUplink 12 ../static/c1.wgprivate;
+  monitoring = { lib, resources, ... }:
   {
     imports = [
       ../modules/devops.nix
     ];
+    networking.wireguard.interfaces.wg0 = {
+      peers = let
+        genPeer = n: path: {
+          allowedIPs = [ "192.168.20.${toString n}/32" ];
+          publicKey = lib.strings.removeSuffix "\n" (builtins.readFile path);
+        };
+      in [
+        (genPeer 10 ../static/a1.wgpublic)
+        (genPeer 11 ../static/b1.wgpublic)
+        (genPeer 12 ../static/c1.wgpublic)
+        { allowedIPs = [ "192.168.20.20/32" ]; publicKey = "Iv+pHGJ6uGYfrSeF3PMSlN4v6YPZF52Xr5f8teH8OEE="; } # sams mac
+        { allowedIPs = [ "192.168.21.1/32" ]; publicKey = "oycbQ1DhtRh0hhD5gpyiKTUh0USkAwbjMer6/h/aHg8="; } # michaels desktop
+      ];
+    };
 
+    services.monitoring-services.enableWireguard = true;
+    deployment.keys."monitoring.wgprivate" = {
+      destDir = "/etc/wireguard";
+      keyFile = ../static/monitoring.wgprivate;
+    };
     services.monitoring-services.applicationDashboards = ../modules/grafana/cardano;
     services.monitoring-services.applicationRules = [
       {

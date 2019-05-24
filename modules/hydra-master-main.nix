@@ -1,4 +1,4 @@
-{ resources, config, pkgs, lib, nodes, ... }:
+{ resources, config, pkgs, lib, ... }:
 
 with lib;
 
@@ -21,10 +21,6 @@ let
     sshUser = "builder";
     supportedFeatures = [];
   };
-  cleanIp = host: let
-      ip1 = if nodes.${host}.options.networking.publicIPv4.isDefined then nodes.${host}.config.networking.publicIPv4 else "0.0.0.0";
-    in
-      if ip1 == null then "0.0.0.0" else ip1;
   mkGithubStatus = { jobset, inputs }: ''
     <githubstatus>
       jobs = Cardano:${jobset}.*:required
@@ -69,12 +65,19 @@ in {
 
   services.hydra = {
     hydraURL = "https://hydra.iohk.io";
-    package = pkgs.callPackage ./hydra-fork.nix { nixpkgsPath = pkgs.path;
+    package = pkgs.callPackage ./hydra-fork.nix {
+      nixpkgsPath = pkgs.path;
+      patches = [
+        (pkgs.fetchpatch {
+          url = "https://github.com/NixOS/hydra/pull/648/commits/4171ab4c4fd576c516dc03ba64d1c7945f769af0.patch";
+          sha256 = "1fxa2459kdws6qc419dv4084c1ssmys7kqg4ic7n643kybamsgrx";
+        })
+      ];
       src = pkgs.fetchFromGitHub {
         owner = "input-output-hk";
         repo = "hydra";
-        rev = "5f30a105edeecf7c3408e56832a859e4385f06cb";
-        sha256 = "102b085wmcnwl1qk077js8rv77f5y6jr0rnc3m6r25662h4lz7l4";
+        rev = "0768891e3cd3ef067d28742098f1dea8462fca75";
+        sha256 = "1aw3p7jm2gsakdqqx4pzhkfx12hh1nxk3wkabcvml5ci814f6jic";
       };
     };
     # max output is 4GB because of amis
@@ -164,10 +167,10 @@ in {
         enableACME = true;
         locations."/".extraConfig = ''
           proxy_pass http://127.0.0.1:8080;
-          proxy_set_header Host $http_host;
+          proxy_set_header Host $host;
           proxy_set_header REMOTE_ADDR $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto https;
+          proxy_set_header X-Forwarded-Proto $scheme;
         '';
         locations."~ /(nix-cache-info|.*\\.narinfo|nar/*)".extraConfig = ''
           return 301 https://iohk-nix-cache.s3-eu-central-1.amazonaws.com$request_uri;

@@ -6,6 +6,7 @@ let org = "IOHK";
     accessKeyId = IOHKaccessKeyId;
     route53accessKeyId = IOHKroute53accessKeyId;
     mkHydra = hostname: itype: ddtags: { config, pkgs, resources, ... }: {
+      # TODO, use ddtags in prometheus
       imports = [
         ../modules/amazon-base.nix
       ];
@@ -27,6 +28,7 @@ let org = "IOHK";
       deployment.route53.hostName = "${hostname}.aws.iohkdev.io";
     };
 in rec {
+  require = [ ./security-groups/allow-deployer-ssh.nix ];
   hydra               = mkHydra "hydra" "r3.2xlarge" ["role:hydra"];
   mantis-hydra        = mkHydra "mantis-hydra" "r3.2xlarge" ["role:hydra"];
   faster-hydra        = mkHydra "faster-hydra" "c5.4xlarge" ["role:hydra"];
@@ -100,16 +102,8 @@ in rec {
 
   resources = {
     ec2SecurityGroups = {
-      "allow-deployer-ssh-${region}-${org}" = {
-        inherit region accessKeyId;
-        description = "SSH";
-        rules = [{
-          protocol = "tcp"; # TCP
-          fromPort = 22; toPort = 22;
-          sourceIp = deployerIP + "/32";
-        }];
-      };
       "allow-hydra-ssh-${region}-${org}" = { resources, ...}: {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "SSH";
         rules = [{
@@ -119,6 +113,7 @@ in rec {
         }];
       };
       "allow-all-ssh-${region}-${org}" = {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "SSH";
         rules = [{
@@ -128,6 +123,7 @@ in rec {
         }];
       };
       "allow-public-www-https-${region}-${org}" = {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "WWW-https";
         rules = [{
@@ -137,6 +133,7 @@ in rec {
         }];
       };
       "allow-public-www-http-${region}-${org}" = {
+        _file = ./infrastructure-target-aws.nix;
         inherit region accessKeyId;
         description = "WWW-http";
         rules = [{
@@ -145,14 +142,24 @@ in rec {
           sourceIp = "0.0.0.0/0";
         }];
       };
+      "allow-monitoring-all-${region}-${org}" = {
+        _file = ./infrastructure-target-aws.nix;
+        inherit region accessKeyId;
+        description = "graylog temporary hole";
+        rules = [
+          { protocol = "tcp"; fromPort = 5044; toPort = 5044; sourceIp = "0.0.0.0/0"; }
+        ];
+      };
     };
-    elasticIPs = {
-      hydra-ip        = { inherit region accessKeyId; };
-      faster-hydra-ip = { inherit region accessKeyId; };
-      mantis-hydra-ip = { inherit region accessKeyId; };
-      cardanod-ip     = { inherit region accessKeyId; };
-      bors-ng-ip      = { inherit region accessKeyId; };
-      log-classifier-ip      = { inherit region accessKeyId; };
+    elasticIPs = let
+      _file = ./infrastructure-target-aws.nix;
+    in {
+      hydra-ip        = { inherit region accessKeyId _file; };
+      faster-hydra-ip = { inherit region accessKeyId _file; };
+      mantis-hydra-ip = { inherit region accessKeyId _file; };
+      cardanod-ip     = { inherit region accessKeyId _file; };
+      bors-ng-ip      = { inherit region accessKeyId _file; };
+      log-classifier-ip      = { inherit region accessKeyId _file; };
     };
     datadogMonitors = (with (import ../modules/datadog-monitors.nix); {
       disk       = mkMonitor (disk_monitor "!group:hydra-and-slaves,!group:buildkite-agents" "0.8"  "0.9");
@@ -160,5 +167,25 @@ in rec {
       disk_hydra = mkMonitor (disk_monitor  "group:hydra-and-slaves" "0.95" "0.951");
       ntp  = mkMonitor ntp_monitor;
     });
+  };
+  monitoring = { config, pkgs, resources, ... }:
+  {
+    imports = [
+      ../modules/amazon-base.nix
+      ../modules/monitoring-services.nix
+    ];
+
+    boot.loader.grub.device = mkForce "/dev/nvme0n1"; # t3.xlarge has an nvme disk, and amazon-image.nix isnt handling it right yet
+    deployment.ec2 = {
+      instanceType = "t3.xlarge";
+      ebsInitialRootDiskSize = 1000;
+
+      associatePublicIpAddress = true;
+      securityGroups = [
+        resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
+        resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
+        resources.ec2SecurityGroups."allow-monitoring-all-${region}-${org}"
+      ];
+    };
   };
 }
