@@ -14,6 +14,7 @@ in {
 
   defaults = {
     _file = ./infrastructure-env-production.nix;
+    # TODO imports = [ ../modules/network-wide.nix ];
 
     services.monitoring-exporters = {
       papertrail.enable = true;
@@ -21,7 +22,6 @@ in {
   };
 
   hydra        = mkHydra "hydra";
-  faster-hydra = mkHydra "faster-hydra";
   mantis-hydra = mkHydra "mantis-hydra";
 
   cardano-deployer = { config, pkgs, resources, ... }: {

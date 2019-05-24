@@ -1,4 +1,4 @@
-{ globals, IOHKaccessKeyId, ... }:
+{ globals, IOHKaccessKeyId, IOHKroute53accessKeyId, ... }:
 
 with import ../lib.nix;
 let
@@ -21,16 +21,19 @@ in {
       };
     };
   };
-  monitoring = { resources, ... }: {
-    deployment.ec2 = {
-      securityGroups = [
-        resources.ec2SecurityGroups."allow-wireguard-in-${region}-${org}"
-        resources.ec2SecurityGroups."allow-to-monitoring-${region}"
-        resources.ec2SecurityGroups."allow-monitoring-static-peers-${region}-${org}"
-      ];
-      region         = mkForce monitoring.region;
-      accessKeyId    = monitoring.accessKeyId;
-      keyPair        = resources.ec2KeyPairs.${monitoring.keyPairName};
+  monitoring = { lib, resources, ... }: {
+    deployment = {
+      route53.accessKeyId = lib.mkForce IOHKroute53accessKeyId;
+      ec2 = {
+        securityGroups = [
+          resources.ec2SecurityGroups."allow-wireguard-in-${region}-${org}"
+          resources.ec2SecurityGroups."allow-to-monitoring-${region}"
+          resources.ec2SecurityGroups."allow-monitoring-static-peers-${region}-${org}"
+        ];
+        region         = mkForce monitoring.region;
+        accessKeyId    = monitoring.accessKeyId;
+        keyPair        = resources.ec2KeyPairs.${monitoring.keyPairName};
+      };
     };
   };
 

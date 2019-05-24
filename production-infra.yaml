@@ -24,6 +24,10 @@ files:
 - deployments/infrastructure-env-production.nix
 - deployments/infrastructure-target-aws.nix
 - deployments/packet-net.nix
+- deployments/monitoring-aws.nix
+- deployments/monitoring-env-production.nix
+- deployments/security-groups.nix
 elements:
 - Infra
+- Monitoring
 target: AWS

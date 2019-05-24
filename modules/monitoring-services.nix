@@ -103,6 +103,15 @@ in {
         example = "monitoring-index-template.html";
       };
 
+      extraHeader = mkOption {
+        type = types.lines;
+        default = "";
+        description = ''
+          extra html added to the splash page for the monitoring
+        '';
+        example = "cluster: rc-staging";
+      };
+
       applicationRules = mkOption {
         type = types.listOf types.attrs;
         default = [];
@@ -324,7 +333,7 @@ in {
                   '';
                   indexFile = pkgs.substituteAll {
                       src = ./nginx + "/${cfg.monitoringTemplateHtmlFile}";
-                      inherit (cfg) monitoringProject monitoringProjectUrl;
+                      inherit (cfg) monitoringProject monitoringProjectUrl extraHeader;
                       inherit monitoringHtml;
                       monitoringSmallImg = ''src="${builtins.baseNameOf cfg.monitoringSmallImgFile}" width="138" height="40"'';
                       monitoringLargeImg = ''src="${builtins.baseNameOf cfg.monitoringLargeImgFile}" width="100"'';
