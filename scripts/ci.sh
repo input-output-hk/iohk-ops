@@ -122,7 +122,7 @@ banner() {
 }
 
 GENERAL_OPTIONS=(--verbose --deployer 0.0.0.0)
-COMMON_OPTIONS=( --topology topology-min.yaml )
+COMMON_OPTIONS=( --topology topology-min.yaml --domain example.com )
 CARDANO_COMPONENTS=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} ${WITH_MONITORING:+Monitoring} )
 CARDANO_COMPONENTS_WITHOUT_MONITORING=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} )
 

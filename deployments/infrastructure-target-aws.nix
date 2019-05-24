@@ -21,17 +21,19 @@ let org = "IOHK";
           resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
           resources.ec2SecurityGroups."allow-hydra-ssh-${region}-${org}"
           resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
-          resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
+          resources.ec2SecurityGroups."allow-monitoring-collection-${region}-${org}"
         ];
       };
       deployment.route53.accessKeyId = route53accessKeyId;
       deployment.route53.hostName = "${hostname}.aws.iohkdev.io";
     };
 in rec {
-  require = [ ./security-groups/allow-deployer-ssh.nix ];
+  require = [
+    ./security-groups/allow-deployer-ssh.nix
+    ./security-groups/allow-public-www-https.nix
+  ];
   hydra               = mkHydra "hydra" "r3.2xlarge" ["role:hydra"];
   mantis-hydra        = mkHydra "mantis-hydra" "r3.2xlarge" ["role:hydra"];
-  faster-hydra        = mkHydra "faster-hydra" "c5.4xlarge" ["role:hydra"];
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
@@ -46,6 +48,7 @@ in rec {
       elasticIPv4 = resources.elasticIPs.cardanod-ip;
       securityGroups = [
         resources.ec2SecurityGroups."allow-all-ssh-${region}-${org}"
+        resources.ec2SecurityGroups."allow-monitoring-collection-${region}-${org}"
       ];
     };
 
@@ -72,7 +75,7 @@ in rec {
       securityGroups = [
         resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
         resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
-        resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
+        resources.ec2SecurityGroups."allow-monitoring-collection-${region}-${org}"
       ];
     };
     deployment.route53.accessKeyId = route53accessKeyId;
@@ -93,7 +96,7 @@ in rec {
       securityGroups = [
         resources.ec2SecurityGroups."allow-deployer-ssh-${region}-${org}"
         resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
-        resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
+        resources.ec2SecurityGroups."allow-monitoring-collection-${region}-${org}"
       ];
     };
     deployment.route53.accessKeyId = route53accessKeyId;
@@ -122,40 +125,11 @@ in rec {
           sourceIp = "0.0.0.0/0";
         }];
       };
-      "allow-public-www-https-${region}-${org}" = {
-        _file = ./infrastructure-target-aws.nix;
-        inherit region accessKeyId;
-        description = "WWW-https";
-        rules = [{
-          protocol = "tcp"; # TCP
-          fromPort = 443; toPort = 443;
-          sourceIp = "0.0.0.0/0";
-        }];
-      };
-      "allow-public-www-http-${region}-${org}" = {
-        _file = ./infrastructure-target-aws.nix;
-        inherit region accessKeyId;
-        description = "WWW-http";
-        rules = [{
-          protocol = "tcp"; # TCP
-          fromPort = 80; toPort = 80;
-          sourceIp = "0.0.0.0/0";
-        }];
-      };
-      "allow-monitoring-all-${region}-${org}" = {
-        _file = ./infrastructure-target-aws.nix;
-        inherit region accessKeyId;
-        description = "graylog temporary hole";
-        rules = [
-          { protocol = "tcp"; fromPort = 5044; toPort = 5044; sourceIp = "0.0.0.0/0"; }
-        ];
-      };
     };
     elasticIPs = let
       _file = ./infrastructure-target-aws.nix;
     in {
       hydra-ip        = { inherit region accessKeyId _file; };
-      faster-hydra-ip = { inherit region accessKeyId _file; };
       mantis-hydra-ip = { inherit region accessKeyId _file; };
       cardanod-ip     = { inherit region accessKeyId _file; };
       bors-ng-ip      = { inherit region accessKeyId _file; };
@@ -181,11 +155,6 @@ in rec {
       ebsInitialRootDiskSize = 1000;
 
       associatePublicIpAddress = true;
-      securityGroups = [
-        resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
-        resources.ec2SecurityGroups."allow-public-www-http-${region}-${org}"
-        resources.ec2SecurityGroups."allow-monitoring-all-${region}-${org}"
-      ];
     };
   };
 }

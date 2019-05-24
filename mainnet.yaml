@@ -14,12 +14,16 @@ args:
   IOHKaccessKeyId:
     tag: NixStr
     contents: mainnet-iohk
+  IOHKroute53accessKeyId:
+    tag: NixStr
+    contents: mainnet-iohk
 gen-cmdline: manual changes from staging-testnet.yaml
 environment: Production
 topology: topology-production.yaml
 installer-bucket:   update-cardano-mainnet.iohk.io
 installer-url-base: update-cardano-mainnet.iohk.io
 name: mainnet
+domain: cardano-mainnet.iohk.io
 files:
 - deployments/keypairs.nix
 - deployments/security-groups.nix
@@ -30,6 +34,7 @@ files:
 - deployments/report-server.nix
 - deployments/report-server-env-production.nix
 - deployments/monitoring-env-production.nix
+- deployments/monitoring-aws.nix
 elements:
 - Nodes
 - Explorer

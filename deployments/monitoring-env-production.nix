@@ -1,5 +1,8 @@
 {
-  require = [ ./monitoring.nix ];
+  require = [
+    ./monitoring.nix
+    ./global.nix
+  ];
   monitoring = { pkgs, lib, ... }:
   {
     imports = [

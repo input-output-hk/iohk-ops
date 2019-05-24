@@ -68,6 +68,7 @@ diagReadCaseInsensitive str = diagRead $ toLower <$> str
 
 optReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> ShortName -> Optional HelpMessage -> Parser a
 optReadLower = opt (diagReadCaseInsensitive . T.unpack)
+
 argReadLower :: (Bounded a, Enum a, Read a, Show a) => ArgName -> Optional HelpMessage -> Parser a
 argReadLower = arg (diagReadCaseInsensitive . T.unpack)
 
@@ -78,6 +79,9 @@ parserEnvironment :: Parser Environment
 parserEnvironment = fromMaybe Ops.defaultEnvironment <$> optional (optReadLower "environment" 'e' $ pure $
                                                                    Turtle.HelpMessage $ "Environment: "
                                                                    <> T.intercalate ", " (lowerShowT <$> (every :: [Environment])) <> ".  Default: development")
+
+parseDomain :: Parser (Maybe Text)
+parseDomain = optional (optText "domain" 'd' $ pure $ Turtle.HelpMessage $ "Domain: <clustername>.aws.iohkdev.io")
 
 parserTarget      :: Parser Target
 parserTarget      = fromMaybe Ops.defaultTarget      <$> optional (optReadLower "target"      't' "Target: aws, all;  defaults to AWS")
@@ -117,6 +121,7 @@ data Command where
                            , tConfigurationKey :: Maybe ConfigurationKey
                            , tGenerateKeys :: GenerateKeys
                            , tEnvironment :: Environment
+                           , tDomain      :: Maybe Text
                            , tTarget      :: Target
                            , tName        :: NixopsDepl
                            , tDeployments :: [Deployment]
@@ -172,6 +177,7 @@ centralCommandParser =
                  <*> optional parserConfigurationKey
                  <*> flag GenerateKeys DontGenerateKeys (long "dont-generate-keys" <> short 'd' <> help "Don't generate development keys")
                  <*> parserEnvironment
+                 <*> parseDomain
                  <*> parserTarget
                  <*> (NixopsDepl <$> argText "NAME"  "Nixops deployment name")
                  <*> parserDeployments)
@@ -345,7 +351,7 @@ runNew o@Options{..} New{..} args = do
   -- generate config:
   systemStart <- timeCurrent
   let cmdline = T.concat $ intersperse " " $ fromArg <$> args
-  config <- Ops.mkNewConfig o cmdline tName tTopology tEnvironment tTarget tDeployments systemStart tConfigurationKey
+  config <- Ops.mkNewConfig o cmdline tName tTopology tEnvironment tDomain tTarget tDeployments systemStart tConfigurationKey
   configFilename <- T.pack . Path.encodeString <$> Ops.writeConfig tFile config
 
   echo ""

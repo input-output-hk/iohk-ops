@@ -37,7 +37,6 @@ in {
     ];
   };
   hydra        = mkHydra ../modules/hydra-master-main.nix;
-  faster-hydra = mkHydra ../modules/hydra-master-main.nix;
   mantis-hydra = mkHydra ../modules/hydra-master-mantis.nix;
 
   buildkite-packet-1  = mkBuildkiteAgent;

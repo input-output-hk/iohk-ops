@@ -7,7 +7,6 @@ with import ../lib.nix;
     global = {
       allocateElasticIP = true;
       enableEkgWeb      = true;
-      dnsDomainname     = "awstest.iohkdev.io";
     };
 
     services = {

@@ -7,6 +7,7 @@ let
 in
 
 {
+  require = [ ./global.nix ];
   # configure all machines in the cluster so they can find graylog
   defaults = { config, lib, ... }: {
     _file = ./monitoring.nix;
@@ -20,7 +21,7 @@ in
       in if ip == null then "0.0.0.0" else ip;
     };
   };
-  monitoring = { config, lib, pkgs, resources, nodes, ... }:
+  monitoring = { config, lib, pkgs, resources, nodes, deploymentName, ... }:
   let
     # a list of { name=; ip=; withNginx=; } for every node in the deployment
     hostList = lib.mapAttrsToList
@@ -51,6 +52,7 @@ in
     '';
 
     services.monitoring-services = {
+      extraHeader = "Deployment Name: ${deploymentName}<br>";
       enable = true;
       metrics = true;
       logging = true;

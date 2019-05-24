@@ -384,6 +384,7 @@ instance FromJSON NixopsConfig where
         <*> v .: "elements"
         <*> v .: "files"
         <*> v .: "args"
+        <*> v .:? "domain"
         -- Filled in in readConfig:
         <*> pure undefined
         <*> pure undefined
@@ -400,6 +401,7 @@ instance ToJSON NixopsConfig where
    , "target"             .= showT cTarget
    , "installer-bucket"   .= cUpdateBucket
    , "installer-url-base" .= cInstallerURLBase
+   , "domain"             .= cDomain
    , "elements"           .= cElements
    , "files"              .= cFiles
    , "args"               .= cDeplArgs ]
@@ -438,8 +440,8 @@ nixopsConfigurationKey = (>>= asString) . Map.lookup "configurationKey" . cDeplA
     asString _ = Nothing
 
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Environment -> Maybe Text -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cDomain cTarget cElements systemStart mConfigurationKey = do
   let EnvSettings{..} = envSettings                             cEnvironment
       cFiles          = deploymentFiles                         cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
@@ -582,9 +584,11 @@ computeFinalDeploymentArgs :: Options -> NixopsConfig -> IO [(NixParam, NixValue
 computeFinalDeploymentArgs o@Options{..} NixopsConfig{..} = do
   IP deployerIP <- establishDeployerIP o oDeployerIP
   let deplArgs' = Map.toList cDeplArgs
-                  <> [("deployerIP",   NixStr  deployerIP)
-                     ,("topologyYaml", NixFile cTopology)
-                     ,("environment",  NixStr  $ lowerShowT cEnvironment)]
+                  <> [ ("deployerIP",   NixStr  deployerIP)
+                     , ("topologyYaml", NixFile cTopology)
+                     , ("environment",  NixStr  $ lowerShowT cEnvironment)
+                     , ("domain", maybe NixNull NixStr cDomain)
+                     ]
   pure $ ("globals", buildGlobalsImportNixExpr deplArgs'): deplArgs'
 
 modify :: Options -> NixopsConfig -> IO ()
