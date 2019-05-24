@@ -9,7 +9,6 @@ with import ../lib.nix;
       allocateElasticIP            = false;
       enableEkgWeb                 = true;
       dnsHostname                  = "${name}-${config.deployment.name}";
-      dnsDomainname                = "aws.iohkdev.io";
       omitDetailedSecurityGroups   = true;
     };
 
