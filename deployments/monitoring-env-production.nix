@@ -1,13 +1,13 @@
 {
-  require = [ ./monitoring.nix ];
+  require = [
+    ./monitoring.nix
+    ./global.nix
+  ];
   monitoring = { pkgs, lib, ... }:
   {
     imports = [
       ../modules/production.nix
     ];
-
-    # warning, this is only valid for infra-staging, need to find a better solution
-    global.dnsDomainname = lib.mkForce "aws.iohkdev.io";
 
     systemd.services.graylog.environment = { JAVA_OPTS = ''
       -Djava.library.path=${pkgs.graylog}/lib/sigar -Xms3g -Xmx3g -XX:NewRatio=1 -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow

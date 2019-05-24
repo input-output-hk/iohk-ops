@@ -1,6 +1,7 @@
 { name, config, resources, ... }:
 
 with import ../lib.nix;
+
 {
   imports = [ ./globals.nix ];
   config.deployment = {

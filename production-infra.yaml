@@ -1,3 +1,4 @@
+# staging deployer infra, deployer, ci systems
 args:
   IOHKaccessKeyId:
     tag: NixStr
@@ -18,6 +19,7 @@ topology: topology-mainnet-infra.yaml
 environment: Production
 installer-bucket: stub
 name: iohk-infra
+domain: aws.iohkdev.io
 files:
 - deployments/keypairs.nix
 - deployments/infrastructure.nix

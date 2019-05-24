@@ -1,3 +1,4 @@
+# staging cardano network
 args:
   configurationKey:
     tag: NixStr
@@ -14,6 +15,9 @@ args:
   IOHKaccessKeyId:
     tag: NixStr
     contents: iohk
+  IOHKroute53accessKeyId:
+    tag: NixStr
+    contents: iohk
 gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
   --here staging nodes reportserver explorer
 environment: Staging
@@ -21,6 +25,7 @@ topology: topology-staging.yaml
 installer-bucket:   update-awstest.iohkdev.io
 installer-url-base: update-awstest.iohkdev.io
 name: rc-staging
+domain: awstest.iohkdev.io
 files:
 - deployments/keypairs.nix
 - deployments/security-groups.nix
@@ -31,6 +36,7 @@ files:
 - deployments/report-server.nix
 - deployments/report-server-env-staging.nix
 - deployments/monitoring-env-staging.nix
+- deployments/monitoring-aws.nix
 elements:
 - Nodes
 - Explorer

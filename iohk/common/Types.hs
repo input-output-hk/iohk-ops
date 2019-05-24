@@ -10,7 +10,6 @@
 module Types
   ( module Types
   , module Arch
-  , NixopsConfig (cInstallerURLBase)
   ) where
 
 import qualified Data.Aeson            as AE
@@ -200,6 +199,7 @@ data NixopsConfig = NixopsConfig
   , cElements         :: [Deployment]
   , cFiles            :: [Text]
   , cDeplArgs         :: DeplArgs
+  , cDomain           :: Maybe Text
   -- this isn't stored in the config file, but is, instead filled in during initialisation
   , topology          :: SimpleTopo
   , nixpkgs           :: Turtle.FilePath

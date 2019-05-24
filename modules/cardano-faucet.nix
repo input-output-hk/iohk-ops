@@ -1,4 +1,4 @@
-with (import ./../lib.nix);
+with import ../lib.nix;
 
 { config, pkgs, lib, ...}:
 
@@ -77,7 +77,7 @@ in {
             proxyPass = "http://127.0.0.1:${toString config.services.cardano-faucet.port}";
           };
         };
-        
+
         extraConfig = ''
           # Otherwise nginx serves files with timestamps unixtime+1 from /nix/store
           if_modified_since off;
