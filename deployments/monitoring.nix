@@ -7,6 +7,7 @@ let
 in
 
 {
+  require = [ ./global.nix ];
   # configure all machines in the cluster so they can find graylog
   defaults = { config, lib, ... }: {
     _file = ./monitoring.nix;
