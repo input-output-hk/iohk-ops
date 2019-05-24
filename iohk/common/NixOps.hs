@@ -440,14 +440,13 @@ nixopsConfigurationKey = (>>= asString) . Map.lookup "configurationKey" . cDeplA
     asString _ = Nothing
 
 -- | Interpret inputs into a NixopsConfig
-mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Environment -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
-mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cTarget cElements systemStart mConfigurationKey = do
+mkNewConfig :: Options -> Text -> NixopsDepl -> Maybe FilePath -> Environment -> Maybe Text -> Target -> [Deployment] -> Elapsed -> Maybe ConfigurationKey -> IO NixopsConfig
+mkNewConfig o cGenCmdline cName                       mTopology cEnvironment cDomain cTarget cElements systemStart mConfigurationKey = do
   let EnvSettings{..} = envSettings                             cEnvironment
       cFiles          = deploymentFiles                         cEnvironment cTarget cElements
       cTopology       = flip fromMaybe                mTopology envDefaultTopology
       cUpdateBucket   = "default-bucket"
       cInstallerURLBase = Nothing
-      cDomain = Nothing
   cDeplArgs <- selectInitialConfigDeploymentArgs o cTopology cEnvironment         cElements systemStart mConfigurationKey
   topology  <- getSimpleTopo cElements cTopology
   nixpkgs   <- getNixPackagesSource
