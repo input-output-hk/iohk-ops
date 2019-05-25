@@ -622,7 +622,7 @@ in {
                     }
                     {
                       alert = "node_filesystem_full_in_4h";
-                      expr = "predict_linear(node_filesystem_free_bytes{device!=\"ramfs\"}[1h], 4*3600) <= 0";
+                      expr = "predict_linear(node_filesystem_free_bytes{device!=\"ramfs\",device!=\"tmpfs\"}[4h], 4*3600) <= 0";
                       for = "5m";
                       labels = {
                         severity = "page";
