@@ -9,8 +9,12 @@ in pkgs.stdenv.mkDerivation {
     cd ${toString ../static}
     umask 077
     for host in ${toString hosts}; do
-      wg genkey > ''${host}.wgprivate
-      wg pubkey < ''${host}.wgprivate > ''${host}.wgpublic
+      if [[ -e ''${host}.wgprivate ]]; then
+        echo "File \"''${host}.wgprivate\" already exists -- skipping public and private wg key creation for the host \"''${host}"\"
+      else
+        wg genkey > ''${host}.wgprivate
+        wg pubkey < ''${host}.wgprivate > ''${host}.wgpublic
+      fi
     done
     exit 0
   '';
