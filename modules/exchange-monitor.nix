@@ -18,7 +18,11 @@ in {
       script = ''
         exec ${pkgs.callPackage ./exchange-monitor {}}
       '';
-      serviceConfig.User = "exchange-monitor-binance";
+      serviceConfig = {
+        User = "exchange-monitor-binance";
+        Restart = "always";
+        RestartSec = "15s";
+      };
     };
     services.prometheus2.scrapeConfigs = [
       {
