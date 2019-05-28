@@ -250,7 +250,7 @@ in {
         type = types.nullOr types.str;
         default = null;
         description = ''
-          The seed string for secure cookies.
+          The seed string for secure cookies. FIXME
         '';
       };
 
@@ -260,6 +260,18 @@ in {
         description = ''
           The url that alertmanager should ping regularly to signal it is alive.
         '';
+      };
+
+      alertmanager.extraRoutes = mkOption {
+        type = types.listOf types.attrs;
+        default = [];
+        description = "extra routes added to services.prometheus.alertmanager.configuration.route.routes";
+      };
+
+      alertmanager.extraReceivers = mkOption {
+        type = types.listOf types.attrs;
+        default = [];
+        description = "extra receivers added to services.prometheus.alertmanager.configuration.receivers";
       };
     };
   };
@@ -528,7 +540,7 @@ in {
               group_wait = "30s";
               group_interval = "2m";
               receiver = "team-pager";
-              routes = [
+              routes = cfg.alertmanager.extraRoutes ++ [
                 {
                   match = {
                     severity = "page";
@@ -543,7 +555,7 @@ in {
                   receiver = "deadmanssnitch";
                 }] else []);
             };
-            receivers = [
+            receivers = cfg.alertmanager.extraReceivers ++ [
               {
                 name = "team-pager";
                 pagerduty_configs = [

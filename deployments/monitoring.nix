@@ -71,7 +71,9 @@ in
       monitoredNodes = map (h: h.name) (lib.filter (h: !h.withNginx) hostList);
       nginxMonitoredNodes = map (h: h.name) (lib.filter (h: h.withNginx) hostList);
       webhost = hostName;
-      pagerDuty = import ../static/pager-duty.nix;
+      pagerDuty = {
+        inherit (import ../static/pager-duty.nix) serviceKey;
+      };
       deadMansSnitch = import ../static/dead-mans-snitch.nix;
     };
   };
