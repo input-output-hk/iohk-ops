@@ -142,6 +142,20 @@ in {
         '';
       };
 
+      grafanaAutoLogin = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          auto-login grafana based on oauth2_proxy login
+          also auto-registers all new users
+
+          warning: if set at first start, you must set grafanaCreds.user to an email from oauth.emailDomain
+          warning: if set after first start, you must authorized a oauth.emailDomain before enabling
+          failure to do the above will leave you unable to login with the grafanaCreds (pw login is disabled by this)
+          temporarily disable this to make grafanaCreds work, and then do the above
+        '';
+      };
+
       graylogCreds = mkOption {
         type = types.attrs;
         default = null;
@@ -182,68 +196,61 @@ in {
         example = "monitoring.lan";
       };
 
-      oauth = mkOption {
-        type = types.submodule {
-          options = {
-            enable = mkOption {
-              type = types.bool;
-              default = true;
-              description = ''
-                Enable OAuth authication for all monitoring services.
-              '';
-            };
-            provider = mkOption {
-              type = types.enum [
-                "google"
-                "github"
-                "azure"
-                "gitlab"
-                "linkedin"
-                "myusa"
-              ];
-              default = "google";
-              description = ''
-                OAuth provider.
-              '';
-            };
-            emailDomain = mkOption {
-              type = types.str;
-              description = ''
-                Email domain.
-              '';
-              example = "iohk.io";
-            };
-            clientID = mkOption {
-              type = types.str;
-              description = ''
-                The OAuth Client ID.
-              '';
-              example = "123456.apps.googleusercontent.com";
-            };
-            clientSecret = mkOption {
-              type = types.str;
-              description = ''
-                The OAuth Client Secret.
-              '';
-            };
-            cookie.secret = mkOption {
-              type = types.str;
-              description = ''
-                The seed string for secure cookies.
-              '';
-            };
-          };
+      oauth = {
+        enable = mkOption {
+          type = types.bool;
+          default = true;
+          description = ''
+            Enable OAuth authication for all monitoring services.
+          '';
         };
-        description = ''
-          OAuth proxy configuration.
-        '';
+        provider = mkOption {
+          type = types.enum [
+            "google"
+            "github"
+            "azure"
+            "gitlab"
+            "linkedin"
+            "myusa"
+          ];
+          default = "google";
+          description = ''
+            OAuth provider.
+          '';
+        };
+        emailDomain = mkOption {
+          type = types.str;
+          description = ''
+            Email domain.
+          '';
+          example = "iohk.io";
+        };
+        clientID = mkOption {
+          type = types.str;
+          description = ''
+            The OAuth Client ID.
+          '';
+          example = "123456.apps.googleusercontent.com";
+        };
+        clientSecret = mkOption {
+          type = types.str;
+          description = ''
+            The OAuth Client Secret.
+          '';
+        };
+        cookie.secret = mkOption {
+          type = types.str;
+          description = ''
+            The seed string for secure cookies.
+          '';
+        };
       };
 
       pagerDuty.serviceKey = mkOption {
         type = types.nullOr types.str;
         default = null;
         description = ''
-          The seed string for secure cookies.
+          The seed string for secure cookies. FIXME
         '';
       };
 
@@ -253,6 +260,18 @@ in {
         description = ''
           The url that alertmanager should ping regularly to signal it is alive.
         '';
+      };
+
+      alertmanager.extraRoutes = mkOption {
+        type = types.listOf types.attrs;
+        default = [];
+        description = "extra routes added to services.prometheus.alertmanager.configuration.route.routes";
+      };
+
+      alertmanager.extraReceivers = mkOption {
+        type = types.listOf types.attrs;
+        default = [];
+        description = "extra receivers added to services.prometheus.alertmanager.configuration.receivers";
       };
     };
   };
@@ -292,6 +311,7 @@ in {
           inherit (cfg.oauth) clientID clientSecret cookie provider;
           email.domains = [ "${cfg.oauth.emailDomain}" ];
           nginx.virtualHosts = [ "${cfg.webhost}" ];
+          setXauthrequest = true;
         };
         nginx.virtualHosts."${cfg.webhost}".locations = {
           "/grafana/".extraConfig = oauthProxyConfig;
@@ -352,42 +372,6 @@ in {
                     root ${rootDir};
                   '';
                 };
-                "/grafana/".extraConfig = mkIf cfg.metrics ''
-                  proxy_pass http://localhost:3000/;
-                  proxy_set_header Host $host;
-                  proxy_set_header REMOTE_ADDR $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto https;
-                '';
-                "/prometheus/".extraConfig = mkIf cfg.metrics ''
-                  proxy_pass http://localhost:9090/prometheus/;
-                  proxy_set_header Host $host;
-                  proxy_set_header REMOTE_ADDR $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto https;
-                '';
-                "/alertmanager/".extraConfig = mkIf cfg.metrics ''
-                  proxy_pass http://localhost:9093/;
-                  proxy_set_header Host $host;
-                  proxy_set_header REMOTE_ADDR $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto https;
-                '';
-                "/graylog/".extraConfig = mkIf cfg.logging ''
-                  proxy_set_header Host $host;
-                  proxy_set_header REMOTE_ADDR $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto https;
-                  proxy_set_header X-Graylog-Server-URL /graylog;
-                  proxy_set_header X-Forward-Host $host;
-                  proxy_set_header X-Forwarded-Server $host;
-
-                  # Required to partially fix the API Browser, but also breaks the streaming page
-                  # rewrite ^ $request_uri;
-                  rewrite ^/graylog/(.*)$ /$1 break;
-                  # return 400;                                   # https://stackoverflow.com/q/28684300
-                  proxy_pass http://localhost:9000/;
-                '';
               };
             };
           };
@@ -402,8 +386,44 @@ in {
       };
     })
 
+    (lib.mkIf cfg.grafanaAutoLogin {
+      services.grafana.extraOptions = {
+        # https://grafana.com/docs/auth/auth-proxy/
+        AUTH_PROXY_ENABLED = "true";
+        AUTH_PROXY_HEADER_NAME = "X-Email";
+        AUTH_PROXY_HEADER_PROPERTY = "email";
+        AUTH_PROXY_AUTO_SIGN_UP = "true";
+        AUTH_PROXY_WHITELIST = "127.0.0.1, ::1"; # only trust nginx to claim usernames
+      };
+    })
     (lib.mkIf cfg.metrics {
       services = {
+        nginx = {
+          enable = true;
+          virtualHosts."${cfg.webhost}".locations = {
+            "/grafana/".extraConfig = ''
+              proxy_pass http://localhost:3000/;
+              proxy_set_header Host $host;
+              proxy_set_header REMOTE_ADDR $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto https;
+            '';
+            "/prometheus/".extraConfig = ''
+              proxy_pass http://localhost:9090/prometheus/;
+              proxy_set_header Host $host;
+              proxy_set_header REMOTE_ADDR $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto https;
+            '';
+            "/alertmanager/".extraConfig = ''
+              proxy_pass http://localhost:9093/;
+              proxy_set_header Host $host;
+              proxy_set_header REMOTE_ADDR $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto https;
+            '';
+          };
+        };
         grafana = {
           enable = true;
           users.allowSignUp = false;
@@ -520,7 +540,7 @@ in {
               group_wait = "30s";
               group_interval = "2m";
               receiver = "team-pager";
-              routes = [
+              routes = cfg.alertmanager.extraRoutes ++ [
                 {
                   match = {
                     severity = "page";
@@ -535,7 +555,7 @@ in {
                   receiver = "deadmanssnitch";
                 }] else []);
             };
-            receivers = [
+            receivers = cfg.alertmanager.extraReceivers ++ [
               {
                 name = "team-pager";
                 pagerduty_configs = [
@@ -622,7 +642,7 @@ in {
                     }
                     {
                       alert = "node_filesystem_full_in_4h";
-                      expr = "predict_linear(node_filesystem_free_bytes{device!=\"ramfs\"}[1h], 4*3600) <= 0";
+                      expr = "predict_linear(node_filesystem_free_bytes{device!=\"ramfs\",device!=\"tmpfs\"}[4h], 4*3600) <= 0";
                       for = "5m";
                       labels = {
                         severity = "page";
@@ -789,6 +809,26 @@ in {
         };
       };
       services = {
+        nginx = {
+          enable = true;
+          virtualHosts."${cfg.webhost}".locations = {
+            "/graylog/".extraConfig = ''
+              proxy_set_header Host $host;
+              proxy_set_header REMOTE_ADDR $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto https;
+              proxy_set_header X-Graylog-Server-URL /graylog;
+              proxy_set_header X-Forward-Host $host;
+              proxy_set_header X-Forwarded-Server $host;
+
+              # Required to partially fix the API Browser, but also breaks the streaming page
+              # rewrite ^ $request_uri;
+              rewrite ^/graylog/(.*)$ /$1 break;
+              # return 400;                                   # https://stackoverflow.com/q/28684300
+              proxy_pass http://localhost:9000/;
+            '';
+          };
+        };
         graylog = {
           enable = true;
           nodeIdFile = "/var/lib/graylog/node-id";
@@ -875,9 +915,7 @@ in {
             action.auto_create_index: false
           '';
         };
-        mongodb = {
-          enable = true;
-        };
+        mongodb.enable = true;
       };
       systemd.services.graylog-preload = let
         graylogConfig = ./graylog/graylogConfig.json;

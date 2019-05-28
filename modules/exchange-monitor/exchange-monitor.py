@@ -6,6 +6,7 @@ import json
 import random
 import time
 import urllib.request
+import sys
 
 #Create a metric to track time spent and requests made.
 EXPORTER_PORT = 8000
@@ -25,6 +26,7 @@ def process_binance_assets():
         if crypto_asset['assetCode']== 'ADA':
             binance_deposits.set(crypto_asset['enableCharge'])
             binance_withdraws.set(crypto_asset['enableWithdraw'])
+    sys.stdout.flush()
 
 if __name__ == '__main__':
     # Start up the server to expose the metrics.

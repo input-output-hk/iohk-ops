@@ -161,6 +161,36 @@ in {
         # NOTE: The Grafana user and password settings only take effect on the initial deployment.
         grafanaCreds = makeCreds "grafana" { user = "changeme"; password = "changeme"; };
         graylogCreds = makeCreds "graylog" { user = "changeme"; password = "changeme"; };
+        grafanaAutoLogin = true;
+        applicationRules = [
+          {
+            alert = "exchange-down-binance";
+            expr = "binance_withdraws == 0 or binance_deposits == 0";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+          }
+        ];
+        alertmanager = {
+          extraRoutes = [
+            {
+              match.severity = "exchange-down";
+              receiver = "exchange-down";
+            }
+          ];
+          extraReceivers = [
+            {
+              name = "exchange-down";
+              pagerduty_configs = [
+                {
+                  service_key = (import ../static/pager-duty.nix).exchangeKey;
+                }
+              ];
+            }
+          ];
+        };
       };
     };
   };
