@@ -1,6 +1,7 @@
 nodes:
   'a1':
     type: core
+    impl: legacy
     region: eu-central-1
     zone:   eu-central-1b
     static-routes: [["b1","c1"], ["r1"]]
@@ -8,6 +9,7 @@ nodes:
     port: 3000
   'b1':
     type: core
+    impl: haskell
     region: eu-central-1
     zone:   eu-central-1b
     static-routes: [["c1","a1"], ["r1"]]
@@ -15,6 +17,7 @@ nodes:
     port: 3000
   'c1':
     type: core
+    impl: rust
     region: eu-central-1
     zone:   eu-central-1a
     static-routes: [["b1","a1"], ["r1"]]
@@ -23,6 +26,7 @@ nodes:
 
   'r1':
     type: relay
+    impl: legacy
     region: eu-central-1
     zone:   eu-central-1b
     static-routes: [["a1"], ["b1"], ["c1"]]

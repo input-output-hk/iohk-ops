@@ -215,6 +215,7 @@ instance ToJSON SimpleNode where
   toJSON SimpleNode{..} = AE.object
    [ "type"        .= (lowerShowT snType & T.stripPrefix "node"
                         & fromMaybe (error "A NodeType constructor gone mad: doesn't start with 'Node'."))
+   , "impl"        .= lowerShowT snImpl
    , "region"      .= snRegion
    , "zone"        .= snZone
    , "org"         .= snOrg
@@ -243,7 +244,7 @@ stubTopology = SimpleTopo Map.empty
 summariseTopology :: Topology -> SimpleTopo
 summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
   SimpleTopo $ Map.mapWithKey simplifier nodeMap
-  where simplifier node (NodeMetadata snType snRegion (NodeRoutes outRoutes) nmAddr snKademlia snPublic mbOrg snZone) =
+  where simplifier node (NodeMetadata snType snImpl snRegion (NodeRoutes outRoutes) nmAddr snKademlia snPublic mbOrg snZone) =
           SimpleNode{..}
           where (mPort,  fqdn)   = case nmAddr of
                                      (NodeAddrExact fqdn'  mPort') -> (mPort', fqdn') -- (Ok, bizarrely, this contains FQDNs, even if, well.. : -)
@@ -253,7 +254,7 @@ summariseTopology (TopologyStatic (AllStaticallyKnownPeers nodeMap)) =
                                    $ (FQDN . T.pack . BU.toString) $ fqdn
                 snInPeers = Set.toList . Set.fromList
                             $ [ other
-                              | (other, (NodeMetadata _ _ (NodeRoutes routes) _ _ _ _ _)) <- Map.toList nodeMap
+                              | (other, (NodeMetadata _ _ _ (NodeRoutes routes) _ _ _ _ _)) <- Map.toList nodeMap
                               , elem node (concat routes) ]
                             <> concat outRoutes
                 snOrg = fromMaybe (trace (T.unpack $ format ("WARNING: node '"%s%"' has no 'org' field specified, defaulting to "%w%".")
