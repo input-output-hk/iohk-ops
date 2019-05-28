@@ -4,7 +4,7 @@ let
   pkgs = import (import ../fetch-nixpkgs.nix) {};
 in pkgs.stdenv.mkDerivation {
   name = "gen-grafana-creds";
-  buildInputs = with pkgs; [ pwgen gnused ];
+  buildInputs = with pkgs; [ pwgen ];
   shellHook = ''
     credsFilename="grafana-creds.nix"    # Default grafana static filename
     defaultUser="root"                   # Default administrative user
