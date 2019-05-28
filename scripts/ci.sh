@@ -80,6 +80,7 @@ test -f static/oauth.nix ||
 test -f static/pager-duty.nix ||
         { echo "{
   serviceKey = \"test\";
+  exchangeKey = \"test2\";
 }" > static/pager-duty.nix; }
 
 test -f static/dead-mans-snitch.nix ||
