@@ -7,7 +7,6 @@ with import ../lib.nix;
     global = {
       allocateElasticIP = true;
       enableEkgWeb      = false;
-      dnsDomainname     = "devops.aws.iohkdev.io";
     };
 
     services = {

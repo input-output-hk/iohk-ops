@@ -8,10 +8,10 @@ let
     endpoint = "monitoring-ip:51820";
   };
 in {
-  require = [ ./monitoring.nix ];
-  a1 = mkUplink 10 ../static/a1.wgprivate;
-  b1 = mkUplink 11 ../static/b1.wgprivate;
-  c1 = mkUplink 12 ../static/c1.wgprivate;
+  require = [
+    ./monitoring.nix
+    ./security-groups/allow-deployer-ssh.nix
+  ];
   monitoring = { lib, resources, ... }:
   {
     imports = [
@@ -24,9 +24,6 @@ in {
           publicKey = lib.strings.removeSuffix "\n" (builtins.readFile path);
         };
       in [
-        (genPeer 10 ../static/a1.wgpublic)
-        (genPeer 11 ../static/b1.wgpublic)
-        (genPeer 12 ../static/c1.wgpublic)
         { allowedIPs = [ "192.168.20.20/32" ]; publicKey = "Iv+pHGJ6uGYfrSeF3PMSlN4v6YPZF52Xr5f8teH8OEE="; } # sams mac
         { allowedIPs = [ "192.168.21.1/32" ]; publicKey = "oycbQ1DhtRh0hhD5gpyiKTUh0USkAwbjMer6/h/aHg8="; } # michaels desktop
       ];
