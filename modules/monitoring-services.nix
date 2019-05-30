@@ -832,6 +832,7 @@ in {
         graylog = {
           enable = true;
           nodeIdFile = "/var/lib/graylog/node-id";
+          plugins = with pkgs.graylogPlugins; [ auth_sso pagerduty slack ];
           passwordSecret = (
             if cfg.graylogCreds ? clusterSecret then
               cfg.graylogCreds.clusterSecret
