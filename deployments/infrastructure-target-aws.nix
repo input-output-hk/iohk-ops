@@ -31,6 +31,7 @@ in rec {
   require = [
     ./security-groups/allow-deployer-ssh.nix
     ./security-groups/allow-public-www-https.nix
+    ./security-groups/allow-all.nix
   ];
   hydra               = mkHydra "hydra" "r3.2xlarge" ["role:hydra"];
   mantis-hydra        = mkHydra "mantis-hydra" "r3.2xlarge" ["role:hydra"];

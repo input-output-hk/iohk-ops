@@ -55,7 +55,6 @@ in
       extraHeader = "Deployment Name: ${deploymentName}<br>";
       enable = true;
       metrics = true;
-      logging = true;
       monitoringProject = "Cardano";
       monitoringProjectUrl = "https://iohk.io/projects/cardano";
       oauth = {

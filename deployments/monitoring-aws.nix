@@ -8,6 +8,9 @@ let
   region = monitoring.region;
   org = monitoring.org;
 in {
+  require = [
+    ./security-groups/allow-public-www-https.nix
+  ];
   resources = {
     ec2SecurityGroups = {
       "allow-wireguard-in-${region}-${org}" = {
@@ -29,6 +32,7 @@ in {
           resources.ec2SecurityGroups."allow-wireguard-in-${region}-${org}"
           resources.ec2SecurityGroups."allow-to-monitoring-${region}"
           resources.ec2SecurityGroups."allow-monitoring-static-peers-${region}-${org}"
+          resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
         ];
         region         = mkForce monitoring.region;
         accessKeyId    = monitoring.accessKeyId;

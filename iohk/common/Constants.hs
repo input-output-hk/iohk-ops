@@ -144,6 +144,8 @@ envSettings env =
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
                                , (Faucet,         All, "deployments/cardano-faucet-env-development.nix")
                                , (ReportServer,   All, "deployments/report-server-env-development.nix")
+                               , (Monitoring,     All, "deployments/monitoring-env-development.nix")
+                               , (Every,          All, "deployments/env-development.nix")
                                ] <> deplAgnosticFiles}
     DevOps -> EnvSettings
       { envDeployerUser      = "staging"
