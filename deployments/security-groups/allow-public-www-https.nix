@@ -5,7 +5,7 @@ let
   mkRule = { org, region }: {
     name = "allow-public-www-https-${region}-${org}";
     value = {
-      _file = ./allow-deployer-ssh.nix;
+      _file = ./allow-public-www-https.nix;
       inherit region;
       accessKeyId = globals.orgAccessKeys.${org};
       description = "WWW-http(s)";

@@ -10,6 +10,10 @@ let
 in {
   require = [
     ./security-groups/allow-public-www-https.nix
+    ./security-groups/allow-deployer-ssh.nix
+    ./security-groups/allow-monitoring-collection.nix
+    ./global.nix
+    ./monitoring.nix
   ];
   resources = {
     ec2SecurityGroups = {
@@ -30,7 +34,6 @@ in {
       ec2 = {
         securityGroups = [
           resources.ec2SecurityGroups."allow-wireguard-in-${region}-${org}"
-          resources.ec2SecurityGroups."allow-to-monitoring-${region}"
           resources.ec2SecurityGroups."allow-monitoring-static-peers-${region}-${org}"
           resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
         ];
