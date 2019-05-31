@@ -5,28 +5,28 @@ let
 in {
   options = {
     services.exchange-monitor = {
-      binance = lib.mkEnableOption "binance exchange monitor";
+      enable = lib.mkEnableOption "exchange monitor";
     };
   };
-  config = lib.mkIf cfg.binance {
-    users.users.exchange-monitor-binance = {
+  config = lib.mkIf cfg.enable {
+    users.users.exchange-monitor = {
       home = "/var/empty";
       isSystemUser = true;
     };
-    systemd.services.exchange-monitor-binance = {
+    systemd.services.exchange-monitor = {
       wantedBy = [ "multi-user.target" ];
       script = ''
         exec ${pkgs.callPackage ./exchange-monitor {}}
       '';
       serviceConfig = {
-        User = "exchange-monitor-binance";
+        User = "exchange-monitor";
         Restart = "always";
         RestartSec = "15s";
       };
     };
     services.prometheus2.scrapeConfigs = [
       {
-        job_name = "exchange-monitor-binance";
+        job_name = "exchange-monitor";
         scrape_interval = "60s";
         metrics_path = "/";
         static_configs = [
@@ -34,7 +34,7 @@ in {
             targets = [
               "localhost:8000"
             ];
-            labels = { alias = "exchange-monitor-binance"; };
+            labels = { alias = "exchange-monitor"; };
           }
         ];
       }

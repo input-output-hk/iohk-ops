@@ -154,7 +154,7 @@ in {
     };
 
     services = {
-      exchange-monitor.binance = true;
+      exchange-monitor.enable = true;
       monitoring-services = {
         enable = true;
         enableWireguard = true;
@@ -166,6 +166,15 @@ in {
           {
             alert = "exchange-down-binance";
             expr = "binance_withdraws == 0 or binance_deposits == 0";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+          }
+          {
+            alert = "exchange-down-bittrex";
+            expr = "bittrex_active == 0";
             for = "10m";
             labels.severity = "exchange-down";
             annotations = {
