@@ -194,7 +194,9 @@ in {
               name = "exchange-down";
               pagerduty_configs = [
                 {
-                  service_key = (import ../static/pager-duty.nix).exchangeKey;
+                  service_key = if (builtins.pathExists ../static/pager-duty.nix)
+                    then ((import ../static/pager-duty.nix).exchangeKey)
+                    else { exchangeKey = null; };
                 }
               ];
             }

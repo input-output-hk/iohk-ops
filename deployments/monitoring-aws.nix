@@ -28,15 +28,15 @@ in {
       };
     };
   };
-  monitoring = { lib, resources, ... }: {
+  monitoring = { config, lib, resources, ... }: {
     deployment = {
       route53.accessKeyId = lib.mkForce IOHKroute53accessKeyId;
       ec2 = {
-        securityGroups = [
+        securityGroups = (optionals (! config.global.omitDetailedSecurityGroups) [
           resources.ec2SecurityGroups."allow-wireguard-in-${region}-${org}"
           resources.ec2SecurityGroups."allow-monitoring-static-peers-${region}-${org}"
           resources.ec2SecurityGroups."allow-public-www-https-${region}-${org}"
-        ];
+        ]);
         region         = mkForce monitoring.region;
         accessKeyId    = monitoring.accessKeyId;
         keyPair        = resources.ec2KeyPairs.${monitoring.keyPairName};

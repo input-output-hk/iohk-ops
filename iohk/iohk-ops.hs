@@ -187,7 +187,7 @@ centralCommandParser =
                 (SetRev
                  <$> parserProject
                  <*> parserCommit "Commit to set PROJECT's version to"
-                 <*> flag DoCommit DontCommit (long "dont-commit" <> short 'n' <> help "Don't commit the *-src.json"))
+                 <*> flag DontCommit DoCommit (long "do-commit" <> short 'c' <> help "Do commit the *-src.json"))
                 (progDesc "Set commit of PROJECT dependency to COMMIT, and commit the resulting changes"))
              ])
   <|> subparser (mconcat
