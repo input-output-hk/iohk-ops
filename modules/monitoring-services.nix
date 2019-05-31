@@ -458,20 +458,36 @@ in {
             adminPassword = traceValFn (x:
               if x == "changeme" then ''
                 *
-                **********************************************************************
+                ******************************************************************************************
                 WARNING: The grafana default administrative password is "${x}".
                          Please customize this in the static grafana credentials file.
-                **********************************************************************
+
+                         If you don't have a grafana static credentials file yet, the following
+                         nix-shell script will create one when run from the git clone root directory:
+
+                           nix-shell modules/gen-grafana-creds.nix [--argstr user x] [--argstr password y]
+
+                         If the optional argument strings of user and password are not supplied, a
+                         root administrative user will be created with a randomized password.
+                ******************************************************************************************
               '' else ''
                 Grafana custom administrative password declared'')
               cfg.grafanaCreds.password;
             adminUser = traceValFn (x:
               if x == "changeme" then ''
                 *
-                **********************************************************************
+                ******************************************************************************************
                 WARNING: The grafana default administative user name is "${x}".
                          Please customize this in the static grafana credentials file.
-                **********************************************************************
+
+                         If you don't have a grafana static credentials file yet, the following
+                         nix-shell script will create one when run from the git clone root directory:
+
+                           nix-shell modules/gen-grafana-creds.nix [--argstr user x] [--argstr password y]
+
+                         If the optional argument strings of user and password are not supplied, a
+                         root administrative user will be created with a randomized password.
+                ******************************************************************************************
               '' else ''
                 Grafana custom administrative user name declared'')
               cfg.grafanaCreds.user;
@@ -832,6 +848,7 @@ in {
         graylog = {
           enable = true;
           nodeIdFile = "/var/lib/graylog/node-id";
+          plugins = with pkgs.graylogPlugins; [ auth_sso pagerduty slack ];
           passwordSecret = (
             if cfg.graylogCreds ? clusterSecret then
               cfg.graylogCreds.clusterSecret
@@ -855,6 +872,19 @@ in {
                 ******
                 ******              tr -cd '[:alnum:]' < /dev/urandom | head -c 96
                 ******
+                ******
+                ****** NOTE:        If you don't have a graylog static credentials file yet,
+                ******              the following nix-shell script will create one when run
+                ******              from the git clone root directory:
+                ******
+                ******
+                ******     nix-shell modules/gen-graylog-creds.nix [--argstr user x] [--argstr password y]
+                ******
+                ******
+                ******              If the optional argument strings of user and password are
+                ******              not supplied, a root administrative user will be created
+                ******              with a randomized password.  A SHA256 password hash and a
+                ******              randomized cluster secret will also be created.
                 ******
                 ******
               '' (abort "Graylog cluster secret required")
@@ -896,6 +926,19 @@ in {
                 ******              echo -n <password> | shasum -a 256 | sed -z 's/  -\n//g'
                 ******
                 ******
+                ****** NOTE:        If you don't have a graylog static credentials file yet,
+                ******              the following nix-shell script will create one when run
+                ******              from the git clone root directory:
+                ******
+                ******
+                ******     nix-shell modules/gen-graylog-creds.nix [--argstr user x] [--argstr password y]
+                ******
+                ******
+                ******              If the optional argument strings of user and password are
+                ******              not supplied, a root administrative user will be created
+                ******              with a randomized password.  A SHA256 password hash and a
+                ******              randomized cluster secret will also be created.
+                ******
                 ******
               '' (abort "Graylog password hash required")
             );
@@ -922,10 +965,18 @@ in {
         password = traceValFn (x:
           if x == "changeme" then ''
             *
-            **********************************************************************
+            ******************************************************************************************
             WARNING: The graylog default administrative password is "${x}".
                      Please customize this in the static graylog credentials file.
-            **********************************************************************
+
+                     If you don't have a graylog static credentials file yet, the following
+                     nix-shell script will create one when run from the git clone root directory:
+
+                       nix-shell modules/gen-graylog-creds.nix [--argstr user x] [--argstr password y]
+
+                     If the optional argument strings of user and password are not supplied, a
+                     root administrative user will be created with a randomized password.
+            ******************************************************************************************
           '' else ''
             Graylog custom administrative password declared'')
           cfg.graylogCreds.password;
