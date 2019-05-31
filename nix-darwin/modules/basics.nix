@@ -2,14 +2,13 @@
 
 let
   opsLib = import ../../lib.nix;
-
+  nix-darwin = (import ../test.nix { host = null; port = null; }).nix-darwin;
 in {
-  imports = [ ./double-builder-gc.nix ];
+  imports = [ ./double-builder-gc.nix ./caffeinate.nix ];
 
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
   environment.systemPackages = with pkgs; [
-    nix-repl
     nix
     tmux
     ncdu
@@ -46,19 +45,27 @@ in {
 
     # Quickly kill stuck builds
     max-silent-time = ${toString (60 * 15)}
+
+    sandbox = true
+    extra-sandbox-paths = /System/Library/Frameworks /usr/lib /System/Library/PrivateFrameworks
   '';
 
-  nix.binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
-  nix.binaryCaches = [ "https://hydra.iohk.io" ];
+  nix.binaryCachePublicKeys = [
+    "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+    "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+  ];
+  nix.binaryCaches = [ "http://192.168.3.1:8081" ];
   nix.trustedUsers = [ "@admin" ];
 
   nix.nixPath = [
-    "nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/nixpkgs-18.03-darwin.tar.gz"
+    "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixpkgs"
+    "darwin-config=/Users/nixos/.nixpkgs/darwin-configuration.nix"
+    "darwin=${nix-darwin}"
   ];
 
   ########################################################################
 
-  environment.etc."per-user/admin/ssh/authorized_keys".text
+  environment.etc."per-user/nixos/ssh/authorized_keys".text
     = lib.concatStringsSep "\n" opsLib.ciInfraKeys + "\n";
 
   ########################################################################

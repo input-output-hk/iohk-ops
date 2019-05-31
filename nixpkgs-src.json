@@ -1,5 +1,5 @@
 {
-    "url": "https://github.com/nixos/nixpkgs",
+    "url": "https://github.com/NixOS/nixpkgs",
     "fetchSubmodules": "true",
     "sha256": "1rmd4cv4ryqqmps0xx3irp3h1ifn7jixdpw707xipm5w1j739cgl",
     "rev": "cdec6217d98bea9fbf8d88a1f9175ae09e332b8a"

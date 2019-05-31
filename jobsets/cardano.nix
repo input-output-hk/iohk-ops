@@ -8,7 +8,7 @@ in { pkgs ? (import fixedNixpkgs {})
 with import (fixedNixpkgs + "/pkgs/top-level/release-lib.nix") { inherit supportedSystems scrubJobs; packageSet = import ../.; };
 
 let
-  iohkpkgs = import ./../default.nix { inherit pkgs; };
+  iohkpkgs = import ../. { inherit pkgs; };
   jobs = mapTestOn ((packagePlatforms iohkpkgs) // {
     iohk-ops = [ "x86_64-linux" ];
     github-webhook-util = [ "x86_64-linux" ];
@@ -29,7 +29,7 @@ let
   };
 in pkgs.lib.fix (jobsets: {
   inherit (jobs) iohk-ops iohk-ops-integration-test nixops;
-  inherit (iohkpkgs) checks;
+  inherit (iohkpkgs) checks IFDPins cachecache;
   inherit tests;
   exchange-monitor = pkgs.callPackage ../modules/exchange-monitor {};
   required = pkgs.lib.hydraJob (pkgs.releaseTools.aggregate {
@@ -43,4 +43,8 @@ in pkgs.lib.fix (jobsets: {
       (builtins.attrValues jobsets.checks)
     ];
   });
+  nix-darwin = {
+    hydra-slave = (import ../nix-darwin/test.nix { role = "hydra-slave"; }).system;
+    buildkite-agent = (import ../nix-darwin/test.nix { role = "buildkite-agent"; }).system;
+  };
 })

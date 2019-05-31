@@ -2,15 +2,10 @@
 
 with lib;
 
-let cfg = config.services.log-classifier;
-    log-classifier-src = pkgs.fetchFromGitHub {
-      owner = "input-output-hk";
-      repo = "log-classifier";
-      rev = "fff61ebb4d6380796ec7a6438a873e6826236f2b";
-      sha256 = "1sc56xpbljm63dh877cy4agqjvv5wqc1cp9y5pdwzskwf7h4302g";
-    };
-    log-classifier-web = (import "${log-classifier-src}/" {}).haskellPackages.log-classifier-web;
-
+let
+  cfg = config.services.log-classifier;
+  iohkops = import ../. { inherit pkgs; };
+  inherit (iohkops) log-classifier-web;
 in {
   options.services.log-classifier = {
     enable = mkEnableOption "enable log classifier";

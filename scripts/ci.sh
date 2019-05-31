@@ -56,6 +56,7 @@ touch static/buildkite_token
 touch static/github_token{,_mantis_hydra}
 touch static/id_buildfarm{,2} static/id_buildfarm{,2}.pub
 touch static/datadog-api.secret static/datadog-application.secret
+echo "127.0.0.1" > static/deployer-ip.txt
 
 test -f static/graylog-creds.nix ||
         { echo "{
@@ -130,7 +131,7 @@ echo '~~~ pre-building cardano-sl-tools'
 nix-build default.nix -A nix-tools.exes.cardano-sl-tools -o cardano-sl-tools
 
 echo '~~~ generating wireguard tests'
-nix-shell modules/gen-wireguard-keys.nix --arg hosts '[ "monitoring" "builder-packet-c1-small-x86" "builder-packet-c1-small-x86-2" "builder-packet-c1-small-x86-3" "builder-packet-c1-small-x86-4" "builder-packet-c1-small-x86-5" "buildkite-packet-1" "buildkite-packet-2" "buildkite-packet-3" "mantis-slave-packet-1" "mantis-slave-packet-2" ]'
+nix-shell modules/gen-wireguard-keys.nix --arg hosts '[ "monitoring" "builder-packet-c1-small-x86" "builder-packet-c1-small-x86-2" "builder-packet-c1-small-x86-3" "builder-packet-c1-small-x86-4" "builder-packet-c1-small-x86-5" "buildkite-packet-1" "buildkite-packet-2" "buildkite-packet-3" "mantis-slave-packet-1" "mantis-slave-packet-2" "hydra" "sarov" "cardano-deployer" ]'
 
 PATH=$PATH:./cardano-sl-tools/bin/
 export PATH

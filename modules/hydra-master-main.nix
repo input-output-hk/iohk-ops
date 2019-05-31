@@ -16,7 +16,7 @@ let
   };
   mkMac = hostName: commonBuildMachineOpt // {
     inherit hostName;
-    maxJobs = 2;
+    maxJobs = 8;
     system = "x86_64-darwin";
     sshUser = "builder";
     supportedFeatures = [];
@@ -28,12 +28,6 @@ let
       excludeBuildFromContext = 1
       useShortContext = 1
     </githubstatus>
-    <githubstatus>
-      jobs = serokell:${jobset}.*:required
-      inputs = ${inputs}
-      excludeBuildFromContext = 1
-      useShortContext = 1
-    </githubstatus>
   '';
   mkStatusBlocks = concatMapStringsSep "" mkGithubStatus;
 in {
@@ -41,10 +35,15 @@ in {
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
     source = ../static/id_buildfarm;
-    uid = config.ids.uids.hydra;
+    uid = config.ids.uids.hydra-queue-runner;
     gid = config.ids.gids.hydra;
-    mode = "0440";
+    mode = "0400";
   };
+  programs.ssh.extraConfig = lib.mkAfter ''
+    Host sarov
+    Hostname 192.168.20.20
+    Port 2200
+  '';
 
   nix = {
     distributedBuilds = true;
@@ -54,39 +53,26 @@ in {
       (mkLinux "builder-packet-c1-small-x86-3.aws.iohkdev.io")
       (mkLinux "builder-packet-c1-small-x86-4.aws.iohkdev.io")
       (mkLinux "builder-packet-c1-small-x86-5.aws.iohkdev.io")
-      (mkMac "osx-1.aws.iohkdev.io")
-      (mkMac "osx-2.aws.iohkdev.io")
-      (mkMac "osx-3.aws.iohkdev.io")
-      (mkMac "osx-4.aws.iohkdev.io")
-      (mkMac "osx-5.aws.iohkdev.io")
+      ((mkMac "sarov") // { sshUser = "root"; speedFactor = 2; })
+      #(mkMac "osx-1.aws.iohkdev.io")
+      #(mkMac "osx-2.aws.iohkdev.io")
+      #(mkMac "osx-3.aws.iohkdev.io")
+      #(mkMac "osx-4.aws.iohkdev.io")
+      #(mkMac "osx-5.aws.iohkdev.io")
     ];
     binaryCaches = mkForce [ "https://cache.nixos.org" ];
   };
 
   services.hydra = {
     hydraURL = "https://hydra.iohk.io";
-    package = pkgs.callPackage ./hydra-fork.nix {
-      nixpkgsPath = pkgs.path;
-      patches = [
-        (pkgs.fetchpatch {
-          url = "https://github.com/NixOS/hydra/pull/648/commits/4171ab4c4fd576c516dc03ba64d1c7945f769af0.patch";
-          sha256 = "1fxa2459kdws6qc419dv4084c1ssmys7kqg4ic7n643kybamsgrx";
-        })
-      ];
-      src = pkgs.fetchFromGitHub {
-        owner = "input-output-hk";
-        repo = "hydra";
-        rev = "0768891e3cd3ef067d28742098f1dea8462fca75";
-        sha256 = "1aw3p7jm2gsakdqqx4pzhkfx12hh1nxk3wkabcvml5ci814f6jic";
-      };
-    };
+    package = pkgs.callPackage ../pkgs/hydra.nix {};
     # max output is 4GB because of amis
     # auth token needs `repo:status`
     extraConfig = ''
       max_output_size = 4294967296
       evaluator_max_heap_size = ${toString (5 * 1024 * 1024 * 1024)}
 
-      max_concurrent_evals = 12
+      max_concurrent_evals = 14
 
       store_uri = s3://iohk-nix-cache?secret-key=/etc/nix/hydra.iohk.io-1/secret&log-compression=br&region=eu-central-1
       server_store_uri = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/
@@ -123,14 +109,8 @@ in {
       # DEVOPS-1208 This CI status for cardano-sl is needed while the
       # Daedalus Windows installer is built on AppVeyor or Buildkite
       <githubstatus>
-        jobs = serokell:cardano-sl.*:daedalus-mingw32-pkg
+        jobs = Cardano:cardano-sl.*:daedalus-mingw32-pkg
         inputs = cardano
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = serokell:daedalus.*:tests\..*
-        inputs = daedalus
         excludeBuildFromContext = 1
         useShortContext = 1
       </githubstatus>

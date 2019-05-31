@@ -15,18 +15,25 @@ with pkgs.lib;
 with pkgs.haskell.lib;
 
 let
+  # nixopsUnstable = /path/to/local/src
+  nixopsUnstable = pkgs.fetchFromGitHub {
+    owner = "input-output-hk";
+    repo = "nixops";
+    rev = "ab86e522373f133e2412bd28a864989eb48f58ec";
+    sha256 = "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv";
+  };
+  log-classifier-web = (import log-classifier-src {}).haskellPackages.log-classifier-web;
   nixops =
     let
-      # nixopsUnstable = /path/to/local/src
-      nixopsUnstable = pkgs.fetchFromGitHub {
-        owner = "input-output-hk";
-        repo = "nixops";
-        rev = "ab86e522373f133e2412bd28a864989eb48f58ec";
-        sha256 = "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv";
-      };
     in (import "${nixopsUnstable}/release.nix" {
          inherit (localLib) nixpkgs;
         }).build.${system};
+  log-classifier-src = pkgs.fetchFromGitHub {
+    owner = "input-output-hk";
+    repo = "log-classifier";
+    rev = "fff61ebb4d6380796ec7a6438a873e6826236f2b";
+    sha256 = "1sc56xpbljm63dh877cy4agqjvv5wqc1cp9y5pdwzskwf7h4302g";
+  };
   iohk-ops-extra-runtime-deps = with pkgs; [
     gitFull nix-prefetch-scripts compiler.yaml
     wget
@@ -68,9 +75,26 @@ let
     fi
     exit 0
   '';
-
+  defaultIohkNix = let
+    spec = builtins.fromJSON (builtins.readFile ./iohk-nix.json);
+  in builtins.fetchTarball {
+    url = "${spec.url}/archive/${spec.rev}.tar.gz";
+    inherit (spec) sha256;
+  };
+  cachecacheSrc = pkgs.fetchFromGitHub {
+    owner = "cleverca22";
+    repo = "cachecache";
+    rev = "37959a2dcce5c93bf424da899d3d5eaf2b3f1768";
+    sha256 = "1d92agrsgs1g05ps3l7wbbib9knq86gq335k5kakzl9rlzdaj4z0";
+  };
+  IFDPins = pkgs.writeText "ifd-pins" ''
+    nixops: ${nixopsUnstable}
+    nixpkgs: ${pkgs.path}
+    iohk-nix: ${defaultIohkNix}
+  '';
+  cachecache = pkgs.callPackage cachecacheSrc {};
 in {
-  inherit nixops iohk-ops iohk-ops-integration-test github-webhook-util cardano-node-pkgs;
+  inherit nixops iohk-ops iohk-ops-integration-test github-webhook-util IFDPins log-classifier-web cachecache cardano-node-pkgs;
   terraform = pkgs.callPackage ./terraform/terraform.nix {};
   mfa = pkgs.callPackage ./terraform/mfa.nix {};
 
