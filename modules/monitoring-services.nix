@@ -250,7 +250,7 @@ in {
         type = types.nullOr types.str;
         default = null;
         description = ''
-          The seed string for secure cookies. FIXME
+          The pagerDuty service key.
         '';
       };
 

@@ -73,7 +73,9 @@ in
       pagerDuty = {
         inherit (import ../static/pager-duty.nix) serviceKey;
       };
-      deadMansSnitch = import ../static/dead-mans-snitch.nix;
+      deadMansSnitch = if (builtins.pathExists ../static/dead-mans-snitch.nix)
+        then (import ../static/dead-mans-snitch.nix)
+        else { pingUrl = null; };
     };
   };
 }
