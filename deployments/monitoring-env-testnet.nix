@@ -14,6 +14,7 @@
       -Djava.library.path=${pkgs.graylog}/lib/sigar -Xms3g -Xmx3g -XX:NewRatio=1 -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow
     ''; };
     services.elasticsearch.extraJavaOptions = [ "-Xms6g" "-Xmx6g" ];
+    services.monitoring-services.grafanaAutoLogin = true;
     services.monitoring-services.applicationDashboards = ../modules/grafana/cardano;
     services.monitoring-services.applicationRules = [
       {
