@@ -8,7 +8,7 @@ let nodeMap = globals.nodeMap; in
 
   resources = {
     elasticIPs = nodesElasticIPs nodeMap;
-    datadogMonitors = with import ../modules/datadog-monitors.nix; {
+    datadogMonitors = if false then (with import ../modules/datadog-monitors.nix; {
       cpu = mkMonitor (cpu_monitor // {
         message = pagerDutyPolicy.nonCritical;
         query = config: "avg(last_5m):avg:system.load.norm.1{depl:${config.deployment.name}} by {host} > 0.99";
@@ -42,6 +42,6 @@ let nodeMap = globals.nodeMap; in
 
       chain_quality = mkMonitor chain_quality_monitor;
       mem_pool_size = mkMonitor mem_pool_size_monitor;
-    };
+    }) else {};
   };
 }
