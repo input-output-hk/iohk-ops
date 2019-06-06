@@ -33,7 +33,9 @@ in rec {
     ./security-groups/allow-public-www-https.nix
     ./security-groups/allow-all.nix
   ];
-  hydra               = mkHydra "hydra" "r3.2xlarge" ["role:hydra"];
+  ## c5.4xlarge 16c @3.4GHz SKL 32RAM         $0.776
+  hydra               = mkHydra "hydra" "c5.4xlarge" ["role:hydra"];
+  ## r3.2xlarge  8c @2.5GHz IVB 61RAM 160SSD  $0.80
   mantis-hydra        = mkHydra "mantis-hydra" "r3.2xlarge" ["role:hydra"];
 
   cardano-deployer = { config, pkgs, resources, ... }: {
