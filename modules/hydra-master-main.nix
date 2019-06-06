@@ -86,7 +86,7 @@ in {
       max_output_size = 4294967296
       evaluator_max_heap_size = ${toString (5 * 1024 * 1024 * 1024)}
 
-      max_concurrent_evals = 8
+      max_concurrent_evals = 12
 
       store_uri = s3://iohk-nix-cache?secret-key=/etc/nix/hydra.iohk.io-1/secret&log-compression=br&region=eu-central-1
       server_store_uri = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/

@@ -5,7 +5,7 @@ let org = "IOHK";
     region = "eu-central-1";
     accessKeyId = IOHKaccessKeyId;
     route53accessKeyId = IOHKroute53accessKeyId;
-    mkHydra = hostname: itype: ddtags: { config, pkgs, resources, ... }: {
+    mkHydra = hostname: itype: rootDevice: { config, pkgs, resources, ... }: {
       # TODO, use ddtags in prometheus
       imports = [
         ../modules/amazon-base.nix
@@ -26,6 +26,8 @@ let org = "IOHK";
       };
       deployment.route53.accessKeyId = route53accessKeyId;
       deployment.route53.hostName = "${hostname}.aws.iohkdev.io";
+    } // optionalAttrs (rootDevice != null) {
+      boot.loader.grub.device = mkForce rootDevice;
     };
 in rec {
   require = [
@@ -33,10 +35,10 @@ in rec {
     ./security-groups/allow-public-www-https.nix
     ./security-groups/allow-all.nix
   ];
-  ## c5.4xlarge 16c @3.4GHz SKL 32RAM         $0.776
-  hydra               = mkHydra "hydra" "c5.4xlarge" ["role:hydra"];
+  ## m5.4xlarge 16c @3.1GHz 64 GiB RAM  EBS Only  $0.768 per Hour
+  hydra               = mkHydra "hydra" "m5.4xlarge" "/dev/nvme0n1";
   ## r3.2xlarge  8c @2.5GHz IVB 61RAM 160SSD  $0.80
-  mantis-hydra        = mkHydra "mantis-hydra" "r3.2xlarge" ["role:hydra"];
+  mantis-hydra        = mkHydra "mantis-hydra" "r3.2xlarge" null;
 
   cardano-deployer = { config, pkgs, resources, ... }: {
     imports = [
