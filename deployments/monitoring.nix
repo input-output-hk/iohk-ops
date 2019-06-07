@@ -7,7 +7,9 @@ let
 in
 
 {
-  require = [ ./global.nix ];
+  require = [
+    ./global.nix
+  ];
   # configure all machines in the cluster so they can find graylog
   defaults = { config, lib, ... }: {
     _file = ./monitoring.nix;
@@ -24,12 +26,19 @@ in
   monitoring = { config, lib, pkgs, resources, nodes, deploymentName, ... }:
   let
     # a list of { name=; ip=; withNginx=; } for every node in the deployment
-    hostList = lib.mapAttrsToList
+    hostList = builtins.listToAttrs (lib.mapAttrsToList
       (nodeName: node: {
         name = "${nodeName}.${node.config.deployment.name}";
-        ip = node.config.services.monitoring-exporters.ownIp;
-        withNginx = node.config.services.nginx.enable;
-      }) nodes;
+        value = {
+          ip = node.config.services.monitoring-exporters.ownIp;
+          hasNginx = node.config.services.nginx.enable;
+          labels = let
+            maybeRole = (globals.fullMap.${nodeName} or {}).nodeType or null;
+          in {
+            role = mkIf (maybeRole != null) maybeRole;
+          };
+        };
+      }) nodes);
     hostName = "monitoring.${config.global.dnsDomainname}";
   in
   {
@@ -47,9 +56,7 @@ in
 
     # add everything from hostList to /etc/hosts
     # if a machine is using wireguard, the `services.monitoring-exporters.ownIp` will be the WG ip, and this will point to that
-    networking.extraHosts = ''
-      ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}") hostList)}
-    '';
+    networking.extraHosts = concatStringsSep "\n" (mapAttrsToList (host: value: "${value.ip} ${host}") hostList);
 
     services.monitoring-services = {
       extraHeader = "Deployment Name: ${deploymentName}<br>";
@@ -67,8 +74,7 @@ in
       grafanaCreds = makeCreds "grafana" { user = "changeme"; password = "changeme"; };
       graylogCreds = makeCreds "graylog" { user = "changeme"; password = "changeme"; };
 
-      monitoredNodes = map (h: h.name) (lib.filter (h: !h.withNginx) hostList);
-      nginxMonitoredNodes = map (h: h.name) (lib.filter (h: h.withNginx) hostList);
+      monitoredNodes = mapAttrs (host: value: { inherit (value) hasNginx labels; }) hostList;
       webhost = hostName;
       pagerDuty = if (builtins.pathExists ../static/pager-duty.nix)
               then { inherit (import ../static/pager-duty.nix) serviceKey; }
