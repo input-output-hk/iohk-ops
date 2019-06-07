@@ -44,8 +44,7 @@ in {
       };
 
       graylogHost = mkOption {
-        type = types.nullOr types.str;
-        default = null;
+        type = types.str;
         example = "graylog:5044";
         description = ''
           The host port under which Graylog is externally reachable.
@@ -132,7 +131,7 @@ in {
 
     # Leaving the "monitoring" attribute name as static rather than
     # referencing monitoringNV due to atala globals.nix usage conflict.
-    (mkIf (cfg.logging && (cfg.graylogHost != null)) {
+    (mkIf cfg.logging {
       services.journalbeat = {
         enable = true;
         extraConfig = ''

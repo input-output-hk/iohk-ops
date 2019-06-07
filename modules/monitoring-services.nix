@@ -4,6 +4,26 @@ with lib;
 
 let
   cfg = config.services.monitoring-services;
+  monitoredNodeOptions = { name, config, ... }: {
+    options = {
+      name = mkOption {
+        type = types.str;
+      };
+      labels = mkOption {
+        type = types.attrs;
+        default = {};
+        description = "Labels to add in prometheus";
+      };
+      hasNginx = mkOption {
+        type = types.bool;
+        default = false;
+        description = "if nginx stats should be scraped";
+      };
+    };
+    config = {
+      name = mkDefault name;
+    };
+  };
 in {
 
   options = {
@@ -170,19 +190,17 @@ in {
       };
 
       monitoredNodes = mkOption {
-        type = types.listOf types.str;
-        default = [];
+        type = types.loaOf (types.submodule monitoredNodeOptions);
+        default = {};
         description = ''
-          Nodes to be monitored.
+          Attribute set of Nodes to be monitored.
         '';
-      };
-
-      nginxMonitoredNodes = mkOption {
-        type = types.listOf types.str;
-        default = [];
-        description = ''
-          Nodes running nginx to be monitored.
-        '';
+        example = {
+          c-a-1 = {
+            hasNginx = false;
+            labels.role = "core";
+          };
+        };
       };
 
       webhost = mkOption {
@@ -776,22 +794,27 @@ in {
               job_name = "node";
               scrape_interval = "10s";
               static_configs = let
-                makeNodeConfig = nodeHostName: {
-                  targets = [ "${nodeHostName}:9100" "${nodeHostName}:9102" ];
-                  labels = { alias = nodeHostName; };
+                makeNodeConfig = key: value: {
+                  targets = [ "${key}:9100" "${key}:9102" ];
+                  labels = {
+                    alias = key;
+                  } // value.labels;
                 };
-              in map makeNodeConfig (cfg.monitoredNodes ++ cfg.nginxMonitoredNodes);
+              in mapAttrsToList makeNodeConfig cfg.monitoredNodes;
             }
             {
               job_name = "nginx";
               scrape_interval = "5s";
               metrics_path = "/status/format/prometheus";
-              static_configs =  let
-                makeNodeConfig = nodeHostName: {
-                  targets = [ "${nodeHostName}:9113" ];
-                  labels = { alias = nodeHostName; };
+              static_configs = let
+                makeNodeConfig = key: value: {
+                  targets = [ "${key}:9113" ];
+                  labels = {
+                    alias = key;
+                  } // value.labels;
                 };
-              in map makeNodeConfig cfg.nginxMonitoredNodes;
+                onlyNginx = n: v: v.hasNginx;
+              in mapAttrsToList makeNodeConfig (filterAttrs onlyNginx cfg.monitoredNodes);
             }
           ];
         };
