@@ -68,11 +68,13 @@ in {
   };
 
   config = mkIf cfg.enable (mkMerge [
-
-    (mkIf (config.services.nginx.enable && cfg.metrics) {
+    {
       nixpkgs.overlays = [
         (import ../overlays/monitoring-exporters.nix)
       ];
+    }
+
+    (mkIf (config.services.nginx.enable && cfg.metrics) {
       services.nginx = {
         appendHttpConfig = ''
           vhost_traffic_status_zone;
