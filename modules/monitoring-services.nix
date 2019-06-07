@@ -130,7 +130,6 @@ in {
 
       grafanaCreds = mkOption {
         type = types.attrs;
-        default = null;
         description = ''
           An attribute set containing the username and password of the
           default administative user in grafana.  This attribute set
@@ -158,7 +157,6 @@ in {
 
       graylogCreds = mkOption {
         type = types.attrs;
-        default = null;
         description = ''
           An attribute set containing the username, password and
           SHA256 password hash of the default administative user
