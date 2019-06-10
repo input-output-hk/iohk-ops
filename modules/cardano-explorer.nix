@@ -17,6 +17,8 @@ in
   ];
   environment.systemPackages = with pkgs; [ goaccess ];
 
+  systemd.services.cardano-node.serviceConfig.LimitNOFILE = 4096;
+
   services.nginx = {
     enable = true;
     commonHttpConfig = ''
