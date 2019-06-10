@@ -3,7 +3,7 @@
 set -eo pipefail
 
 # Make sure that we are using `find`/`xargs` from GNU and not the (gasp) BSD version 😒
-PATH=$(nix-build -E "(import ./. {}).pkgs.findutils" --no-out-link)/bin:$PATH
+PATH=$(nix-build -E "(import ${gacroot:?} {}).pkgs.findutils" --no-out-link)/bin:$PATH
 
 case "$1" in
 -h | --help | help )
