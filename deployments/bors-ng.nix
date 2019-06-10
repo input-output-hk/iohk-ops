@@ -28,6 +28,12 @@
 
   services.nginx = {
     enable = true;
+    commonHttpConfig = ''
+      log_format x-fwd '$remote_addr - $remote_user [$time_local] '
+                       '"$request" $status $body_bytes_sent '
+                       '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
+      access_log /var/spool/nginx/logs/access.log x-fwd;
+    '';
     recommendedGzipSettings = true;
     recommendedOptimisation = true;
     recommendedProxySettings = true;
@@ -44,4 +50,5 @@
   };
 
   networking.firewall.allowedTCPPorts = [ 80 443 ];
+  environment.systemPackages = with pkgs; [ goaccess ];
 }
