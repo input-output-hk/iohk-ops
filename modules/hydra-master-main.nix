@@ -104,6 +104,7 @@ in {
         { jobset = "cardano-ledger"; inputs = "cardano-ledger"; }
         { jobset = "cardano-wallet"; inputs = "cardano-wallet"; }
         { jobset = "cardano-shell"; inputs = "cardano-shell"; }
+        { jobset = "cardano-node"; inputs = "cardano-node"; }
         { jobset = "cardano"; inputs = "cardano"; }
         { jobset = "plutus"; inputs = "plutus"; }
         { jobset = "log-classifier"; inputs = "log-classifier"; }
