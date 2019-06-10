@@ -138,6 +138,7 @@ let
       url = "https://github.com/input-output-hk/cardano-wallet.git";
       branch = "master";
       prs = walletPrsJSON;
+      bors = true;
     };
 
     cardano-shell = {
