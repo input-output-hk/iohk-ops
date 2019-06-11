@@ -15,8 +15,18 @@ in
   networking.firewall.allowedTCPPorts = [
     80 443 # nginx
   ];
+  environment.systemPackages = with pkgs; [ goaccess ];
+
+  systemd.services.cardano-node.serviceConfig.LimitNOFILE = 4096;
+
   services.nginx = {
     enable = true;
+    commonHttpConfig = ''
+      log_format x-fwd '$remote_addr - $remote_user [$time_local] '
+                       '"$request" $status $body_bytes_sent '
+                       '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
+      access_log syslog:server=unix:/dev/log x-fwd;
+    '';
     virtualHosts =
      let vhostDomainName = if config.global.dnsDomainname != null
                            then config.global.dnsDomainname else "iohkdev.io";
