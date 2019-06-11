@@ -45,7 +45,7 @@ in {
       log_format x-fwd '$remote_addr - $remote_user [$time_local] '
                        '"$request" $status $body_bytes_sent '
                        '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
-      access_log /var/spool/nginx/logs/access.log x-fwd;
+      access_log syslog:server=unix:/dev/log x-fwd;
     '';
     virtualHosts = let
       vhostDomainName = if config.global.dnsDomainname != null
