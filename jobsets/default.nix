@@ -30,8 +30,10 @@
 , iohkMonitoringPrsJSON ? ./simple-pr-dummy.json
 , ledgerPrsJSON ? ./simple-pr-dummy.json
 , cardanoLedgerSpecsPrsJSON ? ./simple-pr-dummy.json
-, shellPrsJSON ? ./simple-pr-dummy.json
 , walletPrsJSON ? ./simple-pr-dummy.json
+, shellPrsJSON ? ./simple-pr-dummy.json
+, cardanoNodePrsJSON ? ./simple-pr-dummy.json
+, cardanoBasePrsJSON ? ./simple-pr-dummy.json
 , iohkNixPrsJSON ? ./simple-pr-dummy.json
 , haskellNixPrsJSON ? ./simple-pr-dummy.json
 , toolsPrsJSON ? ./simple-pr-dummy.json
@@ -138,6 +140,7 @@ let
       url = "https://github.com/input-output-hk/cardano-wallet.git";
       branch = "master";
       prs = walletPrsJSON;
+      bors = true;
     };
 
     cardano-shell = {
@@ -145,6 +148,20 @@ let
       url = "https://github.com/input-output-hk/cardano-shell.git";
       branch = "develop";
       prs = shellPrsJSON;
+      bors = true;
+    };
+
+    cardano-node = {
+      description = "Cardano Node";
+      url = "https://github.com/input-output-hk/cardano-node.git";
+      prs = cardanoNodePrsJSON;
+      bors = true;
+    };
+
+    cardano-base = {
+      description = "Cardano Base";
+      url = "https://github.com/input-output-hk/cardano-base.git";
+      prs = cardanoBasePrsJSON;
       bors = true;
     };
 

@@ -25,6 +25,8 @@
          ,"cardanoLedgerSpecsPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-ledger-specs", "emailresponsible": false }
          ,"walletPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-wallet", "emailresponsible": false }
          ,"shellPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-shell", "emailresponsible": false }
+         ,"cardanoNodePrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-node", "emailresponsible": false }
+         ,"cardanoBasePrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-base", "emailresponsible": false }
          ,"toolsPrsJSON": { "type": "githubpulls", "value": "input-output-hk tools", "emailresponsible": false }
     }
 }
