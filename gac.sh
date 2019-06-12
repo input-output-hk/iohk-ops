@@ -85,7 +85,7 @@ cmd=${1:-doit}; test -n "$1"; shift
 ###
 gacroot="$(realpath "$0" | xargs dirname)"
 if [[ -d "${gacroot}/../clusters" ]]
-then overlayroot="$(dirname ${gacroot})"
+then overlayroot="$(dirname "${gacroot}")"
 else overlayroot="${gacroot}"
 fi
 
