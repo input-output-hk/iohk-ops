@@ -16,7 +16,7 @@ for subsequent deployment.
 The CLUSTER-NAME will be used both for the ops checkout directory, and
 the Nixops deployment.
 
-Available cluster types:  $(if test ! -d clusters; then cd .seed; fi && find . -mindepth 1 -maxdepth 1 -type d -prinf '%f\0' | xargs -0)
+Available cluster types:  $(cd ${overlayroot}/clusters ; find . -mindepth 1 -maxdepth 1 -type d -printf '%f\0' | xargs -0)
 
 Generals documentation: https://github.com/input-output-hk/iohk-ops/blob/goguen-ala-cardano/docs/Goguen-clusters-HOWTO.org
 
