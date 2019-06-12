@@ -5,6 +5,9 @@ set -eo pipefail
 # Make sure that we are using `find`/`xargs` from GNU and not the (gasp) BSD version 😒
 PATH=$(nix-build -E "(import ${gacroot:?} {}).pkgs.findutils" --no-out-link)/bin:$PATH
 
+# disable shellcheck complaining about undeclared variables:
+# `overlayroot` is declared in `gac.sh` which sources this file (it is not meant to be called directly)
+# shellcheck disable=SC2154
 case "$1" in
 -h | --help | help )
         cat <<EOF
@@ -16,7 +19,7 @@ for subsequent deployment.
 The CLUSTER-NAME will be used both for the ops checkout directory, and
 the Nixops deployment.
 
-Available cluster types:  $(if test ! -d clusters; then cd .seed; fi && find . -mindepth 1 -maxdepth 1 -type d -prinf '%f\0' | xargs -0)
+Available cluster types:  $(cd "${overlayroot}/clusters" ; find . -mindepth 1 -maxdepth 1 -type d -printf '%f\0' | xargs -0)
 
 Generals documentation: https://github.com/input-output-hk/iohk-ops/blob/goguen-ala-cardano/docs/Goguen-clusters-HOWTO.org
 
