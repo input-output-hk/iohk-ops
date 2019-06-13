@@ -30,7 +30,7 @@ This should all be _in lowercase_ to avoid problems when updating DNS entries.
 1. optional: `git checkout SOME-BRANCH`
 1. `iohk-ops set-rev cardanosl CARDANO-REVISION`
 1. `nix-shell -A withAuxx`
-1. `io new [--dont-generate-keys] [--configuration-key CONFIGURATION-KEY] ISSUE-ID Nodes [Explorer] [ReportServer]`
+1. `io new [--dont-generate-keys] [--configuration-key CONFIGURATION-KEY] ISSUE-ID Nodes [Explorer]`
    - the `CONFIGURATION-KEY` defaults to `devnet`
    - this will generate stake keys using `cardano-keygen`, unless `--dont-generate-keys` was passed
    - the elements after `ISSUE-ID` name cluster components, for the CSL nodes, explorer and report server, correspondingly -- which all are, strictly speaking, optional, with the caveat that having a `Nodes`-free cluster doesn't make a lot of sense
@@ -69,7 +69,7 @@ When one wants to redeploy a cluster, it's not necessary to destroy the machines
 This uses the customizable wallet connect script generator in cardano-sl
 (see [Exchange Onboarding](https://github.com/input-output-hk/cardano-sl/blob/develop/docs/exchange-onboarding.md#generate-custom-configuration)).
 
-You need to clone the `cardano-sl` repository and checkout the 
+You need to clone the `cardano-sl` repository and checkout the
 particular commit used in `io set-rev` (see `rev` attribute of `cardano-sl-src.json`):
 
 1. `git clone https://github.com/input-output-hk/cardano-sl.git && cd cardano-sl`

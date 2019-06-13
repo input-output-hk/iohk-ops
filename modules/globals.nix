@@ -18,12 +18,12 @@ with lib;
           };
           centralRegion = mkOption {
             type = str;
-            description = "Region for deployer, explorer, report-server and other global services.";
+            description = "Region for deployer, explorer and other global services.";
             default = "eu-central-1";
           };
           defaultOrg = mkOption {
             type = enum [ "CF" "IOHK" "Emurgo" ];
-            description = "Organisation hosting deployer, report-server and other global services.";
+            description = "Organisation hosting deployer and other global services.";
             default = "IOHK";
           };
           organisation = mkOption {

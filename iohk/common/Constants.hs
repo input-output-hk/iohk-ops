@@ -81,7 +81,6 @@ envSettings :: HasCallStack => Environment -> EnvSettings
 envSettings env =
   let deplAgnosticFiles      = [ (Every,          All, "deployments/keypairs.nix")
                                , (Explorer,       All, "deployments/cardano-explorer.nix")
-                               , (ReportServer,   All, "deployments/report-server.nix")
                                , (Faucet,         All, "deployments/cardano-faucet.nix")
                                , (Nodes,          All, "deployments/cardano-nodes.nix")
                                , (Infra,          All, "deployments/infrastructure.nix")
@@ -97,11 +96,9 @@ envSettings env =
       , envDefaultTopology   = "topology-staging.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
                                , (Explorer,       All, "deployments/security-groups.nix")
-                               , (ReportServer,   All, "deployments/security-groups.nix")
                                , (Monitoring,     All, "deployments/security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-staging.nix")
-                               , (ReportServer,   All, "deployments/report-server-env-staging.nix")
                                , (Monitoring,     All, "deployments/monitoring-env-staging.nix")
                                , (Infra,          All, "deployments/infrastructure-env-staging.nix")
                                ] <> deplAgnosticFiles}
@@ -112,11 +109,9 @@ envSettings env =
       , envDefaultTopology   = "topology-production.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
                                , (Explorer,       All, "deployments/security-groups.nix")
-                               , (ReportServer,   All, "deployments/security-groups.nix")
                                , (Monitoring,     All, "deployments/security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-production.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-production.nix")
-                               , (ReportServer,   All, "deployments/report-server-env-production.nix")
                                , (Monitoring,     All, "deployments/monitoring-env-production.nix")
                                , (Infra,          All, "deployments/infrastructure-env-production.nix")
                                ] <> deplAgnosticFiles}
@@ -131,7 +126,6 @@ envSettings env =
                                , (Monitoring,     All, "deployments/security-groups.nix")
                                , (Nodes,          All, "deployments/cardano-nodes-env-testnet.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-testnet.nix")
-                               , (ReportServer,   All, "deployments/report-server-env-testnet.nix")
                                , (Faucet,         All, "deployments/cardano-faucet-env-testnet.nix")
                                , (Monitoring,     All, "deployments/monitoring-env-testnet.nix")
                                ] <> deplAgnosticFiles}
@@ -143,7 +137,6 @@ envSettings env =
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
                                , (Faucet,         All, "deployments/cardano-faucet-env-development.nix")
-                               , (ReportServer,   All, "deployments/report-server-env-development.nix")
                                , (Monitoring,     All, "deployments/monitoring-env-development.nix")
                                , (Every,          All, "deployments/env-development.nix")
                                ] <> deplAgnosticFiles}
@@ -167,7 +160,6 @@ envSettings env =
       , envDefaultTopology   = "topology-benchmark.yaml"
       , envDeploymentFiles   = [ (Nodes,          All, "deployments/cardano-nodes-env-development.nix")
                                , (Explorer,       All, "deployments/cardano-explorer-env-development.nix")
-                               , (ReportServer,   All, "deployments/report-server-env-development.nix")
                                ] <> deplAgnosticFiles}
     Any -> error "envSettings called with 'Any'"
 

@@ -143,7 +143,6 @@ nodes:
     public: false
 
 # explorer is in eu-central-1 (frankfurt)
-# report-server is in eu-central-1
 
 # the public relays are spread across many regions.
 # 3 in US, 4 in Asia, 3 in Europe
