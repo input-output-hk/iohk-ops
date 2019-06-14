@@ -137,21 +137,6 @@ rec {
     };
   };
 
-  cardano_report_process_monitor = {
-    name = "cardano-report-server process is down";
-    type = "service check";
-    query = config: "\"process.up\".over(\"depl:${config.deployment.name}\",\"process:cardano-report-server\").by(\"host\",\"process\").last(6).count_by_status()";
-    monitorOptions = {
-      notify_no_data = true;
-      no_data_timeframe = 10;
-      thresholds = {
-        warning = 4;
-        critical = 5;
-        ok = 2;
-      };
-    };
-  };
-
   cardano_faucet_process_monitor = {
     name = "cardano-faucet process is down";
     type = "service check";

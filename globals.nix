@@ -14,8 +14,8 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     #          - DNS naming
     topologySpecList = (builtins.sort (l: r: l.name < r.name)
                                       (mapAttrsToList (k: v: { name = k; value = v;}) topologySpec))
-                       ++ [ explorerSpecElt reportServerSpecElt faucetSpecElt monitoringSpecElt ];
-    # NOTE: the following definitions for explorerSpecElt and reportServerSpecElt
+                       ++ [ explorerSpecElt faucetSpecElt monitoringSpecElt ];
+    # NOTE: the following definition for explorerSpecElt
     #       allow us to treat all cluster nodes in a uniform way.
     #       It's as if they were defined in the topology yaml.
     explorerSpecElt  = { name  = "explorer";
@@ -39,18 +39,6 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                                    peers    = [];
                                    address  = "faucet.cardano";
                                    port     = 3000; }; };
-
-    reportServerSpecElt =
-                       { name  = "report-server";
-                         value = { org      = defaultOrg;
-                                   region   = centralRegion;
-                                   zone     = centralZone;
-                                   public   = false;
-                                   type     = "other";
-                                   kademlia = false;
-                                   peers    = [];
-                                   address  = "report-server.cardano";
-                                   port     = null; }; };
 
     monitoringSpecElt =
                        { name  = "monitoring";
@@ -86,7 +74,6 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                    typeIsExplorer = name == "explorer";
                      typeIsFaucet = name == "faucet";
                 typeIsRunsCardano = typeIsCore || typeIsRelay || typeIsExplorer || typeIsFaucet;
-               typeIsReportServer = name == "report-server";
                  typeIsMonitoring = name == "monitoring";
                       accessKeyId = if elem org allOrgs
                                     then orgAccessKeys.${org}
@@ -109,10 +96,9 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
     ##
     explorerNV      = findFirst  (x: x.value.typeIsExplorer)     {}   indexed;
     faucetNV        = findFirst  (x: x.value.typeIsFaucet)       {}   indexed;
-    reportServerNV  = findFirst  (x: x.value.typeIsReportServer) {}   indexed;
     monitoringNV    = findFirst  (x: x.value.typeIsMonitoring)   {}   indexed;
     fullMap         = nodeMap // listToAttrs (builtins.filter (x: x != {})
-                                              [ explorerNV faucetNV reportServerNV monitoringNV ]);
+                                              [ explorerNV faucetNV monitoringNV ]);
 in
 {
   inherit topologyYaml;

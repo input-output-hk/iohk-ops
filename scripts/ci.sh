@@ -12,7 +12,6 @@ WITH_PRODUCTION=true
 WITH_TESTNET=true
 WITH_DEVELOPMENT=true
 WITH_EXPLORER=true
-WITH_REPORT_SERVER=true
 WITH_MONITORING=true
 WITH_INFRA_PRODUCTION=true
 WITH_INFRA_STAGING=true
@@ -28,7 +27,6 @@ do
     t) WITH_TESTNET=${OPTARG};;
     d) WITH_DEVELOPMENT=${OPTARG};;
     e) WITH_EXPLORER=${OPTARG};;
-    r) WITH_REPORT_SERVER=${OPTARG};;
     m) WITH_MONITORING=${OPTARG};;
     i) WITH_INFRA_PRODUCTION=${OPTARG};;
     j) WITH_INFRA_STAGING=${OPTARG};;
@@ -124,8 +122,8 @@ banner() {
 
 GENERAL_OPTIONS=(--verbose --deployer 0.0.0.0)
 COMMON_OPTIONS=( --topology topology-min.yaml --domain example.com )
-CARDANO_COMPONENTS=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} ${WITH_MONITORING:+Monitoring} )
-CARDANO_COMPONENTS_WITHOUT_MONITORING=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_REPORT_SERVER:+ReportServer} )
+CARDANO_COMPONENTS=( Nodes ${WITH_EXPLORER:+Explorer} ${WITH_MONITORING:+Monitoring} )
+CARDANO_COMPONENTS_WITHOUT_MONITORING=( Nodes ${WITH_EXPLORER:+Explorer} )
 
 
 echo '~~~ pre-building cardano-sl-tools'

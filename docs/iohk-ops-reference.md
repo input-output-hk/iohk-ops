@@ -25,7 +25,7 @@ For an example deployment scenario, see [Example Deployment](#example-deployment
 - `template [--node-limit N] [--environment ENV] [--target TGT] BRANCH DEPLOYMENT...`: produce (or update) a checkout of BRANCH with a configuration YAML file (whose name depends on the _environment_), primed for future operations.
     - `--node-limit` allows patch-less limiting of the cluster size;  A suitable value is `4` _: -)_
 - `set-cardano COMMIT`, `set-explorer COMMIT`: set the `cardano-sl-src.json` and `cardano-sl-explorer-src.json` with inputs, suitable to parametrise various ops, for instance `pkgs/generate.sh`
-- `mini-keys`: fake/request/provide a minimum set of keys required for a minimum complete deployment (_explorer_ + _report-server_ + _nodes_ -- henceforth referred to as MCD)
+- `mini-keys`: fake/request/provide a minimum set of keys required for a minimum complete deployment (_explorer_ + _nodes_ -- henceforth referred to as MCD)
 - `do`: chain commands, like:
 
 ```
@@ -56,11 +56,11 @@ First, let's assume the following:
 
 - it's a _development_ environment cluster
 - we want to limit cluster size to 4 nodes
-- we want the full package: _nodes_, _cardano-explorer_ and _report-server_
+- we want the full package: _nodes_ and _cardano-explorer_
 
 This translates to:
 ```
-$ io template --environment development --node-limit 4 some-branch Nodes Explorer ReportServer
+$ io template --environment development --node-limit 4 some-branch Nodes Explorer
 ...observe git clone
 ...observe the generated config.yaml
 $ cd some-branch
@@ -111,7 +111,7 @@ The following subcommands have been rolled into a single
  - `find-installers`
  - `s3upload`
  - `set-version-json`
- 
+
 See [Daedalus Installer Update Procedure](./Daedalus-Installer-Update-Procedure.md)
 for instructions.
 

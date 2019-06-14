@@ -123,7 +123,6 @@ with import ../lib.nix;
         centralRegionSGNames = centralRegion:
             [ "allow-to-explorer-${centralRegion}"
               "allow-to-faucet-${centralRegion}"
-              "allow-to-report-server-${centralRegion}"
             ];
         centralRegionSGs = centralRegion:
           let region = centralRegion;
@@ -151,15 +150,6 @@ with import ../lib.nix;
               } {
                 protocol = "tcp";
                 fromPort = 443; toPort = 443;
-                sourceIp = "0.0.0.0/0";
-              }];
-            };
-            "allow-to-report-server-${region}" = {
-              inherit region accessKeyId;
-              description = "Access Cardano report server";
-              rules = [{
-                protocol = "tcp";
-                fromPort = 8080; toPort = 8080;
                 sourceIp = "0.0.0.0/0";
               }];
             };
