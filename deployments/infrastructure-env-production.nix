@@ -181,6 +181,15 @@ in {
               description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
             };
           }
+          {
+            alert = "exchange-down-bitthumb";
+            expr = "bithumb_active == 0";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+          }
         ];
         alertmanager = {
           extraRoutes = [
