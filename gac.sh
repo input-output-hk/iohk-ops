@@ -84,8 +84,10 @@ cmd=${1:-doit}; test -n "$1"; shift
 ### Overlay root detection: ${PWD}, $(dirname $self)
 ###
 gacroot="$(realpath "$0" | xargs dirname)"
-if [[ -d "${gacroot}/../clusters" ]]
-then overlayroot="$(dirname "${gacroot}")"
+if [[ -d "$PWD/clusters" ]]
+then overlayroot=$PWD
+elif [[ -d "$PWD/.seed/clusters" ]]
+then overlayroot="$PWD/.seed"
 else overlayroot="${gacroot}"
 fi
 
@@ -157,7 +159,7 @@ nixops_nix_opts=("${nix_opts[@]}"
                  -I "static=./static"
                  -I "goguen=${gacroot}/goguen"
                  ${OVERLAY_MODE:+-I local-module=./modules}
-                 ${OVERLAY_MODE:+-I iops=./iops})
+                 ${OVERLAY_MODE:+-I iops=${gacroot}})
 
 if test ! -f "${nixops}"
 then nix-store --realise "${nixops}"
