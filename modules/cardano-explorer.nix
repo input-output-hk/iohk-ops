@@ -41,7 +41,15 @@ in
             tryFiles = "$uri /index.html";
           };
           "/api/".proxyPass = "http://127.0.0.1:8100";
-          "/socket.io/".proxyPass = "http://127.0.0.1:8110";
+          "/socket.io/" = {
+            proxyPass = "http://127.0.0.1:8110";
+            extraConfig = ''
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection "upgrade";
+              proxy_read_timeout 86400;
+            '';
+          };
         };
         # Otherwise nginx serves files with timestamps unixtime+1 from /nix/store
         extraConfig = ''
