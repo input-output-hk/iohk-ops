@@ -190,6 +190,24 @@ in {
               description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
             };
           }
+          {
+            alert = "exchange-down-hitbtc";
+            expr = "hitbtc_withdraws == false or hitbtc_deposits == false";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+          }
+          {
+            alert = "exchange-down-coinex";
+            expr = "coinex_withdraws == false or coinex_deposits == false";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+          }
         ];
         alertmanager = {
           extraRoutes = [

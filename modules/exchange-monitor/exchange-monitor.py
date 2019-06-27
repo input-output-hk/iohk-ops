@@ -19,6 +19,10 @@ binance_withdraws = Gauge('binance_withdraws', 'Binance Withdraws enabled')
 bittrex_active = Gauge('bittrex_active', 'Bittrex Wallet enabled')
 bittrex_withdraw_queue_depth = Gauge('bittrex_withdraw_queue_depth', 'Bittrex Withdraw Queue Depth')
 bithumb_active = Gauge('bithumb_active', 'Bithumb Wallet enabled')
+hitbtc_deposits = Gauge('hitbtc_deposits', 'Hitbtc Deposits enabled')
+hitbtc_withdraws = Gauge('hitbtc_withdraws', 'Hitbtc Withdraws enabled')
+coinex_deposits = Gauge('coinex_deposits', 'Coinex Deposits enabled')
+coinex_withdraws = Gauge('coinex_withdraws', 'Coinex Withdraws enabled')
 
 # Decorate function with metric.
 @BINANCE_REQUEST_TIME.time()
@@ -56,7 +60,31 @@ def process_bithumb_assets():
     if crypto_asset['status'] == '0000':
         bithumb_active.set(True)
     sys.stdout.flush()
-
+    
+    # Decorate function with metric.
+@HITBTC_REQUEST_TIME.time()
+def process_hitbtc_assets():
+    url = "https://api.hitbtc.com/api/2/public/currency/ADA"
+    json_obj = urllib.request.urlopen(url)
+    crypto_asset = json.loads(json_obj.read().decode('utf-8'))
+    print("Processing HITbtc assets")
+    if crypto_asset['id'] == 'ADA':
+        hitbtc_deposits.set(crypto_asset['payinEnabled']) 
+        hitbtc_withdraws.set(crypto_asset['payoutEnabled'])
+    sys.stdout.flush()
+    
+# Decorate function with metric.
+@COINEX_REQUEST_TIME.time()
+def process_coinex_assets():
+    url = "https://api.coinex.com/v1/common/asset/config?coin_type=ADA"
+    json_obj = urllib.request.urlopen(url)
+    crypto_asset = json.loads(json_obj.read().decode('utf-8'))
+    print ("Processing Coinex assets")
+    if crypto_asset['code'] == 0:
+        coinex_deposits.set(crypto_asset['data']['ADA']['can_deposit'])
+        coinex_withdraws.set(crypto_asset['data']['ADA']['can_withdraw']) 
+    sys.stdout.flush()
+    
 if __name__ == '__main__':
     # Start up the server to expose the metrics.
     start_http_server(EXPORTER_PORT)
@@ -79,4 +107,14 @@ if __name__ == '__main__':
         except:
             print("failed to process bithumb assets")
             bithumb_active.set(False)
+        try:
+            process_hitbtc_assets()
+        except:
+            print("failed to process hitbtc assets")
+            hitbtc_active.set(False)
+        try:
+            process_coinex_assets()
+        except:
+            print("failed to process coinex assets")
+            coinex_active.set(False)         
         time.sleep(SLEEP_TIME)
