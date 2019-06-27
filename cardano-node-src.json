@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/input-output-hk/cardano-node",
+  "rev": "44640f9cf02a49257edc14987c38bc85a2edf02f",
+  "sha256": "0cm6dvyq5ci8w10hb3csvh3kvgnwv20r9nc8s5g85ynygqfp89sr",
+  "fetchSubmodules": false
+}
