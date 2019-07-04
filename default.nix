@@ -7,6 +7,7 @@ in
 , pkgs ? (import (localLib.nixpkgs) { inherit system crossSystem config; })
 , compiler ? pkgs.haskellPackages
 , cardanoRevOverride ? null
+, cardanoNodeRevOverride ? null
 , ...
 }@args:
 
@@ -37,6 +38,7 @@ let
 
   cardano-sl-pkgs = localLib.fetchProjectPackages "cardano-sl" <cardano-sl> ./.             cardanoRevOverride args;
   mantis-pkgs     = localLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
+  cardano-node-pkgs = localLib.fetchProjectPackages "cardano-node" <cardano-node> ./.       cardanoNodeRevOverride args;
 
   github-webhook-util = pkgs.callPackage ./github-webhook-util { };
 
@@ -68,7 +70,7 @@ let
   '';
 
 in {
-  inherit nixops iohk-ops iohk-ops-integration-test github-webhook-util;
+  inherit nixops iohk-ops iohk-ops-integration-test github-webhook-util cardano-node-pkgs;
   terraform = pkgs.callPackage ./terraform/terraform.nix {};
   mfa = pkgs.callPackage ./terraform/mfa.nix {};
 
