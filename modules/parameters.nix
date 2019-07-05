@@ -122,20 +122,10 @@
     };
     ##
     ##
-    hydra = mkOption {
-      description = "Hydra-specific parameters.";
-      default = {};
-      type = submodule {
-        options = {
-          ##
-          ## Non-mandatory configuration:
-          s3Bucket = mkOption {
-            type = nullOr str;
-            description = "Specify a bucket name to use an existing bucket to upload docker images to. If set to null (default) a bucket will be created.";
-            default = null;
-          };
-        };
-      };
+    hydra.s3Bucket = mkOption {
+      type = nullOr str;
+      description = "Specify a bucket name to use an existing bucket to upload docker images to. If set to null (default) a bucket will be created.";
+      default = null;
     };
   };
 }
