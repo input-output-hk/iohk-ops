@@ -10,14 +10,14 @@ in
   imports = [ ./cardano.nix ];
   global.dnsHostname   = mkForce   "cardano-explorer";
 
-  services.cardano-node.executable = "${explorer-drv}/bin/cardano-explorer";
+  services.cardano-node-legacy.executable = "${explorer-drv}/bin/cardano-explorer";
 
   networking.firewall.allowedTCPPorts = [
     80 443 # nginx
   ];
   environment.systemPackages = with pkgs; [ goaccess ];
 
-  systemd.services.cardano-node.serviceConfig.LimitNOFILE = 4096;
+  systemd.services.cardano-node-legacy.serviceConfig.LimitNOFILE = 4096;
 
   services.nginx = {
     enable = true;

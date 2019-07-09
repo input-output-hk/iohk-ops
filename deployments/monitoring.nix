@@ -32,6 +32,7 @@ in
         value = {
           ip = node.config.services.monitoring-exporters.ownIp;
           hasNginx = node.config.services.nginx.enable;
+          hasNativePrometheus = node.config.services.cardano-node.enable or false;
           labels = let
             maybeRole = (globals.fullMap.${nodeName} or {}).nodeType or null;
           in {
@@ -74,7 +75,7 @@ in
       grafanaCreds = makeCreds "grafana" { user = "changeme"; password = "changeme"; };
       graylogCreds = makeCreds "graylog" { user = "changeme"; password = "changeme"; };
 
-      monitoredNodes = mapAttrs (host: value: { inherit (value) hasNginx labels; }) hostList;
+      monitoredNodes = mapAttrs (host: value: { inherit (value) hasNginx hasNativePrometheus labels; }) hostList;
       webhost = hostName;
       pagerDuty = if (builtins.pathExists ../static/pager-duty.nix)
               then { inherit (import ../static/pager-duty.nix) serviceKey; }

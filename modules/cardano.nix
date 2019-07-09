@@ -5,37 +5,55 @@ with import ../lib.nix;
 
   let
     assetLockFile = ../static/asset-locked-addresses.txt;
-    nodeNameToPublicIP   = name: let ip = nodes.${name}.config.services.cardano-node.publicIP;
-                                 in if ip == null then "" else ip;
+    nodeNameToPublicIP   = name: 
+      if nodes.${name}.options.networking.publicIPv4.isDefined 
+      then nodes.${name}.config.networking.publicIPv4 else "";
     neighbourPairs       = map (n: { name = n; ip = nodeNameToPublicIP n; })
                                (builtins.trace "${config.params.name}: role '${config.params.nodeType}'" config.params.peers);
     ppNeighbour          = n: "${n.name}: ${n.ip}";
     sep                  = ", ";
+    cfgLegacy            = config.services.cardano-node-legacy;
     cfg                  = config.services.cardano-node;
+    sources = import ../nix/sources.nix;
+
   in {
     imports = [
       ./cardano-service.nix
+      (sources.cardano-node + "/nix/nixos/cardano-node.nix")
       ./cardano-base.nix
       ./globals.nix
     ];
 
     networking.extraHosts =
-    let hostList = if config.services.cardano-node.enable == false then []
-                   else
-                   neighbourPairs
+    let hostList = if (config.services.cardano-node.enable || config.services.cardano-node-legacy.enable)
+                   then (neighbourPairs
                    ++ (map (x:
                         { name = x;
                           ip   = nodeNameToPublicIP x; })
                         (attrNames config.global.nodeMap))
-                   ++ (if !(hasAttr "publicIP" config.services.cardano-node) then []
-                       else [ { name = config.params.name;
-                                ip   = nodeNameToPublicIP config.params.name; } ]);
+                   ++ (if (hasAttr "publicIP" config.services.cardano-node || hasAttr "host" config.services.cardano-node)
+                       then [ { name = config.params.name;
+                                ip   = nodeNameToPublicIP config.params.name; } ]
+                       else []))
+                   else [];
     in
     ''
     ${concatStringsSep "\n" (map (host: "${toString host.ip} ${host.name}.cardano") hostList)}
     '';
 
-    services.cardano-node = {
+    services.cardano-node = if (config.params.nodeImpl != "haskell") then {} else {
+      enable = true;
+      # system-start-time = config.global.systemStart; TODO
+      consensus-protocol = "real-pbft"; # FIXME: should this be configurable in topology?
+      slot-duration = 20;
+      host = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
+      port = config.params.port;
+      node-id = config.params.i;
+      producers-peers = map (n: let p = nodes.${n.name}.config.params.port; in "${n.ip}:${toString p}") neighbourPairs;
+      logger.config-file = sources.cardano-node + "/configuration/log-config-0.yaml";
+    };
+
+    services.cardano-node-legacy = if (config.params.nodeImpl != "legacy") then {} else {
       enable         = true;
       nodeName       = config.params.name;
       nodeIndex      = config.params.i;
@@ -68,8 +86,9 @@ wallet:
       privateIP = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
       statsdServer = "127.0.0.1:8125";
     } // (optionalAttrs (config.params.typeIsCore && (builtins.pathExists assetLockFile)) { inherit assetLockFile; });
+
     deployment.keys =
-      (optionalAttrs (config.params.typeIsCore && cfg.productionMode)
+      (optionalAttrs (config.params.typeIsCore && cfgLegacy.enable && cfgLegacy.productionMode)
         (let keyfile = "key${toString config.params.i}.sk";
          in {
            "key${toString config.params.i}" = builtins.trace (config.params.name + ": using " + keyfile) {

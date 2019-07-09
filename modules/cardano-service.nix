@@ -2,7 +2,7 @@ with import ../lib.nix;
 
 { config, pkgs, lib, options, ... }:
 let
-  cfg = config.services.cardano-node;
+  cfg = config.services.cardano-node-legacy;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node";
   iohkPkgs = import ../default.nix { enableProfiling = cfg.enableProfiling; };
@@ -55,7 +55,7 @@ let
   ];
 in {
   options = {
-    services.cardano-node = {
+    services.cardano-node-legacy = {
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };
       systemStart = mkOption { type = types.int; default = 0; };
@@ -145,11 +145,11 @@ in {
   };
 
   config = mkIf cfg.enable {
-    services.cardano-node.serveEkg = config.global.enableEkgWeb;
+    services.cardano-node-legacy.serveEkg = config.global.enableEkgWeb;
 
     assertions = [
     { assertion = cfg.nodeType != null;
-      message = "services.cardano-node.type must be set to one of: core relay other"; }
+      message = "services.cardano-node-legacy.type must be set to one of: core relay other"; }
     ];
 
     users = {
@@ -189,7 +189,7 @@ in {
       ];
     };
 
-    systemd.services.cardano-node = {
+    systemd.services.cardano-node-legacy = {
       description   = "cardano node service";
       after         = [ "network.target" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
@@ -219,9 +219,9 @@ in {
       };
     };
 
-    systemd.services.cardano-node-recorder = mkIf (config.deployment.arguments.configurationKey == "bench") {
+    systemd.services.cardano-node-legacy-recorder = mkIf (config.deployment.arguments.configurationKey == "bench") {
       description   = "recording metrics on cardano node service";
-      after         = [ "systemd.services.cardano-node" ];
+      after         = [ "systemd.services.cardano-node-legacy" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       path = [ pkgs.glibc pkgs.procps ];  # dependencies
       script = ''
