@@ -15,15 +15,11 @@ with pkgs.lib;
 with pkgs.haskell.lib;
 
 let
+  sources = localLib.sources;
   nixops =
     let
       # nixopsUnstable = /path/to/local/src
-      nixopsUnstable = pkgs.fetchFromGitHub {
-        owner = "input-output-hk";
-        repo = "nixops";
-        rev = "ab86e522373f133e2412bd28a864989eb48f58ec";
-        sha256 = "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv";
-      };
+      nixopsUnstable = sources.nixops-iohk;
     in (import "${nixopsUnstable}/release.nix" {
          inherit (localLib) nixpkgs;
         }).build.${system};
@@ -36,7 +32,7 @@ let
     gnupg
   ];
 
-  cardano-sl-pkgs = localLib.fetchProjectPackages "cardano-sl" <cardano-sl> ./.             cardanoRevOverride args;
+  cardano-sl-pkgs = import (sources.cardano-sl.revOverride cardanoRevOverride) {};
   mantis-pkgs     = localLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
   cardano-node-pkgs = localLib.fetchProjectPackages "cardano-node" <cardano-node> ./.       cardanoNodeRevOverride args;
 
