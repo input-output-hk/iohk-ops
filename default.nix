@@ -32,9 +32,14 @@ let
     gnupg
   ];
 
-  cardano-sl-pkgs = import (sources.cardano-sl.revOverride cardanoRevOverride) {};
+  cardano-sl-src = sources.cardano-sl.revOverride cardanoRevOverride;
+  cardano-sl-pkgs = import cardano-sl-src {
+    enableDebugging = args.enableDebugging or false;
+    enableProfiling = args.enableProfiling or false;
+    gitrev = cardano-sl-src.rev;
+  };
   mantis-pkgs     = localLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
-  cardano-node-pkgs = localLib.fetchProjectPackages "cardano-node" <cardano-node> ./.       cardanoNodeRevOverride args;
+  cardano-node-pkgs = import (sources.cardano-sl.revOverride cardanoNodeRevOverride) {};
 
   github-webhook-util = pkgs.callPackage ./github-webhook-util { };
 
