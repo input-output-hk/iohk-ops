@@ -39,7 +39,7 @@ let
     gitrev = cardano-sl-src.rev;
   };
   mantis-pkgs     = localLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
-  cardano-node-pkgs = import (sources.cardano-sl.revOverride cardanoNodeRevOverride) {};
+  cardano-node-pkgs = import (sources.cardano-node.revOverride cardanoNodeRevOverride) {};
 
   github-webhook-util = pkgs.callPackage ./github-webhook-util { };
 
