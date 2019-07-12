@@ -50,7 +50,7 @@ with import ../lib.nix;
       port = config.params.port;
       node-id = config.params.i;
       producers-peers = map (n: let p = nodes.${n.name}.config.params.port; in "${n.ip}:${toString p}") neighbourPairs;
-      logger.config-file = sources.cardano-node + "/configuration/log-config-0.yaml";
+      logger.config-file = ./iohk-monitoring-config.yaml;
     };
 
     services.cardano-node-legacy = if (config.params.nodeImpl != "legacy") then {} else {
