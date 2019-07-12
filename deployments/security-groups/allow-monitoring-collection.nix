@@ -27,7 +27,7 @@ let
           sourceIp = monitoringSourceIp;
         }{
           protocol = "tcp";
-          fromPort = 12760; toPort = 12760; # iohk-monitoring-framework
+          fromPort = 12799; toPort = 12799; # iohk-monitoring-framework
           sourceIp = monitoringSourceIp;
         }];
     };

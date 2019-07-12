@@ -809,7 +809,7 @@ in {
               static_configs = let
                 makeNodeConfig = key: value: {
                   targets = [ "${key}:9100" "${key}:9102" ] 
-                    ++ (optional value.hasNativePrometheus "${key}:12760");
+                    ++ (optional value.hasNativePrometheus "${key}:12799");
                   labels = {
                     alias = key;
                   } // value.labels;

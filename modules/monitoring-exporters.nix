@@ -89,6 +89,21 @@ in {
       networking.firewall.allowedTCPPorts = [ 9113 ];
     })
 
+    (mkIf ((config.services.cardano-node.enable or false) && cfg.metrics) {
+      services.nginx = {
+        enable = true;
+        appendHttpConfig = ''
+          server {
+            listen 12799;
+            location /metrics {
+              proxy_pass http://127.0.0.1:12760/metrics;
+            }
+          }
+        '';
+      };
+      networking.firewall.allowedTCPPorts = [ 12799 ];
+    })
+
     (mkIf cfg.metrics {
       systemd.services."statd-exporter" = {
         wantedBy = [ "multi-user.target" ];
