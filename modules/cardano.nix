@@ -1,7 +1,7 @@
 # XXX: rename this file:  cardano-node-config vs. cardano-nodes-config is CRUEL
 with import ../lib.nix;
 
-{ pkgs, nodes, config, resources, options, ...}:
+{ pkgs, nodes, config, resources, options, lib, ...}:
 
   let
     assetLockFile = ../static/asset-locked-addresses.txt;
@@ -49,7 +49,21 @@ with import ../lib.nix;
       host = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
       port = config.params.port;
       node-id = config.params.i;
-      producers-peers = map (n: let p = nodes.${n.name}.config.params.port; in "${n.ip}:${toString p}") neighbourPairs;
+      topology = pkgs.writeText "topology.json" (builtins.toJSON (lib.mapAttrsToList (name: node: {
+        nodeId = node.i;
+        nodeAddress = {
+          addr = if (node.i == cfg.node-id) 
+            then cfg.host
+            else (nodeNameToPublicIP name);
+          port = toString node.port;
+        };
+        producers = if (node.i == cfg.node-id) 
+          then map (n: {
+            addr = n.ip;
+            port = toString config.global.nodeMap.${n.name}.port;
+          }) (builtins.filter (n: config.global.nodeMap.${n.name}.typeIsCore) neighbourPairs)
+          else [];
+      }) config.global.nodeMap));
       logger.config-file = ./iohk-monitoring-config.yaml;
     };
 

@@ -1,14 +1,14 @@
 {
     "cardano-node": {
-        "branch": "master",
+        "branch": "nixos-service-fixes",
         "description": null,
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "889cb13b2c42464b60f6b286eaa36ee0ddae3d30",
-        "sha256": "1vhgs1ms0mh1gg81v42fni01fj7ixywianakfxwxdhjf16zj5sbb",
+        "rev": "bc768592702e1d0c2262dae8c86e38cd8b086479",
+        "sha256": "0hqynzi079wlgxxkr1nj8pnc6093l06z10g9nj7bib4s21q1gavb",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-node/archive/889cb13b2c42464b60f6b286eaa36ee0ddae3d30.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-node/archive/bc768592702e1d0c2262dae8c86e38cd8b086479.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "cardano-sl": {
