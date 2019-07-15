@@ -146,7 +146,7 @@ let
     cardano-shell = {
       description = "Cardano Shell";
       url = "https://github.com/input-output-hk/cardano-shell.git";
-      branch = "develop";
+      branch = "master";
       prs = shellPrsJSON;
       bors = true;
     };
