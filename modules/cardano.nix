@@ -53,6 +53,10 @@ with import ../lib.nix;
       logger.config-file = ./iohk-monitoring-config.yaml;
     };
 
+    networking.firewall = mkIf cfg.enable {
+      allowedTCPPorts = [ cfg.port ];
+    };
+
     services.cardano-node-legacy = if (config.params.nodeImpl != "legacy") then {} else {
       enable         = true;
       nodeName       = config.params.name;
