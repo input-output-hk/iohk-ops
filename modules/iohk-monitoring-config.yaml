@@ -17,7 +17,7 @@ setupBackends:
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - TraceForwarderBK
-  #- KatipBK
+  - KatipBK
   #- EditorBK
 
 # file to forward traced objects
