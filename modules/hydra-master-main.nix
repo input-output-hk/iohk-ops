@@ -101,6 +101,7 @@ in {
       ${mkStatusBlocks [
         { jobset = "iohk-ops"; inputs = "jobsets"; }
         { jobset = "cardano-base"; inputs = "cardano-base"; }
+        { jobset = "cardano-byron-proxy"; inputs = "cardano-byron-proxy"; }
         { jobset = "cardano-ledger-specs"; inputs = "cardano-ledger-specs"; }
         { jobset = "cardano-ledger"; inputs = "cardano-ledger"; }
         { jobset = "cardano-wallet"; inputs = "cardano-wallet"; }

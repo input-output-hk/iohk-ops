@@ -27,6 +27,7 @@
 , plutusPrsJSON ? ./simple-pr-dummy.json
 , logClassifierPrsJSON ? ./simple-pr-dummy.json
 , ouroborosNetworkPrsJSON ? ./simple-pr-dummy.json
+, cardanoByronProxyPrsJSON ? ./simple-pr-dummy.json
 , iohkMonitoringPrsJSON ? ./simple-pr-dummy.json
 , ledgerPrsJSON ? ./simple-pr-dummy.json
 , cardanoLedgerSpecsPrsJSON ? ./simple-pr-dummy.json
@@ -109,6 +110,14 @@ let
       url = "https://github.com/input-output-hk/ouroboros-network.git";
       branch = "master";
       prs = ouroborosNetworkPrsJSON;
+      bors = true;
+    };
+
+    cardano-byron-proxy = {
+      description = "Cardano Byron Proxy";
+      url = "https://github.com/input-output-hk/cardano-byron-proxy.git";
+      branch = "master";
+      prs = cardanoByronProxyPrsJSON;
       bors = true;
     };
 
