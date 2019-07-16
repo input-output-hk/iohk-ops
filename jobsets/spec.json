@@ -16,6 +16,7 @@
          ,"iohkNixPrsJSON": { "type": "githubpulls", "value": "input-output-hk iohk-nix", "emailresponsible": false }
          ,"haskellNixPrsJSON": { "type": "githubpulls", "value": "input-output-hk haskell.nix", "emailresponsible": false }
          ,"cardanoPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-sl", "emailresponsible": false }
+         ,"cardanoByronProxyPrsJSON": { "type": "githubpulls", "value": "input-output-hk cardano-byron-proxy", "emailresponsible": false }
          ,"daedalusPrsJSON": { "type": "githubpulls", "value": "input-output-hk daedalus", "emailresponsible": false }
          ,"plutusPrsJSON": { "type": "githubpulls", "value": "input-output-hk plutus", "emailresponsible": false }
          ,"logClassifierPrsJSON": { "type": "githubpulls", "value": "input-output-hk log-classifier", "emailresponsible": false }
