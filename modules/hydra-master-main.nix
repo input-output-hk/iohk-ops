@@ -103,6 +103,7 @@ in {
         { jobset = "cardano-base"; inputs = "cardano-base"; }
         { jobset = "cardano-byron-proxy"; inputs = "cardano-byron-proxy"; }
         { jobset = "cardano-prelude"; inputs = "cardano-prelude"; }
+        { jobset = "decentralized-software-updates"; inputs = "decentralized-software-updates"; }
         { jobset = "cardano-ledger-specs"; inputs = "cardano-ledger-specs"; }
         { jobset = "cardano-ledger"; inputs = "cardano-ledger"; }
         { jobset = "cardano-wallet"; inputs = "cardano-wallet"; }
