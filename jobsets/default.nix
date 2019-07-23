@@ -29,6 +29,7 @@
 , ouroborosNetworkPrsJSON ? ./simple-pr-dummy.json
 , cardanoByronProxyPrsJSON ? ./simple-pr-dummy.json
 , cardanoPreludePrsJSON ? ./simple-pr-dummy.json
+, decentralizedSoftwareUpdatesPrsJSON ? ./simple-pr-dummy.json
 , iohkMonitoringPrsJSON ? ./simple-pr-dummy.json
 , ledgerPrsJSON ? ./simple-pr-dummy.json
 , cardanoLedgerSpecsPrsJSON ? ./simple-pr-dummy.json
@@ -127,6 +128,14 @@ let
       url = "https://github.com/input-output-hk/cardano-prelude.git";
       branch = "master";
       prs = cardanoPreludePrsJSON;
+      bors = true;
+    };
+
+    decentralized-software-updates = {
+      description = "Decentralized Software Updates";
+      url = "https://github.com/input-output-hk/decentralized-software-updates";
+      branch = "master";
+      prs = decentralizedSoftwareUpdatesPrsJSON;
       bors = true;
     };
 
