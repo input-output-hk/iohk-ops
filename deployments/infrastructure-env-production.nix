@@ -275,6 +275,15 @@ in {
               description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
             };
           }
+          {
+            alert = "exchange-down-bitmax";
+            expr = "bitmax_active == 0";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+          }          
         ];
         alertmanager = {
           extraRoutes = [

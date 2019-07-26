@@ -16,6 +16,7 @@ BITTREX_REQUEST_TIME = Summary('bittrex_process_time', 'Time spent processing bi
 BITHUMB_REQUEST_TIME = Summary('bithumb_process_time', 'Time spent processing bithumb assets')
 HITBTC_REQUEST_TIME = Summary('hitbtc_process_time', 'Time spent processing hitbtc assets')
 COINEX_REQUEST_TIME = Summary('coinex_process_time', 'Time spent processing coinex assets')
+BITMAX_REQUEST_TIME = Summary('bitmax_process_time', 'Time spent processing bitmax assets')
 binance_deposits = Gauge('binance_deposits', 'Binance Deposits enabled')
 binance_withdraws = Gauge('binance_withdraws', 'Binance Withdraws enabled')
 bittrex_active = Gauge('bittrex_active', 'Bittrex Wallet enabled')
@@ -25,6 +26,7 @@ hitbtc_deposits = Gauge('hitbtc_deposits', 'Hitbtc Deposits enabled')
 hitbtc_withdraws = Gauge('hitbtc_withdraws', 'Hitbtc Withdraws enabled')
 coinex_deposits = Gauge('coinex_deposits', 'Coinex Deposits enabled')
 coinex_withdraws = Gauge('coinex_withdraws', 'Coinex Withdraws enabled')
+bitmax_active = Gauge('bitmax_active', 'Bitmax Wallet enabled')
 
 # Decorate function with metric.
 @BINANCE_REQUEST_TIME.time()
@@ -52,7 +54,7 @@ def process_bittrex_assets():
             bittrex_withdraw_queue_depth.set(crypto_asset['Health']['WithdrawQueueDepth'])
     sys.stdout.flush()
 
-        # Decorate function with metric.
+# Decorate function with metric.
 @BITHUMB_REQUEST_TIME.time()
 def process_bithumb_assets():
     url = "https://api.bithumb.com/public/ticker/ADA"
@@ -86,7 +88,20 @@ def process_coinex_assets():
         coinex_deposits.set(crypto_asset['data']['ADA']['can_deposit'])
         coinex_withdraws.set(crypto_asset['data']['ADA']['can_withdraw']) 
     sys.stdout.flush()
-    
+
+# Decorate function with metric.
+@BITMAX_REQUEST_TIME.time()
+def process_bitmax_assets():
+    url  = "https://bitmax.io/api/v1/assets"
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    json_obj = urllib.request.urlopen(req)
+    crypto_assets = json.loads(json_obj.read().decode('utf-8'))
+    print("processing bitmax assets")
+    for crypto_asset in crypto_assets:
+        if crypto_asset['assetCode'] == 'ADA' and crypto_asset['status'] == 'Normal':
+            bitmax_active.set(True)
+    sys.stdout.flush()
+
 if __name__ == '__main__':
     # Start up the server to expose the metrics.
     start_http_server(EXPORTER_PORT)
@@ -119,4 +134,9 @@ if __name__ == '__main__':
         except:
             print("failed to process coinex assets")
             coinex_active.set(False)         
+        try:
+            process_bitmax_assets()
+        except:
+            print("failed to process bitmax assets")
+            bitmax_active.set(False)            
         time.sleep(SLEEP_TIME)
