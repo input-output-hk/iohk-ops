@@ -117,6 +117,7 @@ in {
         { jobset = "haskell-nix"; inputs = "haskell-nix"; }
         { jobset = "tools"; inputs = "tools"; }
         { jobset = "iohk-nix"; inputs = "iohk-nix"; }
+        { jobset = "cardano-explorer"; inputs = "cardano-explorer"; }
       ]}
 
       # DEVOPS-1208 This CI status for cardano-sl is needed while the
