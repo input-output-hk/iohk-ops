@@ -6,10 +6,10 @@ let
   cfg = config.services.cardano-faucet;
 
   iohkPkgs = import ../default.nix { inherit config pkgs; inherit (pkgs) system; };
-  walletPackage = iohkPkgs.cardanoPackages.cardano-wallet-static;
-  faucetPackage = iohkPkgs.cardanoPackages.cardano-sl-faucet-static;
-  toolsPackage = iohkPkgs.cardano-sl-tools;
-  configFiles = iohkPkgs.cardano-sl-config;
+  walletPackage = iohkPkgs.nix-tools.exes.cardano-wallet;
+  faucetPackage = iohkPkgs.nix-tools.exes.cardano-sl-faucet;
+  toolsPackage = iohkPkgs.nix-tools.exes.cardano-sl-tools;
+  configFiles = iohkPkgs.cardanoConfig;
 
   walletStateDir = "${cfg.home}/wallet";
   tlsDir = "${cfg.home}/tls";

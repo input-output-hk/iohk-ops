@@ -5,9 +5,9 @@ let
   cfg = config.services.cardano-node;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node";
-  iohkPkgs = import ../default.nix { enableProfiling = cfg.enableProfiling; };
-  cardano = iohkPkgs.cardano-sl-node-static;
-  cardano-config = iohkPkgs.cardano-sl-config;
+  iohkPkgs = import ../default.nix { };
+  cardano = iohkPkgs.nix-tools.cexes.cardano-sl-node.cardano-node-simple;
+  cardano-config = iohkPkgs.cardanoConfig;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";

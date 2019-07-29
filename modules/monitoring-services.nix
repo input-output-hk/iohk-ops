@@ -340,7 +340,6 @@ in {
     {
       networking.firewall.allowedTCPPorts = [ 80 ];
       environment.systemPackages = with pkgs; [ goaccess ];
-
       services = {
         nginx = {
           enable = true;

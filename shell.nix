@@ -27,8 +27,8 @@ let
     name = "io-with-auxx";
     buildInputs = [
       iohk-ops
-      iohkpkgs.cardano-sl-auxx
-      iohkpkgs.cardano-sl-tools
+      iohkpkgs.nix-tools.exes.cardano-sl-auxx
+      iohkpkgs.nix-tools.exes.cardano-sl-tools
       # todo, switch run nix-shell to nix run
       pkgs.bashInteractive
     ];
