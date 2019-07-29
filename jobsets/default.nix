@@ -40,6 +40,7 @@
 , iohkNixPrsJSON ? ./simple-pr-dummy.json
 , haskellNixPrsJSON ? ./simple-pr-dummy.json
 , toolsPrsJSON ? ./simple-pr-dummy.json
+, explorerPrsJSON ? ./simple-pr-dummy.json
 }:
 
 let pkgs = import nixpkgs {}; in
@@ -68,6 +69,15 @@ let
       };
       prs = cardanoPrsJSON;
       prJobsetModifier = withFasterBuild;
+      bors = true;
+    };
+
+    cardano-explorer = {
+      description = "cardano explorer";
+      url = "https://github.com/input-output-hk/cardano-explorer.git";
+      input = "cardano-explorer";
+      branch = "master";
+      prs = explorerPrsJSON;
       bors = true;
     };
 
