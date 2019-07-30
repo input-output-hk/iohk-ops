@@ -130,7 +130,7 @@ load_config
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ### gac.sh relies on ./default.nix providing the 'pkgs' and 'nixpkgs' attributes coming from iohk-nix.
 ###
-nixpkgs_out=$(nix-instantiate  --eval -E '(import ./. {}).nixpkgs'     | xargs echo)
+nixpkgs_out=$(nix-instantiate  --eval -E 'let inherit (import ./. {}) nixpkgs; in nixpkgs.outPath or nixpkgs'     | xargs echo)
 nix_out="$(   nix-build --no-out-link -E '(import ./. {}).pkgs.nix'    | xargs echo)"
 nixops_out="$(nix-build --no-out-link -E '(import ./. {}).pkgs.nixops' | xargs echo)"
 nix=${nix_out}/bin/nix
