@@ -787,7 +787,7 @@ build o _c depl = do
 -- | Use nix to grab the cardano-sl-config.
 getCardanoSLConfig :: Options -> IO Path.FilePath
 getCardanoSLConfig o = fromText <$> incmdStrip o "nix-build" args
-  where args = [ "-A", "cardano-sl-config", "default.nix" ]
+  where args = [ "-A", "cardanoConfig", "default.nix" ]
 
 
 -- * State management

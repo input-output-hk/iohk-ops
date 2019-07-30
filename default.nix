@@ -55,11 +55,11 @@ let
              });
 
   iohk-ops-integration-test = let
-    parts = with cardano-sl-pkgs; [ cardano-sl-auxx cardano-sl-tools iohk-ops ];
+    parts = with cardano-sl-pkgs.nix-tools.exes; [ cardano-sl-auxx cardano-sl-tools iohk-ops ];
   in pkgs.runCommand "iohk-ops-integration-test" {} ''
     mkdir -p $out/nix-support
     export PATH=${pkgs.lib.makeBinPath parts}:$PATH
-    export CARDANO_SL_CONFIG=${cardano-sl-pkgs.cardano-sl-config}
+    export CARDANO_SL_CONFIG=${cardano-sl-pkgs.cardanoConfig}
     mkdir test
     cp ${iohk-ops.src}/test/Spec.hs test  # a file to hash
     iohk-ops-integration-test | tee $out/test.log
