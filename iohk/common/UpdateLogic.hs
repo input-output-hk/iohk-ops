@@ -211,6 +211,7 @@ pipelineDaedalus = "daedalus"        :: Text
 
 bkArtifactInstallerArch :: Artifact -> Maybe Arch
 bkArtifactInstallerArch art | T.isSuffixOf ".pkg" fn = Just Mac64
+                            | T.isSuffixOf ".exe" fn = Just Win64
                             | T.isSuffixOf ".bin" fn = Just Linux64
                             | otherwise = Nothing
   where fn = artifactFilename art
