@@ -127,7 +127,7 @@ CARDANO_COMPONENTS_WITHOUT_MONITORING=( Nodes ${WITH_EXPLORER:+Explorer} )
 
 
 echo '~~~ pre-building cardano-sl-tools'
-nix-build default.nix -A cardano-sl-tools -o cardano-sl-tools
+nix-build default.nix -A nix-tools.exes.cardano-sl-tools -o cardano-sl-tools
 
 echo '~~~ generating wireguard tests'
 nix-shell modules/gen-wireguard-keys.nix --arg hosts '[ "monitoring" "builder-packet-c1-small-x86" "builder-packet-c1-small-x86-2" "builder-packet-c1-small-x86-3" "builder-packet-c1-small-x86-4" "builder-packet-c1-small-x86-5" "buildkite-packet-1" "buildkite-packet-2" "buildkite-packet-3" "mantis-slave-packet-1" "mantis-slave-packet-2" ]'

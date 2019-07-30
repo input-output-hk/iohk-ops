@@ -69,10 +69,6 @@ let
   lib = pkgs.lib;
   fetchProjectPackages = name: host: pinRoot: revOverride: args:
     let
-      args' = args // {
-        enableDebugging = args.enableDebugging or false;
-        enableProfiling = args.enableProfiling or false;
-      };
       src = let try = builtins.tryEval host;
         in if try.success
            then builtins.trace "using search host <${name}>" try.value
@@ -85,7 +81,6 @@ let
         };
         in if (revOverride != null) then localOverride else src;
       pkgs = import src-phase2 ({
-          inherit (args') enableDebugging enableProfiling;
         } // lib.optionalAttrs (src-phase2 ? rev) {
           gitrev = src-phase2.rev;
         });

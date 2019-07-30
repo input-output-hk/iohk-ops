@@ -4,7 +4,7 @@ with import ../lib.nix;
 
 let
   cardanoPackages = import ../default.nix {};
-  explorer-drv = cardanoPackages.cardano-sl-explorer-static;
+  explorer-drv = cardanoPackages.nix-tools.cexes.cardano-sl-explorer.cardano-explorer;
 in
 {
   imports = [ ./cardano.nix ];
@@ -36,7 +36,7 @@ in
         addSSL = true;
         locations = {
           "/" = {
-            root = cardanoPackages.cardano-sl-explorer-frontend;
+            root = cardanoPackages.explorerFrontend;
             # Serve static files or fallback to browser history api
             tryFiles = "$uri /index.html";
           };
