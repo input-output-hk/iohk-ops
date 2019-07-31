@@ -2,8 +2,12 @@
 let nodeMap = { inherit (globals.fullMap) explorer; }; in
 
 {
-  explorer = {
-    imports = [ ../modules/cardano-explorer.nix ];
+  explorer = { config, ... }:
+  {
+    imports = [
+      ../modules/cardano-explorer.nix
+      ../modules/cardano-explorer-python.nix
+    ];
     params = nodeMap.explorer;
   };
 }
