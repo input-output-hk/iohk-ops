@@ -1,7 +1,7 @@
 with (import ./../lib.nix);
 
 params:
-{ name, config, pkgs, resources, ... }: {
+{
   imports = [
     ./staging.nix
     ./monitoring-exporters.nix
