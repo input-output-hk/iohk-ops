@@ -37,10 +37,14 @@ in
     elasticIPs = nodesElasticIPs nodeMap;
   };
 
-  monitoring = { nodes, pkgs, ... }:
+  monitoring = { nodes, ... }:
   {
-    services.prometheus2.scrapeConfigs = [
-      {
+    imports = [
+      ../modules/monitoring-services.nix
+    ];
+
+    services = {
+      prometheus2.scrapeConfigs = [{
         job_name = "explorer-api-monitor";
         scrape_interval = "60s";
         metrics_path = "/metrics";
@@ -52,7 +56,21 @@ in
             labels = { alias = "explorer-python-api"; };
           }
         ];
-      }
-    ];
+      }];
+      monitoring-services = {
+        applicationRules = [
+          {
+            alert = "exchange-python-down";
+            expr = "rate(block_height[5m]) == 0";
+            for = "10m";
+            labels.severity = "page";
+            annotations = {
+              summary = "{{$labels.alias}} blockheight unchanged for >=10mins";
+              description = "{{$labels.alias}} blockheight unchanged for >=10mins.  Under ordinary operation, we would expect blockheight to increase by 3 blocks per minute.";
+            };
+          }
+        ];
+      };
+    };
   };
 }
