@@ -40,6 +40,7 @@ in
             # Serve static files or fallback to browser history api
             tryFiles = "$uri /index.html";
           };
+          "/api/blocks/range/".extraConfig = "return 404;";
           "/api/".proxyPass = "http://127.0.0.1:8100";
           "/socket.io/" = {
             proxyPass = "http://127.0.0.1:8110";
