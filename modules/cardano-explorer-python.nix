@@ -31,7 +31,11 @@ in {
         in {
           "cardano-explorer.${vhostDomainName}" = {
             locations = {
-              "/api/addresses/summary/".proxyPass = "http://127.0.0.1:7000";
+              # Use the main explorer API
+              "/api/addresses/summary/".proxyPass = "http://127.0.0.1:8100";
+              # Pass to python API; switch to this line and redeploy once
+              # the initial DB dump sync has completed
+              # "/api/addresses/summary/".proxyPass = "http://127.0.0.1:7000";
           };
         };
       };
