@@ -13,7 +13,7 @@ in
     ./global.nix
   ];
 
-  explorer = { config, lib, resources, ... }: ( (import ../modules/cardano-production.nix) nodeMap.explorer ) //
+  explorer = { name, config, pkgs, resources, lib, ... }@args: ( (import ../modules/cardano-production.nix) nodeMap.explorer args ) //
   {
     deployment = {
       # route53.accessKeyId = lib.mkForce IOHKroute53accessKeyId;
