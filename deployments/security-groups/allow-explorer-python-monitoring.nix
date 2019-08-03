@@ -13,11 +13,18 @@ let
       accessKeyId = globals.orgAccessKeys.${org};
       description = "Monitoring Explorer Python";
       rules = lib.optionals (nodes ? "${globals.monitoringNV.name}" || monitorIpOverride != null)
-        [{
+      [
+        {
           protocol = "tcp";
           fromPort = 7000; toPort = 7000; # prometheus exporters
           sourceIp = monitoringSourceIp;
-        }];
+        }
+        {
+          protocol = "tcp";
+          fromPort = 7001; toPort = 7001; # prometheus exporters
+          sourceIp = monitoringSourceIp;
+        }
+      ];
     };
   };
 in {
