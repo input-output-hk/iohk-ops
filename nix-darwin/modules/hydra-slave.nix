@@ -14,12 +14,17 @@ in
 {
   users.knownUsers = [ "builder" ];
   users.users.builder = {
-    uid = 501;
+    uid = 502;
     gid = 20;  # staff
     description = "Hydra";
     home = "/Users/builder";
     shell = "/bin/bash";
   };
+  #users.knownGroups = [ "com.apple.access_ssh" ];
+  #users.groups."com.apple.access_ssh" = {
+  #  gid = 399;
+  #  members = [ "builder" ];
+  #};
 
   nix.trustedUsers = [ "root" "builder" ];
 
@@ -32,9 +37,8 @@ in
     chown builder: /Users/builder/.bashrc
   '';
 
-  environment.etc."per-user/builder/ssh/authorized_keys".text =
-    concatMapStringsSep "\n" (key: ''
-      command="${environment} ${config.nix.package}/bin/nix-store --serve --write" ${key}
-    '') opsLib.buildSlaveKeys.macos + "\n";
+  # TODO, use the builder user and allow ssh access
+  environment.etc."per-user/root/ssh/authorized_keys".text =
+    concatMapStringsSep "\n" (key: ''command="${environment} ${config.nix.package}/bin/nix-store --serve --write" ${key}'') opsLib.buildSlaveKeys.macos + "\n";
 
 }

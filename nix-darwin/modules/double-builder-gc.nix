@@ -21,4 +21,9 @@ in {
     enable = true;
     inherit maxFreedMB minFreeMB;
   };
+  # TODO, switch over?
+  #nix.gc.automatic = true;
+  #nix.gc.options = let
+  #    gbFree = 25;
+  #in "--max-freed $((${toString gbFree} * 1024**3 - 1024 * $(df -P -k /nix/store | tail -n 1 | awk '{ print $4 }')))";
 }

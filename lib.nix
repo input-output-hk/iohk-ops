@@ -15,7 +15,10 @@ let
         url = "${spec.url}/archive/${spec.rev}.tar.gz";
         inherit (spec) sha256;
       }) (removeAttrs iohkNixArgs ["iohkNixJsonOverride"]);
-  iohkNix       = mkIohkNix { application = "iohk-ops"; };
+  iohkNix       = mkIohkNix {
+    application = "iohk-ops";
+    #nixpkgsJsonOverride = ./nixpkgs-src.json;
+  };
   iohkNixGoguen = mkIohkNix { application = "goguen"
                             ; nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json
                             ; iohkNixJsonOverride = ./goguen/pins/iohk-nix-src.json

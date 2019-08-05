@@ -1,7 +1,9 @@
 { ... }:
 
-with (import ../lib.nix);
+with import ../lib.nix;
+
 let
+  lib = (import <nixpkgs> {}).lib;
   mkHydra = hostname: { config, pkgs, resources, ... }: { };
   mkUplink = mkMkUplink {
     central = "192.168.20.1";
@@ -9,8 +11,19 @@ let
     # TODO, `monitoring-ip` will be wrong if monitoring isnt using an elastic ip by that name
     endpoint = "monitoring-ip:51820";
   };
+  org = "IOHK";
+  region = "eu-central-1";
+  genPeer = n: path: {
+    allowedIPs = [ "192.168.20.${toString n}/32" ];
+    publicKey = lib.strings.removeSuffix "\n" (builtins.readFile path);
+    persistentKeepalive = 30;
+  };
 in {
   network.description = "IOHK infrastructure production";
+  require = [
+    ./hydra-master-wireguard.nix
+    ./mac-base.nix
+  ];
 
   defaults = {
     _file = ./infrastructure-env-production.nix;
@@ -29,9 +42,32 @@ in {
       ../modules/deployer.nix
     ];
 
-    deployment.keys.tarsnap = {
-      keyFile = ../static/tarsnap-cardano-deployer.secret;
-      destDir = "/var/lib/keys";
+    deployment = {
+      keys = {
+        tarsnap = {
+          keyFile = ../static/tarsnap-cardano-deployer.secret;
+          destDir = "/var/lib/keys";
+        };
+        "cardano-deployer.wgprivate" = {
+          destDir = "/etc/wireguard";
+          keyFile = ../static/cardano-deployer.wgprivate;
+        };
+      };
+      ec2.securityGroups = [
+        resources.ec2SecurityGroups."allow-wireguard-in-${region}-${org}"
+      ];
+    };
+
+    networking = {
+      firewall.allowedUDPPorts = [ 51820 ];
+      wireguard.interfaces.wg0 = {
+        ips = [ "192.168.20.3/32" ];
+        listenPort = 51820;
+        privateKeyFile = "/etc/wireguard/cardano-deployer.wgprivate";
+        peers = [
+          (genPeer 20 ../static/sarov.wgpublic)
+        ];
+      };
     };
 
     users = {
@@ -83,29 +119,33 @@ in {
         webhookSecretFile = "${keysDir}/bors-ng-github-webhook-secret";
       };
     };
-    systemd.services.bors-ng.after = [ "keys.target" ];
-    systemd.services.bors-ng.requires = [ "keys.target" ];
+    systemd.services.bors-ng = {
+      after = [ "keys.target" ];
+      requires = [ "keys.target" ];
+    };
     users.users.bors-ng.extraGroups = [ "keys" ];
 
-    deployment.keys.bors-ng-secret-key-base = {
-      keyFile = ../static/bors-ng-secret-key-base;
-      destDir = "/var/lib/keys";
-      user = "bors-ng";
-    };
-    deployment.keys.bors-ng-github-client-secret = {
-      keyFile = ../static/bors-ng-github-client-secret;
-      destDir = "/var/lib/keys";
-      user = "bors-ng";
-    };
-    deployment.keys."bors-ng-github-integration.pem" = {
-      keyFile = ../static/bors-ng-github-integration.pem;
-      destDir = "/var/lib/keys";
-      user = "bors-ng";
-    };
-    deployment.keys.bors-ng-github-webhook-secret = {
-      keyFile = ../static/bors-ng-github-webhook-secret;
-      destDir = "/var/lib/keys";
-      user = "bors-ng";
+    deployment.keys = {
+      bors-ng-secret-key-base = {
+        keyFile = ../static/bors-ng-secret-key-base;
+        destDir = "/var/lib/keys";
+        user = "bors-ng";
+      };
+      bors-ng-github-client-secret = {
+        keyFile = ../static/bors-ng-github-client-secret;
+        destDir = "/var/lib/keys";
+        user = "bors-ng";
+      };
+      "bors-ng-github-integration.pem" = {
+        keyFile = ../static/bors-ng-github-integration.pem;
+        destDir = "/var/lib/keys";
+        user = "bors-ng";
+      };
+      bors-ng-github-webhook-secret = {
+        keyFile = ../static/bors-ng-github-webhook-secret;
+        destDir = "/var/lib/keys";
+        user = "bors-ng";
+      };
     };
   };
   log-classifier = { config, pkgs, resources, ... }: let
@@ -131,18 +171,17 @@ in {
       keyFile = ../static/monitoring.wgprivate;
     };
     networking.wireguard.interfaces.wg0 = {
-      peers = let
-        genPeer = n: path: {
-          allowedIPs = [ "192.168.20.${toString n}/32" ];
-          publicKey = lib.strings.removeSuffix "\n" (builtins.readFile path);
-        };
-      in [
+      peers = [
+        # hydra master
+        (genPeer 2 ../static/hydra.wgpublic)
         # main hydra build-slaves
         (genPeer 11 ../static/builder-packet-c1-small-x86.wgpublic)
         (genPeer 12 ../static/builder-packet-c1-small-x86-2.wgpublic)
         (genPeer 13 ../static/builder-packet-c1-small-x86-3.wgpublic)
         (genPeer 14 ../static/builder-packet-c1-small-x86-4.wgpublic)
         (genPeer 15 ../static/builder-packet-c1-small-x86-5.wgpublic)
+        # nixos+mac machines
+        (genPeer 20 ../static/sarov.wgpublic)
         # buildkite agents
         (genPeer 31 ../static/buildkite-packet-1.wgpublic)
         (genPeer 32 ../static/buildkite-packet-2.wgpublic)
@@ -155,6 +194,34 @@ in {
 
     services = {
       exchange-monitor.enable = true;
+      prometheus2.scrapeConfigs = [
+        {
+          job_name = "sarov-mac-hydra";
+          scrape_interval = "10s";
+          metrics_path = "/mac1/hydra";
+          static_configs = [
+            {
+              targets = [
+                "192.168.20.20:9111"
+              ];
+              labels.role = "build-slave";
+            }
+          ];
+        }
+        {
+          job_name = "sarov-host";
+          scrape_interval = "10s";
+          metrics_path = "/mac1/host";
+          static_configs = [
+            {
+              targets = [
+                "192.168.20.20:9111"
+              ];
+              labels.role = "mac-host";
+            }
+          ];
+        }
+      ];
       monitoring-services = {
         enable = true;
         enableWireguard = true;

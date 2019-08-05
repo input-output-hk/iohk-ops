@@ -680,7 +680,7 @@ in {
                     }
                     {
                       alert = "node_filesystem_full_in_4h";
-                      expr = "predict_linear(node_filesystem_free_bytes{device!=\"ramfs\",device!=\"tmpfs\"}[4h], 4*3600) <= 0";
+                      expr = "predict_linear(node_filesystem_free_bytes{device!=\"ramfs\",device!=\"tmpfs\",fstype!=\"autofs\",fstype!=\"cd9660\"}[4h], 4*3600) <= 0";
                       for = "5m";
                       labels = {
                         severity = "page";
@@ -704,7 +704,7 @@ in {
                     }
                     {
                       alert = "node_load1_90percent";
-                      expr = "node_load1 / on(alias) count(node_cpu_seconds_total{mode=\"system\"}) by (alias) >= 0.9";
+                      expr = "node_load1 / on(alias) count(node_cpu_seconds_total{mode=\"system\",role!=\"mac-host\",role!=\"build-slave\"}) by (alias) >= 0.9";
                       for = "1h";
                       labels = {
                         severity = "page";
@@ -716,7 +716,7 @@ in {
                     }
                     {
                       alert = "node_cpu_util_90percent";
-                      expr = "100 - (avg by (alias) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) >= 90";
+                      expr = "100 - (avg by (alias) (irate(node_cpu_seconds_total{mode=\"idle\",role!=\"mac-host\",role!=\"build-slave\"}[5m])) * 100) >= 90";
                       for = "1h";
                       labels = {
                         severity = "page";
@@ -832,24 +832,19 @@ in {
       warnings = [ "Graylog passwords will be stored as plaintext in the Nix store!" ];
       networking.firewall.allowedTCPPorts = [ 5044 ];
       systemd.services.graylog = {
-        environment = {
-          JAVA_HOME = lib.mkForce pkgs.jre_headless; # until fix gets upstreamed
-        };
-        serviceConfig = {
-          TimeoutStartSec = "10m";
-          # maybe upstream the post-start?
-          ExecStartPost = pkgs.writeScript "graylog-post-start" ''
-            #!${pkgs.stdenv.shell}
-            export PATH=${pkgs.netcat}/bin:$PATH
+        environment.JAVA_HOME = lib.mkForce pkgs.jre_headless; # until fix gets upstreamed
+        # maybe upstream the post-start?
+        postStart = ''
+          export PATH=${pkgs.netcat}/bin:$PATH
 
-            for x in {1..100}; do
-              echo loop $x
-              nc -z localhost 9000 && break
-              echo "waiting 10 sec"
-              sleep 10
-            done
-          '';
-        };
+          for x in {1..100}; do
+            echo loop $x
+            nc -z localhost 9000 && break
+            echo "waiting 10 sec"
+            sleep 10
+          done
+        '';
+        serviceConfig.TimeoutStartSec = "10m";
       };
       services = {
         nginx = {
@@ -1012,25 +1007,21 @@ in {
         wantedBy = [ "multi-user.target" ];
         after = [ "graylog.service elasticsearch.service mongodb.service" ];
         path = with pkgs; [ curl gnugrep jq ];
+        preStart = ''
+          chmod 0644 /var/lib/graylog/.graylogConfigured* || true
+          chown graylog:nogroup /var/lib/graylog/.graylogConfigured* || true
+        '';
+        script = let
+          graylogPreload = pkgs.substituteAll {
+            src = ./graylog/graylogPreload.sh;
+            inherit (cfg.graylogCreds) user;
+            inherit password;
+            isExecutable = true;
+          };
+        in "${graylogPreload} install ${graylogConfig}";
         serviceConfig = {
           Type = "oneshot";
-          User = "${config.services.graylog.user}";
-          ExecStartPre = pkgs.writeScript "graylog-preload-prestart" ''
-            #!${pkgs.stdenv.shell}
-            chmod 0644 /var/lib/graylog/.graylogConfigured* || true
-            chown graylog:nogroup /var/lib/graylog/.graylogConfigured* || true
-          '';
-          ExecStart = let
-            graylogPreload = pkgs.substituteAll {
-              src = ./graylog/graylogPreload.sh;
-              inherit (cfg.graylogCreds) user;
-              inherit password;
-              isExecutable = true;
-            };
-          in pkgs.writeScript "graylog-start" ''
-            #!${pkgs.stdenv.shell}
-            ${graylogPreload} install ${graylogConfig}
-          '';
+          User = config.services.graylog.user;
         };
       };
     })
