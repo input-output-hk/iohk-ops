@@ -40,7 +40,7 @@ in {
         };
       };
     };
-    networking.firewall.allowedTCPPorts = [ 7000 ];
+    networking.firewall.allowedTCPPorts = [ 7000 7001 ];
     users.users.explorer-python-api = {
       home = "/var/empty";
       isSystemUser = true;
@@ -49,11 +49,25 @@ in {
       wantedBy = [ "multi-user.target" ];
       environment = {
         DBSOCKPATH = "/tmp";
-        EPOCHSLOTS = "${builtins.toString cfg.epochSlots}";
         ADDRMAXLEN = "${builtins.toString cfg.addrMaxLen}";
       };
       preStart = "sleep 5";
       script = "exec ${explorerPythonAPI}/bin/run-explorer-python-api";
+      serviceConfig = {
+        User = "explorer-python-api";
+        Restart = "always";
+        RestartSec = "30s";
+      };
+    };
+    systemd.services.explorer-python-dumper = {
+      wantedBy = [ "multi-user.target" ];
+      environment = {
+        DBSOCKPATH = "/tmp";
+        EPOCHSLOTS = "${builtins.toString cfg.epochSlots}";
+        ADDRMAXLEN = "${builtins.toString cfg.addrMaxLen}";
+      };
+      preStart = "sleep 5";
+      script = "exec ${explorerPythonAPI}/bin/run-explorer-python-dumper";
       serviceConfig = {
         User = "explorer-python-api";
         Restart = "always";

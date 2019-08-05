@@ -51,6 +51,7 @@ in {
           {
             targets = [
               "explorer.${nodes.explorer.config.deployment.name}:7000"
+              "explorer.${nodes.explorer.config.deployment.name}:7001"
             ];
             labels = { alias = "explorer-python-api"; };
           }
