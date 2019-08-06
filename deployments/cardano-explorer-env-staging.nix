@@ -61,7 +61,7 @@ in
       monitoring-services = {
         applicationRules = [
           {
-            alert = "exchange-python-down";
+            alert = "explorer-python-down";
             expr = "rate(block_height[5m]) == 0";
             for = "10m";
             labels.severity = "page";
