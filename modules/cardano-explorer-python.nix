@@ -49,6 +49,7 @@ in {
       wantedBy = [ "multi-user.target" ];
       environment = {
         DBSOCKPATH = "/tmp";
+        prometheus_multiproc_dir = "/tmp/explorer-python-metrics";
         ADDRMAXLEN = "${builtins.toString cfg.addrMaxLen}";
       };
       preStart = "sleep 5";
