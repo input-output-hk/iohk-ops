@@ -2,26 +2,11 @@
 # nix-repl lib.nix
 
 let
-  # iohk-nix can be overridden for debugging purposes by setting
-  # NIX_PATH=iohk_nix=/path/to/iohk-nix
-  mkIohkNix = { iohkNixJsonOverride ? ./iohk-nix.json, ... }@iohkNixArgs: import (
-    let try = builtins.tryEval <iohk_nix>;
-    in if try.success
-    then builtins.trace "using host <iohk_nix>" try.value
-    else
-      let
-        spec = builtins.fromJSON (builtins.readFile iohkNixJsonOverride);
-      in builtins.fetchTarball {
-        url = "${spec.url}/archive/${spec.rev}.tar.gz";
-        inherit (spec) sha256;
-      }) (removeAttrs iohkNixArgs ["iohkNixJsonOverride"]);
-  iohkNix       = mkIohkNix {
-    application = "iohk-ops";
-    #nixpkgsJsonOverride = ./nixpkgs-src.json;
-  };
-  iohkNixGoguen = mkIohkNix { application = "goguen"
-                            ; nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json
-                            ; iohkNixJsonOverride = ./goguen/pins/iohk-nix-src.json
+  sources       = import ./nix/sources.nix;
+  goguenSources = import ./goguen/nix/sources.nix;
+  iohkNix       = import sources.iohk-nix { application = "iohk-ops"; };
+  iohkNixGoguen = import goguenSources.iohk-nix { nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json
+                            # TODO after updating iohk-nix: instead of nixpkgsJsonOverride: sourcesOverride = { inherit (goguenSources) nixpkgs }
                             ; config = { allowUnfree = true; }
                             ; };
   goguenNixpkgs = iohkNixGoguen.nixpkgs;
@@ -102,8 +87,8 @@ let
   graalvm8 = (import iohkNixGoguen.nixpkgs javaOverrideNixpkgsConfig).graalvm8;
 in lib // (rec {
   inherit (iohkNix) nixpkgs;
-  inherit mkIohkNix fetchProjectPackages pkgs graalvm8;
-  inherit iohkNix iohkNixGoguen goguenNixpkgs;
+  inherit fetchProjectPackages pkgs graalvm8;
+  inherit sources iohkNix iohkNixGoguen goguenNixpkgs;
   inherit fetchPinAuto fetchGitWithSubmodules readPin;
 
   makeCreds = service: default:
@@ -164,7 +149,7 @@ in lib // (rec {
   # Given a list of NixOS configs, generate a list of peers (ip/dht mappings)
   genPeersFromConfig = configs:
     let
-      f = c: "${c.networking.publicIPv4}:${toString c.services.cardano-node.port}";
+      f = c: "${c.networking.publicIPv4}:${toString c.services.cardano-node-legacy.port}";
     in map f configs;
 
   # modulo operator

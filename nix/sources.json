@@ -1,0 +1,110 @@
+{
+    "cardano-byron-proxy": {
+        "branch": "master",
+        "description": "A bydirectional proxy between the Shelly and Byron versions of the Cardano network",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "cardano-byron-proxy",
+        "rev": "b6a334d4351750b7f796921104049f746cd07e50",
+        "sha256": "1dhx67cw56i8qnsw73nvksbyahrzidhsakn6v4a5ihz8jlqzgijn",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/b6a334d4351750b7f796921104049f746cd07e50.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-node": {
+        "branch": "jbgi/testnet-fixes",
+        "description": null,
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "cardano-node",
+        "rev": "25ee0e5f8440849ca3b7e23d9f64d983db22f8c6",
+        "sha256": "1wymf1x6wmjm7znsi1vwq7cgbh3nh4gibhw8lm6lzgy0alv0djvx",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-node/archive/25ee0e5f8440849ca3b7e23d9f64d983db22f8c6.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-sl": {
+        "branch": "develop",
+        "description": "Cryptographic currency implementing Ouroboros PoS protocol",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "cardano-sl",
+        "rev": "4f8cbfc63a7c741108995469a08d70202dda3e0c",
+        "sha256": "08r1zd58yqxglmynkk35vdf45546rqnffxcf48spqb158g17pydk",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-sl/archive/4f8cbfc63a7c741108995469a08d70202dda3e0c.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "gitignore": {
+        "branch": "master",
+        "description": "Nix function for filtering local git sources",
+        "homepage": "",
+        "owner": "hercules-ci",
+        "repo": "gitignore",
+        "rev": "ec5dd0536a5e4c3a99c797b86180f7261197c124",
+        "sha256": "0k2r8y21rn4kr5dmddd3906x0733fs3bb8hzfpabkdav3wcy3klv",
+        "type": "tarball",
+        "url": "https://github.com/hercules-ci/gitignore/archive/ec5dd0536a5e4c3a99c797b86180f7261197c124.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "iohk-nix": {
+        "branch": "niv",
+        "description": "nix scripts shared across projects",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "162cc6ed30d291355bce415ae80be606cd311d68",
+        "sha256": "00wdrzkwqqpkxbx5cknb55d94by9aj04flcgdmnk2lfd799skv55",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/162cc6ed30d291355bce415ae80be606cd311d68.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "jormungandr-nix": {
+        "branch": "master",
+        "description": "jormungandr nix scripts",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "jormungandr-nix",
+        "rev": "39f909ec432f7fa84bc4ac793a25ac9ca6d93a6f",
+        "sha256": "1a8n4wfsgxpnah35idpqqvg8hjgairk67h4hfh7x8z3i3rvx8mrm",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/jormungandr-nix/archive/39f909ec432f7fa84bc4ac793a25ac9ca6d93a6f.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "niv": {
+        "branch": "master",
+        "description": "Easy dependency management for Nix projects",
+        "homepage": "https://github.com/nmattia/niv",
+        "owner": "nmattia",
+        "repo": "niv",
+        "rev": "099f9ea92169c2edbc3ca33313b68f5e9686e800",
+        "sha256": "1rqaw2r5wbbfpbxjgwrwzf619la1iqvzp3mhq1mfz9vk4hjd3335",
+        "type": "tarball",
+        "url": "https://github.com/nmattia/niv/archive/099f9ea92169c2edbc3ca33313b68f5e9686e800.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixops-iohk": {
+        "branch": "iohk",
+        "description": "NixOps, the NixOS-based cloud deployment tool",
+        "homepage": "http://nixos.org/",
+        "owner": "input-output-hk",
+        "repo": "nixops",
+        "rev": "ab86e522373f133e2412bd28a864989eb48f58ec",
+        "sha256": "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/nixops/archive/ab86e522373f133e2412bd28a864989eb48f58ec.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs": {
+        "branch": "nixos-19.03",
+        "description": "Nixpkgs/NixOS branches that track the Nixpkgs/NixOS channels",
+        "homepage": null,
+        "owner": "NixOS",
+        "repo": "nixpkgs-channels",
+        "rev": "cdec6217d98bea9fbf8d88a1f9175ae09e332b8a",
+        "sha256": "1rmd4cv4ryqqmps0xx3irp3h1ifn7jixdpw707xipm5w1j739cgl",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/cdec6217d98bea9fbf8d88a1f9175ae09e332b8a.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    }
+}

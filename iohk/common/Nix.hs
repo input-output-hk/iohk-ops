@@ -105,7 +105,7 @@ nixBuildExpr expr = fp <$> procNix "nix-build" ["--no-out-link", "--expr", expr]
 -- | Evaluate a nix expression, returning its value.
 nixEvalFile :: FromJSON a => FilePath -> IO a
 nixEvalFile nixFile = eval >>= parseNixOutput
-  where eval = procNix "nix-instantiate" [ "--json", "--read-write-mode" , "--eval" , format fp nixFile ]
+  where eval = procNix "nix-instantiate" [ "--json", "--strict", "--read-write-mode" , "--eval" , format fp nixFile ]
 
 -- | Fetches the pinned nixpkgs source and returns its store path.
 getNixPackagesSource :: IO FilePath

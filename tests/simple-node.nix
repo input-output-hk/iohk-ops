@@ -7,7 +7,7 @@ import <nixpkgs/nixos/tests/make-test.nix> ({ pkgs, ... }: {
     machine = { config, pkgs, ... }: {
       imports = [ (import ../modules/cardano.nix (nodeMap.machine)) ];
       virtualisation.qemu.options = [ "-cpu Haswell" ];
-      services.cardano-node = {
+      services.cardano-node-legacy = {
         autoStart = true;
         neighbours = [];
       };

@@ -19,6 +19,16 @@ let
         default = false;
         description = "if nginx stats should be scraped";
       };
+      hasNativePrometheus = mkOption {
+        type = types.bool;
+        default = false;
+        description = "if native prometheus exporter should be scraped";
+      };
+      hasSecondNativePrometheus = mkOption {
+        type = types.bool;
+        default = false;
+        description = "if a second native prometheus exporter should be scraped";
+      };
     };
     config = {
       name = mkDefault name;
@@ -198,6 +208,8 @@ in {
         example = {
           c-a-1 = {
             hasNginx = false;
+            hasNativePrometheus = true;
+            hasSecondNativePrometheus = true;
             labels.role = "core";
           };
         };
@@ -801,7 +813,9 @@ in {
               scrape_interval = "10s";
               static_configs = let
                 makeNodeConfig = key: value: {
-                  targets = [ "${key}:9100" "${key}:9102" ];
+                  targets = [ "${key}:9100" "${key}:9102" ] 
+                    ++ (optional value.hasNativePrometheus "${key}:12760")
+                    ++ (optional value.hasSecondNativePrometheus "${key}:12761");
                   labels = {
                     alias = key;
                   } // value.labels;

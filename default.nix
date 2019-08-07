@@ -15,13 +15,9 @@ with pkgs.lib;
 with pkgs.haskell.lib;
 
 let
+  sources = localLib.sources;
   # nixopsUnstable = /path/to/local/src
-  nixopsUnstable = pkgs.fetchFromGitHub {
-    owner = "input-output-hk";
-    repo = "nixops";
-    rev = "ab86e522373f133e2412bd28a864989eb48f58ec";
-    sha256 = "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv";
-  };
+      nixopsUnstable = sources.nixops-iohk;
   log-classifier-web = (import log-classifier-src {}).haskellPackages.log-classifier-web;
   nixops =
     let
@@ -43,9 +39,12 @@ let
     gnupg
   ];
 
-  cardano-sl-pkgs = localLib.fetchProjectPackages "cardano-sl" <cardano-sl> ./.             cardanoRevOverride args;
+  cardano-sl-src = sources.cardano-sl.revOverride cardanoRevOverride;
+  cardano-sl-pkgs = import cardano-sl-src {
+    gitrev = cardano-sl-src.rev;
+  };
   mantis-pkgs     = localLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
-  cardano-node-pkgs = localLib.fetchProjectPackages "cardano-node" <cardano-node> ./.       cardanoNodeRevOverride args;
+  cardano-node-pkgs = import (sources.cardano-node.revOverride cardanoNodeRevOverride) {};
 
   github-webhook-util = pkgs.callPackage ./github-webhook-util { };
 

@@ -17,5 +17,11 @@ params:
   deployment.ec2.instanceType =
     mkForce (if params.typeIsRelay && params.public == true
              then "m4.large"
+             else if (params.nodeImpl == "haskell")
+             then "t3.xlarge"
              else "t2.large");
+
+  boot.loader.grub = lib.mkIf (deployment.ec2.instanceType == "t3.xlarge") {
+    device = lib.mkForce "/dev/nvme0n1"; # t3.xlarge has an nvme disk, and amazon-image.nix isnt handling it right yet
+  };
 }

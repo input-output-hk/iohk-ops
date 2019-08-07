@@ -321,7 +321,7 @@ let
   # iohk-ops structure is slightly different
 
   iohkOpsURI = "https://github.com/input-output-hk/iohk-ops.git";
-  nixpkgs-src = builtins.fromJSON (builtins.readFile ./../nixpkgs-src.json);
+  nixpkgs-src = (import ../nix/sources.nix).nixpkgs;
   mkNixops = nixopsBranch: nixpkgsRev: {
     nixexprpath = "jobsets/cardano.nix";
     description = "IOHK-Ops";

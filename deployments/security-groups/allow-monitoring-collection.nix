@@ -25,6 +25,10 @@ let
           protocol = "tcp";
           fromPort = 9113; toPort = 9113; # nginx exporter
           sourceIp = monitoringSourceIp;
+        }{
+          protocol = "tcp";
+          fromPort = 12760; toPort = 12761; # iohk-monitoring-framework
+          sourceIp = monitoringSourceIp;
         }];
     };
   };

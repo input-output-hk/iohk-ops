@@ -7,7 +7,12 @@ let
   iohk-ops = iohkpkgs.iohk-ops;
   justIo = pkgs.mkShell {
     name = "io";
-    buildInputs = with pkgs; [ iohk-ops iohkpkgs.cardano-node-pkgs.nix-tools.exes.cardano-node terraform_0_11 iohkpkgs.nixops ];
+    buildInputs = with pkgs; [
+      iohk-ops
+      (builtins.trace (builtins.attrNames iohkpkgs.cardano-node-pkgs.nix-tools.exes) iohkpkgs.cardano-node-pkgs.nix-tools.exes.cardano-node)
+      (import (import ./nix/sources.nix).niv {}).niv
+      terraform_0_11
+      iohkpkgs.nixops ];
     passthru = {
       inherit ioSelfBuild withAuxx;
     };
