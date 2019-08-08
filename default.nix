@@ -23,6 +23,7 @@ let
     let
     in (import "${nixopsUnstable}/release.nix" {
          inherit (localLib) nixpkgs;
+         p = (p: [ p.aws p.packet ] );
         }).build.${system};
   log-classifier-src = pkgs.fetchFromGitHub {
     owner = "input-output-hk";

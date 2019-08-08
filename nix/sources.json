@@ -84,15 +84,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixops-iohk": {
-        "branch": "iohk",
+        "branch": "nixops-core-pr-int",
         "description": "NixOps, the NixOS-based cloud deployment tool",
         "homepage": "http://nixos.org/",
         "owner": "input-output-hk",
         "repo": "nixops",
-        "rev": "ab86e522373f133e2412bd28a864989eb48f58ec",
-        "sha256": "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv",
+        "rev": "2447be9da55beda18c761896ecc2fb5966dd0447",
+        "sha256": "1yvhhc95p6n7qximanbrwdzghwixvx98q9h2a5p6qssh9ngzka83",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/nixops/archive/ab86e522373f133e2412bd28a864989eb48f58ec.tar.gz",
+        "url": "https://github.com/input-output-hk/nixops/archive/2447be9da55beda18c761896ecc2fb5966dd0447.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
