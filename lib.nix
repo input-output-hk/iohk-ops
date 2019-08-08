@@ -4,7 +4,7 @@
 let
   sources       = import ./nix/sources.nix;
   goguenSources = import ./goguen/nix/sources.nix;
-  iohkNix       = import sources.iohk-nix { application = "iohk-ops"; };
+  iohkNix       = import sources.iohk-nix { application = "iohk-ops"; nixpkgsOverride = import ./fetch-nixpkgs.nix; };
   iohkNixGoguen = import goguenSources.iohk-nix { nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json
                             # TODO after updating iohk-nix: instead of nixpkgsJsonOverride: sourcesOverride = { inherit (goguenSources) nixpkgs }
                             ; config = { allowUnfree = true; }

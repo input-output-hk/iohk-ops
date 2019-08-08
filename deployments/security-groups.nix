@@ -23,13 +23,13 @@ with import ../lib.nix;
           (fold (x: y: x // y) {}
           (         (centralRegionSGs  centralRegion)
 
-           ++  map  (regionSGs         { nodePort = 3000; }) # TODO: 'config' is mostly empty here.
+           ++  map  (regionSGs         { nodePort = 3000; nodePort2 = 3001; }) # TODO: 'config' is mostly empty here.
                     globals.allRegions
 
            ++  map  (orgXRegionSGs { inherit (globals) monitoringNV; inherit nodes; } resources.elasticIPs)
                     globals.orgXRegions
 
-           ++  map  (coreSGs           3000 resources.elasticIPs) # TODO: config for port
+           ++  map  (coreSGs resources.elasticIPs) # TODO: config for port
                     globals.cores
 
            ++  map  (monitorSGs { inherit config nodes; } { nodePort = 5044; } resources.elasticIPs)
@@ -43,7 +43,7 @@ with import ../lib.nix;
             [ "allow-kademlia-public-udp-${region}"
               "allow-cardano-public-tcp-${region}"
             ];
-        regionSGs      = { nodePort }: region: {
+        regionSGs      = { nodePort, nodePort2 }: region: {
             "allow-kademlia-public-udp-${region}" = {
               inherit region accessKeyId;
               description = "Kademlia UDP public";
@@ -56,11 +56,18 @@ with import ../lib.nix;
             "allow-cardano-public-tcp-${region}" = {
               inherit region accessKeyId;
               description = "Cardano TCP public";
-              rules = [{
+              rules = [
+                {
                 protocol = "tcp"; # TCP
                 fromPort = nodePort; toPort = nodePort;
                 sourceIp = "0.0.0.0/0";
-              }];
+                }
+                {
+                protocol = "tcp"; # TCP
+                fromPort = nodePort2; toPort = nodePort2;
+                sourceIp = "0.0.0.0/0";
+                }
+              ];
             };
           };
         orgXRegionSGNames = { org, region }:
@@ -103,7 +110,7 @@ with import ../lib.nix;
           };
         coreSGNames = core:
             [ "allow-cardano-static-peers-${core.name}-${core.value.region}-${core.value.org}" ];
-        coreSGs     = nodePort: ips: core:
+        coreSGs     = ips: core:
           let neighbourNames = traceF (p: "${core.name} peers: " + concatStringsSep ", " core.value.peers) core.value.peers;
               neighbours = map (name: globals.nodeMap.${name}) neighbourNames;
               neighGrant =
