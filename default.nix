@@ -19,14 +19,15 @@ let
   nixopsUnstable = pkgs.fetchFromGitHub {
     owner = "input-output-hk";
     repo = "nixops";
-    rev = "ab86e522373f133e2412bd28a864989eb48f58ec";
-    sha256 = "0xfwyh21x6r2x7rjgf951gkkld3h10x05qr79im3gvhsgnq3nzmv";
+    rev = "2447be9da55beda18c761896ecc2fb5966dd0447";
+    sha256 = "1yvhhc95p6n7qximanbrwdzghwixvx98q9h2a5p6qssh9ngzka83";
   };
   log-classifier-web = (import log-classifier-src {}).haskellPackages.log-classifier-web;
   nixops =
     let
     in (import "${nixopsUnstable}/release.nix" {
          inherit (localLib) nixpkgs;
+         p = (p: [ p.aws p.packet ]);
         }).build.${system};
   log-classifier-src = pkgs.fetchFromGitHub {
     owner = "input-output-hk";
