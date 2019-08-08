@@ -55,7 +55,6 @@ mkdir -p cardano-sl/explorer/frontend/dist
 touch static/buildkite_token
 touch static/github_token{,_mantis_hydra}
 touch static/id_buildfarm{,2} static/id_buildfarm{,2}.pub
-touch static/datadog-api.secret static/datadog-application.secret
 echo "127.0.0.1" > static/deployer-ip.txt
 
 test -f static/graylog-creds.nix ||

@@ -363,10 +363,8 @@ runNew o@Options{..} New{..} args = do
     let secrets = map ("static" </>)
                   [ "github_token"
                   , "id_buildfarm"
-                  , "datadog-api.secret"
                   , "google_oauth_hydra_grafana.secret"
                   , "github-webhook-util.secret"
-                  , "datadog-application.secret"
                   , "zendesk-token.secret"
                   , "bors-ng-secret-key-base"
                   , "bors-ng-github-client-secret"

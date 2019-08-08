@@ -13,7 +13,6 @@ in {
   testnet-deployer = { config, pkgs, resources, ... }: {
     imports = [
       ../modules/common.nix
-      ../modules/datadog.nix
       ../modules/monitoring-exporters.nix
       ../modules/deployer-base.nix
     ];
