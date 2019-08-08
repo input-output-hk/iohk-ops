@@ -148,6 +148,8 @@ data Environment
   | Benchmark
   | Production
   | Staging
+  | StagingShelley
+  | StagingShelleyShort
   | Testnet
   | Development
   | DevOps

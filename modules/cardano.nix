@@ -5,8 +5,8 @@ with import ../lib.nix;
 
   let
     assetLockFile = ../static/asset-locked-addresses.txt;
-    nodeNameToPublicIP   = name: 
-      if nodes.${name}.options.networking.publicIPv4.isDefined 
+    nodeNameToPublicIP   = name:
+      if nodes.${name}.options.networking.publicIPv4.isDefined
       then nodes.${name}.config.networking.publicIPv4 else "";
     neighbourPairs       = map (n: { name = n; ip = nodeNameToPublicIP n; })
                                (builtins.trace "${config.params.name}: role '${config.params.nodeType}'" config.params.peers);
@@ -45,6 +45,7 @@ with import ../lib.nix;
     services.byron-proxy = if (config.params.nodeImpl != "haskell") then {} else {
       enable = true;
       environment = config.global.environment;
+      topologyFile = config.global.topologyYaml;
     };
 
     services.cardano-node = mkIf (config.params.nodeImpl == "haskell") {
@@ -63,12 +64,12 @@ with import ../lib.nix;
       topology = pkgs.writeText "topology.json" (builtins.toJSON (lib.mapAttrsToList (name: node: {
         nodeId = node.i;
         nodeAddress = {
-          addr = if (node.i == cfg.node-id) 
+          addr = if (node.i == cfg.node-id)
             then cfg.host-addr
             else (nodeNameToPublicIP name);
           port = node.port;
         };
-        producers = if (node.i == cfg.node-id) 
+        producers = if (node.i == cfg.node-id)
           then (map (n: {
             addr = n.ip;
             port = config.global.nodeMap.${n.name}.port;
