@@ -44,7 +44,7 @@ with import ../lib.nix;
 
     services.byron-proxy = if (config.params.nodeImpl != "haskell") then {} else {
       enable = true;
-      environment = config.global.environment;
+      environment = cardanoSlEnv.${config.global.environment};
       topologyFile = config.global.topologyYaml;
     };
 
