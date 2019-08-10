@@ -113,4 +113,16 @@ in
     nix:
       enable: true
   '';
+
+  systemd.services.buildkite-agent-custom = {
+    wantedBy = [ "buildkite-agent.service" ];
+    script = ''
+      mkdir -p /build
+      chown -R buildkite-agent:nogroup /build
+    '';
+    serviceConfig = {
+      Type = "oneshot";
+    };
+  };
+
 }
