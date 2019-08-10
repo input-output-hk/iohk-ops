@@ -58,19 +58,9 @@ let
     type = "demand";
     module = ../modules/hydra-slave.nix;
   };
-  createPacketHydraSlaveLegacy = hostname: mkPacketNet {
-    inherit hostname;
-    type = "legacy";
-    module = ../modules/hydra-slave.nix;
-  };
   createPacketBuildkite = hostname: mkPacketNet {
     inherit hostname;
     type = "demand";
-    module = ../modules/buildkite-agent.nix;
-  };
-  createPacketBuildkiteLegacy = hostname: mkPacketNet {
-    inherit hostname;
-    type = "legacy";
     module = ../modules/buildkite-agent.nix;
   };
   createPacketHydraSlaveImpure = hostname: mkPacketNet {
@@ -99,18 +89,6 @@ let
     "packet-buildkite-3"
   ];
   # Legacy systems, to be removed!
-  hydraLegacySlaves = [
-    "builder-packet-c1-small-x86"
-    "builder-packet-c1-small-x86-2"
-    "builder-packet-c1-small-x86-3"
-    "builder-packet-c1-small-x86-4"
-    "builder-packet-c1-small-x86-5"
-  ];
-  buildkiteLegacyAgents = [
-    "buildkite-packet-1"
-    "buildkite-packet-2"
-    "buildkite-packet-3"
-  ];
   mantisHydraLegacySlaves = [
     "mantis-slave-packet-1"
     "mantis-slave-packet-2"
@@ -120,8 +98,6 @@ in
   resources.packetKeyPairs = mkPacketKeyPairs [ "infra" ];
 }
 // builtins.listToAttrs (builtins.concatLists [
-    (map (createPacketMachines createPacketHydraSlaveLegacy) hydraLegacySlaves)
-    (map (createPacketMachines createPacketBuildkiteLegacy) buildkiteLegacyAgents)
     (map (createPacketMachines createPacketHydraSlaveImpureLegacy) mantisHydraLegacySlaves)
     (map (createPacketMachines createPacketHydraSlave) hydraSlaves)
     (map (createPacketMachines createPacketBuildkite) buildkiteAgents)

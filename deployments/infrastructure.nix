@@ -23,19 +23,9 @@ let
       ../modules/hydra-slave.nix
     ];
   };
-  mkBuildkiteAgent = { ... }: {
-    imports = [
-      ../modules/common.nix
-      ../modules/buildkite-agent.nix
-    ];
-  };
 in {
   hydra        = mkHydra ../modules/hydra-master-main.nix;
   mantis-hydra = mkHydra ../modules/hydra-master-mantis.nix;
-
-  buildkite-packet-1  = mkBuildkiteAgent;
-  buildkite-packet-2  = mkBuildkiteAgent;
-  buildkite-packet-3  = mkBuildkiteAgent;
 
   cardano-deployer = { config, pkgs, ... }: {
     imports = [
