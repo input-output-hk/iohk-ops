@@ -370,7 +370,6 @@ runNew o@Options{..} New{..} args = do
                   , "bors-ng-github-client-secret"
                   , "bors-ng-github-integration.pem"
                   , "bors-ng-github-webhook-secret"
-                  , "packet.nix"
                   ]
     forM_ secrets touch
     echo "Ensured secrets exist"

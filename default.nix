@@ -16,6 +16,12 @@ with pkgs.haskell.lib;
 
 let
   # nixopsUnstable = /path/to/local/src
+  nixopsPacketSrc = pkgs.fetchFromGitHub {
+    owner = "input-output-hk";
+    repo = "nixops-packet";
+    rev = "eaea333f2e2ab74390228b4b847ecd971aafbaf2";
+    sha256 = "0ivsyfy8yky7qk303c5k71n85nkpc3a9zjr4j9iqw6c4ym5yxx6a";
+  };
   nixopsUnstable = pkgs.fetchFromGitHub {
     owner = "input-output-hk";
     repo = "nixops";
@@ -27,7 +33,9 @@ let
     let
     in (import "${nixopsUnstable}/release.nix" {
          inherit (localLib) nixpkgs;
-         p = (p: [ p.aws p.packet ]);
+         p = (p: let
+           nixopsPacket = p.callPackage "${nixopsPacketSrc}/release.nix" {};
+         in [ p.aws nixopsPacket ]);
         }).build.${system};
   log-classifier-src = pkgs.fetchFromGitHub {
     owner = "input-output-hk";

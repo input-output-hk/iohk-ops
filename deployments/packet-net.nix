@@ -2,7 +2,15 @@
 
 with (import ../lib.nix);
 let
-  packetSecrets = import ../static/packet.nix;
+  mockCreds = {
+    accessKeyId = "abc123";
+    projects = {
+      infra = {
+        id = "1";
+      };
+    };
+  };
+  packetSecrets = if builtins.pathExists ../static/packet.nix then import ../static/packet.nix else mockCreds;
   projects = packetSecrets.projects;
   accessKeyId = packetSecrets.accessKeyId;
   getPacketKeyPairName = project: "packet-keypair-${project}";
@@ -37,7 +45,7 @@ let
     imports = [ ../modules/common.nix
                 module
               ] ++ (optionals (type == "legacy")
-              (map (f: builtins.toPath(toString(./.) + "/${hostname}/" + f))
+              (map (f: ./. + "/${hostname}/${f}")
                   (builtins.attrNames (builtins.readDir (./. + "/${hostname}")))));
     environment.systemPackages = with pkgs;
       [ moreutils ];
