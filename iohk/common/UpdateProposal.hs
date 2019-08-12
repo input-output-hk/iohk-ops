@@ -615,24 +615,27 @@ makeDownloadVersionInfo InstallersResults{..} urls hashes sha256 sigs = archMap 
       , dviHash = lookupArch a hashes
       , dviSHA256 = lookupArch a sha256
       , dviSignature = lookupArch a sigs
+      , dviApplicationVersion = grApplicationVersion globalResult
       }
 
 -- | Intermediate data type for the daedalus download json file.
 data DownloadVersionInfo = DownloadVersionInfo
-  { dviVersion   :: Text
-  , dviURL       :: Text
-  , dviHash      :: Text
-  , dviSHA256    :: Text
-  , dviSignature :: Maybe Text
+  { dviVersion            :: Text
+  , dviURL                :: Text
+  , dviHash               :: Text
+  , dviSHA256             :: Text
+  , dviSignature          :: Maybe Text
+  , dviApplicationVersion :: Int
   } deriving (Show, Generic)
 
 instance ToJSON DownloadVersionInfo where
   toJSON dvi = object
-    [ "version"   .= dviVersion dvi
-    , "URL"       .= dviURL dvi
-    , "hash"      .= dviHash dvi
-    , "SHA256"    .= dviSHA256 dvi
-    , "signature" .= dviSignature dvi
+    [ "version"            .= dviVersion dvi
+    , "URL"                .= dviURL dvi
+    , "hash"               .= dviHash dvi
+    , "SHA256"             .= dviSHA256 dvi
+    , "signature"          .= dviSignature dvi
+    , "applicationVersion" .= dviApplicationVersion dvi
     ]
 
 data DownloadVersionJson = DownloadVersionJson
