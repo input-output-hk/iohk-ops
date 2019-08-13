@@ -19,7 +19,7 @@ let
     persistentKeepalive = 30;
   };
 in {
-  network.description = "IOHK infrastructure production";
+  network.description = "iohk-infra-prod";
   require = [
     ./hydra-master-wireguard.nix
     ./mac-base.nix
@@ -175,17 +175,17 @@ in {
         # hydra master
         (genPeer 2 ../static/hydra.wgpublic)
         # main hydra build-slaves
-        (genPeer 11 ../static/builder-packet-c1-small-x86.wgpublic)
-        (genPeer 12 ../static/builder-packet-c1-small-x86-2.wgpublic)
-        (genPeer 13 ../static/builder-packet-c1-small-x86-3.wgpublic)
-        (genPeer 14 ../static/builder-packet-c1-small-x86-4.wgpublic)
-        (genPeer 15 ../static/builder-packet-c1-small-x86-5.wgpublic)
+        (genPeer 11 ../static/packet-hydra-slave-1.wgpublic)
+        (genPeer 12 ../static/packet-hydra-slave-2.wgpublic)
+        (genPeer 13 ../static/packet-hydra-slave-3.wgpublic)
+        (genPeer 14 ../static/packet-hydra-slave-4.wgpublic)
+        (genPeer 15 ../static/packet-hydra-slave-5.wgpublic)
         # nixos+mac machines
         (genPeer 20 ../static/sarov.wgpublic)
         # buildkite agents
-        (genPeer 31 ../static/buildkite-packet-1.wgpublic)
-        (genPeer 32 ../static/buildkite-packet-2.wgpublic)
-        (genPeer 33 ../static/buildkite-packet-3.wgpublic)
+        (genPeer 31 ../static/packet-buildkite-1.wgpublic)
+        (genPeer 32 ../static/packet-buildkite-2.wgpublic)
+        (genPeer 33 ../static/packet-buildkite-3.wgpublic)
         # mantis hydra build-slaves
         (genPeer 51 ../static/mantis-slave-packet-1.wgpublic)
         (genPeer 52 ../static/mantis-slave-packet-2.wgpublic)
@@ -300,15 +300,15 @@ in {
     };
   };
 
-  builder-packet-c1-small-x86 = mkUplink 11 ../static/builder-packet-c1-small-x86.wgprivate;
-  builder-packet-c1-small-x86-2 = mkUplink 12 ../static/builder-packet-c1-small-x86-2.wgprivate;
-  builder-packet-c1-small-x86-3 = mkUplink 13 ../static/builder-packet-c1-small-x86-3.wgprivate;
-  builder-packet-c1-small-x86-4 = mkUplink 14 ../static/builder-packet-c1-small-x86-4.wgprivate;
-  builder-packet-c1-small-x86-5 = mkUplink 15 ../static/builder-packet-c1-small-x86-5.wgprivate;
+  packet-hydra-slave-1 = mkUplink 11 ../static/packet-hydra-slave-1.wgprivate;
+  packet-hydra-slave-2 = mkUplink 12 ../static/packet-hydra-slave-2.wgprivate;
+  packet-hydra-slave-3 = mkUplink 13 ../static/packet-hydra-slave-3.wgprivate;
+  packet-hydra-slave-4 = mkUplink 14 ../static/packet-hydra-slave-4.wgprivate;
+  packet-hydra-slave-5 = mkUplink 15 ../static/packet-hydra-slave-5.wgprivate;
 
-  buildkite-packet-1 = mkUplink 31 ../static/buildkite-packet-1.wgprivate;
-  buildkite-packet-2 = mkUplink 32 ../static/buildkite-packet-2.wgprivate;
-  buildkite-packet-3 = mkUplink 33 ../static/buildkite-packet-3.wgprivate;
+  packet-buildkite-1 = mkUplink 31 ../static/packet-buildkite-1.wgprivate;
+  packet-buildkite-2 = mkUplink 32 ../static/packet-buildkite-2.wgprivate;
+  packet-buildkite-3 = mkUplink 33 ../static/packet-buildkite-3.wgprivate;
 
   mantis-slave-packet-1 = mkUplink 51 ../static/mantis-slave-packet-1.wgprivate;
   mantis-slave-packet-2 = mkUplink 52 ../static/mantis-slave-packet-2.wgprivate;

@@ -130,7 +130,7 @@ echo '~~~ pre-building cardano-sl-tools'
 nix-build default.nix -A nix-tools.exes.cardano-sl-tools -o cardano-sl-tools
 
 echo '~~~ generating wireguard tests'
-nix-shell modules/gen-wireguard-keys.nix --arg hosts '[ "monitoring" "builder-packet-c1-small-x86" "builder-packet-c1-small-x86-2" "builder-packet-c1-small-x86-3" "builder-packet-c1-small-x86-4" "builder-packet-c1-small-x86-5" "buildkite-packet-1" "buildkite-packet-2" "buildkite-packet-3" "mantis-slave-packet-1" "mantis-slave-packet-2" "hydra" "sarov" "cardano-deployer" ]'
+nix-shell modules/gen-wireguard-keys.nix --arg hosts '[ "monitoring" "packet-hydra-slave-1" "packet-hydra-slave-2" "packet-hydra-slave-3" "packet-hydra-slave-4" "packet-hydra-slave-5" "packet-buildkite-1" "packet-buildkite-2" "packet-buildkite-3" "mantis-slave-packet-1" "mantis-slave-packet-2" "hydra" "sarov" "cardano-deployer" ]'
 
 PATH=$PATH:./cardano-sl-tools/bin/
 export PATH
