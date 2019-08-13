@@ -71,6 +71,7 @@ in {
     extraConfig = ''
       max_output_size = 4294967296
       evaluator_max_heap_size = ${toString (5 * 1024 * 1024 * 1024)}
+      max_db_connections = 50
 
       max_concurrent_evals = 14
 
