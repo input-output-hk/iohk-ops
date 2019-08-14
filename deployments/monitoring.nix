@@ -1,11 +1,6 @@
-{ globals, ... }:
+{ domain, monitoringEnv ? "ec2" }:
 
 with import ../lib.nix;
-let
-  nodeMap = { inherit (globals.fullMap) monitoring; };
-  monitoring = nodeMap.monitoring;
-in
-
 {
   require = [
     ./global.nix
@@ -15,9 +10,6 @@ in
     _file = ./monitoring.nix;
     imports = [ ../modules/monitoring-exporters.nix ];
     services.monitoring-exporters = {
-      # TODO, `monitoring-ip` will be wrong if monitoring isnt using an elastic ip by that name
-      graylogHost = "monitoring-ip:5044";
-      #graylogHost = "${config.deployment.arguments.globals.monitoringNV.name}-ip:5044";
       ownIp = let
         ip = config.networking.publicIPv4;
       in if ip == null then "0.0.0.0" else ip;
@@ -32,22 +24,17 @@ in
         value = {
           ip = node.config.services.monitoring-exporters.ownIp;
           hasNginx = node.config.services.nginx.enable;
-          labels = let
-            maybeRole = (globals.fullMap.${nodeName} or {}).nodeType or null;
-          in {
-            role = mkIf (maybeRole != null) maybeRole;
-          };
+          labels.role = "other";
         };
       }) nodes);
-    hostName = "monitoring.${config.global.dnsDomainname}";
+    hostName = "monitoring.${domain}";
   in
   {
     imports = [
       ../modules/common.nix
-      ../modules/amazon-base.nix
       ../modules/network-wide.nix
       ../modules/monitoring-services.nix
-    ];
+    ] ++ (lib.optional (monitoringEnv == "ec2") ../modules/amazon-base.nix);
 
     global = {
       organisation = monitoring.org;

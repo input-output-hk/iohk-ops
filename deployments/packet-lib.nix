@@ -1,6 +1,6 @@
-{lib, ... }:
-
-lib.fix (self: let
+{ lib, ... }:
+with lib;
+fix (self: let
   projects = self.packetSecrets.projects;
   accessKeyId = self.packetSecrets.accessKeyId;
 in {
@@ -9,6 +9,9 @@ in {
     projects = {
       infra = {
         id = "1";
+      };
+      ci = {
+        id = "2";
       };
     };
   };
@@ -21,7 +24,7 @@ in {
       project = projects.${project}.id;
     };
   };
-  mkPacketKeyPairs = projects: lib.listToAttrs (map self.mkPacketKeyPair projects);
+  mkPacketKeyPairs = projects: listToAttrs (map self.mkPacketKeyPair projects);
   mkPacketNet = { hostname, module, type ? "demand", facility ? "any", plan ? "c1.small.x86", project ? "infra", extraopts ? {} }:
   { config, name, pkgs, resources, ... }: let
     projectId = projects.${project}.id;

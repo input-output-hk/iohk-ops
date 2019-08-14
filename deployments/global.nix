@@ -1,11 +1,11 @@
-{ globals, domain, monitorIpOverride ? null, ... }:
+{ globals ? {}, domain, monitorIpOverride ? null, ... }:
 
 {
   require = [
     # TODO, only import if config.global.omitDetailedSecurityGroups
-    ./security-groups/allow-all.nix
+    # ./security-groups/allow-all.nix
     # TODO, make conditional on omitDetailedSecurityGroups
-    ./security-groups/allow-monitoring-collection.nix
+    # ./security-groups/allow-monitoring-collection.nix
   ];
   defaults = { config, lib, resources, ... }: {
     _file = ./global.nix;

@@ -1,11 +1,11 @@
-{ name, config, resources, ... }:
+{ name, config, resources, lib, ... }:
 
 with import ../lib.nix;
 
 {
   imports = [ ./globals.nix ];
   config.deployment = {
-    ec2 = {
+    ec2 = lib.mkIf (config.deployment.targetEnv == "ec2") {
       elasticIPv4 = if config.global.allocateElasticIP
                     then resources.elasticIPs.${name + "-ip"} else "";
       securityGroups = map (resolveSGName resources)

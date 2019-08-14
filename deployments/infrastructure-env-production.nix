@@ -3,7 +3,7 @@
 with import ../lib.nix;
 
 let
-  lib = (import <nixpkgs> {}).lib;
+  inherit (pkgs) lib;
   mkHydra = hostname: { config, pkgs, resources, ... }: { };
   mkUplink = mkMkUplink {
     central = "192.168.20.1";
