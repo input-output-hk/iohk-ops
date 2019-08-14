@@ -18,10 +18,10 @@ let
       hostId = hostid;
       wireguard.interfaces.wg0.ips = [ "${wgip}/24" ];
     };
-    fileSystems = {
-      "/".device = "${hostname}/root";
-      "/home".device = "${hostname}/home";
-      "/nix".device = "${hostname}/nix";
+    fileSystems = lib.mkIf (hostname == "sarov") {
+      "/".device = lib.mkForce "${hostname}/root";
+      "/home".device = lib.mkForce "${hostname}/home";
+      "/nix".device = lib.mkForce "${hostname}/nix";
     };
     #macosGuest.role = role;
   };

@@ -16,8 +16,8 @@ let
         inherit (spec) sha256;
       }) (removeAttrs iohkNixArgs ["iohkNixJsonOverride"]);
   iohkNix       = mkIohkNix {
-    application = "iohk-ops";
-    #nixpkgsJsonOverride = ./nixpkgs-src.json;
+    #application = "iohk-ops";
+    nixpkgsJsonOverride = ./nixpkgs-src.json;
   };
   iohkNixGoguen = mkIohkNix { application = "goguen"
                             ; nixpkgsJsonOverride = ./goguen/pins/nixpkgs-src.json
