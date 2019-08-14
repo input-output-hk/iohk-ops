@@ -6,6 +6,7 @@ in {
   imports = [
     <nixpkgs/nixos/modules/installer/scan/not-detected.nix>
     ./macs/host
+    ./macs/host/macmini-kernel.nix
     ./cachecache.nix
   ];
   options = {
@@ -98,9 +99,18 @@ in {
     };
     powerManagement.cpuFreqGovernor = "performance";
     fileSystems = {
-      "/".fsType = "zfs";
-      "/home".fsType = "zfs";
-      "/nix".fsType = "zfs";
+      "/" = {
+        fsType = "zfs";
+        device = "tank/root";
+      };
+      "/home" = {
+        fsType = "zfs";
+        device = "tank/home";
+      };
+      "/nix" = {
+        fsType = "zfs";
+        device = "tank/nix";
+      };
       "/boot" = {
         label = "EFI";
         fsType = "vfat";
