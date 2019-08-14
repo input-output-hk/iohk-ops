@@ -23,6 +23,11 @@ in {
     ];
   };
 
+  network = {
+    description = "CI Infrastructure";
+    enableRollback = true;
+  };
+
   resources.packetKeyPairs = mkPacketKeyPairs [ "ci" ];
 
   hydra = mkPacketNet {
