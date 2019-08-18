@@ -15,6 +15,7 @@ with import ../lib.nix;
     cfgLegacy            = config.services.cardano-node-legacy;
     cfg                  = config.services.cardano-node;
     sources = import ../nix/sources.nix;
+    cardanoEnv = (import (sources.cardano-node + "/lib.nix")).environments;
     cardanoSlEnv = (import (sources.cardano-sl + "/lib.nix")).environments;
   in {
     imports = [
@@ -50,8 +51,8 @@ with import ../lib.nix;
 
     services.cardano-node = mkIf (config.params.nodeImpl == "haskell") {
       enable = true;
-      genesisFile = cardanoSlEnv."${config.global.environment}".genesisFile;
-      genesisHash = cardanoSlEnv."${config.global.environment}".genesisHash;
+      genesisFile = cardanoEnv."${config.global.environment}".genesisFile;
+      genesisHash = cardanoEnv."${config.global.environment}".genesisHash;
       signingKey = if (config.params.typeIsCore)
         then "/var/lib/keys/cardano-node"
         else null;
