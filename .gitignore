@@ -38,3 +38,4 @@ txgen.json
 **/terraform.tfvars
 nixpkgs
 genesis-keys
+cardano-config

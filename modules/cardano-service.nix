@@ -175,19 +175,19 @@ in {
     };
 
     # Workaround for CSL-1320
-    systemd.services.cardano-restart = let
-      # how many minutes between nodes restarting
-      nodeMinute = mod (cfg.nodeIndex * 4) 60;
-    in {
-      script = (if (config.deployment.arguments.configurationKey == "bench")
-        then '' echo System not restarted because benchmark is running.''
-        else '' /run/current-system/sw/bin/systemctl restart cardano-node'');
-      # Reboot cardano-node every 36h (except Mon->Tue gap which is 24h)
-      startAt = [
-        "Tue,Fri,Mon 13:${toString nodeMinute}"
-        "Thu,Sun     01:${toString nodeMinute}"
-      ];
-    };
+    #systemd.services.cardano-restart = let
+    #  # how many minutes between nodes restarting
+    #  nodeMinute = mod (cfg.nodeIndex * 4) 60;
+    #in {
+    #  script = (if (config.deployment.arguments.configurationKey == "bench")
+    #    then '' echo System not restarted because benchmark is running.''
+    #    else '' /run/current-system/sw/bin/systemctl restart cardano-node-legacy'');
+    #  # Reboot cardano-node every 36h (except Mon->Tue gap which is 24h)
+    #  startAt = [
+    #    "Tue,Fri,Mon 13:${toString nodeMinute}"
+    #    "Thu,Sun     01:${toString nodeMinute}"
+    #  ];
+    #};
 
     systemd.services.cardano-node-legacy = {
       description   = "cardano node service";

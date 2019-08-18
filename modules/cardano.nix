@@ -50,17 +50,16 @@ with import ../lib.nix;
 
     services.cardano-node = mkIf (config.params.nodeImpl == "haskell") {
       enable = true;
-      genesis-file = cardanoSlEnv."${config.global.environment}".genesisFile;
-      genesis-hash = cardanoSlEnv."${config.global.environment}".genesisHash;
-      signing-key = if (config.params.typeIsCore)
+      genesisFile = cardanoSlEnv."${config.global.environment}".genesisFile;
+      genesisHash = cardanoSlEnv."${config.global.environment}".genesisHash;
+      signingKey = if (config.params.typeIsCore)
         then "/var/lib/keys/cardano-node"
         else null;
       # delegation-certificate = TODO;
-      consensus-protocol = "real-pbft";
-      slot-duration = 20;
-      host-addr = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
+      consensusProtocol = "real-pbft";
+      hostAddr = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
       port = config.params.port;
-      node-id = config.params.i;
+      nodeId = config.params.i;
       topology = pkgs.writeText "topology.json" (builtins.toJSON (lib.mapAttrsToList (name: node: {
         nodeId = node.i;
         nodeAddress = {

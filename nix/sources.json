@@ -5,22 +5,22 @@
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "cardano-byron-proxy",
-        "rev": "c76343381d6766554f67428f5b8c33e06de25864",
-        "sha256": "1whhqvwzzfhi0hizvfvi5cl4g1mghq43cj8644pspal4gbv83zis",
+        "rev": "a8615ef2ca5504bc8e92ca9b038565c4d2808414",
+        "sha256": "1fa7g9h514hs46vyzjvz70c1jpxkbs9y8k3djhmi3ghxrnl11x47",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/c76343381d6766554f67428f5b8c33e06de25864.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/a8615ef2ca5504bc8e92ca9b038565c4d2808414.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "cardano-node": {
-        "branch": "master",
+        "branch": "startup-scripts",
         "description": null,
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "c9059fa8d5f5d89e67896fd3ffaf32aabfd9d63c",
-        "sha256": "1samm5z41nx6fws0wdrgpf03bswg3nrai8vmxj97wsxxizannmpa",
+        "rev": "e7a9e40b26068d15d607cf22f740d4aecb1833cb",
+        "sha256": "18labk5ck3lghw0c3xd3irhxzly4y6ykvcwx1y16kh045iwxqv8j",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-node/archive/c9059fa8d5f5d89e67896fd3ffaf32aabfd9d63c.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-node/archive/e7a9e40b26068d15d607cf22f740d4aecb1833cb.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "cardano-sl": {
@@ -29,10 +29,10 @@
         "homepage": "",
         "owner": "input-output-hk",
         "repo": "cardano-sl",
-        "rev": "95beb3b78f20738e71df4bcc44de0f0bb17c47d6",
-        "sha256": "15qmi283x3azifpslq67wx0pa47xm2rv9fi4iazmmg9mp88m25z3",
+        "rev": "6a4bc7f8eeb7559e8b623c133bf58c53c5e61547",
+        "sha256": "1l0gs5wmbcw2pbzzz47i5v5z97pr4is57i8aw3qhnckmgi40dslq",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-sl/archive/95beb3b78f20738e71df4bcc44de0f0bb17c47d6.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-sl/archive/6a4bc7f8eeb7559e8b623c133bf58c53c5e61547.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "gitignore": {
@@ -89,10 +89,10 @@
         "homepage": "http://nixos.org/",
         "owner": "input-output-hk",
         "repo": "nixops",
-        "rev": "2447be9da55beda18c761896ecc2fb5966dd0447",
-        "sha256": "1yvhhc95p6n7qximanbrwdzghwixvx98q9h2a5p6qssh9ngzka83",
+        "rev": "28dd42a2dc9f6bada1ea587de80cde8dae0ddbf0",
+        "sha256": "0a74c8f0hpb60s91f3igx63zx8amblp3iqr6ic3fdr28nvmvbhgr",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/nixops/archive/2447be9da55beda18c761896ecc2fb5966dd0447.tar.gz",
+        "url": "https://github.com/input-output-hk/nixops/archive/28dd42a2dc9f6bada1ea587de80cde8dae0ddbf0.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
@@ -101,10 +101,10 @@
         "homepage": null,
         "owner": "NixOS",
         "repo": "nixpkgs-channels",
-        "rev": "2d05858567ed02bc2299be49cc5d2b60f02e6d73",
-        "sha256": "18cy0nh2x5drhadp9l3aqfp8xyz2zg8khrhi5qmn5bblghs6193a",
+        "rev": "67135fbcc5d5d28390c127ef519b09a362ef2466",
+        "sha256": "00591607zmn1hfjs4959ksh164b0gjqwkvbrc4anx6da8xmhfcc2",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs-channels/archive/2d05858567ed02bc2299be49cc5d2b60f02e6d73.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/67135fbcc5d5d28390c127ef519b09a362ef2466.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
