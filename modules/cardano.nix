@@ -82,7 +82,7 @@ with import ../lib.nix;
           }])
           else [];
       }) config.global.nodeMap));
-      logger.config-file = ./iohk-monitoring-config.yaml;
+      logger.configFile = ./iohk-monitoring-config.yaml;
     };
 
     networking.firewall = mkIf cfg.enable {
