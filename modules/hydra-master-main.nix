@@ -53,7 +53,7 @@ in {
       (mkLinux "packet-hydra-slave-3.aws.iohkdev.io")
       (mkLinux "packet-hydra-slave-4.aws.iohkdev.io")
       (mkLinux "packet-hydra-slave-5.aws.iohkdev.io")
-      ((mkMac "sarov") // { sshUser = "root"; speedFactor = 2; })
+      ((mkMac "sarov") // { sshUser = "builder"; speedFactor = 2; })
       #(mkMac "osx-1.aws.iohkdev.io")
       #(mkMac "osx-2.aws.iohkdev.io")
       #(mkMac "osx-3.aws.iohkdev.io")

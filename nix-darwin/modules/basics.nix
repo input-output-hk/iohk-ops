@@ -65,6 +65,9 @@ in {
 
   ########################################################################
 
+  environment.etc."per-user/root/ssh/authorized_keys".text
+    = lib.concatStringsSep "\n" opsLib.ciInfraKeys + "\n";
+
   environment.etc."per-user/nixos/ssh/authorized_keys".text
     = lib.concatStringsSep "\n" opsLib.ciInfraKeys + "\n";
 
@@ -81,7 +84,7 @@ in {
     mdutil -E / &> /dev/null
     echo "ok"
 
-    for user in admin buildkite builder; do
+    for user in admin nixos buildkite builder; do
         authorized_keys=/etc/per-user/$user/ssh/authorized_keys
         user_home=/Users/$user
         printf "configuring ssh keys for $user... "

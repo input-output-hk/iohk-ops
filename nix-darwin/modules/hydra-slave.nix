@@ -37,8 +37,7 @@ in
     chown builder: /Users/builder/.bashrc
   '';
 
-  # TODO, use the builder user and allow ssh access
-  environment.etc."per-user/root/ssh/authorized_keys".text =
+  environment.etc."per-user/builder/ssh/authorized_keys".text =
     concatMapStringsSep "\n" (key: ''command="${environment} ${config.nix.package}/bin/nix-store --serve --write" ${key}'') opsLib.buildSlaveKeys.macos + "\n";
 
 }
