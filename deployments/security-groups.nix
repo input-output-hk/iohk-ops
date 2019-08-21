@@ -23,7 +23,7 @@ with import ../lib.nix;
           (fold (x: y: x // y) {}
           (         (centralRegionSGs  centralRegion)
 
-           ++  map  (regionSGs         { nodePort = 3000; nodePort2 = 3001; }) # TODO: 'config' is mostly empty here.
+           ++  map  (regionSGs         { nodePort = 3000; nodePortEnd = 3001; }) # TODO: 'config' is mostly empty here.
                     globals.allRegions
 
            ++  map  (orgXRegionSGs { inherit (globals) monitoringNV; inherit nodes; } resources.elasticIPs)
@@ -43,7 +43,7 @@ with import ../lib.nix;
             [ "allow-kademlia-public-udp-${region}"
               "allow-cardano-public-tcp-${region}"
             ];
-        regionSGs      = { nodePort, nodePort2 }: region: {
+        regionSGs      = { nodePort, nodePortEnd }: region: {
             "allow-kademlia-public-udp-${region}" = {
               inherit region accessKeyId;
               description = "Kademlia UDP public";
@@ -59,12 +59,7 @@ with import ../lib.nix;
               rules = [
                 {
                 protocol = "tcp"; # TCP
-                fromPort = nodePort; toPort = nodePort;
-                sourceIp = "0.0.0.0/0";
-                }
-                {
-                protocol = "tcp"; # TCP
-                fromPort = nodePort2; toPort = nodePort2;
+                fromPort = nodePort; toPort = nodePortEnd;
                 sourceIp = "0.0.0.0/0";
                 }
               ];

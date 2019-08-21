@@ -50,10 +50,16 @@ with import ../lib.nix;
       enable = true;
       environment = toCardanoEnvName config.global.environment;
       topologyFile = config.global.topologyYaml;
+      nodeId = config.params.name;
+      pbftThreshold = "0.9";
+      address = "${if options.networking.publicIPv4.isDefined then config.networking.publicIPv4 else "127.0.0.1"}:${toString config.params.port}";
+      listen = "0.0.0.0:${toString config.params.port}";
+      proxyHost = "0.0.0.0";
     };
 
     services.cardano-node = mkIf (config.params.nodeImpl == "haskell") {
       enable = true;
+      pbftThreshold = "0.9";
       inherit (cardanoLib.environments.${toCardanoEnvName config.global.environment})
         genesisFile
         genesisHash;
@@ -63,7 +69,7 @@ with import ../lib.nix;
       # delegation-certificate = TODO;
       consensusProtocol = "real-pbft";
       hostAddr = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
-      port = config.params.port;
+      port = config.params.port + 1;
       nodeId = config.params.i;
       topology = pkgs.writeText "topology.json" (builtins.toJSON (lib.mapAttrsToList (name: node: {
         nodeId = node.i;
@@ -71,12 +77,12 @@ with import ../lib.nix;
           addr = if (node.i == cfg.nodeId)
             then cfg.hostAddr
             else (nodeNameToPublicIP name);
-          port = node.port;
+          port = node.port + 1;
         };
         producers = if (node.i == cfg.nodeId)
           then (map (n: {
             addr = n.ip;
-            port = config.global.nodeMap.${n.name}.port;
+            port = config.global.nodeMap.${n.name}.port + 1;
             valency = 1;
           }) neighbourPairs
           ++ [{
@@ -90,7 +96,7 @@ with import ../lib.nix;
     };
 
     networking.firewall = mkIf cfg.enable {
-      allowedTCPPorts = [ cfg.port ];
+      allowedTCPPorts = [ cfg.port (cfg.port + 1) ];
     };
 
     systemd.services."cardano-node" = mkIf (cfg.enable && config.params.typeIsCore) {
