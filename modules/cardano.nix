@@ -15,8 +15,11 @@ with import ../lib.nix;
     cfgLegacy            = config.services.cardano-node-legacy;
     cfg                  = config.services.cardano-node;
     sources = import ../nix/sources.nix;
-    cardanoEnv = (import (sources.cardano-node + "/lib.nix")).environments;
-    cardanoSlEnv = (import (sources.cardano-sl + "/lib.nix")).environments;
+    toCardanoEnvName = env: {
+      # mapping of environnement name from globals.nix to the one defined in cardanoLib:
+      stagingshelleyshort = "shelley_staging_short";
+      stagingshelley      = "shelley_staging";
+    }.${env} or env;
   in {
     imports = [
       ./cardano-service.nix
@@ -45,14 +48,15 @@ with import ../lib.nix;
 
     services.byron-proxy = if (config.params.nodeImpl != "haskell") then {} else {
       enable = true;
-      environment = cardanoSlEnv.${config.global.environment};
+      environment = toCardanoEnvName config.global.environment;
       topologyFile = config.global.topologyYaml;
     };
 
     services.cardano-node = mkIf (config.params.nodeImpl == "haskell") {
       enable = true;
-      genesisFile = cardanoEnv."${config.global.environment}".genesisFile;
-      genesisHash = cardanoEnv."${config.global.environment}".genesisHash;
+      inherit (cardanoLib.environments.${toCardanoEnvName config.global.environment})
+        genesisFile
+        genesisHash;
       signingKey = if (config.params.typeIsCore)
         then "/var/lib/keys/cardano-node"
         else null;
@@ -64,17 +68,17 @@ with import ../lib.nix;
       topology = pkgs.writeText "topology.json" (builtins.toJSON (lib.mapAttrsToList (name: node: {
         nodeId = node.i;
         nodeAddress = {
-          addr = if (node.i == cfg.node-id)
-            then cfg.host-addr
+          addr = if (node.i == cfg.nodeId)
+            then cfg.hostAddr
             else (nodeNameToPublicIP name);
           port = node.port;
         };
-        producers = if (node.i == cfg.node-id)
+        producers = if (node.i == cfg.nodeId)
           then (map (n: {
             addr = n.ip;
             port = config.global.nodeMap.${n.name}.port;
             valency = 1;
-          }) (builtins.filter (n: config.global.nodeMap.${n.name}.typeIsCore) neighbourPairs)
+          }) neighbourPairs
           ++ [{
             addr = "127.0.0.1";
             port = 7777;
