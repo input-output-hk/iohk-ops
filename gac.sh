@@ -314,7 +314,7 @@ genkey | g | generate-node-keys ) # Doc:
         generate_node_keys;;
 
 delete | destroy | terminate | abolish | eliminate | demolish | delete-nixops-deployment ) # Doc:
-        ${nixops} destroy  "${nixops_subopts[@]}" --confirm
+        ${nixops} destroy  "${nixops_subopts[@]}"
         ${nixops} delete   "${nixops_subopts[@]}";;
 fromscratch | re | redeploy-cluster-from-scrach ) # Doc:
         $self delete && $self create && $self deploy;;
