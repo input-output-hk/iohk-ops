@@ -319,8 +319,6 @@ destroy ) # Doc:
 delete ) # Doc:
         ${nixops} delete   "${nixops_subopts[@]}" "$@";;
 
-fromscratch | re | redeploy-cluster-from-scrach ) # Doc:
-        $self delete && $self create && $self deploy;;
 info   | i | nixops-info ) # Doc:
         ${nixops} info     "${nixops_subopts[@]}";;
 "" | "" ) # Doc:
