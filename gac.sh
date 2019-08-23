@@ -314,7 +314,7 @@ genkey | g | generate-node-keys ) # Doc:
         generate_node_keys;;
 
 destroy ) # Doc:
-        ${nixops} destroy  "${nixops_subopts[@]}";;
+        ${nixops} destroy  "${nixops_subopts[@]}" "$@";;
 
 delete ) # Doc:
         ${nixops} delete   "${nixops_subopts[@]}";;
