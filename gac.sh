@@ -317,7 +317,7 @@ destroy ) # Doc:
         ${nixops} destroy  "${nixops_subopts[@]}" "$@";;
 
 delete ) # Doc:
-        ${nixops} delete   "${nixops_subopts[@]}";;
+        ${nixops} delete   "${nixops_subopts[@]}" "$@";;
 
 fromscratch | re | redeploy-cluster-from-scrach ) # Doc:
         $self delete && $self create && $self deploy;;
