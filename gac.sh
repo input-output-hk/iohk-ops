@@ -313,9 +313,12 @@ configure | config | cfg | conf | configure-nixops-deployment-arguments ) # Doc:
 genkey | g | generate-node-keys ) # Doc:
         generate_node_keys;;
 
-delete | destroy ) # Doc:
-        ${nixops} destroy  "${nixops_subopts[@]}"
+destroy ) # Doc:
+        ${nixops} destroy  "${nixops_subopts[@]}";;
+
+delete ) # Doc:
         ${nixops} delete   "${nixops_subopts[@]}";;
+
 fromscratch | re | redeploy-cluster-from-scrach ) # Doc:
         $self delete && $self create && $self deploy;;
 info   | i | nixops-info ) # Doc:
