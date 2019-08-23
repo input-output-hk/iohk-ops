@@ -96,6 +96,7 @@ in {
         { jobset = "cardano-wallet"; inputs = "cardano-wallet"; }
         { jobset = "cardano-shell"; inputs = "cardano-shell"; }
         { jobset = "cardano-node"; inputs = "cardano-node"; }
+        { jobset = "cardano-explorer"; inputs = "cardano-explorer"; }
         { jobset = "cardano"; inputs = "cardano"; }
         { jobset = "plutus"; inputs = "plutus"; }
         { jobset = "log-classifier"; inputs = "log-classifier"; }
@@ -104,7 +105,6 @@ in {
         { jobset = "haskell-nix"; inputs = "haskell-nix"; }
         { jobset = "tools"; inputs = "tools"; }
         { jobset = "iohk-nix"; inputs = "iohk-nix"; }
-        { jobset = "cardano-explorer"; inputs = "cardano-explorer"; }
       ]}
 
       # DEVOPS-1208 This CI status for cardano-sl is needed while the
