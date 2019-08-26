@@ -201,7 +201,7 @@ $(nix-build scripts/set-wallets-cluster.nix --argstr clusterName edgenodes-clust
 Since working cluster is spending computer resources, please do not leave working cluster if you don't need it anymore.
 To destroy the cluster use `destroy-cluster.nix`. First of all, go to the root of your working directory:
 
-````bash
+```bash
 cd ..
 ```
 
