@@ -82,7 +82,7 @@ in {
 
       ${optionalString (builtins.pathExists ../static/github_token) ''
       <github_authorization>
-        input-output-hk = ${(builtins.readFile ../static/github_token) or ""}
+        input-output-hk = ${builtins.readFile ../static/github_token}
       </github_authorization>
       ''}
 
