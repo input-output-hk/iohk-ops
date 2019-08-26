@@ -33,7 +33,7 @@ let
 in {
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
-    source = if (builtins.pathExists ../static/id_buildfarm) then ../static/id_buildfarm else pkgs.writeText "build-farm" "";
+    source = if (builtins.pathExists ../static/id_buildfarm) then ../static/id_buildfarm else builtins.toFile "build-farm" "";
     uid = config.ids.uids.hydra-queue-runner;
     gid = config.ids.gids.hydra;
     mode = "0400";

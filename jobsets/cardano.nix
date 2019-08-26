@@ -41,6 +41,7 @@ in pkgs.lib.fix (jobsets: {
       jobsets.iohk-ops.x86_64-linux
       (builtins.attrValues jobsets.tests)
       (builtins.attrValues jobsets.checks)
+      jobsets.tests.hydraLocally
     ];
   });
   nix-darwin = {
