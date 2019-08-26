@@ -31,10 +31,9 @@ let
   '';
   mkStatusBlocks = concatMapStringsSep "" mkGithubStatus;
 in {
-  imports = [ ./github-webhook-util.nix ];
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
-    source = ../static/id_buildfarm;
+    source = if (builtins.pathExists ../static/id_buildfarm) then ../static/id_buildfarm else pkgs.writeText "build-farm" "";
     uid = config.ids.uids.hydra-queue-runner;
     gid = config.ids.gids.hydra;
     mode = "0400";
@@ -81,9 +80,11 @@ in {
       log_prefix = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/
       upload_logs_to_binary_cache = true
 
+      ${optionalString (builtins.pathExists ../static/github_token) ''
       <github_authorization>
-        input-output-hk = ${builtins.readFile ../static/github_token}
+        input-output-hk = ${(builtins.readFile ../static/github_token) or ""}
       </github_authorization>
+      ''}
 
       ${mkStatusBlocks [
         { jobset = "iohk-ops"; inputs = "jobsets"; }
@@ -123,17 +124,6 @@ in {
       </githubstatus>
     '';
   };
-  deployment.keys."github-webhook-util".text = builtins.readFile ../static/github-webhook-util.secret;
-  systemd.services."github-webhook-util" = {
-    after = [ "github-webhook-util-key.service" ];
-    wants = [ "github-webhook-util-key.service" ];
-  };
-
-  services.github-webhook-util = {
-    enable = true;
-    domain = "hydra.iohk.io";
-    secrets = "/run/keys/github-webhook-util";
-  };
   services.grafana = {
     enable = true;
     users.allowSignUp = true;
@@ -142,7 +132,7 @@ in {
     extraOptions = {
       AUTH_GOOGLE_ENABLED = "true";
       AUTH_GOOGLE_CLIENT_ID = "778964826061-5v0m922g1qcbc1mdtpaf8ffevlso2v7p.apps.googleusercontent.com";
-      AUTH_GOOGLE_CLIENT_SECRET = builtins.readFile ../static/google_oauth_hydra_grafana.secret;
+      AUTH_GOOGLE_CLIENT_SECRET = if (builtins.pathExists ../static-google_oauth_hydra_grafana.secret) then builtins.readFile ../static/google_oauth_hydra_grafana.secret else "";
     };
   };
 
@@ -155,7 +145,7 @@ in {
         enableACME = true;
         locations."/".extraConfig = ''
           proxy_pass http://127.0.0.1:8080;
-          proxy_set_header Host $host;
+          proxy_set_header Host $host:$server_port;
           proxy_set_header REMOTE_ADDR $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
