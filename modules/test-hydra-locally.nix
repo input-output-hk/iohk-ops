@@ -21,6 +21,7 @@ let
     services = {
       mingetty.autologinUser = "root";
       grafana.extraOptions.AUTH_GOOGLE_CLIENT_SECRET = lib.mkForce "";
+      monitoring-exporters.logging = false;
       nginx.virtualHosts."hydra.iohk.io" = {
         forceSSL = lib.mkForce false;
         enableACME = lib.mkForce false;

@@ -2,10 +2,10 @@
 
 let
   hydraSrc = pkgs.fetchFromGitHub {
-    owner = "input-output-hk";
+    owner = "nixos";
     repo = "hydra";
-    rev = "0768891e3cd3ef067d28742098f1dea8462fca75";
-    sha256 = "1aw3p7jm2gsakdqqx4pzhkfx12hh1nxk3wkabcvml5ci814f6jic";
+    rev = "906d2493c5c74673ba317d0b5ce7d97b062bd39b";
+    sha256 = "0i7szp04c873gfmj1h0dcl5rsbzzldc160pcls8z9v6iphils34i";
   };
 in
   pkgs.callPackage ./hydra-fork.nix {

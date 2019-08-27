@@ -123,7 +123,7 @@ in {
       </githubstatus>
     '';
   };
-  deployment.keys."github-webhook-util".text = builtins.readFile ../static/github-webhook-util.secret;
+  #deployment.keys."github-webhook-util".text = builtins.readFile ../static/github-webhook-util.secret;
   systemd.services."github-webhook-util" = {
     after = [ "github-webhook-util-key.service" ];
     wants = [ "github-webhook-util-key.service" ];
