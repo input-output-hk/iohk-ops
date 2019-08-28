@@ -2,7 +2,7 @@
   boot.supportedFilesystems = [ "zfs" ];
   imports = [
     <nixpkgs/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix>
-    ../macmini-kernel.nix
+    ../macmini-boot-fixes.nix
     ./justdoit.nix
   ];
   kexec.justdoit = {

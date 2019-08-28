@@ -8,7 +8,7 @@ let
     sshKey = "/etc/nix/id_buildfarm";
     sshUser = "root";
     system = "x86_64-linux";
-    supportedFeatures = [ "kvm" "nixos-test" ];
+    supportedFeatures = [ "kvm" "nixos-test" "big-parallel" ];
   };
   mkLinux = hostName: commonBuildMachineOpt // {
     inherit hostName;
@@ -42,6 +42,12 @@ in {
     Host sarov
     Hostname 192.168.20.20
     Port 2200
+    Host mac-mini-1
+    Hostname 192.168.20.21
+    Port 2200
+    Host mac-mini-2
+    Hostname 192.168.20.22
+    Port 2200
   '';
 
   nix = {
@@ -52,7 +58,9 @@ in {
       (mkLinux "packet-hydra-slave-3.aws.iohkdev.io")
       (mkLinux "packet-hydra-slave-4.aws.iohkdev.io")
       (mkLinux "packet-hydra-slave-5.aws.iohkdev.io")
-      ((mkMac "sarov") // { sshUser = "builder"; speedFactor = 2; })
+      ((mkMac "sarov") // { sshUser = "builder"; speedFactor = 1; })
+      ((mkMac "mac-mini-1") // { sshUser = "builder"; speedFactor = 2; })
+      ((mkMac "mac-mini-2") // { sshUser = "builder"; speedFactor = 2; })
       #(mkMac "osx-1.aws.iohkdev.io")
       #(mkMac "osx-2.aws.iohkdev.io")
       #(mkMac "osx-3.aws.iohkdev.io")
@@ -83,7 +91,6 @@ in {
       <github_authorization>
         input-output-hk = ${builtins.readFile ../static/github_token}
       </github_authorization>
-
       ${mkStatusBlocks [
         { jobset = "iohk-ops"; inputs = "jobsets"; }
         { jobset = "cardano-base"; inputs = "cardano-base"; }

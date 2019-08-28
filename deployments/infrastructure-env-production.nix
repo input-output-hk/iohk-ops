@@ -66,6 +66,8 @@ in {
         privateKeyFile = "/etc/wireguard/cardano-deployer.wgprivate";
         peers = [
           (genPeer 20 ../static/sarov.wgpublic)
+          (genPeer 21 ../static/mac-mini-1.wgpublic)
+          (genPeer 22 ../static/mac-mini-2.wgpublic)
         ];
       };
     };
@@ -182,6 +184,8 @@ in {
         (genPeer 15 ../static/packet-hydra-slave-5.wgpublic)
         # nixos+mac machines
         (genPeer 20 ../static/sarov.wgpublic)
+        (genPeer 21 ../static/mac-mini-1.wgpublic)
+        (genPeer 22 ../static/mac-mini-2.wgpublic)
         # buildkite agents
         (genPeer 31 ../static/packet-buildkite-1.wgpublic)
         (genPeer 32 ../static/packet-buildkite-2.wgpublic)

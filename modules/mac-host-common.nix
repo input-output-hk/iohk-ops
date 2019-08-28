@@ -6,7 +6,7 @@ in {
   imports = [
     <nixpkgs/nixos/modules/installer/scan/not-detected.nix>
     ./macs/host
-    ./macs/host/macmini-kernel.nix
+    ./macs/host/macmini-boot-fixes.nix
     ./cachecache.nix
   ];
   options = {
@@ -16,21 +16,32 @@ in {
   };
   config = {
     boot = {
-      initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
-      kernelModules = [ "kvm-intel" "wl" ];
-      extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
+      initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" "zfsUnstable" "nvme" ];
+      kernelModules = [ "kvm-intel" ];
+      extraModulePackages = with config.boot.kernelPackages; lib.mkForce [ zfsUnstable wireguard ];
+      # initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
+      # kernelModules = [ "kvm-intel" "wl" ];
+      # extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
       loader = {
-        systemd-boot.enable = true;
-        efi.canTouchEfiVariables = true;
+        #systemd-boot.enable = true;
+        #efi.canTouchEfiVariables = true;
+        efi.canTouchEfiVariables = false;
+        grub = {
+          enable = true;
+          version = 2;
+          efiInstallAsRemovable = true;
+          efiSupport = true;
+          device = "nodev";
+        };
       };
     };
     nix.maxJobs = 4;
-    nixpkgs.config.allowUnfree = true;
-    networking.firewall.allowedTCPPorts = [ 5900 5901 5902 8081 ];
+    nixpkgs = {
+      config.allowUnfree = true;
+    };
+    networking.firewall.allowedTCPPorts = [ 5900 8081 ];
     networking.firewall.extraCommands = lib.mkAfter ''
       iptables -t nat -A nixos-nat-pre -i wg0 -p tcp -m tcp --dport 2200 -j DNAT --to-destination 192.168.3.2:22
-      iptables -t nat -A nixos-nat-pre -i wg0 -p tcp -m tcp --dport 2201 -j DNAT --to-destination 192.168.4.2:22
-      iptables -t nat -A nixos-nat-pre -i wg0 -p tcp -m tcp --dport 2202 -j DNAT --to-destination 192.168.5.2:22
     '';
     networking.wireguard.interfaces.wg0 = let
       genPeer = n: name: endpoint: {
@@ -68,8 +79,8 @@ in {
     monitorama = {
       enable = true;
       hosts = {
-        "/mac1/host" = "http://127.0.0.1:9100/metrics";
-        "/mac1/hydra" = "http://192.168.3.2:9100/metrics";
+        "/monitorama/host" = "http://127.0.0.1:9100/metrics";
+        "/monitorama/ci" = "http://192.168.3.2:9100/metrics";
       };
     };
     environment.systemPackages = with pkgs; [
@@ -92,7 +103,6 @@ in {
       pcscd.enable = true;
       cachecache.enable = true; # port 8081
       openssh = {
-        passwordAuthentication = true;
         enable = true;
         permitRootLogin = "yes";
       };
@@ -117,39 +127,29 @@ in {
       };
     };
     macosGuest = let
-      guestConfDir1 = host: port: (import ../nix-darwin/test.nix { role = "hydra-slave"; inherit host port; }).guestConfDir;
-      guestConfDir2 = host: port: (import ../nix-darwin/test.nix { role = "buildkite-agent"; inherit host port; }).guestConfDir;
+      guestConfDir1 = host: port: hostname: (import ../nix-darwin/test.nix { role = "ci"; inherit host port hostname; }).guestConfDir;
     in {
       enable = true;
       network = {
-        externalInterface = "ens9";
+        externalInterface = "ens1";
         tapDevices = {
-          tap-hydra = {
-            subnet = "192.168.3";
-          };
-          tap-buildkite1 = {
-            subnet = "192.168.4";
-          };
           tap-ci = {
-            subnet = "192.168.6";
-          };
-          tap-mojave = {
-            subnet = "192.168.5";
+            subnet = "192.168.3";
           };
         };
       };
       machines = {
-        hydra = {
-          zvolName = "sarov/mojave-image1";
+        ci = {
+          zvolName = "tank/mojave-image1";
           network = {
             interiorNetworkPrefix = "192.168.3";
             guestSshPort = 2200;
             prometheusPort = 9101;
-            tapDevice = "tap-hydra";
+            tapDevice = "tap-ci";
             guestIP = "192.168.3.2";
           };
           guest = {
-            guestConfigDir = guestConfDir1 "192.168.3.1" "1514";
+            guestConfigDir = guestConfDir1 "192.168.3.1" "1514" "${config.networking.hostName}-ci";
             cores = 2;
             threads = 2;
             sockets = 1;
@@ -158,53 +158,9 @@ in {
             ovmfVarsFile = ./macs/dist/OVMF_VARS-1024x768.fd;
             cloverImage = (pkgs.callPackage ./macs/clover-image.nix { csrFlag = "0x23"; }).clover-image;
             MACAddress = "52:54:00:c9:18:27";
-            vncListen = "192.168.20.20:0";
+            vncListen = "0.0.0.0:0";
           };
         };
-        #buildkite1 = {
-        #  zvolName = "sarov/mojave-image1";
-        #  network = {
-        #    interiorNetworkPrefix = "192.168.4";
-        #    guestSshPort = 2201;
-        #    prometheusPort = 9102;
-        #    tapDevice = "tap-buildkite1";
-        #    guestIP = "192.168.4.2";
-        #  };
-        #  guest = {
-        #    guestConfigDir = guestConfDir2 "192.168.4.1" "1515";
-        #    cores = 2;
-        #    threads = 2;
-        #    sockets = 1;
-        #    memoryInMegs = 6*1024;
-        #    ovmfCodeFile = ./macs/dist/OVMF_CODE.fd;
-        #    ovmfVarsFile = ./macs/dist/OVMF_VARS-1024x768.fd;
-        #    cloverImage = (pkgs.callPackage ./macs/clover-image.nix { csrFlag = "0x23"; }).clover-image;
-        #    MACAddress = "52:54:00:c9:18:28";
-        #    vncListen = "192.168.20.20:1";
-        #  };
-        #};
-        #mojave = {
-        #  zvolName = "sarov/mojave-image1";
-        #  network = {
-        #    interiorNetworkPrefix = "192.168.5";
-        #    guestSshPort = 2202;
-        #    prometheusPort = 9103;
-        #    tapDevice = "tap-mojave";
-        #    guestIP = "192.168.5.2";
-        #  };
-        #  guest = {
-        #    guestConfigDir = guestConfDir1 "192.168.5.1" "1516";
-        #    cores = 2;
-        #    threads = 2;
-        #    sockets = 1;
-        #    memoryInMegs = 6 * 1024;
-        #    ovmfCodeFile = ./macs/dist/OVMF_CODE.fd;
-        #    ovmfVarsFile = ./macs/dist/OVMF_VARS-1024x768.fd;
-        #    cloverImage = (pkgs.callPackage ./macs/clover-image.nix { csrFlag = "0x23"; }).clover-image;
-        #    MACAddress = "52:54:00:c9:18:29";
-        #    vncListen = "192.168.20.20:2";
-        #  };
-        #};
       };
     };
   };

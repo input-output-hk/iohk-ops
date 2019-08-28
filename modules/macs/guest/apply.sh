@@ -4,6 +4,11 @@ echo "apply started at $(date)" /dev/udp/@host@/@port@
 
 printf '\n*.*\t@@host@:@port@\n' >> /etc/syslog.conf
 
+scutil --set HostName @hostname@
+scutil --set LocalHostName @hostname@
+scutil --set ComputerName @hostname@
+dscacheutil -flushcache
+
 exec 3>&1
 exec 2> >(nc -u @host@ @port@)
 exec 1>&2
@@ -97,7 +102,12 @@ EOF
     set -e
     sleep 30
 )
-
+(
+    if [ -d /Volumes/CONFIG/buildkite ]
+    then
+      cp -a /Volumes/CONFIG/buildkite /Users/nixos/buildkite
+    fi
+)
 (
     # shellcheck disable=SC2031
     export USER=root
