@@ -31,7 +31,11 @@ let
   '';
   mkStatusBlocks = concatMapStringsSep "" mkGithubStatus;
 in {
-  imports = [ ./github-webhook-util.nix ];
+  disabledModules = [ "services/continuous-integration/hydra/default.nix" ];
+  imports = [
+    ./github-webhook-util.nix
+    /path/to/source/hydra/hydra-module.nix
+    ];
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
     source = ../static/id_buildfarm;
@@ -63,7 +67,7 @@ in {
     binaryCaches = mkForce [ "https://cache.nixos.org" ];
   };
 
-  services.hydra = {
+  services.hydra-dev = {
     hydraURL = "https://hydra.iohk.io";
     package = pkgs.callPackage ../pkgs/hydra.nix {};
     # max output is 4GB because of amis
