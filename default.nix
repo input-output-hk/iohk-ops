@@ -16,17 +16,17 @@ with pkgs.haskell.lib;
 
 let
   # nixopsUnstable = /path/to/local/src
-  nixopsPacketSrc = pkgs.fetchFromGitHub {
-    owner = "input-output-hk";
-    repo = "nixops-packet";
-    rev = "31fc6e7de1e2842cb3904947bb156dc4ee421b93";
-    sha256 = "0j83q9rsyh4pwa9llzkjb9ik534qdra7hwn1hjjn0dxxhx8j2kil";
-  };
   nixopsUnstable = pkgs.fetchFromGitHub {
     owner = "input-output-hk";
     repo = "nixops";
-    rev = "2447be9da55beda18c761896ecc2fb5966dd0447";
-    sha256 = "1yvhhc95p6n7qximanbrwdzghwixvx98q9h2a5p6qssh9ngzka83";
+    rev = "28dd42a2dc9f6bada1ea587de80cde8dae0ddbf0";
+    sha256 = "0a74c8f0hpb60s91f3igx63zx8amblp3iqr6ic3fdr28nvmvbhgr";
+  };
+  nixopsPacketSrc = pkgs.fetchFromGitHub {
+    owner = "input-output-hk";
+    repo = "nixops-packet";
+    rev = "ae89fc7791c5f8ae518869800d49cd5eeec3e5e0";
+    sha256 = "1r40jyzv3f381js93yvb3l8hxmia7fgi5lc084ydpwzhq3c706wh";
   };
   log-classifier-web = (import log-classifier-src {}).haskellPackages.log-classifier-web;
   nixops =
