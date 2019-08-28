@@ -25,7 +25,7 @@ in {
     };
   };
   mkPacketKeyPairs = projects: listToAttrs (map self.mkPacketKeyPair projects);
-  mkPacketNet = { hostname, module, type ? "demand", facility ? "any", plan ? "c1.small.x86", project ? "infra", extraopts ? {} }:
+  mkPacketNet = { hostname, modules, type ? "demand", facility ? "any", plan ? "c1.small.x86", ipxeScriptUrl ? "", project ? "infra", extraopts ? {} }:
   { config, name, pkgs, resources, ... }: let
     projectId = projects.${project}.id;
   in {
@@ -35,7 +35,7 @@ in {
           targetHost = hostname + ".aws.iohkdev.io";
           targetEnv = "packet";
           packet = {
-            inherit accessKeyId facility plan;
+            inherit accessKeyId facility plan ipxeScriptUrl;
             keyPair = resources.packetKeyPairs.${self.getPacketKeyPairName project};
             project = projectId;
           };
@@ -46,36 +46,47 @@ in {
       };
     in deploymentTypes.${type};
 
-    imports = [
-                module
+    imports = modules ++ [
                 extraopts
               ] ++ (optionals (type == "legacy")
               (map (f: ./. + "/${hostname}/${f}")
                   (builtins.attrNames (builtins.readDir (./. + "/${hostname}")))));
     environment.systemPackages = with pkgs;
-      [ moreutils ];
+      [ moreutils ethtool jq ];
     # services.extra-statsd = mkForce false;
+  };
+  createPacketHydraSlaveBuildkite = hostname: self.mkPacketNet {
+    inherit hostname;
+    type = "demand";
+    facility = "ams1";
+    plan = "c2.medium.x86";
+    project = "ci";
+    ipxeScriptUrl = "http://173.61.28.54:9000/c2-medium-x86/netboot.ipxe";
+    modules = [ 
+      ../modules/hydra-slave.nix
+      ../modules/buildkite-agent.nix
+    ];
   };
   createPacketHydraSlave = hostname: self.mkPacketNet {
     inherit hostname;
     type = "demand";
-    module = ../modules/hydra-slave.nix;
+    modules = [ ../modules/hydra-slave.nix ];
   };
   createPacketBuildkite = hostname: self.mkPacketNet {
     inherit hostname;
     type = "demand";
-    module = ../modules/buildkite-agent.nix;
+    modules = [ ../modules/buildkite-agent.nix ];
   };
   createPacketHydraSlaveImpure = hostname: self.mkPacketNet {
     inherit hostname;
     type = "demand";
-    module = ../modules/hydra-slave.nix;
+    modules = [ ../modules/hydra-slave.nix ];
     extraopts = { nix.useSandbox = mkForce false; };
   };
   createPacketHydraSlaveImpureLegacy = hostname: mkPacketNet {
     inherit hostname;
     type = "legacy";
-    module = ../modules/hydra-slave.nix;
+    modules = [ ../modules/hydra-slave.nix ];
     extraopts = { nix.useSandbox = mkForce false; };
   };
   createPacketMachines = function: hostname: { name = hostname; value = function hostname; };

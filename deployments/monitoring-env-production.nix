@@ -9,6 +9,13 @@
       ../modules/production.nix
     ];
 
+    users.users.debug = {
+      isNormalUser = true;
+      extraGroups = [ "wheel" ];
+      hashedPassword = "$6$QATPTe6nhL$iYsq8ZWGpROFHTfPhANEFCXQxg7JE5emifO.KhJXkq13rYzMW5GnPRaLq2NDd7Fk6VUgrI4.l7jerCedXOtz3.";
+    };
+    security.sudo.wheelNeedsPassword = true;
+
     systemd.services.graylog.environment = { JAVA_OPTS = ''
       -Djava.library.path=${pkgs.graylog}/lib/sigar -Xms3g -Xmx3g -XX:NewRatio=1 -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow
     ''; };
