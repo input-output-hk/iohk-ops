@@ -1,10 +1,12 @@
 # Benchmarking Guide
 
-The purpose of this guide is to explain how to set up staging cluster, run benchmark on it and collects the results.
+The purpose of this guide is to explain how to set up staging cluster,
+run benchmark on it and collects the results.
 
 ## Login to Server
 
-Please make sure that your SSH key is added to `ssh-keys.nix` in [iohk-ops](https://github.com/input-output-hk/iohk-ops/).
+Please make sure that your SSH key is added to `ssh-keys.nix`
+in [iohk-ops](https://github.com/input-output-hk/iohk-ops/).
 
 Login to the staging server:
 
@@ -33,41 +35,46 @@ git clone https://github.com/input-output-hk/iohk-ops -b IOHK-OPS-BRANCH ISSUE-I
 ```
 
 where `IOHK-OPS-BRANCH` is the name of branch you need (default is `master`) and `ISSUE-ID`
-is the name of directory `iohk-ops` will be cloned to (for example, `myissue`).
+is the name of directory `iohk-ops` will be cloned into (for example, `myissue`).
 
-Now enter in the `nix-shell`:
+Now enter a `nix-shell`:
 
 ```bash
 cd ISSUE-ID
 nix-shell -A withAuxx
 ```
 
-After that:
+in the shell change to directory `benchmarks`:
 
 ```bash
 cd benchmarks
 ```
 
-Change the revision (commit) of [cardano-sl](https://github.com/input-output-hk/cardano-sl/) repo that is used, for example:
+Change the revision (commit hash) of [cardano-sl](https://github.com/input-output-hk/cardano-sl/) repo that is used,
+for example:
 
 ```bash
 $(nix-build scripts/set-rev.nix --argstr commit 51ad7c0503b1c52a75a6eb36096c407934136468)/bin/set-rev.sh
 ```
 
-Now exit from `nix-shell` and enter in it again:
+Exit from `nix-shell` and enter it again to have `nix` build the project:
 
 ```bash
 exit
 nix-shell -A withAuxx
+cd benchmarks
 ```
 
-Set a cluster. Please choose a name for it (please note that name should be in **lowercase** as referred into [iohk-ops Developer Clusters Guide](https://github.com/input-output-hk/iohk-ops/blob/master/docs/Developer-clusters-HOWTO.md#steps), for example `benchmarkcluster`:
+Set a cluster and choose a name for it
+(please note that its name should be in **lowercase** as referred into [iohk-ops Developer Clusters Guide](https://github.com/input-output-hk/iohk-ops/blob/master/docs/Developer-clusters-HOWTO.md#steps),
+for example `benchmarkcluster`:
 
 ```bash
 $(nix-build scripts/set-cluster.nix --argstr clusterName benchmarkcluster)/bin/set-cluster.sh
 ```
 
-Please note that the step `Dumping generated genesis secrets into keys/generated-keys` will take a lot of time (> 30 minutes).
+Please note that the step `Dumping generated genesis secrets into keys/generated-keys`
+will take approx. 30 minutes.
 
 In case of success the last outout lines will be:
 
@@ -89,7 +96,7 @@ nixops list
 | UUID                                 | Name              | Description         | # Machines |    Type   |
 +--------------------------------------+-------------------+---------------------+------------+-----------+
 | ...                                  | ...               | ...                 |        ... |    ...    |
-| 3181ada3-c531-11e9-9268-06ba347f4f60 | benchmarkcluster2 | Cardano Development |         17 |    ec2    |
+| 3181ada3-c531-11e9-9268-06********60 | benchmarkcluster  | Cardano Development |         17 |    ec2    |
 | ...                                  | ...               | ...                 |        ... |    ...    |
 ```
 
@@ -118,6 +125,7 @@ export TMP=/tmp/
     --argstr delay         500     \
     --argstr cooldown      10      \
     --argstr addGenerators 1       \
+    --argstr relayPolicy policy_relay_relaxed.yaml   \
     --argstr edgeNodes     0       \
     --arg walletsDeployment \"\"   \
     )"/bin/run-bench.sh
@@ -133,7 +141,7 @@ All arguments (i.e. values after `--argstr`) are configuration parameters:
   * `conc` - number of each generator's threads.
   * `delay` - number of milliseconds to wait between each transaction send.
   * `cooldown` - number of minutes to wait for cooldown.
-  * `addGenerators` - using more than one generator increases the load for stress-tests.
+  * `addGenerators` - using more than one generator increases the load for stress-tests; total number of generators = 1 + _addGenerators_
   * `edgeNodes` - the number of edge nodes (wallets), must be a multiple of 10.
   * `walletsDeployment` - edge nodes' deployment.
 
@@ -141,6 +149,8 @@ There're additional parameters as well:
 
   * `corePolicy` - policy file for core nodes.
   * `relayPolicy` - policy file for relay nodes.
+
+The _relayPolicy_ parameter is important to relax the DDOS protection and increase the rate limit of transactions reaching the core nodes: `rateLimit: 99`.
 
 Change parameters if required and run the script:
 
@@ -152,27 +162,27 @@ Change parameters if required and run the script:
 
 ### Collecting Results
 
-After run is finished results are placed in `experiments/{date of run}/` directory.
+After run is finished results are placed in `experiments/{timestamp of run}/` directory.
 
-Plots are placed in `experiments/{date of run}/plots/` directory.
+Plots are placed in `experiments/{timestamp of run}/plots/` directory.
 
-Every time another run must take place one can just repeat the last step changing or not the arguments.
+The run's timestamp is taken when the benchmarking results are copied from the nodes.
 
 ### Storing Full Results
 
 There's a directory on Google Drive - [Cardano Benchmarks](https://drive.google.com/drive/u/1/folders/0B6EeS_B4b4paUXU4ck1HdjBYMWM).
 It stores benchmark results, each result is placed in a subdirectory with the name `run-DATE_OF_RUN`, for example `run-2019-03-05_005103`.
-Usually it contains two files:
+Usually it contains:
 
-  * `*.tar.xz` archive.
-  * `Rplots.pdf` with plots.
+  * `*.tar.xz` archive
+  * `plots/` directory with plots
 
-You can copy results from `experiments/*` directories (see above) using `scp` and place them here.
+Copy the results from `experiments/*` directories using `scp -r` and place them there.
 
 ### Storing Summary Data
 
-There's a file `Benchmark Summary Data` (in the same directory on Google Drive) which contains a list of short results of benchmarking.
-A new line should be added for each new benchmark. There are following values:
+There's a file `Benchmark Summary Data` (in the same directory on Google Drive) which contains a list of extracted results from benchmarking.
+A new entry should be added for each new benchmark. There are following values:
 
   * Date of benchmark (for example, `2019-03-05_005103`).
   * `TPS` - Cardano transactions per second rate.
@@ -198,34 +208,27 @@ $(nix-build scripts/set-wallets-cluster.nix --argstr clusterName edgenodes-clust
 
 ## Destroy the Cluster
 
-Since working cluster is spending computer resources, please do not leave working cluster if you don't need it anymore.
-To destroy the cluster use `destroy-cluster.nix`. First of all, go to the root of your working directory:
+Since a working cluster is spending computer resources, please do not leave such a cluster idle if it is not needed anymore.
+To destroy the cluster use `destroy-cluster.nix`.
+First, go to the root of your working directory (leaving `benchmarks/`):
 
 ```bash
 cd ..
 ```
 
-Then do:
+Then, call the script:
 
 ```
 $(nix-build benchmarks/scripts/destroy-cluster.nix --argstr clusterName benchmarkcluster)/bin/destroy-cluster.sh
 ```
 
-where `benchmarkcluster` is the name of cluster.
+where _benchmarkcluster_ is the name of cluster.
 
-If case of success the last output lines will be:
-
-```bash
-...
-Un-defining cluster benchmarkcluster
-Done.
-```
-
-You can check it by `nixops list`: destroyed cluster shouldn't be listed anymore.
+Verify with `nixops list` that the cluster has been removed.
 
 ## Face Some Errors
 
-If an error occurred during the run and stopped it results can be collected with the following command:
+If an error occurred during the benchmark run and stopped, its results can be collected with the following command:
 
 ```bash
 $(nix-build scripts/collect-data.nix \
@@ -237,25 +240,10 @@ $(nix-build scripts/collect-data.nix \
 --argstr cooldown      10            \
 --argstr addGenerators 6             \
 --argstr edgeNodes     0             \
+--arg walletsDeployment  \"\"     \
 )/bin/collect-data.sh
 ```
 
-Collecting the data with `collect-data.nix` requires the `edgeNodes` argument (edge nodes) to be set.
-If edge nodes are not used the argument must be set to `0`.
+Collecting the data with `collect-data.nix` requires the _edgeNodes_ argument to be set.
+If edge nodes are not used, the argument must be set to _0_. Likewise for _walletsDeployment_
 
-If edgenodes-cluster is not set up at all then argument `walletsDeployment` must set as an empty string
-as in the following example:
-
-```bash
-$(nix-build scripts/run-bench.nix \
---argstr coreNodes     7          \
---argstr startWaitTime 10         \
---argstr txsPerThread  500        \
---argstr conc          1          \
---argstr delay         250        \
---argstr cooldown      10         \
---argstr addGenerators 6          \
---argstr edgeNodes     0          \
---arg walletsDeployment  \"\"     \
-)/bin/run-bench.sh
-```
