@@ -16,9 +16,12 @@ in {
   };
   config = {
     boot = {
-      initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
-      kernelModules = [ "kvm-intel" "wl" ];
-      extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
+      initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" "zfsUnstable" ];
+      kernelModules = [ "kvm-intel" ];
+      extraModulePackages = with config.boot.kernelPackages; lib.mkForce [ zfsUnstable wireguard ];
+      # initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
+      # kernelModules = [ "kvm-intel" "wl" ];
+      # extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
       loader = {
         systemd-boot.enable = true;
         efi.canTouchEfiVariables = true;
@@ -46,7 +49,7 @@ in {
         {
           publicKey = "kf/f+PWsMPVtV0vMvjG7A8ShgRfdwFAb99u+ixBboBE=";
           allowedIPs = [ "192.168.20.0/24" ];
-          endpoint = "monitoring.aws.iohkdev.io:51820";
+          endpoint = "monitoring.ci.iohkdev.io:51820";
           persistentKeepalive = 30;
         }
         {
@@ -55,7 +58,7 @@ in {
           endpoint = "99.192.62.202:51820";
           persistentKeepalive = 30;
         }
-        (genPeer 2 "hydra" "hydra.iohk.io:51820")
+        (genPeer 2 "hydra" "hydra.ci.iohkdev.io:51820")
         (genPeer 3 "cardano-deployer" "${lib.strings.removeSuffix "\n" (builtins.readFile ../static/deployer-ip.txt)}:51820")
         {
           publicKey = "MRowDI1eC9B5Hx/zgPk5yyq2eWSq6kYFW5Sjm7w52AY=";

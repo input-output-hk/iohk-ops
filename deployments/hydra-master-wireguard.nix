@@ -18,9 +18,14 @@ in {
       listenPort = 51820;
       privateKeyFile = "/etc/wireguard/hydra.wgprivate";
       peers = [
-        { # sarov
-          publicKey = "mC3XblolhrDxerxXCvF1vyXdAY208/1bJhhtsulk5DU=";
-          allowedIPs = [ "192.168.20.20/32" ];
+        #{ # sarov
+        #  publicKey = "mC3XblolhrDxerxXCvF1vyXdAY208/1bJhhtsulk5DU=";
+        #  allowedIPs = [ "192.168.20.20/32" ];
+        #  persistentKeepalive = 30;
+        #}
+        { # mac-mini-1
+          publicKey = "eGEdIydAFSKgVEQ5RKI08uBGfZeQzVuQOrN962FB/SA=";
+          allowedIPs = [ "192.168.20.30/32" ];
           persistentKeepalive = 30;
         }
         {

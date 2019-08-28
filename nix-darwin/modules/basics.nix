@@ -51,7 +51,7 @@ in {
   '';
 
   nix.binaryCachePublicKeys = [
-    "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+    "hydra.iohk.io-1:pBSKwSWbeqlB7LnSdnxguemXjso7IVv6/h4W2joTycA="
     "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
   ];
   nix.binaryCaches = [ "http://192.168.3.1:8081" ];
