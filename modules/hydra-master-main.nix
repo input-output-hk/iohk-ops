@@ -12,7 +12,7 @@ let
   };
   mkLinux = hostName: commonBuildMachineOpt // {
     inherit hostName;
-    maxJobs = 8;
+    maxJobs = 12;
   };
   mkMac = hostName: commonBuildMachineOpt // {
     inherit hostName;
@@ -53,21 +53,13 @@ in {
   nix = {
     distributedBuilds = true;
     buildMachines = [
-      (mkLinux "packet-hydra-slave-1.aws.iohkdev.io")
-      (mkLinux "packet-hydra-slave-2.aws.iohkdev.io")
-      (mkLinux "packet-hydra-slave-3.aws.iohkdev.io")
-      (mkLinux "packet-hydra-slave-4.aws.iohkdev.io")
-      (mkLinux "packet-hydra-slave-5.aws.iohkdev.io")
-      ((mkMac "sarov") // { speedFactor = 1; })
-      ((mkMac "mac-mini-1") // { speedFactor = 2; })
-      ((mkMac "mac-mini-2") // { speedFactor = 2; })
-      #(mkMac "osx-1.aws.iohkdev.io")
-      #(mkMac "osx-2.aws.iohkdev.io")
-      #(mkMac "osx-3.aws.iohkdev.io")
-      #(mkMac "osx-4.aws.iohkdev.io")
-      #(mkMac "osx-5.aws.iohkdev.io")
+      (mkLinux "packet-hydra-buildkite-1.ci.iohkdev.io")
+      #(mkLinux "packet-hydra-buildkite-2.ci.iohkdev.io")
     ];
     binaryCaches = mkForce [ "https://cache.nixos.org" ];
+    binaryCachePublicKeys = mkForce [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+    ];
   };
 
   services.hydra = {
@@ -82,55 +74,56 @@ in {
 
       max_concurrent_evals = 14
 
-      store_uri = s3://iohk-nix-cache?secret-key=/etc/nix/hydra.iohk.io-1/secret&log-compression=br&region=eu-central-1
-      server_store_uri = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/
-      binary_cache_public_uri = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/
-      log_prefix = https://iohk-nix-cache.s3-eu-central-1.amazonaws.com/
+      store_uri = s3://iohk-nix-cache-temp?secret-key=/etc/nix/hydra.iohk.io-1/secret&log-compression=br&region=eu-central-1
+      server_store_uri = https://iohk-nix-cache-temp.s3-eu-central-1.amazonaws.com/
+      binary_cache_public_uri = https://iohk-nix-cache-temp.s3-eu-central-1.amazonaws.com/
+      log_prefix = https://iohk-nix-cache-temp.s3-eu-central-1.amazonaws.com/
       upload_logs_to_binary_cache = true
 
-      <github_authorization>
-        input-output-hk = ${builtins.readFile ../static/github_token}
-      </github_authorization>
-      ${mkStatusBlocks [
-        { jobset = "iohk-ops"; inputs = "jobsets"; }
-        { jobset = "cardano-base"; inputs = "cardano-base"; }
-        { jobset = "cardano-byron-proxy"; inputs = "cardano-byron-proxy"; }
-        { jobset = "cardano-prelude"; inputs = "cardano-prelude"; }
-        { jobset = "decentralized-software-updates"; inputs = "decentralized-software-updates"; }
-        { jobset = "cardano-ledger-specs"; inputs = "cardano-ledger-specs"; }
-        { jobset = "cardano-ledger"; inputs = "cardano-ledger"; }
-        { jobset = "cardano-wallet"; inputs = "cardano-wallet"; }
-        { jobset = "cardano-shell"; inputs = "cardano-shell"; }
-        { jobset = "cardano-node"; inputs = "cardano-node"; }
-        { jobset = "cardano-explorer"; inputs = "cardano-explorer"; }
-        { jobset = "cardano"; inputs = "cardano"; }
-        { jobset = "plutus"; inputs = "plutus"; }
-        { jobset = "log-classifier"; inputs = "log-classifier"; }
-        { jobset = "ouroboros-network"; inputs = "ouroboros-network"; }
-        { jobset = "iohk-monitoring"; inputs = "iohk-monitoring"; }
-        { jobset = "haskell-nix"; inputs = "haskell-nix"; }
-        { jobset = "tools"; inputs = "tools"; }
-        { jobset = "iohk-nix"; inputs = "iohk-nix"; }
-      ]}
-
-      # DEVOPS-1208 This CI status for cardano-sl is needed while the
-      # Daedalus Windows installer is built on AppVeyor or Buildkite
-      <githubstatus>
-        jobs = Cardano:cardano-sl.*:daedalus-mingw32-pkg
-        inputs = cardano
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
-      <githubstatus>
-        jobs = Cardano:daedalus.*:tests\..*
-        inputs = daedalus
-        excludeBuildFromContext = 1
-        useShortContext = 1
-      </githubstatus>
     '';
+      #<github_authorization>
+      #  input-output-hk = ${builtins.readFile ../static/github_token}
+      #</github_authorization>
+
+      #${mkStatusBlocks [
+      #  { jobset = "iohk-ops"; inputs = "jobsets"; }
+      #  { jobset = "cardano-base"; inputs = "cardano-base"; }
+      #  { jobset = "cardano-byron-proxy"; inputs = "cardano-byron-proxy"; }
+      #  { jobset = "cardano-prelude"; inputs = "cardano-prelude"; }
+      #  { jobset = "decentralized-software-updates"; inputs = "decentralized-software-updates"; }
+      #  { jobset = "cardano-ledger-specs"; inputs = "cardano-ledger-specs"; }
+      #  { jobset = "cardano-ledger"; inputs = "cardano-ledger"; }
+      #  { jobset = "cardano-wallet"; inputs = "cardano-wallet"; }
+      #  { jobset = "cardano-shell"; inputs = "cardano-shell"; }
+      #  { jobset = "cardano-node"; inputs = "cardano-node"; }
+      #  { jobset = "cardano"; inputs = "cardano"; }
+      #  { jobset = "plutus"; inputs = "plutus"; }
+      #  { jobset = "log-classifier"; inputs = "log-classifier"; }
+      #  { jobset = "ouroboros-network"; inputs = "ouroboros-network"; }
+      #  { jobset = "iohk-monitoring"; inputs = "iohk-monitoring"; }
+      #  { jobset = "haskell-nix"; inputs = "haskell-nix"; }
+      #  { jobset = "tools"; inputs = "tools"; }
+      #  { jobset = "iohk-nix"; inputs = "iohk-nix"; }
+      #  { jobset = "cardano-explorer"; inputs = "cardano-explorer"; }
+      #]}
+
+      ## DEVOPS-1208 This CI status for cardano-sl is needed while the
+      ## Daedalus Windows installer is built on AppVeyor or Buildkite
+      #<githubstatus>
+      #  jobs = Cardano:cardano-sl.*:daedalus-mingw32-pkg
+      #  inputs = cardano
+      #  excludeBuildFromContext = 1
+      #  useShortContext = 1
+      #</githubstatus>
+      #<githubstatus>
+      #  jobs = Cardano:daedalus.*:tests\..*
+      #  inputs = daedalus
+      #  excludeBuildFromContext = 1
+      #  useShortContext = 1
+      #</githubstatus>
   };
   services.grafana = {
-    enable = true;
+    enable = false;
     users.allowSignUp = true;
     domain = "hydra.iohk.io";
     rootUrl = "%(protocol)ss://%(domain)s/grafana/";
@@ -141,13 +134,20 @@ in {
     };
   };
 
+  users.users.debug = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ];
+    hashedPassword = "$6$QATPTe6nhL$iYsq8ZWGpROFHTfPhANEFCXQxg7JE5emifO.KhJXkq13rYzMW5GnPRaLq2NDd7Fk6VUgrI4.l7jerCedXOtz3.";
+  };
+  security.sudo.wheelNeedsPassword = true;
+
   networking.firewall.allowedTCPPorts = [ 80 443 ];
   environment.systemPackages = with pkgs; [ goaccess ];
   services.nginx = {
     virtualHosts = {
       "hydra.iohk.io" = {
-        forceSSL = true;
-        enableACME = true;
+        forceSSL = false;
+        enableACME = false;
         locations."/".extraConfig = ''
           proxy_pass http://127.0.0.1:8080;
           proxy_set_header Host $host;
@@ -156,7 +156,7 @@ in {
           proxy_set_header X-Forwarded-Proto $scheme;
         '';
         locations."~ /(nix-cache-info|.*\\.narinfo|nar/*)".extraConfig = ''
-          return 301 https://iohk-nix-cache.s3-eu-central-1.amazonaws.com$request_uri;
+          return 301 https://iohk-nix-cache-temp.s3-eu-central-1.amazonaws.com$request_uri;
         '';
         locations."/graph/".extraConfig = ''
           proxy_pass http://127.0.0.1:8081;

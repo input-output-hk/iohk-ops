@@ -11,7 +11,13 @@ in
             ];
 
   nix = {
-    binaryCaches = mkForce [ "https://cache.nixos.org" ];
+    buildCores = mkForce 4;
+    trustedBinaryCaches = mkForce [];
+    binaryCaches = mkForce [ "https://cache.nixos.org" "https://iohk-nix-cache-temp.s3-eu-central-1.amazonaws.com/" ];
+    binaryCachePublicKeys = mkForce [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "hydra.iohk.io-1:pBSKwSWbeqlB7LnSdnxguemXjso7IVv6/h4W2joTycA="
+    ];
     extraOptions = ''
       # Max of 2 hours to build any given derivation on Linux.
       # See ../nix-darwin/modules/basics.nix for macOS.

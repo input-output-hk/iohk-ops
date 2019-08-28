@@ -13,6 +13,7 @@ in {
   require = [
     ./monitoring-env-production.nix
     ./hydra-master-wireguard.nix
+    ./mac-base.nix
   ];
 
   defaults = {
@@ -33,21 +34,23 @@ in {
   hydra = mkPacketNet {
     hostname = "hydra";
     type = "demand";
-    module = ../modules/hydra-master-common.nix;
+    modules = [ ../modules/hydra-master-common.nix ];
     facility = "ams1";
     plan = "c2.medium.x86";
+    ipxeScriptUrl = "http://173.61.28.54:9000/c2-medium-x86/netboot.ipxe";
     project = "ci";
     extraopts = {
       imports = [ ../modules/hydra-master-main.nix ];
     };
   };
 
-  monitoring  = mkPacketNet {
+  monitoring = mkPacketNet {
     hostname = "monitoring";
     type = "demand";
-    module = {};
+    modules = [];
     facility = "ams1";
     plan = "c2.medium.x86";
+    ipxeScriptUrl = "http://173.61.28.54:9000/c2-medium-x86/netboot.ipxe";
     project = "ci";
     extraopts = {
       deployment.keys."monitoring.wgprivate" = {
@@ -62,5 +65,31 @@ in {
       };
       services.monitoring-services.enableWireguard = true;
     };
+  };
+
+  packet-hydra-buildkite-1 = mkPacketNet {
+    hostname = "packet-hydra-buildkite-1";
+    type = "demand";
+    modules = [ 
+      ../modules/hydra-slave.nix
+      ../modules/buildkite-agent.nix
+    ];
+    facility = "ams1";
+    plan = "c2.medium.x86";
+    ipxeScriptUrl = "http://173.61.28.54:9000/c2-medium-x86/netboot.ipxe";
+    project = "ci";
+  };
+
+  packet-hydra-buildkite-2 = mkPacketNet {
+    hostname = "packet-hydra-buildkite-2";
+    type = "demand";
+    modules = [ 
+      ../modules/hydra-slave.nix
+      ../modules/buildkite-agent.nix
+    ];
+    facility = "ams1";
+    plan = "c2.medium.x86";
+    ipxeScriptUrl = "http://173.61.28.54:9000/c2-medium-x86/netboot.ipxe";
+    project = "ci";
   };
 }
