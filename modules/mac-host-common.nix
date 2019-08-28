@@ -92,7 +92,6 @@ in {
       pcscd.enable = true;
       cachecache.enable = true; # port 8081
       openssh = {
-        passwordAuthentication = true;
         enable = true;
         permitRootLogin = "yes";
       };
@@ -122,7 +121,7 @@ in {
     in {
       enable = true;
       network = {
-        externalInterface = "ens9";
+        externalInterface = "ens1";
         tapDevices = {
           tap-hydra = {
             subnet = "192.168.3";
@@ -140,7 +139,7 @@ in {
       };
       machines = {
         hydra = {
-          zvolName = "sarov/mojave-image1";
+          zvolName = "tank/mojave-image1";
           network = {
             interiorNetworkPrefix = "192.168.3";
             guestSshPort = 2200;
@@ -158,7 +157,7 @@ in {
             ovmfVarsFile = ./macs/dist/OVMF_VARS-1024x768.fd;
             cloverImage = (pkgs.callPackage ./macs/clover-image.nix { csrFlag = "0x23"; }).clover-image;
             MACAddress = "52:54:00:c9:18:27";
-            vncListen = "192.168.20.20:0";
+            vncListen = "0.0.0.0:0";
           };
         };
         #buildkite1 = {

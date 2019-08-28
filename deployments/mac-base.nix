@@ -1,6 +1,9 @@
+with import ../lib.nix;
 let
+  inherit (pkgs) lib;
   mkMac = { wgip
   , deployip # the IP used to reach it from the deployer
+  , deployPort
   , hostname # the hostname
   , hostid # the hostid for zfs
   #, role
@@ -8,6 +11,7 @@ let
     imports = [ ../modules/mac-host-common.nix ];
     deployment = {
       targetHost = deployip;
+      targetPort = deployPort;
       keys."private.key" = {
         destDir = "/etc/wireguard";
         keyFile = ../static + "/${hostname}.wgprivate";
@@ -25,11 +29,13 @@ let
     };
     #macosGuest.role = role;
   };
-in {
-  sarov = mkMac {
-    wgip = "192.168.20.20"; # what ip to configure the machine at on wireguard
-    deployip = "192.168.20.20"; # what ip to ssh into when deploying
-    hostname = "sarov";
-    hostid = "d11ab455"; # the random hostid generated at install time
-  };
-}
+in lib.mapAttrs (hostname: metadata: mkMac { inherit (metadata) wgip deployip hostname hostid deployPort; }) (import ./mac-metadata.nix)
+
+#{
+#  sarov = mkMac {
+#    wgip = "192.168.20.20"; # what ip to configure the machine at on wireguard
+#    deployip = "192.168.20.20"; # what ip to ssh into when deploying
+#    hostname = "sarov";
+#    hostid = "d11ab455"; # the random hostid generated at install time
+#  };
+#}
