@@ -103,6 +103,7 @@ in {
     services.monitoring-exporters = {
       graylogHost = lib.mkForce "${(builtins.elemAt monitoringWg monitorDefault).monWgIp}:5044";
       ownIp = lib.mkForce "${subnet}.${toString ipo4}";
+      useWireguardListeners = true;
     };
 
     boot.extraModulePackages = [ config.boot.kernelPackages.wireguard ];
@@ -156,7 +157,7 @@ in {
     };
   } // args);
 
-  createPacketMonitor = { hostname, ... }@args: self.mkPacketNetMod ({
+  createPacketMonitor = { hostname, subnet ? "192.168.20", ipo4 ? "1", ... }@args: self.mkPacketNetMod ({
     inherit hostname;
     type = "demand";
     facility = "ams1";
@@ -164,6 +165,12 @@ in {
     project = "ci";
     ipxeScriptUrl = "http://173.61.28.54:9000/c2-medium-x86/netboot.ipxe";
     modules = [];
+    extraopts = {
+      services.monitoring-services = {
+        useWireguardListeners = true;
+        ownIp = lib.mkForce "${subnet}.${toString ipo4}";
+      };
+    };
   } // args);
 
   createPacketHydraSlaveBuildkite = { hostname, ... }@args: self.mkPacketNetMod ({

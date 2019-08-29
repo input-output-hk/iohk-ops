@@ -51,17 +51,28 @@ in {
         '';
       };
 
+      useWireguardListeners = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Bind the 8125, 9100, 9102 listeners on the wg ip instead of globally.
+        '';
+      };
+
+      ownIp = mkOption {
+        type = types.str;
+        description = ''
+          The address a remote prometheus node will use to contact this machine.
+          Typically set to the wireguard ip if available.
+        '';
+      };
+
       papertrail.enable = mkOption {
         type = types.bool;
         default = false;
         description = ''
           Enable papertrail.
         '';
-      };
-
-      ownIp = mkOption {
-        type = types.str;
-        description = "the address a remote prometheus node will use to contact this machine";
       };
     };
   };
@@ -78,7 +89,7 @@ in {
         appendHttpConfig = ''
           vhost_traffic_status_zone;
           server {
-            listen 9113;
+            listen ${if cfg.useWireguardListeners then "${cfg.ownIp}:" else ""}9113;
             location /status {
               vhost_traffic_status_display;
               vhost_traffic_status_display_format html;
@@ -95,13 +106,14 @@ in {
         requires = [ "network.target" ];
         after = [ "network.target" ];
         script = ''
-          ${pkgs.prometheus-statsd-exporter}/bin/statsd_bridge -statsd.listen-address ":8125" -web.listen-address ":9102" -statsd.add-suffix=false || ${pkgs.prometheus-statsd-exporter}/bin/statsd_exporter --statsd.listen-udp=":8125" --web.listen-address=":9102"
+          ${pkgs.prometheus-statsd-exporter}/bin/statsd_bridge -statsd.listen-address "${if cfg.useWireguardListeners then "${cfg.ownIp}" else ""}:8125" -web.listen-address "${if cfg.useWireguardListeners then "${cfg.ownIp}" else ""}:9102" -statsd.add-suffix=false || ${pkgs.prometheus-statsd-exporter}/bin/statsd_exporter --statsd.listen-udp="${if cfg.useWireguardListeners then "${cfg.ownIp}" else ""}:8125" --web.listen-address="${if cfg.useWireguardListeners then "${cfg.ownIp}" else ""}:9102"
         '';
       };
 
       services = {
         prometheus.exporters.node = {
           enable = true;
+          listenAddress = if cfg.useWireguardListeners then "${cfg.ownIp}" else "0.0.0.0";
           enabledCollectors = [
             "systemd"
             "tcpstat"
@@ -129,8 +141,6 @@ in {
       networking.firewall.allowedTCPPorts = [ 9100 9102 ];
     })
 
-    # Leaving the "monitoring" attribute name as static rather than
-    # referencing monitoringNV due to atala globals.nix usage conflict.
     (mkIf cfg.logging {
       services.journalbeat = {
         enable = true;

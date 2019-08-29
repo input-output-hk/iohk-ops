@@ -48,7 +48,7 @@
           },
           "bind_address": {
             "@type": "string",
-            "@value": "0.0.0.0"
+            "@value": "@interface@"
           },
           "no_beats_prefix": {
             "@type": "boolean",

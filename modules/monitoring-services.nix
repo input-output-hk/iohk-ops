@@ -50,6 +50,22 @@ in {
         default = false;
       };
 
+      useWireguardListeners = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Bind the 5044 graylog listener on the wg ip instead of globally.
+        '';
+      };
+
+      ownIp = mkOption {
+        type = types.str;
+        description = ''
+          The address a remote prometheus node will use to contact this machine.
+          Typically set to the wireguard ip if available.
+        '';
+      };
+
       metrics = mkOption {
         type = types.bool;
         default = true;
@@ -449,7 +465,7 @@ in {
         grafana = {
           enable = true;
           users.allowSignUp = false;
-          addr = "";
+          addr = "127.0.0.1";
           domain = "${cfg.webhost}";
           rootUrl = "%(protocol)ss://%(domain)s/grafana/";
           extraOptions = lib.mkIf cfg.oauth.enable {
@@ -518,6 +534,7 @@ in {
         prometheus.exporters = {
           blackbox = {
             enable = true;
+            listenAddress = "127.0.0.1";
             configFile = pkgs.writeText "blackbox-exporter.yaml" (builtins.toJSON {
               modules = {
                 https_2xx = {
@@ -572,6 +589,7 @@ in {
         };
         prometheus.alertmanager = {
           enable = cfg.pagerDuty.serviceKey != null;
+          listenAddress = "127.0.0.1";
           configuration = {
             route = {
               group_by = [ "alertname" "alias" ];
@@ -615,6 +633,7 @@ in {
         };
         prometheus2 = {
           enable = true;
+          listenAddress = "localhost:9090";
           webExternalUrl = "https://${cfg.webhost}/prometheus/";
           extraFlags = [
             "--storage.tsdb.retention=8760h"
@@ -967,13 +986,14 @@ in {
           elasticsearchHosts = [ "http://localhost:9200" ];
           # Elasticsearch config below is for a single node deployment
           extraConfig = ''
-            http_bind_address = 0.0.0.0:9000
+            http_bind_address = 127.0.0.1:9000
             elasticsearch_shards = 1
             elasticsearch_replicas = 0
           '';
         };
         elasticsearch = {
           enable = true;
+          listenAddress = "127.0.0.1";
           package = pkgs.elasticsearch6-oss;
           # Prevent graylog deflector indexing by turning off auto create index option
           extraConf = ''
@@ -983,7 +1003,11 @@ in {
         mongodb.enable = true;
       };
       systemd.services.graylog-preload = let
-        graylogConfig = ./graylog/graylogConfig.json;
+        graylogConfig = pkgs.substituteAll {
+          src = ./graylog/graylogConfig.json;
+          interface = if cfg.useWireguardListeners then "${cfg.ownIp}" else "0.0.0.0";
+          isExecutable = false;
+        };
         password = traceValFn (x:
           if x == "changeme" then ''
             *
