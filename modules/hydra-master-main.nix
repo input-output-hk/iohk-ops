@@ -54,7 +54,7 @@ in {
     distributedBuilds = true;
     buildMachines = [
       (mkLinux "packet-hydra-buildkite-1.ci.iohkdev.io")
-      #(mkLinux "packet-hydra-buildkite-2.ci.iohkdev.io")
+      (mkLinux "packet-hydra-buildkite-2.ci.iohkdev.io")
     ];
     binaryCaches = mkForce [ "https://cache.nixos.org" ];
     binaryCachePublicKeys = mkForce [
