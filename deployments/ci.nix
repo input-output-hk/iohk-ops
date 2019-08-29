@@ -7,19 +7,11 @@ let
   # All parameters in mkPacketNetMod are overridable from within each host provided attribute set
 
   monitorList = [
-    {
-      hostname = "monitoring";
-      ipo4 = "1";
-      inherit peerWg;
-    }
+    { hostname = "monitoring"; ipo4 = "1"; inherit peerWg; }
   ];
 
   hydraList = [
-    {
-      hostname = "hydra";
-      ipo4 = "2";
-      inherit peerWg;
-    }
+    { hostname = "hydra"; ipo4 = "2"; inherit peerWg; }
   ];
 
   hydraSlaveBuildkiteList = [
@@ -39,6 +31,7 @@ in {
   ];
 
   defaults = {
+    services.monitoring-exporters.graylogHost = "192.168.20.1";
     imports = [
       ../modules/common.nix
       ../modules/globals.nix
