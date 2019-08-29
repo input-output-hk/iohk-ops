@@ -23,8 +23,16 @@ in {
       # kernelModules = [ "kvm-intel" "wl" ];
       # extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
       loader = {
-        systemd-boot.enable = true;
-        efi.canTouchEfiVariables = true;
+        #systemd-boot.enable = true;
+        #efi.canTouchEfiVariables = true;
+        efi.canTouchEfiVariables = false;
+        grub = {
+          enable = true;
+          version = 2;
+          efiInstallAsRemovable = true;
+          efiSupport = true;
+          device = "nodev";
+        };
       };
     };
     nix.maxJobs = 4;
