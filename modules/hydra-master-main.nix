@@ -59,19 +59,8 @@ in {
     distributedBuilds = true;
     buildMachines = [
       (mkLinux "packet-hydra-buildkite-1.ci.iohkdev.io")
+      (mkLinux "packet-hydra-buildkite-2.ci.iohkdev.io")
       ((mkMac "mac-mini-1") // { sshUser = "root"; speedFactor = 2; })
-      #(mkLinux "packet-hydra-buildkite-2.ci.iohkdev.io")
-      #(mkLinux "packet-hydra-slave-1.aws.iohkdev.io")
-      #(mkLinux "packet-hydra-slave-2.aws.iohkdev.io")
-      #(mkLinux "packet-hydra-slave-3.aws.iohkdev.io")
-      #(mkLinux "packet-hydra-slave-4.aws.iohkdev.io")
-      #(mkLinux "packet-hydra-slave-5.aws.iohkdev.io")
-      #((mkMac "sarov") // { sshUser = "root"; speedFactor = 2; })
-      #(mkMac "osx-1.aws.iohkdev.io")
-      #(mkMac "osx-2.aws.iohkdev.io")
-      #(mkMac "osx-3.aws.iohkdev.io")
-      #(mkMac "osx-4.aws.iohkdev.io")
-      #(mkMac "osx-5.aws.iohkdev.io")
     ];
     binaryCaches = mkForce [ "https://cache.nixos.org" ];
     binaryCachePublicKeys = mkForce [
