@@ -6,7 +6,7 @@ in {
   imports = [
     <nixpkgs/nixos/modules/installer/scan/not-detected.nix>
     ./macs/host
-    ./macs/host/macmini-kernel.nix
+    ./macs/host/macmini-boot-fixes.nix
     ./cachecache.nix
   ];
   options = {
@@ -36,7 +36,9 @@ in {
       };
     };
     nix.maxJobs = 4;
-    nixpkgs.config.allowUnfree = true;
+    nixpkgs = {
+      config.allowUnfree = true;
+    };
     networking.firewall.allowedTCPPorts = [ 5900 5901 5902 8081 ];
     networking.firewall.extraCommands = lib.mkAfter ''
       iptables -t nat -A nixos-nat-pre -i wg0 -p tcp -m tcp --dport 2200 -j DNAT --to-destination 192.168.3.2:22
