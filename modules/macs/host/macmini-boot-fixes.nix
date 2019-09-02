@@ -1,10 +1,11 @@
 { pkgs, ... }:
 let
-  pkgsUnstable = import (builtins.fetchTarball "https://github.com/nixos/nixpkgs/archive/362be9608c3.tar.gz") {
+  # TODO: switch to 19.03 if this PR gets merged before freeze
+  pkgsUnstable = import (builtins.fetchTarball "https://github.com/nixos/nixpkgs/archive/a8d26fc34a7ceb52d098e384f316b8e4b19651bb.tar.gz") {
     config = {};
     overlays = [];
   };
-  macBootOverlay = self: super {
+  macBootOverlay = self: super: {
     inherit (pkgsUnstable) grub2;
   };
 in {
