@@ -117,11 +117,11 @@ with import ../lib.nix;
       listenAddress = "${
         if options.networking.privateIPv4.isDefined
         then config.networking.privateIPv4
-        else "0.0.0.0"}:${config.params.port}";
+        else "0.0.0.0"}:${toString config.params.port}";
       publicAddress = "/ip4/${
         if options.networking.publicIPv4.isDefined
         then config.networking.publicIPv4
-        else config.networking.privateIPv4}/tcp/${config.params.port}";
+        else config.networking.privateIPv4}/tcp/${toString config.params.port}";
       publicId = config.params.name;
       logger = {
         output = "gelf";
