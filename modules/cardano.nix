@@ -142,6 +142,8 @@ with import ../lib.nix;
       wants = [ "jormungandr-pool-secret.yaml-key.service" ];
     };
 
+    users.users.jormungandr.extraGroups = [ "keys" ];
+
     services.cardano-node-legacy = mkIf (config.params.nodeImpl == "legacy") {
       enable         = true;
       nodeName       = config.params.name;
