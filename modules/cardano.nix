@@ -122,7 +122,7 @@ with import ../lib.nix;
         if options.networking.publicIPv4.isDefined
         then config.networking.publicIPv4
         else config.networking.privateIPv4}/tcp/${toString config.params.port}";
-      publicId = config.params.name;
+      # publicId = config.params.name;
       logger = {
         output = "gelf";
         backend = "monitoring.stakepool.cardano-testnet.iohkdev.io:12201";
