@@ -102,7 +102,7 @@ with import ../lib.nix;
       wants = [ "cardano-node-key.service" ];
     };
 
-    networking.firewall = mkIf (cfg.enable) {
+    networking.firewall = mkIf (cfg.enable || cfgRust.enable) {
       allowedTCPPorts = [ cfg.port (cfg.port + 1) ];
     };
 
@@ -140,10 +140,6 @@ with import ../lib.nix;
     systemd.services."jormungandr" = mkIf (cfgRust.enable && config.params.typeIsCore) {
       after = [ "jormungandr-pool-secret.yaml-key.service" ];
       wants = [ "jormungandr-pool-secret.yaml-key.service" ];
-    };
-
-    networking.firewall = mkIf (cfgRust.enable) {
-      allowedTCPPorts = [ cfg.port ];
     };
 
     services.cardano-node-legacy = mkIf (config.params.nodeImpl == "legacy") {
