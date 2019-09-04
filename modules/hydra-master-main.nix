@@ -31,7 +31,6 @@ let
   '';
   mkStatusBlocks = concatMapStringsSep "" mkGithubStatus;
 in {
-  imports = [ ./github-webhook-util.nix ];
   environment.etc = lib.singleton {
     target = "nix/id_buildfarm";
     source = ../static/id_buildfarm;
@@ -122,17 +121,6 @@ in {
         useShortContext = 1
       </githubstatus>
     '';
-  };
-  deployment.keys."github-webhook-util".text = builtins.readFile ../static/github-webhook-util.secret;
-  systemd.services."github-webhook-util" = {
-    after = [ "github-webhook-util-key.service" ];
-    wants = [ "github-webhook-util-key.service" ];
-  };
-
-  services.github-webhook-util = {
-    enable = true;
-    domain = "hydra.iohk.io";
-    secrets = "/run/keys/github-webhook-util";
   };
   services.grafana = {
     enable = true;

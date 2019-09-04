@@ -117,7 +117,6 @@ where
 import           CommandLineUtils                 (filePathOption, directoryOption)
 import           Control.Arrow                    ((***))
 import           Control.Exception                (throwIO)
-import           Control.Lens                     ((<&>))
 import           Control.Monad                    (forM_, mapM_)
 import qualified Data.Aeson                    as AE
 import           Data.Aeson                       ((.:), (.:?), (.=), (.!=))

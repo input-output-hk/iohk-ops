@@ -1,9 +1,9 @@
 let
-  localLib = import ../lib.nix;
+  commonLib = import ../lib.nix;
 in
 { system ? builtins.currentSystem
 , config ? {}
-, pkgs ? (import (localLib.nixpkgs) { inherit system config; })
+, pkgs ? (import (commonLib.nixpkgs) { inherit system config; })
 }:
 
 let

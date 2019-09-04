@@ -27,6 +27,7 @@ let
     cp -r --no-preserve=mode ${./roles} nix-darwin/roles
     cp -r --no-preserve=mode ${./modules} nix-darwin/modules
     cp -r --no-preserve=mode ${./services} nix-darwin/services
+    cp -r --no-preserve=mode ${../nix} nix
     cp ${./test.nix} nix-darwin/test.nix
     cp ${../lib.nix} lib.nix
     cp ${../iohk-nix.json} iohk-nix.json
