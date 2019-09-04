@@ -1,13 +1,19 @@
-{ localLib ? import ./lib.nix
-, pkgs ? localLib.pkgs
+{ commonLib ? import ./lib.nix
+, pkgs ? commonLib.pkgs
 }:
 
 let
   iohkpkgs = import ./default.nix {};
   iohk-ops = iohkpkgs.iohk-ops;
+  niv = (import commonLib.sources.niv {}).niv;
   justIo = pkgs.mkShell {
     name = "io";
-    buildInputs = with pkgs; [ iohk-ops iohkpkgs.cardano-node-pkgs.nix-tools.exes.cardano-node terraform_0_11 iohkpkgs.nixops ];
+    buildInputs = with pkgs; [
+      iohk-ops
+      #iohkpkgs.cardano-node-pkgs.nix-tools.exes.cardano-node
+      (import (import ./nix/sources.nix).niv {}).niv
+      terraform_0_11
+      iohkpkgs.nixops ];
     passthru = {
       inherit ioSelfBuild withAuxx;
     };

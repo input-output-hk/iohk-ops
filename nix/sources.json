@@ -1,0 +1,122 @@
+{
+    "cachecache": {
+        "branch": "master",
+        "description": null,
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "cachecache",
+        "rev": "37959a2dcce5c93bf424da899d3d5eaf2b3f1768",
+        "sha256": "1d92agrsgs1g05ps3l7wbbib9knq86gq335k5kakzl9rlzdaj4z0",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cachecache/archive/37959a2dcce5c93bf424da899d3d5eaf2b3f1768.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-sl": {
+        "branch": "develop",
+        "description": "Cryptographic currency implementing Ouroboros PoS protocol",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "cardano-sl",
+        "rev": "1b3faebbb552f293f78b569729174d827d09f6e5",
+        "sha256": "1axyjw7drh0nqcjnd3ralkbraa9v9fd8z3j7acmil235mvdz9a4s",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-sl/archive/1b3faebbb552f293f78b569729174d827d09f6e5.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "gitignore": {
+        "branch": "master",
+        "description": "Nix function for filtering local git sources",
+        "homepage": "",
+        "owner": "hercules-ci",
+        "repo": "gitignore",
+        "rev": "6c4ab20841d2a20cf69d52c8e848c4d6b0aa73fe",
+        "sha256": "0nbwg01z0girs8c5zxg5zqivhny064rafzf47pygsmxlag0jiliq",
+        "type": "tarball",
+        "url": "https://github.com/hercules-ci/gitignore/archive/6c4ab20841d2a20cf69d52c8e848c4d6b0aa73fe.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "hydra": {
+        "branch": "iohk-19.03",
+        "description": "Hydra, the Nix-based continuous build system",
+        "homepage": "http://nixos.org/hydra",
+        "owner": "input-output-hk",
+        "repo": "hydra",
+        "rev": "0768891e3cd3ef067d28742098f1dea8462fca75",
+        "sha256": "1aw3p7jm2gsakdqqx4pzhkfx12hh1nxk3wkabcvml5ci814f6jic",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/hydra/archive/0768891e3cd3ef067d28742098f1dea8462fca75.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "iohk-nix": {
+        "branch": "master",
+        "description": "nix scripts shared across projects",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "365bac8721a95a41ee874a42e4b4692464f48d94",
+        "sha256": "1jb87h8d9jialgp4mkzic4gnn5p7p0db952a0id7qq2w777g5965",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/365bac8721a95a41ee874a42e4b4692464f48d94.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "log-classifier": {
+        "branch": "develop",
+        "description": "The purpose of this project is to analyze/classify Cardano log file and provide a feedback to the end user.",
+        "homepage": "https://iohk.io/",
+        "owner": "input-output-hk",
+        "repo": "log-classifier",
+        "rev": "55307dbbea4865ed23345067ec89910985086502",
+        "sha256": "1vq664xnrl57isnw1mmn7yx4wwgp3yac27pnphpcvbiiglakqy2r",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/log-classifier/archive/55307dbbea4865ed23345067ec89910985086502.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "niv": {
+        "branch": "master",
+        "description": "Easy dependency management for Nix projects",
+        "homepage": "https://github.com/nmattia/niv",
+        "owner": "nmattia",
+        "repo": "niv",
+        "rev": "213315b65807ceae979da902875efaad1c53dc1d",
+        "sha256": "1cczwqnmfs17i00gn8s9l7sf2s3h498gzlv7wrkdin4v31lydv08",
+        "type": "tarball",
+        "url": "https://github.com/nmattia/niv/archive/213315b65807ceae979da902875efaad1c53dc1d.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixops-core": {
+        "branch": "nixops-core-pr-int",
+        "description": "NixOps, the NixOS-based cloud deployment tool",
+        "homepage": "http://nixos.org/",
+        "owner": "input-output-hk",
+        "repo": "nixops",
+        "rev": "28dd42a2dc9f6bada1ea587de80cde8dae0ddbf0",
+        "sha256": "0a74c8f0hpb60s91f3igx63zx8amblp3iqr6ic3fdr28nvmvbhgr",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/nixops/archive/28dd42a2dc9f6bada1ea587de80cde8dae0ddbf0.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixops-packet": {
+        "branch": "c2-medium-reserved-changes",
+        "description": "NixOps Packet.net Plugin",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "nixops-packet",
+        "rev": "ae89fc7791c5f8ae518869800d49cd5eeec3e5e0",
+        "sha256": "1r40jyzv3f381js93yvb3l8hxmia7fgi5lc084ydpwzhq3c706wh",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/nixops-packet/archive/ae89fc7791c5f8ae518869800d49cd5eeec3e5e0.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs": {
+        "branch": "nixos-19.03",
+        "description": "Nixpkgs/NixOS branches that track the Nixpkgs/NixOS channels",
+        "homepage": null,
+        "owner": "NixOS",
+        "repo": "nixpkgs-channels",
+        "rev": "541d9cce8af7a490fb9085305939569567cb58e6",
+        "sha256": "0jgz72hhzkd5vyq5v69vpljjlnf0lqaz7fh327bvb3cvmwbfxrja",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/541d9cce8af7a490fb9085305939569567cb58e6.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    }
+}

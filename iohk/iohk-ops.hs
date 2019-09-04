@@ -364,7 +364,6 @@ runNew o@Options{..} New{..} args = do
                   [ "github_token"
                   , "id_buildfarm"
                   , "google_oauth_hydra_grafana.secret"
-                  , "github-webhook-util.secret"
                   , "zendesk-token.secret"
                   , "bors-ng-secret-key-base"
                   , "bors-ng-github-client-secret"

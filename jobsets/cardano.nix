@@ -11,7 +11,6 @@ let
   iohkpkgs = import ../. { inherit pkgs; };
   jobs = mapTestOn ((packagePlatforms iohkpkgs) // {
     iohk-ops = [ "x86_64-linux" ];
-    github-webhook-util = [ "x86_64-linux" ];
     iohk-ops-integration-test = [ "x86_64-linux" ];
     nixops = [ "x86_64-linux" ];
   });
@@ -44,7 +43,7 @@ in pkgs.lib.fix (jobsets: {
     ];
   });
   nix-darwin = {
-    hydra-slave = (import ../nix-darwin/test.nix { role = "hydra-slave"; }).system;
-    buildkite-agent = (import ../nix-darwin/test.nix { role = "buildkite-agent"; }).system;
+    hydra-slave = (import ../nix-darwin/test.nix { role = "hydra-slave"; host = "build"; port = "123";}).system;
+    buildkite-agent = (import ../nix-darwin/test.nix { role = "buildkite-agent"; host = "build"; port = "123"; }).system;
   };
 })

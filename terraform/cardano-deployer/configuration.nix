@@ -16,7 +16,7 @@ let
     sha256 = "19p0722w135l36y64vmn5x1imqxmkx8gzrw2zzkmnh7xd0c1fyay";
   };
   iohk-pkgs = import src {};
-  localLib = import (src + "/lib.nix");
+  commonLib = import (src + "/lib.nix");
 
 in {
     imports = [
@@ -28,10 +28,10 @@ in {
       isNormalUser = true;
       description = "Deploy the deployer";
       extraGroups = [ "wheel" ];
-      openssh.authorizedKeys.keys = localLib.devOpsKeys;
+      openssh.authorizedKeys.keys = commonLib.devOpsKeys;
     };
 
-    users.extraUsers.root.openssh.authorizedKeys.keys = localLib.devOpsKeys;
+    users.extraUsers.root.openssh.authorizedKeys.keys = commonLib.devOpsKeys;
 
     security.sudo.enable = true;
     security.sudo.wheelNeedsPassword = false;
@@ -48,5 +48,5 @@ in {
 
     environment.systemPackages =
       with pkgs; [ tmux git vim ] ++
-      with iohk-pkgs; [ nixops iohk-ops ];
+      (with iohk-pkgs; [ nixops iohk-ops ]);
 }

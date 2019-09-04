@@ -1,10 +1,10 @@
 let
-  localLib = import ./lib.nix;
+  commonLib = import ./lib.nix;
 in
 { system ? builtins.currentSystem
 , crossSystem ? null
 , config ? {}
-, pkgs ? (import (localLib.nixpkgs) { inherit system crossSystem config; })
+, pkgs ? (import (commonLib.nixpkgs) { inherit system crossSystem config; })
 , compiler ? pkgs.haskellPackages
 , cardanoRevOverride ? null
 , cardanoNodeRevOverride ? null
@@ -16,33 +16,19 @@ with pkgs.haskell.lib;
 
 let
   # nixopsUnstable = /path/to/local/src
-  nixopsPacketSrc = pkgs.fetchFromGitHub {
-    owner = "input-output-hk";
-    repo = "nixops-packet";
-    rev = "eaea333f2e2ab74390228b4b847ecd971aafbaf2";
-    sha256 = "0ivsyfy8yky7qk303c5k71n85nkpc3a9zjr4j9iqw6c4ym5yxx6a";
-  };
-  nixopsUnstable = pkgs.fetchFromGitHub {
-    owner = "input-output-hk";
-    repo = "nixops";
-    rev = "2447be9da55beda18c761896ecc2fb5966dd0447";
-    sha256 = "1yvhhc95p6n7qximanbrwdzghwixvx98q9h2a5p6qssh9ngzka83";
-  };
+  sources = commonLib.sources;
+  nixopsPacketSrc = sources.nixops-packet;
+  nixopsSrc = sources.nixops-core; # nixops is an input to iohk-ops on hydra so different name
   log-classifier-web = (import log-classifier-src {}).haskellPackages.log-classifier-web;
   nixops =
     let
-    in (import "${nixopsUnstable}/release.nix" {
-         inherit (localLib) nixpkgs;
+    in (import "${nixopsSrc}/release.nix" {
+         inherit (commonLib) nixpkgs;
          p = (p: let
            nixopsPacket = p.callPackage "${nixopsPacketSrc}/release.nix" {};
          in [ p.aws nixopsPacket ]);
         }).build.${system};
-  log-classifier-src = pkgs.fetchFromGitHub {
-    owner = "input-output-hk";
-    repo = "log-classifier";
-    rev = "fff61ebb4d6380796ec7a6438a873e6826236f2b";
-    sha256 = "1sc56xpbljm63dh877cy4agqjvv5wqc1cp9y5pdwzskwf7h4302g";
-  };
+  log-classifier-src = sources.log-classifier;
   iohk-ops-extra-runtime-deps = with pkgs; [
     gitFull nix-prefetch-scripts compiler.yaml
     wget
@@ -52,11 +38,12 @@ let
     gnupg
   ];
 
-  cardano-sl-pkgs = localLib.fetchProjectPackages "cardano-sl" <cardano-sl> ./.             cardanoRevOverride args;
-  mantis-pkgs     = localLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
-  cardano-node-pkgs = localLib.fetchProjectPackages "cardano-node" <cardano-node> ./.       cardanoNodeRevOverride args;
-
-  github-webhook-util = pkgs.callPackage ./github-webhook-util { };
+  cardano-sl-src = sources.cardano-sl.revOverride cardanoRevOverride;
+  cardano-sl-pkgs = import cardano-sl-src {
+    gitrev = cardano-sl-src.rev;
+  };
+  mantis-pkgs     = commonLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
+  cardano-node-pkgs = import (sources.cardano-node.revOverride cardanoNodeRevOverride) {};
 
   iohk-ops = pkgs.haskell.lib.overrideCabal
              (compiler.callPackage ./iohk/default.nix {})
@@ -84,31 +71,24 @@ let
     fi
     exit 0
   '';
-  defaultIohkNix = let
-    spec = builtins.fromJSON (builtins.readFile ./iohk-nix.json);
-  in builtins.fetchTarball {
-    url = "${spec.url}/archive/${spec.rev}.tar.gz";
-    inherit (spec) sha256;
-  };
-  cachecacheSrc = pkgs.fetchFromGitHub {
-    owner = "cleverca22";
-    repo = "cachecache";
-    rev = "37959a2dcce5c93bf424da899d3d5eaf2b3f1768";
-    sha256 = "1d92agrsgs1g05ps3l7wbbib9knq86gq335k5kakzl9rlzdaj4z0";
-  };
-  IFDPins = pkgs.writeText "ifd-pins" ''
-    nixops: ${nixopsUnstable}
-    nixpkgs: ${pkgs.path}
-    iohk-nix: ${defaultIohkNix}
+  IFDPins = let
+    f = k: s: "ln -sv ${s.outPath} $out/${k}";
+    mapSources = concatStringsSep "\n" (mapAttrsFlatten f sources);
+  in pkgs.runCommand "ifd-pins" {} ''
+    mkdir $out
+    cd $out
+    ${mapSources}
   '';
+
+  cachecacheSrc = sources.cachecache;
   cachecache = pkgs.callPackage cachecacheSrc {};
 in {
-  inherit nixops iohk-ops iohk-ops-integration-test github-webhook-util IFDPins log-classifier-web cachecache cardano-node-pkgs;
+  inherit nixops iohk-ops iohk-ops-integration-test log-classifier-web cachecache IFDPins cardano-node-pkgs;
   terraform = pkgs.callPackage ./terraform/terraform.nix {};
   mfa = pkgs.callPackage ./terraform/mfa.nix {};
 
   checks = let
-    src = localLib.cleanSourceTree ./.;
+    src = commonLib.cleanSourceTree ./.;
   in {
     shellcheck = pkgs.callPackage ./scripts/shellcheck.nix { inherit src; };
   };

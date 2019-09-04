@@ -1,7 +1,7 @@
 { name, pkgs, ... }:
 
 let
-  localLib = import ../lib.nix;
+  commonLib = import ../lib.nix;
 in
 {
   imports = [
@@ -53,7 +53,7 @@ in
   ];
 
   # Grant CI and dev tools people access to buildkite agents
-  users.users.root.openssh.authorizedKeys.keys = localLib.ciInfraKeys;
+  users.users.root.openssh.authorizedKeys.keys = commonLib.ciInfraKeys;
 
   deployment.keys = {
     aws-creds = {

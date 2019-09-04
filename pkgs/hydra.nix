@@ -1,12 +1,7 @@
 { pkgs }:
 
 let
-  hydraSrc = pkgs.fetchFromGitHub {
-    owner = "input-output-hk";
-    repo = "hydra";
-    rev = "0768891e3cd3ef067d28742098f1dea8462fca75";
-    sha256 = "1aw3p7jm2gsakdqqx4pzhkfx12hh1nxk3wkabcvml5ci814f6jic";
-  };
+  hydraSrc = (import ../lib.nix).sources.hydra;
 in
   pkgs.callPackage ./hydra-fork.nix {
       nixpkgsPath = pkgs.path;

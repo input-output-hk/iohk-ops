@@ -3,7 +3,7 @@
 with lib;
 
 let
-  localLib = import ../lib.nix;
+  commonLib = import ../lib.nix;
 in
 {
   imports = [ ./auto-gc.nix
@@ -20,8 +20,8 @@ in
   };
 
   users.extraUsers.root.openssh.authorizedKeys.keys =
-    localLib.ciInfraKeys ++
+    commonLib.ciInfraKeys ++
     map (key: ''
       command="nice -n20 nix-store --serve --write" ${key}
-    '') localLib.buildSlaveKeys.linux;
+    '') commonLib.buildSlaveKeys.linux;
 }
