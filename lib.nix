@@ -86,7 +86,7 @@ let
   };
   graalvm8 = (import iohkNixGoguen.nixpkgs javaOverrideNixpkgsConfig).graalvm8;
 in lib // (rec {
-  inherit (iohkNix) nixpkgs cardanoLib;
+  inherit (iohkNix) nixpkgs cardanoLib rust-packages;
   inherit fetchProjectPackages pkgs graalvm8;
   inherit sources iohkNix iohkNixGoguen goguenNixpkgs;
   inherit fetchPinAuto fetchGitWithSubmodules readPin;

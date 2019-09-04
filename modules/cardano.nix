@@ -14,6 +14,7 @@ with import ../lib.nix;
     sep                  = ", ";
     cfgLegacy            = config.services.cardano-node-legacy;
     cfg                  = config.services.cardano-node;
+    cfgRust              = config.services.jormungandr;
     sources = import ../nix/sources.nix;
     toCardanoEnvName = env: {
       # mapping of environnement name from globals.nix to the one defined in cardanoLib:
@@ -25,6 +26,7 @@ with import ../lib.nix;
       ./cardano-service.nix
       (sources.cardano-node + "/nix/nixos")
       (sources.cardano-byron-proxy + "/nix/nixos")
+      (sources.jormungandr-nix + "/nixos")
       ./cardano-base.nix
       ./globals.nix
     ];
@@ -95,13 +97,42 @@ with import ../lib.nix;
       logger.configFile = ./iohk-monitoring-config.yaml;
     };
 
-    networking.firewall = mkIf cfg.enable {
-      allowedTCPPorts = [ cfg.port (cfg.port + 1) ];
-    };
-
     systemd.services."cardano-node" = mkIf (cfg.enable && config.params.typeIsCore) {
       after = [ "cardano-node-key.service" ];
       wants = [ "cardano-node-key.service" ];
+    };
+
+    services.jormungandr = mkIf (config.params.nodeImpl == "rust") {
+      enable = true;
+      package = rust-packages.pkgs.jormungandr-master;
+      block0 = ../static/block-0.bin;
+      secrets-paths = lib.optional config.params.typeIsCore "/var/lib/keys/jormungandr-pool-secret.yaml";
+      topicsOfInterest = {
+        messages = if config.params.typeIsCore then "high" else "low";
+        blocks = if config.params.typeIsCore then "high" else "normal";
+      };
+      trustedPeersAddresses = map
+        (n: "/ip4/${n.ip}/tcp/${config.global.nodeMap.${n.name}.port}")
+        neighbourPairs;
+      listenAddress = "${
+        if options.networking.privateIPv4.isDefined
+        then config.networking.privateIPv4
+        else "0.0.0.0"}:${config.params.port}";
+      publicAddress = "/ip4/${
+        if options.networking.publicIPv4.isDefined
+        then config.networking.publicIPv4
+        else config.networking.privateIPv4}/tcp/${config.params.port}";
+      publicId = config.params.name;
+      logger = {
+        output = "gelf";
+        backend = "monitoring.stakepool.cardano-testnet.iohkdev.io:12201";
+        logs-id = "${config.global.environment}-${config.params.name}";
+      };
+    };
+
+    systemd.services."jormungandr" = mkIf (cfgRust.enable && config.params.typeIsCore) {
+      after = [ "jormungandr-pool-secret.yaml-key.service" ];
+      wants = [ "jormungandr-pool-secret.yaml-key.service" ];
     };
 
     services.cardano-node-legacy = mkIf (config.params.nodeImpl == "legacy") {
@@ -148,10 +179,23 @@ wallet:
               destDir = "/var/lib/keys";
           };
         }
+      )) // (optionalAttrs (config.params.typeIsCore && cfgRust.enable) (
+        let keyfile = "secret_pool_${toString (config.params.i + 1)}.yaml"; in
+        {
+          "jormungandr-pool-secret.yaml" = builtins.trace (config.params.name + ": using " + keyfile) {
+              keyFile = ./. + "/../static/secrets/${keyfile}";
+              user = "jormungandr";
+              destDir = "/var/lib/keys";
+          };
+        }
       ));
 
     systemd.services."cardano-node-legacy" = mkIf (config.params.typeIsCore && cfgLegacy.enable && cfgLegacy.productionMode) {
       after = [ "cardano-node-key.service" ];
       wants = [ "cardano-node-key.service" ];
+    };
+
+    networking.firewall = mkIf cfg.enable {
+      allowedTCPPorts = [ cfg.port (cfg.port + 1) ];
     };
   }
