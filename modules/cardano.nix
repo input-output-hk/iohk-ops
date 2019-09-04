@@ -114,10 +114,10 @@ with import ../lib.nix;
       trustedPeersAddresses = map
         (n: "/ip4/${n.ip}/tcp/${toString config.global.nodeMap.${n.name}.port}")
         neighbourPairs;
-      listenAddress = "${
+      listenAddress = "/ip4/${
         if options.networking.privateIPv4.isDefined
         then config.networking.privateIPv4
-        else "0.0.0.0"}:${toString config.params.port}";
+        else "0.0.0.0"}/tcp/${toString config.params.port}";
       publicAddress = "/ip4/${
         if options.networking.publicIPv4.isDefined
         then config.networking.publicIPv4
