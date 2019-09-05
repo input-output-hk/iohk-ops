@@ -80,10 +80,10 @@ in {
       log_prefix = https://iohk-nix-cache-temp.s3-eu-central-1.amazonaws.com/
       upload_logs_to_binary_cache = true
 
+      <github_authorization>
+        input-output-hk = ${builtins.readFile ../static/github_token}
+      </github_authorization>
     '';
-      #<github_authorization>
-      #  input-output-hk = ${builtins.readFile ../static/github_token}
-      #</github_authorization>
 
       #${mkStatusBlocks [
       #  { jobset = "iohk-ops"; inputs = "jobsets"; }
