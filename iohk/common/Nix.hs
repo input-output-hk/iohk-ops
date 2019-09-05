@@ -1,35 +1,46 @@
-{-# LANGUAGE DataKinds, DeriveGeneric, DeriveDataTypeable, FlexibleInstances, GADTs, KindSignatures, OverloadedStrings, RecordWildCards, StandaloneDeriving, ViewPatterns #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE KindSignatures     #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ViewPatterns       #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-orphans -Wno-missing-signatures #-}
 
 module Nix where
 
-import           Prelude                   hiding (FilePath)
+import           Prelude                    hiding (FilePath)
 
-import           Control.Monad.Catch              (Exception, throwM, MonadThrow)
-import qualified Data.Aeson                    as AE
-import           Data.Aeson                       ((.:), (.=), eitherDecodeStrict, Value)
-import qualified Data.ByteString.Lazy.Char8    as L8
-import qualified Data.ByteString.Char8         as S8
-import           Data.Foldable                    (asum)
-import qualified Data.Map.Strict               as Map
+import           Control.Monad.Catch        (Exception, MonadThrow, throwM)
+import           Data.Aeson                 (Value, eitherDecodeStrict, (.:),
+                                             (.=))
+import qualified Data.Aeson                 as AE
+import qualified Data.ByteString.Char8      as S8
+import qualified Data.ByteString.Lazy.Char8 as L8
+import           Data.Foldable              (asum)
+import qualified Data.Map.Strict            as Map
 import           Data.Maybe
-import           Data.Text                        (Text, toTitle)
-import qualified Data.Text                     as T
-import qualified Data.Text.IO                  as T
-import qualified Data.Text.Encoding            as T
-import           Data.Text.Encoding.Error         (lenientDecode)
-import           Data.Typeable                    (Typeable)
-import           Data.Yaml                        (FromJSON(..), ToJSON(..))
-import           Filesystem.Path                  (FilePath)
-import qualified Filesystem.Path.CurrentOS     as FP
-import           Turtle                    hiding (env, err, fold, prefix, procs, e, f, o, x)
-import qualified Turtle.Bytes                  as B
+import           Data.Text                  (Text, toTitle)
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
+import           Data.Text.Encoding.Error   (lenientDecode)
+import qualified Data.Text.IO               as T
+import           Data.Typeable              (Typeable)
+import           Data.Yaml                  (FromJSON (..), ToJSON (..))
+import           Filesystem.Path            (FilePath)
+import qualified Filesystem.Path.CurrentOS  as FP
+import           Turtle                     hiding (e, env, err, f, fold, o,
+                                             prefix, procs, x)
+import qualified Turtle.Bytes               as B
 
-import Constants
-import Types
-import Utils
+import           Constants
+import           Types
+import           Utils
 
-
+
 -- * A bit of Nix types
 --
 deriving instance Show (NixSource a)
@@ -90,7 +101,7 @@ nixArgCmdline (NixParam name) x            = ["--arg",    name, nixValueStr x]
 
 fromNixStr :: NixValue -> Text
 fromNixStr (NixStr s) = s
-fromNixStr x = error $ "fromNixStr, got a non-NixStr: " <> show x
+fromNixStr x          = error $ "fromNixStr, got a non-NixStr: " <> show x
 
 -- | Evaluate a nix expression, returning its value as JSON.
 nixEvalExpr :: Text -> IO Value
@@ -105,7 +116,7 @@ nixBuildExpr expr = fp <$> procNix "nix-build" ["--no-out-link", "--expr", expr]
 -- | Evaluate a nix expression, returning its value.
 nixEvalFile :: FromJSON a => FilePath -> IO a
 nixEvalFile nixFile = eval >>= parseNixOutput
-  where eval = procNix "nix-instantiate" [ "--json", "--read-write-mode" , "--eval" , format fp nixFile ]
+  where eval = procNix "nix-instantiate" [ "--json", "--strict", "--read-write-mode" , "--eval" , format fp nixFile ]
 
 -- | Fetches the pinned nixpkgs source and returns its store path.
 getNixPackagesSource :: IO FilePath
