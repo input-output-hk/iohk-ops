@@ -43,7 +43,8 @@ let
     gitrev = cardano-sl-src.rev;
   };
   mantis-pkgs     = commonLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
-  cardano-node-pkgs = import (sources.cardano-node.revOverride cardanoNodeRevOverride) {};
+  cardano-node-srcs = sources.cardano-node.revOverride cardanoNodeRevOverride;
+  cardano-node-pkgs = import cardano-node-srcs {};
 
   iohk-ops = pkgs.haskell.lib.overrideCabal
              (compiler.callPackage ./iohk/default.nix {})
@@ -83,7 +84,8 @@ let
   cachecacheSrc = sources.cachecache;
   cachecache = pkgs.callPackage cachecacheSrc {};
 in {
-  inherit nixops iohk-ops iohk-ops-integration-test log-classifier-web cachecache IFDPins cardano-node-pkgs;
+  inherit nixops iohk-ops iohk-ops-integration-test log-classifier-web cachecache IFDPins
+          cardano-node-srcs cardano-node-pkgs;
   terraform = pkgs.callPackage ./terraform/terraform.nix {};
   mfa = pkgs.callPackage ./terraform/mfa.nix {};
 
