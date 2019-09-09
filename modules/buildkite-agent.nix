@@ -1,13 +1,27 @@
-{ name, pkgs, ... }:
+{ name, pkgs, lib, ... }:
 
 let
   commonLib = import ../lib.nix;
+
+  # NFS topology for cache directory
+  nfsServer = "buildkite-packet-1" ;
+  nfsClients = lib.remove nfsServer [
+    "buildkite-packet-1"
+    "buildkite-packet-2"
+    "buildkite-packet-3"
+    "packet-hydra-buildkite-1"
+    "packet-hydra-buildkite-2"
+  ];
+
 in
 {
   imports = [
     ./auto-gc.nix
     ./nix_nsswitch.nix
     ./docker-builder.nix
+    (if name == nfsServer
+       then (import ./buildkite-cache-server.nix { clients = nfsClients; })
+       else (import ./buildkite-cache.nix { server = nfsServer; }))
   ];
 
   services.buildkite-agent = {
