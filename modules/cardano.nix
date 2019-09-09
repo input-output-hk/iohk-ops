@@ -133,7 +133,7 @@ with import ../lib.nix;
       logger = {
         output = "gelf";
         backend = "monitoring.stakepool.cardano-testnet.iohkdev.io:12201";
-        logs-id = "${config.params.name}.${config.deployment.name}";
+        logs-id = "${config.deployment.name}.${config.params.name}";
       };
     };
 
