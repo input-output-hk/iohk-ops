@@ -2,7 +2,7 @@
 
 let
   opsLib = import ../../lib.nix;
-  nix-darwin = (import ../test.nix { host = null; port = null; }).nix-darwin;
+  nix-darwin = (import ../test.nix { host = null; port = null; hostname = null; }).nix-darwin;
 in {
   imports = [ ./double-builder-gc.nix ./caffeinate.nix ];
 
@@ -46,7 +46,7 @@ in {
     # Quickly kill stuck builds
     max-silent-time = ${toString (60 * 15)}
 
-    sandbox = true
+    sandbox = false
     extra-sandbox-paths = /System/Library/Frameworks /usr/lib /System/Library/PrivateFrameworks
   '';
 

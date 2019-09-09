@@ -123,9 +123,7 @@ in {
     };
 
     systemd.services = {
-      netcatsyslog-hydra = mkLogServer 1514;
-      netcatsyslog-buildkite = mkLogServer 1515;
-      netcatsyslog-mojave = mkLogServer 1516;
+      netcatsyslog-ci = mkLogServer 1514;
     };
   };
 }

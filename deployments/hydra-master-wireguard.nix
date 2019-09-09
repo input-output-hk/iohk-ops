@@ -23,6 +23,16 @@ in {
           allowedIPs = [ "192.168.20.20/32" ];
           persistentKeepalive = 30;
         }
+        { # mac-mini-1
+          publicKey = "nvKCarVUXdO0WtoDsEjTzU+bX0bwWYHJAM2Y3XhO0Ao=";
+          allowedIPs = [ "192.168.20.21/32" ];
+          persistentKeepalive = 30;
+        }
+        { # mac-mini-2
+          publicKey = "VcOEVp/0EG4luwL2bMmvGvlDNDbCzk7Vkazd3RRl51w=";
+          allowedIPs = [ "192.168.20.22/32" ];
+          persistentKeepalive = 30;
+        }
         {
           publicKey = "asG7R996ieVEhoeBHTK2DVNI664dfeBalL5dPqHIcXo=";
           allowedIPs = [ "192.168.20.0/24" ];

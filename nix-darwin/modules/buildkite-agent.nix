@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 
 let
-  keys = "/Users/admin/buildkite";
+  keys = "/Users/nixos/buildkite";
 
 in {
   services.buildkite-agent = let
@@ -14,7 +14,7 @@ in {
     }) { inherit (pkgs) config system; };
   in {
     enable = true;
-    package = unstablePkgs.buildkite-agent3;
+    package = pkgs.buildkite-agent3;
     runtimePackages = with pkgs; [
       bash gnutar gzip bzip2 xz
       git git-lfs
@@ -59,9 +59,10 @@ in {
 
   # Fix up group membership and perms on secrets directory.
   # Ensure that buildkite-agent home directory exists with correct
-  # permissions.
-  system.activationScripts.postActivation.text = ''
-    dseditgroup -o edit -a admin -t user buildkite-agent
+  # permissions. We use applications so this occurs between creating users
+  # and launchd scripts
+  system.activationScripts.applications.text = ''
+    dseditgroup -o edit -a nixos -t user buildkite-agent
     mkdir -p ${keys}
     chgrp -R buildkite-agent ${keys}
     chmod -R o-rx ${keys}

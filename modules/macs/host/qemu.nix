@@ -27,7 +27,13 @@ in {
         serviceConfig.PrivateTmp = true;
 
         preStart = ''
+          echo prestart script
           zfs destroy ${clonedVol} || true
+          while [ -e /dev/${clonedVol} ]
+          do
+            echo "waiting for volume to finish removing"
+            sleep 5
+          done
           zfs clone ${snapshot} ${clonedVol}
 
           # Create a cloud-init style cdrom
@@ -38,9 +44,16 @@ in {
           find .
           genisoimage -v -J -r -V CONFIG -o /tmp/config.iso .
         '';
-        postStop = "zfs destroy ${clonedVol}";
+        postStop = ''
+          echo poststop script
+          while [ -e /dev/${clonedVol} ]
+          do
+            zfs destroy ${clonedVol} || (echo "waiting for volume to finish removing" ; sleep 1)
+          done
+        '';
         script = ''
-          qemu-system-x86_64 \
+          echo main script
+          exec qemu-system-x86_64 \
               -enable-kvm \
               -cpu Penryn,kvm=on,vendor=GenuineIntel,+invtsc,vmware-cpuid-freq=on,+aes,+xsave,+avx,+xsaveopt,avx2,+smep \
               -machine pc-q35-2.9 \

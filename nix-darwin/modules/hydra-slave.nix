@@ -20,11 +20,6 @@ in
     home = "/Users/builder";
     shell = "/bin/bash";
   };
-  #users.knownGroups = [ "com.apple.access_ssh" ];
-  #users.groups."com.apple.access_ssh" = {
-  #  gid = 399;
-  #  members = [ "builder" ];
-  #};
 
   nix.trustedUsers = [ "root" "builder" ];
 
@@ -35,6 +30,7 @@ in
     mkdir -p /Users/builder
     echo "source /etc/profile" > /Users/builder/.bashrc
     chown builder: /Users/builder/.bashrc
+    dseditgroup -o edit -a builder -t user com.apple.access_ssh
   '';
 
   environment.etc."per-user/builder/ssh/authorized_keys".text =

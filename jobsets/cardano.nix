@@ -43,7 +43,6 @@ in pkgs.lib.fix (jobsets: {
     ];
   });
   nix-darwin = {
-    hydra-slave = (import ../nix-darwin/test.nix { role = "hydra-slave"; host = "build"; port = "123";}).system;
-    buildkite-agent = (import ../nix-darwin/test.nix { role = "buildkite-agent"; host = "build"; port = "123"; }).system;
+    ci = (import ../nix-darwin/test.nix { role = "ci"; host = "build"; port = "123"; }).system;
   };
 })
