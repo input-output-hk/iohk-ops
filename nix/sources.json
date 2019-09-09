@@ -65,10 +65,10 @@
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "jormungandr-nix",
-        "rev": "0e02eb1d07f09d130bd79cdd827cfe258cba30fb",
-        "sha256": "0jvhwlcr55q3xia6bjlb0f4g9l2rkh7mj7p3qcv35qbaymjyvdmf",
+        "rev": "86bf6af9ba497dc1ac837b5ee0c8b747e19a1c20",
+        "sha256": "1skzd2xn11gp15l92za5zj3fczfrwkbc4xzs8ibbzwkwndfhdq02",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/jormungandr-nix/archive/0e02eb1d07f09d130bd79cdd827cfe258cba30fb.tar.gz",
+        "url": "https://github.com/input-output-hk/jormungandr-nix/archive/86bf6af9ba497dc1ac837b5ee0c8b747e19a1c20.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
