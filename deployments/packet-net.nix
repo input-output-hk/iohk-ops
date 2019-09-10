@@ -1,7 +1,7 @@
 { domain, ... }:
 
 with import ../lib.nix;
-with import ./packet-lib.nix { inherit domain lib; };
+with import ./packet-lib.nix { inherit domain; inherit (pkgs) lib; };
 let
   hydraSlaves = [
     "packet-hydra-slave-1"

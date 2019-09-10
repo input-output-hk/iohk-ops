@@ -1,12 +1,14 @@
-{ globals ? {}, domain, monitorIpOverride ? null, ... }:
+{ globals ? {}, domain, monitorIpOverride ? null, monitoringEnv ? "ec2", ... }:
 
+with import ../lib.nix;
 {
-  require = [
-    # TODO, only import if config.global.omitDetailedSecurityGroups
-    # ./security-groups/allow-all.nix
-    # TODO, make conditional on omitDetailedSecurityGroups
-    # ./security-groups/allow-monitoring-collection.nix
-  ];
+  require = (optionals (monitoringEnv == "ec2") [
+    # TODO: also make conditional on omitDetailedSecurityGroups
+    ./security-groups/allow-all.nix
+    # TODO: also make conditional on ! omitDetailedSecurityGroups
+    ./security-groups/allow-monitoring-collection.nix
+  ]);
+
   defaults = { config, lib, resources, ... }: {
     _file = ./global.nix;
     imports = [ ../modules/globals.nix ];

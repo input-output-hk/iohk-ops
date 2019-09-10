@@ -1,7 +1,10 @@
-{ domain, monitoringEnv ? "ec2" }:
+{ globals ? {}, domain, monitoringEnv ? "ec2", ... }:
 
 with import ../lib.nix;
-{
+let
+  nodeMap = { inherit (globals.fullMap) monitoring; };
+  monitoring = nodeMap.monitoring;
+in {
   require = [
     ./global.nix
   ];
@@ -13,6 +16,8 @@ with import ../lib.nix;
       ownIp = let
         ip = config.networking.publicIPv4;
       in if ip == null then "0.0.0.0" else ip;
+      graylogHost = if (monitoringEnv == "ec2") then "monitoring-ip:5044"
+                    else "${config.services.monitoring-exporters.ownIp}:5044";
     };
   };
   monitoring = { config, lib, pkgs, resources, nodes, deploymentName, ... }:

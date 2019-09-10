@@ -203,7 +203,7 @@ in {
     modules = [ ../modules/hydra-slave.nix ];
     extraopts = { nix.useSandbox = mkForce false; };
   };
-  createPacketHydraSlaveImpureLegacy = hostname: mkPacketNet {
+  createPacketHydraSlaveImpureLegacy = hostname: self.mkPacketNet {
     inherit hostname;
     type = "legacy";
     modules = [ ../modules/hydra-slave.nix ];
