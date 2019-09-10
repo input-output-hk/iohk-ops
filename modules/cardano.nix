@@ -108,6 +108,7 @@ with import ../lib.nix;
 
     services.jormungandr = mkIf (config.params.nodeImpl == "rust") {
       enable = true;
+      withBackTraces = true;
       package = rust-packages.pkgs.jormungandr-master;
       block0 = ../static/block-0.bin;
       secrets-paths = lib.optional config.params.typeIsCore "/var/lib/keys/jormungandr-pool-secret.yaml";
@@ -126,7 +127,6 @@ with import ../lib.nix;
         if options.networking.publicIPv4.isDefined
         then config.networking.publicIPv4
         else config.networking.privateIPv4}/tcp/${toString config.params.port}";
-      # publicId = config.params.name;
       logger = {
         output = "gelf";
         backend = "monitoring.stakepool.cardano-testnet.iohkdev.io:12201";
