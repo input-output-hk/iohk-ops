@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ domain, lib, ... }:
 with lib;
 fix (self: let
   projects = self.packetSecrets.projects;
@@ -32,7 +32,7 @@ in {
     deployment = let
       deploymentTypes = {
         demand = {
-          targetHost = hostname + ".aws.iohkdev.io";
+          targetHost = hostname + "." + domain;
           targetEnv = "packet";
           packet = {
             inherit accessKeyId facility plan ipxeScriptUrl;
@@ -41,7 +41,7 @@ in {
           };
         };
         legacy = {
-          targetHost = hostname + ".aws.iohkdev.io";
+          targetHost = hostname + "." + domain;
         };
       };
     in deploymentTypes.${type};
@@ -82,7 +82,7 @@ in {
     deployment = let
       deploymentTypes = {
         demand = {
-          targetHost = hostname + ".ci.iohkdev.io";
+          targetHost = hostname + "." + domain;
           targetEnv = "packet";
           packet = {
             inherit accessKeyId facility plan ipxeScriptUrl;
@@ -95,7 +95,7 @@ in {
           };
         };
         legacy = {
-          targetHost = hostname + ".ci.iohkdev.io";
+          targetHost = hostname + "." + domain;
         };
       };
     in deploymentTypes.${type};

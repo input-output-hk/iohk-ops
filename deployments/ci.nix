@@ -1,5 +1,6 @@
+{ domain, ... }:
 with import ../lib.nix;
-with import ./packet-lib.nix { inherit (pkgs) lib; };
+with import ./packet-lib.nix { inherit domain; inherit (pkgs) lib; };
 
 let
   inherit (pkgs) lib;
