@@ -3,6 +3,7 @@ with lib;
 fix (self: let
   projects = self.packetSecrets.projects;
   accessKeyId = self.packetSecrets.accessKeyId;
+  ipxeUrlBase = lib.strings.removeSuffix "\n" (builtins.readFile ../static/ipxe-url-base.txt);
 in {
   mockCreds = {
     accessKeyId = "abc123";
@@ -150,7 +151,7 @@ in {
     facility = "ams1";
     plan = "c2.medium.x86";
     project = "ci";
-    ipxeScriptUrl = "http://173.61.28.54:9000/c2-medium-x86/netboot.ipxe";
+    ipxeScriptUrl = ipxeUrlBase + "c2-medium-x86/netboot.ipxe";
     modules = [ ../modules/hydra-master-common.nix ];
     extraopts = {
       imports = [ ../modules/hydra-master-main.nix ];
@@ -163,7 +164,7 @@ in {
     facility = "ams1";
     plan = "c2.medium.x86";
     project = "ci";
-    ipxeScriptUrl = "http://173.61.28.54:9000/c2-medium-x86/netboot.ipxe";
+    ipxeScriptUrl = ipxeUrlBase + "c2-medium-x86/netboot.ipxe";
     modules = [];
     extraopts = {
       services.monitoring-services = {
@@ -179,7 +180,7 @@ in {
     facility = "ams1";
     plan = "c2.medium.x86";
     project = "ci";
-    ipxeScriptUrl = "http://173.61.28.54:9000/c2-medium-x86/netboot.ipxe";
+    ipxeScriptUrl = ipxeUrlBase + "c2-medium-x86/netboot.ipxe";
     modules = [
       ../modules/hydra-slave.nix
       ../modules/buildkite-agent.nix

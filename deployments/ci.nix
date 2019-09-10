@@ -16,8 +16,20 @@ let
   ];
 
   hydraSlaveBuildkiteList = [
-    { hostname = "packet-hydra-buildkite-1"; ipo4 = "11"; extraopts = { services.buildkite-services.metadata = "system=x86_64-linux"; }; }
-    { hostname = "packet-hydra-buildkite-2"; ipo4 = "12"; extraopts = { services.buildkite-services.metadata = "system=x86_64-linux"; }; }
+    { hostname = "packet-hydra-buildkite-1";
+      ipo4 = "11";
+      extraopts = {
+        services.buildkite-services.metadata = "system=x86_64-linux";
+        services.hydra-slave.cores = 4;
+      };
+    }
+    { hostname = "packet-hydra-buildkite-2";
+      ipo4 = "12";
+      extraopts = {
+        services.buildkite-services.metadata = "system=x86_64-linux";
+        services.hydra-slave.cores = 4;
+      };
+    }
   ];
 
   peerWg = [
