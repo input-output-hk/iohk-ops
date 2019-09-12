@@ -19,12 +19,7 @@ in {
       initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" "zfsUnstable" "nvme" ];
       kernelModules = [ "kvm-intel" ];
       extraModulePackages = with config.boot.kernelPackages; lib.mkForce [ zfsUnstable wireguard ];
-      # initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
-      # kernelModules = [ "kvm-intel" "wl" ];
-      # extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
       loader = {
-        #systemd-boot.enable = true;
-        #efi.canTouchEfiVariables = true;
         efi.canTouchEfiVariables = false;
         grub = {
           enable = true;
@@ -39,9 +34,10 @@ in {
     nixpkgs = {
       config.allowUnfree = true;
     };
-    networking.firewall.allowedTCPPorts = [ 5900 8081 ];
+    networking.firewall.allowedTCPPorts = [ 5900 5901 8081 ];
     networking.firewall.extraCommands = lib.mkAfter ''
       iptables -t nat -A nixos-nat-pre -i wg0 -p tcp -m tcp --dport 2200 -j DNAT --to-destination 192.168.3.2:22
+      iptables -t nat -A nixos-nat-pre -i wg0 -p tcp -m tcp --dport 2201 -j DNAT --to-destination 192.168.4.2:22
     '';
     networking.wireguard.interfaces.wg0 = let
       genPeer = n: name: endpoint: {
@@ -81,6 +77,7 @@ in {
       hosts = {
         "/monitorama/host" = "http://127.0.0.1:9100/metrics";
         "/monitorama/ci" = "http://192.168.3.2:9100/metrics";
+        "/monitorama/signing" = "http://192.168.4.2:9100/metrics";
       };
     };
     environment.systemPackages = with pkgs; [
@@ -128,6 +125,7 @@ in {
     };
     macosGuest = let
       guestConfDir1 = host: port: hostname: (import ../nix-darwin/test.nix { role = "ci"; inherit host port hostname; }).guestConfDir;
+      guestConfDir2 = host: port: hostname: (import ../nix-darwin/test.nix { role = "signing"; inherit host port hostname; }).guestConfDir;
     in {
       enable = true;
       network = {
@@ -135,6 +133,9 @@ in {
         tapDevices = {
           tap-ci = {
             subnet = "192.168.3";
+          };
+          tap-signing = {
+            subnet = "192.168.4";
           };
         };
       };
@@ -159,6 +160,28 @@ in {
             cloverImage = (pkgs.callPackage ./macs/clover-image.nix { csrFlag = "0x23"; }).clover-image;
             MACAddress = "52:54:00:c9:18:27";
             vncListen = "0.0.0.0:0";
+          };
+        };
+        signing = {
+          zvolName = "tank/mojave-image2-xcode";
+          network = {
+            interiorNetworkPrefix = "192.168.4";
+            guestSshPort = 2201;
+            prometheusPort = 9102;
+            tapDevice = "tap-signing";
+            guestIP = "192.168.4.2";
+          };
+          guest = {
+            guestConfigDir = guestConfDir2 "192.168.4.1" "1515" "${config.networking.hostName}-signing";
+            cores = 2;
+            threads = 2;
+            sockets = 1;
+            memoryInMegs = 6 * 1024;
+            ovmfCodeFile = ./macs/dist/OVMF_CODE.fd;
+            ovmfVarsFile = ./macs/dist/OVMF_VARS-1024x768.fd;
+            cloverImage = (pkgs.callPackage ./macs/clover-image.nix { csrFlag = "0x23"; }).clover-image;
+            MACAddress = "52:54:00:c9:18:28";
+            vncListen = "0.0.0.0:1";
           };
         };
       };
