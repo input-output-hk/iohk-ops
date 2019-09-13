@@ -200,6 +200,45 @@ in {
       exchange-monitor.enable = true;
       prometheus2.scrapeConfigs = [
         {
+          job_name = "sarov-host";
+          scrape_interval = "10s";
+          metrics_path = "/mac1/host";
+          static_configs = [
+            {
+              targets = [
+                "192.168.20.20:9111"
+              ];
+              labels.role = "mac-host";
+            }
+          ];
+        }
+        {
+          job_name = "mac-mini-1-host";
+          scrape_interval = "10s";
+          metrics_path = "/monitorama/host";
+          static_configs = [
+            {
+              targets = [
+                "192.168.20.21:9111"
+              ];
+              labels.role = "mac-host";
+            }
+          ];
+        }
+        {
+          job_name = "mac-mini-2-host";
+          scrape_interval = "10s";
+          metrics_path = "/monitorama/host";
+          static_configs = [
+            {
+              targets = [
+                "192.168.20.22:9111"
+              ];
+              labels.role = "mac-host";
+            }
+          ];
+        }
+        {
           job_name = "sarov-mac-hydra";
           scrape_interval = "10s";
           metrics_path = "/mac1/hydra";
@@ -213,15 +252,54 @@ in {
           ];
         }
         {
-          job_name = "sarov-host";
+          job_name = "mac-mini-1-ci";
           scrape_interval = "10s";
-          metrics_path = "/mac1/host";
+          metrics_path = "/monitorama/ci";
           static_configs = [
             {
               targets = [
-                "192.168.20.20:9111"
+                "192.168.20.21:9111"
               ];
-              labels.role = "mac-host";
+              labels.role = "build-slave";
+            }
+          ];
+        }
+        {
+          job_name = "mac-mini-2-ci";
+          scrape_interval = "10s";
+          metrics_path = "/monitorama/ci";
+          static_configs = [
+            {
+              targets = [
+                "192.168.20.22:9111"
+              ];
+              labels.role = "build-slave";
+            }
+          ];
+        }
+        {
+          job_name = "mac-mini-1-signing";
+          scrape_interval = "10s";
+          metrics_path = "/monitorama/signing";
+          static_configs = [
+            {
+              targets = [
+                "192.168.20.21:9111"
+              ];
+              labels.role = "build-slave";
+            }
+          ];
+        }
+        {
+          job_name = "mac-mini-2-signing";
+          scrape_interval = "10s";
+          metrics_path = "/monitorama/signing";
+          static_configs = [
+            {
+              targets = [
+                "192.168.20.22:9111"
+              ];
+              labels.role = "build-slave";
             }
           ];
         }
@@ -287,7 +365,7 @@ in {
             annotations = {
               description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
             };
-          }          
+          }
         ];
         alertmanager = {
           extraRoutes = [
