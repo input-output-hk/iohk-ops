@@ -124,6 +124,7 @@ in {
 
     systemd.services = {
       netcatsyslog-ci = mkLogServer 1514;
+      netcatsyslog-signing = mkLogServer 1515;
     };
   };
 }
