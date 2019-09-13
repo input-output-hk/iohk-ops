@@ -8,11 +8,11 @@ in with lib; {
     services.buildkite-services-darwin = {
       metadata = mkOption {
         type = types.str;
-        default = "system=x86_64-darwin,env=production";
+        default = "system=x86_64-darwin";
         description = ''
           Metadata associated with a buildkite agent.
         '';
-        example = "system=x86_64-darwin,env=production";
+        example = "system=x86_64-darwin";
       };
     };
   };
