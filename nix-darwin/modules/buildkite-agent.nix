@@ -39,7 +39,7 @@ in with lib; {
       openssh.privateKeyPath = "${keys}/id_buildkite";
       openssh.publicKeyPath = "${keys}/id_buildkite.pub";
       hooks.pre-command = ''
-        creds=${keys}/buildkite_aws_creds
+        creds=${keys}/buildkite_aws_creds_*
         if [ -e $creds ]; then
           source $creds
         else
