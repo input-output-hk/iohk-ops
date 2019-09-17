@@ -60,14 +60,16 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "jormungandr-faucet": {
-        "url": "https://github.com/input-output-hk/jormungandr-faucet/archive/8b46e132289a0470e8ad953cdf0728bd88653886.tar.gz",
-        "owner": "input-output-hk",
         "branch": "master",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
-        "repo": "jormungandr-faucet",
-        "sha256": "1c4miql2jgr8g4ac46sbj0w4fz7kynjdba922wsjc6gnbzzs3w62",
         "description": "faucet for jormungandr",
-        "rev": "8b46e132289a0470e8ad953cdf0728bd88653886"
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "jormungandr-faucet",
+        "rev": "c5ecc0f36abd15533753c4dc648eb02728123d92",
+        "sha256": "0wysqlpgbhfmz7iay1yq3ycvwwrpz9jc328riyr4qzrsrkkn0cbr",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/jormungandr-faucet/archive/c5ecc0f36abd15533753c4dc648eb02728123d92.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "jormungandr-nix": {
         "branch": "listen-address",

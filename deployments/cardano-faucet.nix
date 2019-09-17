@@ -2,16 +2,12 @@
 let nodeMap = { inherit (globals.fullMap) faucet; }; in
 
 {
-  faucet = if config.params.nodeImpl == "haskell" then {
+  faucet = {
     imports = [
       ../modules/cardano-base.nix
       ../modules/cardano-faucet.nix
+      ../modules/cardano.nix
     ];
     params = nodeMap.faucet;
-  } else
-    if config.params.nodeImpl == "rust" then {
-    imports = [
-      (sources.jormungandr-faucet + "/nix/nixos")
-    ];
-  } else {};
+  };
 }

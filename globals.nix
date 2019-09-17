@@ -76,7 +76,7 @@ let topologySpec     = builtins.fromJSON (builtins.readFile topologyFile);
                        typeIsCore = nodeType == "core";
                       typeIsRelay = nodeType == "relay";
                    typeIsExplorer = name == "explorer";
-                     typeIsFaucet = name == "faucet";
+                     typeIsFaucet = nodeType == "faucet";
                 typeIsRunsCardano = typeIsCore || typeIsRelay || typeIsExplorer || typeIsFaucet;
                  typeIsMonitoring = name == "monitoring";
                       accessKeyId = if elem org allOrgs

@@ -106,7 +106,7 @@ data NodeOrg = IOHK | CF | Emurgo
 instance FromJSON NodeOrg
 instance ToJSON NodeOrg
 
-data NodeType = NodeCore | NodeRelay | NodeEdge
+data NodeType = NodeCore | NodeRelay | NodeEdge | NodeFaucet
   deriving (Show)
 
 data NodeImpl = Legacy | Haskell | Rust
@@ -121,6 +121,7 @@ instance FromJSON NodeType where
         "core"     -> return NodeCore
         "edge"     -> return NodeEdge
         "relay"    -> return NodeRelay
+        "faucet"   -> return NodeFaucet
         _otherwise -> fail $ "Invalid NodeType " ++ show typ
 
 instance FromJSON NodeImpl where

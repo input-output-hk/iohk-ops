@@ -23,11 +23,13 @@ with import ../lib.nix;
       stagingshelley      = "shelley_staging";
     }.${env} or env;
   in {
+    disabledModules = [ "services/networking/jormungandr.nix" ];
     imports = [
       ./cardano-service.nix
       (sources.cardano-node + "/nix/nixos")
       (sources.cardano-byron-proxy + "/nix/nixos")
       (sources.jormungandr-nix + "/nixos")
+      (sources.jormungandr-faucet + "/nix/nixos")
       ./cardano-base.nix
       ./globals.nix
     ];
@@ -114,6 +116,7 @@ with import ../lib.nix;
     services.jormungandr-faucet = mkIf (config.params.typeIsFaucet && config.params.nodeImpl == "rust") {
       enable = true;
       lovelacesToGive = 250000;
+      jormungandrApi = "http://localhost:3001/api/v0";
     };
 
     services.jormungandr = mkIf (config.params.nodeImpl == "rust") {
@@ -142,6 +145,7 @@ with import ../lib.nix;
         backend = "monitoring.stakepool.cardano-testnet.iohkdev.io:12201";
         logs-id = "${config.deployment.name}.${config.params.name}";
       };
+      rest.listenAddress = "${config.networking.privateIPv4}:3001";
     };
 
     systemd.services."jormungandr" = mkIf (cfgRust.enable && config.params.typeIsCore) {
@@ -207,7 +211,7 @@ wallet:
       )) // (optionalAttrs (config.params.typeIsFaucet && cfgRust.enable) (
         let keyfile = "stake_9_key.sk"; in
         {
-          "jormungandr-faucet.sk" = builtins.trace (config.params.name + ": using" + keyfile) {
+          "jormungandr-faucet.sk" = builtins.trace (config.params.name + ": using " + keyfile) {
             keyFile = ./. + "/../static/secrets/${keyfile}";
             user = "jormungandr";
             destDir = "/var/lib/keys";
