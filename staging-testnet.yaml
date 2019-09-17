@@ -1,40 +1,43 @@
+# staging cardano network
 args:
-  IOHKroute53accessKeyId:
-    tag: NixStr
-    contents: default
   configurationKey:
     tag: NixStr
-    contents: testnet_staging_full
+    contents: mainnet_dryrun_full
   EmurgoaccessKeyId:
     tag: NixStr
-    contents: default
+    contents: fifth-party
   systemStart:
     tag: NixInt
-    contents: 1567616210
+    contents: 1506450213
   CFaccessKeyId:
     tag: NixStr
-    contents: default
+    contents: third-party
   IOHKaccessKeyId:
     tag: NixStr
-    contents: default
-gen-cmdline: new -e staging --domain jormungandr-testnet.iohkdev.io jormungandr-testnet
-  nodes monitoring
+    contents: iohk
+  IOHKroute53accessKeyId:
+    tag: NixStr
+    contents: iohk
+gen-cmdline: template -c staging-testnet.yaml --environment staging --nixops /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
+  --here staging nodes reportserver explorer
 environment: Staging
-installer-bucket: default-bucket
-installer-url-base: null
-domain: jormungandr-testnet.iohkdev.io
 topology: topology-staging.yaml
-name: jormungandr-testnet
+installer-bucket:   update-awstest.iohkdev.io
+installer-url-base: update-awstest.iohkdev.io
+name: rc-staging
+domain: awstest.iohkdev.io
 files:
-- deployments/security-groups.nix
-- deployments/cardano-nodes-env-staging.nix
 - deployments/keypairs.nix
+- deployments/security-groups.nix
 - deployments/cardano-nodes.nix
-- deployments/cardano-faucet.nix
+- deployments/cardano-nodes-env-staging.nix
+- deployments/cardano-explorer.nix
+- deployments/cardano-explorer-env-staging.nix
 - deployments/monitoring-env-staging.nix
 - deployments/monitoring-aws.nix
 elements:
 - Nodes
+- Explorer
 - Monitoring
-- Faucet
+nixops: /nix/store/mb4rfbkliwjvcdcnqzgg4bgi45i8pb3s-nixops-1.6pre0_abcdef/bin/nixops
 target: AWS
