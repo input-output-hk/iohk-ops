@@ -64,6 +64,17 @@ with import ../lib.nix;
                 }
               ];
             };
+            "allow-jormangandr-public-tcp-${region}" = {
+              inherit region accessKeyId;
+              description = "Jormangandr TCP public";
+              rules = [
+                {
+                protocol = "tcp"; # TCP
+                fromPort = nodePort; toPort = nodePort;
+                sourceIp = "0.0.0.0/0";
+                }
+              ];
+            };
           };
         orgXRegionSGNames = { org, region }:
             [ "allow-ekg-public-tcp-${region}-${org}"

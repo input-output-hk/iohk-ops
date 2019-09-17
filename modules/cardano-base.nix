@@ -29,7 +29,7 @@ with import ../lib.nix;
            (typeIsCore && (nodeImpl != "rust"))  [ "allow-cardano-static-peers-${config.params.name}-${config.params.region}-${config.params.org}" ]
         ++ optionals
            (typeIsRelay || (nodeImpl == "rust")) [ "allow-kademlia-public-udp-${config.params.region}"
-                                                   "allow-cardano-public-tcp-${config.params.region}" ]
+                                                   "allow-jormangandr-public-tcp-${config.params.region}" ]
         ++ optionals typeIsMonitoring            [ "allow-monitoring-static-peers-${config.params.region}-${config.params.org}" ]
         ++ optionals config.global.enableEkgWeb  [ "allow-ekg-public-tcp-${config.params.region}-${config.params.org}" ];
       in map (resolveSGName resources)
