@@ -9,7 +9,7 @@ let
     name = "io";
     buildInputs = with pkgs; [
       iohk-ops
-      (builtins.trace (builtins.attrNames iohkpkgs.cardano-node-pkgs.nix-tools.exes) iohkpkgs.cardano-node-pkgs.nix-tools.exes.cardano-node)
+      iohkpkgs.cardano-node-pkgs.nix-tools.exes.cardano-node
       (import (import ./nix/sources.nix).niv {}).niv
       terraform_0_11
       iohkpkgs.nixops ];
