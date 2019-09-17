@@ -13,7 +13,7 @@ nodes:
     impl: rust
     type: core
     host: c-a-1.cardano
-    static-routes: [['c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     org: IOHK
 
   'c-a-2':
@@ -22,7 +22,7 @@ nodes:
     impl: rust
     type: core
     host: c-a-2.cardano
-    static-routes: [['c-a-1', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     org: IOHK
 
   'c-a-3':
@@ -31,7 +31,7 @@ nodes:
     impl: rust
     type: core
     host: c-a-3.cardano
-    static-routes: [['c-a-1', 'c-a-2'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     org: IOHK
 
   'c-b-1':
@@ -40,7 +40,7 @@ nodes:
     impl: rust
     type: core
     host: c-b-1.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     org: Emurgo
 
   'c-b-2':
@@ -49,7 +49,7 @@ nodes:
     impl: rust
     type: core
     host: c-b-2.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     org: Emurgo
 
   'c-c-1':
@@ -58,7 +58,7 @@ nodes:
     impl: rust
     type: core
     host: c-c-1.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     org: CF
 
   'c-c-2':
@@ -67,7 +67,7 @@ nodes:
     impl: rust
     type: core
     host: c-c-2.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     org: CF
 
 # now the 7 relays, in the same 3 regions
@@ -79,7 +79,7 @@ nodes:
     type: relay
     org: IOHK
     host: r-a-1.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     kademlia: false
     public: false
 
@@ -90,7 +90,7 @@ nodes:
     type: relay
     org: IOHK
     host: r-a-2.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     kademlia: false
     public: false
 
@@ -101,7 +101,7 @@ nodes:
     type: relay
     org: IOHK
     host: r-a-3.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2'], ['r-b-1', 'r-b-2'], ['r-c-1', 'r-c-2']]
     kademlia: false
     public: false
 
@@ -112,7 +112,7 @@ nodes:
     type: relay
     org: IOHK
     host: r-b-1.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-2'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-2'], ['r-c-1', 'r-c-2']]
     kademlia: false
     public: false
 
@@ -123,7 +123,7 @@ nodes:
     type: relay
     org: IOHK
     host: r-b-2.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1'], ['r-c-1', 'r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1'], ['r-c-1', 'r-c-2']]
     kademlia: false
     public: false
 
@@ -134,7 +134,7 @@ nodes:
     type: relay
     org: IOHK
     host: r-c-1.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-2'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-2']]
     kademlia: false
     public: false
 
@@ -145,7 +145,7 @@ nodes:
     type: relay
     org: IOHK
     host: r-c-2.cardano
-    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1'], ['faucet']]
+    static-routes: [['c-a-1', 'c-a-2', 'c-a-3'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['r-a-1', 'r-a-2', 'r-a-3'], ['r-b-1', 'r-b-2'], ['r-c-1']]
     kademlia: false
     public: false
 
