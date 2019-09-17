@@ -25,6 +25,10 @@ let
           destDir = "/var/lib/macos-vm-persistent-config-signing/buildkite";
           keyFile = ../static/buildkite_token;
         };
+        "buildkite_aws_creds_ci" = {
+          destDir = "/var/lib/macos-vm-persistent-config-ci/buildkite";
+          keyFile = ../static/buildkite-hook;
+        };
         "buildkite_aws_creds_signing" = {
           destDir = "/var/lib/macos-vm-persistent-config-signing/buildkite";
           keyFile = ../static/buildkite-hook;
