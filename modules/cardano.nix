@@ -116,7 +116,7 @@ with import ../lib.nix;
     services.jormungandr-faucet = mkIf (config.params.typeIsFaucet && config.params.nodeImpl == "rust") {
       enable = true;
       lovelacesToGive = 250000;
-      jormungandrApi = "http://localhost:3001/api/v0";
+      jormungandrApi = "http://${config.networking.privateIPv4}:${toString (cfg.port + 1)}/api/v0"; 
     };
 
     services.jormungandr = mkIf (config.params.nodeImpl == "rust") {
