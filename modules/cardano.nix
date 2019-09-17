@@ -15,6 +15,7 @@ with import ../lib.nix;
     cfgLegacy            = config.services.cardano-node-legacy;
     cfg                  = config.services.cardano-node;
     cfgRust              = config.services.jormungandr;
+    cfgFaucet            = config.services.jormungandr-faucet;
     sources = import ../nix/sources.nix;
     toCardanoEnvName = env: {
       # mapping of environnement name from globals.nix to the one defined in cardanoLib:
@@ -103,7 +104,16 @@ with import ../lib.nix;
     };
 
     networking.firewall = mkIf (cfg.enable || cfgRust.enable) {
-      allowedTCPPorts = [ cfg.port (cfg.port + 1) ];
+      allowedTCPPorts = [
+        cfg.port
+        (cfg.port + 1)
+        cfgFaucet.port
+      ];
+    };
+
+    services.jormungandr-faucet = mkIf (config.params.typeIsFaucet && config.params.nodeImpl == "rust") {
+      enable = true;
+      lovelacesToGive = 250000;
     };
 
     services.jormungandr = mkIf (config.params.nodeImpl == "rust") {
@@ -192,6 +202,15 @@ wallet:
               keyFile = ./. + "/../static/secrets/${keyfile}";
               user = "jormungandr";
               destDir = "/var/lib/keys";
+          };
+        }
+      )) // (optionalAttrs (config.params.typeIsFaucet && cfgRust.enable) (
+        let keyfile = "stake_9_key.sk"; in
+        {
+          "jormungandr-faucet.sk" = builtins.trace (config.params.name + ": using" + keyfile) {
+            keyFile = ./. + "/../static/secrets/${keyfile}";
+            user = "jormungandr";
+            destDir = "/var/lib/keys";
           };
         }
       ));
