@@ -42,6 +42,7 @@ with import ../lib.nix;
         regionSGNames = region:
             [ "allow-kademlia-public-udp-${region}"
               "allow-cardano-public-tcp-${region}"
+              "allow-jormangandr-public-tcp-${region}"
             ];
         regionSGs      = { nodePort, nodePortEnd }: region: {
             "allow-kademlia-public-udp-${region}" = {
