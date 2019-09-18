@@ -17,6 +17,7 @@ with pkgs.haskell.lib;
 let
   # nixopsUnstable = /path/to/local/src
   sources = commonLib.sources;
+  nixopsContainerSrc = sources.nixops-container;
   nixopsPacketSrc = sources.nixops-packet;
   nixopsSrc = sources.nixops-core; # nixops is an input to iohk-ops on hydra so different name
   log-classifier-web = (import log-classifier-src {}).haskellPackages.log-classifier-web;
@@ -25,8 +26,9 @@ let
     in (import "${nixopsSrc}/release.nix" {
          inherit (commonLib) nixpkgs;
          p = (p: let
+           nixopsContainer = p.callPackage "${nixopsContainerSrc}/release.nix" {};
            nixopsPacket = p.callPackage "${nixopsPacketSrc}/release.nix" {};
-         in [ p.aws nixopsPacket ]);
+         in [ p.aws nixopsContainer nixopsPacket ]);
         }).build.${system};
   log-classifier-src = sources.log-classifier;
   iohk-ops-extra-runtime-deps = with pkgs; [

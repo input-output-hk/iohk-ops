@@ -95,6 +95,18 @@
         "url": "https://github.com/input-output-hk/nixops/archive/28dd42a2dc9f6bada1ea587de80cde8dae0ddbf0.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "nixops-container": {
+        "branch": "master",
+        "description": "NixOps Container Plugin",
+        "homepage": null,
+        "owner": "PsyanticY",
+        "repo": "nixops-container",
+        "rev": "7068c034e2db6f847d873767308227c471cf095a",
+        "sha256": "0fid8khnnwhx3dzd2v0l4bxrady3gz9pfa3rjsgpri0nmk9c7qsy",
+        "type": "tarball",
+        "url": "https://github.com/PsyanticY/nixops-container/archive/7068c034e2db6f847d873767308227c471cf095a.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "nixops-packet": {
         "branch": "c2-medium-reserved-changes",
         "description": "NixOps Packet.net Plugin",
