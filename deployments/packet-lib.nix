@@ -183,7 +183,7 @@ in {
     ipxeScriptUrl = ipxeUrlBase + "c2-medium-x86/netboot.ipxe";
     modules = [
       ../modules/hydra-slave.nix
-      ../modules/buildkite-agent.nix
+      ../modules/buildkite-agent-container.nix
     ];
   } // args);
 
