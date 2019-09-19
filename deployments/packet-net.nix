@@ -66,11 +66,11 @@ let
     type = "demand";
     module = ../modules/hydra-slave.nix;
   };
-  createPacketBuildkite = hostname: mkPacketNet {
+  createPacketBuildkite = { hostname, ... }@args: mkPacketNet ({
     inherit hostname;
     type = "demand";
-    module = ../modules/buildkite-agent.nix;
-  };
+    module = ../modules/buildkite-agent-container.nix;
+  } // args);
   createPacketHydraSlaveImpure = hostname: mkPacketNet {
     inherit hostname;
     type = "demand";
@@ -84,6 +84,7 @@ let
     extraopts = { nix.useSandbox = mkForce false; };
   };
   createPacketMachines = function: hostname: { name = hostname; value = function hostname; };
+  createPacketMachinesMod = function: { hostname, ... }@args: { name = hostname; value = function args; };
   hydraSlaves = [
     "packet-hydra-slave-1"
     "packet-hydra-slave-2"
@@ -92,9 +93,24 @@ let
     "packet-hydra-slave-5"
   ];
   buildkiteAgents = [
-    "packet-buildkite-1"
-    "packet-buildkite-2"
-    "packet-buildkite-3"
+    { hostname = "packet-buildkite-1";
+      ipo4 = "11";
+      extraopts = {
+        services.buildkite-containers.hostIdSuffix = "1";
+      };
+    }
+    { hostname = "packet-buildkite-2";
+      ipo4 = "12";
+      extraopts = {
+        services.buildkite-containers.hostIdSuffix = "2";
+      };
+    }
+    { hostname = "packet-buildkite-3";
+      ipo4 = "13";
+      extraopts = {
+        services.buildkite-containers.hostIdSuffix = "3";
+      };
+    }
   ];
   # Legacy systems, to be removed!
   mantisHydraLegacySlaves = [
@@ -108,5 +124,5 @@ in
 // builtins.listToAttrs (builtins.concatLists [
     (map (createPacketMachines createPacketHydraSlaveImpureLegacy) mantisHydraLegacySlaves)
     (map (createPacketMachines createPacketHydraSlave) hydraSlaves)
-    (map (createPacketMachines createPacketBuildkite) buildkiteAgents)
+    (map (createPacketMachinesMod createPacketBuildkite) buildkiteAgents)
    ])
