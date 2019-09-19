@@ -107,12 +107,12 @@ with import ../lib.nix;
     };
 
     networking.firewall = mkIf (cfg.enable || cfgRust.enable) {
-      allowedTCPPorts = [
-        cfg.port
-        (cfg.port + 1)
-        cfgFaucet.port
-      ];
+      allowedTCPPorts = [ cfg.port (cfg.port + 1) ];
     };
+
+    environment.systemPackages = mkIf (config.params.nodeImpl == "rust") [
+      (import (sources.jormungandr-nix + "/lib.nix")).pkgs.jormungandr-cli
+    ];
 
     services.jormungandr = mkIf (config.params.nodeImpl == "rust") {
       enable = true;

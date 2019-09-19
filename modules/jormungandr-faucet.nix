@@ -1,17 +1,26 @@
-with import ../lib.nix;
-{ config, pkgs, lib }:
+{ config, pkgs, lib, ... }:
 
 let
+  sources = import ../nix/sources.nix;
+  inherit (lib) mkIf mkForce;
+
   enable = config.params.typeIsFaucet && config.params.nodeImpl == "rust";
   host = config.networking.privateIPv4;
   apiPort = toString (config.services.cardano-node.port + 1);
-  faucetPort = toString config.services.jormungandr-faucet.port;
-  vhostDomainName = lib.attrByPath [ "global" "dnsDomainname" ] "iohkdev.io" config;
+  faucetPort = config.services.jormungandr-faucet.port;
+  vhostDomainName = if config.global.dnsDomainname == null
+                    then "iohkdev.io"
+                    else config.global.dnsDomainname;
 in {
+  global.dnsHostname = mkIf enable (mkForce "jormungandr-faucet");
   services.jormungandr-faucet = mkIf enable {
     enable = true;
     lovelacesToGive = 250000;
     jormungandrApi = "http://${host}:${apiPort}/api/v0";
+  };
+
+  networking.firewall = mkIf enable {
+    allowedTCPPorts = [ 80 443 faucetPort ];
   };
 
   services.nginx = mkIf enable {
@@ -22,15 +31,16 @@ in {
                         '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
         access_log syslog:server=unix:/dev/log x-fwd;
     '';
+    recommendedTlsSettings = true;
+    recommendedOptimisation = true;
+    recommendedGzipSettings = true;
+    recommendedProxySettings = true;
+    serverTokens = false;
     virtualHosts = {
       "jormungandr-faucet.${vhostDomainName}" = {
         forceSSL = true;
         enableACME = true;
-        listen = [{
-          addr = "0.0.0.0";
-          port = 80;
-        }];
-        locations."/".proxyPass = "http://${host}:${faucetPort}";
+        locations."/".proxyPass = "http://127.0.0.1:${toString faucetPort}";
       };
     };
   };
