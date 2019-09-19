@@ -52,11 +52,10 @@ in with lib;
           imports = [
             ./nix_nsswitch.nix
             ./docker-builder.nix
+            ./common.nix
           ];
-          system.extraSystemBuilderCmds = ''
-            ln -sv ${pkgs.path} $out/nixpkgs
-          '';
-          nix.nixPath = [ "nixpkgs=/run/current-system/nixpkgs" ];
+          services.monitoring-exporters.enable = false;
+          services.ntp.enable = mkForce false;
           services.buildkite-agent = {
             enable = true;
             name   = name + "-" + containerName;

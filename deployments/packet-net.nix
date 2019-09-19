@@ -44,6 +44,7 @@ let
 
     imports = [ ../modules/common.nix
                 module
+                extraopts
               ] ++ (optionals (type == "legacy")
               (map (f: ./. + "/${hostname}/${f}")
                   (builtins.attrNames (builtins.readDir (./. + "/${hostname}")))));
