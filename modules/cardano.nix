@@ -31,6 +31,7 @@ with import ../lib.nix;
       (sources.jormungandr-nix + "/nixos")
       (sources.jormungandr-faucet + "/nix/nixos")
       ./jormungandr-faucet.nix
+      ./jormungandr-monitor.nix
       ./cardano-base.nix
       ./globals.nix
     ];
@@ -146,6 +147,10 @@ with import ../lib.nix;
     systemd.services."jormungandr" = mkIf (cfgRust.enable && config.params.typeIsCore) {
       after = [ "jormungandr-pool-secret.yaml-key.service" ];
       wants = [ "jormungandr-pool-secret.yaml-key.service" ];
+    };
+
+    services.jormungandr-monitor = mkIf (config.params.nodeImpl == "rust") {
+      enable = true;
     };
 
     users.users.jormungandr.extraGroups = [ "keys" ];

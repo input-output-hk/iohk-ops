@@ -29,6 +29,11 @@ let
         default = false;
         description = "if a second native prometheus exporter should be scraped";
       };
+      hasJormungandrPrometheus = mkOption {
+        type = types.bool;
+        default = false;
+        description = "if a Jormungandr Prometheus exporter should be scraped";
+      };
     };
     config = {
       name = mkDefault name;
@@ -813,9 +818,10 @@ in {
               scrape_interval = "10s";
               static_configs = let
                 makeNodeConfig = key: value: {
-                  targets = [ "${key}:9100" "${key}:9102" ] 
+                  targets = [ "${key}:9100" "${key}:9102" ]
                     ++ (optional value.hasNativePrometheus "${key}:12760")
-                    ++ (optional value.hasSecondNativePrometheus "${key}:12761");
+                    ++ (optional value.hasSecondNativePrometheus "${key}:12761")
+                    ++ (optional value.hasJormungandrPrometheus "${key}:8000");
                   labels = {
                     alias = key;
                   } // value.labels;

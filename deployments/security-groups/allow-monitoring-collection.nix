@@ -15,6 +15,10 @@ let
       rules = lib.optionals (nodes ? "${globals.monitoringNV.name}" || monitorIpOverride != null)
         [{
           protocol = "tcp";
+          fromPort = 8000; toPort = 8000; # jormungandr prometheus exporter
+          sourceIp = monitoringSourceIp;
+        }{
+          protocol = "tcp";
           fromPort = 9100; toPort = 9100; # prometheus exporters
           sourceIp = monitoringSourceIp;
         }{
