@@ -51,6 +51,7 @@ in {
         default 0;
         https://webdevc.iohk.io 1;
         https://testnet.iohkdev.io 1;
+        http://127.0.0.1:4000 1;
       }
 
       map $origin_allowed $origin {
