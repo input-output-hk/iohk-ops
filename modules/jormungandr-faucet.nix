@@ -68,12 +68,9 @@ in {
           let
             headers = ''
               add_header 'Vary' 'Origin' always;
-              add_header 'Access-Control-Allow-Origin' $origin;
-              add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS';
-              add_header 'Access-Control-Allow-Headers' 'User-Agent,X-Requested-With,Content-Type';
-              add_header 'Access-Control-Max-Age' 1728000;
-              add_header 'Content-Type' 'text/plain; charset=utf-8';
-              add_header 'Content-Length' 0;
+              add_header 'Access-Control-Allow-Origin' $origin always;
+              add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS always';
+              add_header 'Access-Control-Allow-Headers' 'User-Agent,X-Requested-With,Content-Type' always;
             '';
           in {
           extraConfig = ''
@@ -81,6 +78,9 @@ in {
 
             if ($request_method = OPTIONS) {
               ${headers}
+              add_header 'Access-Control-Max-Age' 1728000;
+              add_header 'Content-Type' 'text/plain; charset=utf-8';
+              add_header 'Content-Length' 0;
               return 204;
               break;
             }
