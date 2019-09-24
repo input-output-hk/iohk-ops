@@ -19,15 +19,13 @@ JORMUNGANDR_REQUEST_TIME = Summary('jormungandr_process_time', 'Time spent proce
 jormungandr_blockRecvCnt = Gauge('jormungandr_blockRecvCnt', 'Jormungandr blockRecvCnt')
 jormungandr_lastBlockDate = Gauge('jormungandr_lastBlockDate', 'Jormungandr lastBlockDate')
 jormungandr_lastBlockFees = Gauge('jormungandr_lastBlockFees', 'Jormungandr lastBlockFees')
+jormungandr_lastBlockHash = Gauge('jormungandr_lastBlockHash', 'Jormungandr lastBlockHash')
 jormungandr_lastBlockHeight = Gauge('jormungandr_lastBlockHeight', 'Jormungandr lastBlockHeight')
 jormungandr_lastBlockSum = Gauge('jormungandr_lastBlockSum', 'Jormungandr lastBlockSum')
 jormungandr_lastBlockTime = Gauge('jormungandr_lastBlockTime', 'Jormungandr lastBlockTime')
 jormungandr_lastBlockTx = Gauge('jormungandr_lastBlockTx', 'Jormungandr lastBlockTx')
 jormungandr_txRecvCnt = Gauge('jormungandr_txRecvCnt', 'Jormungandr txRecvCnt')
 jormungandr_uptime = Gauge('jormungandr_uptime', 'Jormungandr uptime')
-
-# Not a numeric metric, therefore excluded:
-jormungandr_lastBlockHash = Gauge('jormungandr_lastBlockHash', 'Jormungandr lastBlockHash')
 
 # Decorate function with metric.
 @JORMUNGANDR_REQUEST_TIME.time()
@@ -59,7 +57,10 @@ def process_jormungandr_metrics():
             try:
                 metrics[metric] = float(metrics[metric])
             except ValueError:
-                metrics[metric] = False
+                try:
+                    metrics[metric] = int(metrics[metric], 16)
+                except ValueError:
+                    metrics[metric] = False
         elif not isinstance(metrics[metric], (float, int)):
             metrics[metric] = False
     # print(f'Santized metrics = {metrics}')
@@ -67,6 +68,7 @@ def process_jormungandr_metrics():
     jormungandr_blockRecvCnt.set(metrics['blockRecvCnt'])
     jormungandr_lastBlockDate.set(metrics['lastBlockDate'])
     jormungandr_lastBlockFees.set(metrics['lastBlockFees'])
+    jormungandr_lastBlockHash.set(metrics['lastBlockHash'])
     jormungandr_lastBlockHeight.set(metrics['lastBlockHeight'])
     jormungandr_lastBlockSum.set(metrics['lastBlockSum'])
     jormungandr_lastBlockTime.set(metrics['lastBlockTime'])
@@ -87,6 +89,7 @@ if __name__ == '__main__':
             jormungandr_blockRecvCnt.set(False)
             jormungandr_lastBlockDate.set(False)
             jormungandr_lastBlockFees.set(False)
+            jormungandr_lastBlockHash.set(False)
             jormungandr_lastBlockHeight.set(False)
             jormungandr_lastBlockSum.set(False)
             jormungandr_lastBlockTime.set(False)
