@@ -149,9 +149,13 @@ with import ../lib.nix;
       wants = [ "jormungandr-pool-secret.yaml-key.service" ];
     };
 
-    services.jormungandr-monitor = mkIf (config.params.nodeImpl == "rust") {
+    services.jormungandr-monitor = mkIf (config.params.nodeImpl == "rust") ({
       enable = true;
-    };
+    } // optionalAttrs (config.params.nodeType == "faucet") {
+      faucetAddress = if (builtins.pathExists ../static/faucet-address.nix)
+        then (import ../static/faucet-address.nix).address
+        else null;
+    });
 
     users.users.jormungandr.extraGroups = [ "keys" ];
 

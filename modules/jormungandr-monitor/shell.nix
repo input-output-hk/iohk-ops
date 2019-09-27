@@ -3,6 +3,7 @@ let
   iohkNix = (import ../../lib.nix).iohkNix;
   pkgs = iohkNix.pkgs;
   dependencies = with pkgs.python3Packages; [
+    dateutil
     netifaces
     requests
     prometheus_client

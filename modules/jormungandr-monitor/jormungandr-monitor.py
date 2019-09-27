@@ -2,6 +2,10 @@ from prometheus_client import Gauge
 from prometheus_client import Summary
 from prometheus_client import start_http_server
 from numbers import Number
+from dateutil.parser import *
+from dateutil.tz import *
+from datetime import *
+import os
 import netifaces as ni
 import requests
 import json
@@ -14,6 +18,7 @@ import warnings
 #Create a metric to track time spent and requests made.
 EXPORTER_PORT = 8000
 SLEEP_TIME = 10
+FAUCET_ADDRESS = os.getenv("FAUCET_ADDRESS")
 
 JORMUNGANDR_REQUEST_TIME = Summary('jormungandr_process_time', 'Time spent processing jormungandr metrics')
 jormungandr_blockRecvCnt = Gauge('jormungandr_blockRecvCnt', 'Jormungandr blockRecvCnt')
@@ -26,6 +31,9 @@ jormungandr_lastBlockTime = Gauge('jormungandr_lastBlockTime', 'Jormungandr last
 jormungandr_lastBlockTx = Gauge('jormungandr_lastBlockTx', 'Jormungandr lastBlockTx')
 jormungandr_txRecvCnt = Gauge('jormungandr_txRecvCnt', 'Jormungandr txRecvCnt')
 jormungandr_uptime = Gauge('jormungandr_uptime', 'Jormungandr uptime')
+if FAUCET_ADDRESS is not None:
+    jormungandr_faucetFunds = Gauge('jormungandr_faucetFunds', 'Jormungandr Faucet Fund Level in Lovelace')
+    jormungandr_faucetCounter = Gauge('jormungandr_faucetCounter', 'Jormungandr Faucet Counter')
 
 # Decorate function with metric.
 @JORMUNGANDR_REQUEST_TIME.time()
@@ -51,20 +59,11 @@ def process_jormungandr_metrics():
     json_obj = urllib.request.urlopen(url)
     metrics = json.loads(json_obj.read().decode('utf-8'))
     print(f'processing jormungandr metrics from {url} via {iface}')
-    # print(f'metrics = {metrics}')
+    metrics['lastBlockTime'] = parse(metrics['lastBlockTime']).timestamp()
+    #print(f'metrics = {metrics}')
     for metric in metrics:
-        if isinstance(metrics[metric], str):
-            try:
-                metrics[metric] = float(metrics[metric])
-            except ValueError:
-                try:
-                    metrics[metric] = int(metrics[metric], 16)
-                except ValueError:
-                    metrics[metric] = False
-        elif not isinstance(metrics[metric], (float, int)):
-            metrics[metric] = False
-    # print(f'Santized metrics = {metrics}')
-    # print(f'Metric = {metric} val = {metrics[metric]}')
+        metrics[metric] = sanitize(metrics[metric])
+    #print(f'Santized metrics = {metrics}')
     jormungandr_blockRecvCnt.set(metrics['blockRecvCnt'])
     jormungandr_lastBlockDate.set(metrics['lastBlockDate'])
     jormungandr_lastBlockFees.set(metrics['lastBlockFees'])
@@ -75,7 +74,27 @@ def process_jormungandr_metrics():
     jormungandr_lastBlockTx.set(metrics['lastBlockTx'])
     jormungandr_txRecvCnt.set(metrics['txRecvCnt'])
     jormungandr_uptime.set(metrics['uptime'])
+    if FAUCET_ADDRESS is not None:
+        url = f'http://{ip}:3001/api/v0/account/{FAUCET_ADDRESS}'
+        json_obj = urllib.request.urlopen(url)
+        metrics = json.loads(json_obj.read().decode('utf-8'))
+        #print(f'metrics = {metrics}')
+        jormungandr_faucetFunds.set(sanitize(metrics['value']))
+        jormungandr_faucetCounter.set(sanitize(metrics['counter']))
     sys.stdout.flush()
+
+def sanitize(metric):
+    if isinstance(metric, str):
+        try:
+            metric = float(metric)
+        except ValueError:
+            try:
+                metric = int(metric, 16)
+            except ValueError:
+                metric = False
+    elif not isinstance(metric, (float, int)):
+        metric = False
+    return metric
 
 if __name__ == '__main__':
     # Start up the server to expose the metrics.
@@ -96,4 +115,7 @@ if __name__ == '__main__':
             jormungandr_lastBlockTx.set(False)
             jormungandr_txRecvCnt.set(False)
             jormungandr_uptime.set(False)
+            if FAUCET_ADDRESS is not None:
+                jormungandr_faucetFunds.set(False)
+                jormungandr_faucetCounter.set(False)
         time.sleep(SLEEP_TIME)

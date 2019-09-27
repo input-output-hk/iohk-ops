@@ -2,10 +2,17 @@
 
 let
   cfg = config.services.jormungandr-monitor;
-in {
+in with lib; {
   options = {
     services.jormungandr-monitor = {
-      enable = lib.mkEnableOption "jormungandr monitor";
+      enable = mkEnableOption "jormungandr monitor";
+      faucetAddress = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = ''
+          An optional faucet address to monitor.
+        '';
+      };
     };
   };
   config = lib.mkIf cfg.enable {
@@ -16,6 +23,9 @@ in {
     };
     systemd.services.jormungandr-monitor = {
       wantedBy = [ "multi-user.target" ];
+      environment = mkIf (cfg.faucetAddress != null) {
+        FAUCET_ADDRESS = cfg.faucetAddress;
+      };
       script = ''
         exec ${pkgs.callPackage ./jormungandr-monitor {}}
       '';
