@@ -5,10 +5,10 @@
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "cardano-byron-proxy",
-        "rev": "a0fcf652e0a635a4b28a57116f29ed7a67ecf16b",
-        "sha256": "0p5ps7bivhbqfsdl75j9sga1pii1y5as1jis2ldwllapz1afdyid",
+        "rev": "473193983af01f721adc5edf69336d85da21af8b",
+        "sha256": "1dlaq1ackgbfj05n007nbpdjp3s9x4vrhvg8dlm5liz7rf0r3w2z",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/a0fcf652e0a635a4b28a57116f29ed7a67ecf16b.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/473193983af01f721adc5edf69336d85da21af8b.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "cardano-node": {
@@ -48,15 +48,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "iohk-nix": {
-        "branch": "jormungandr-master",
+        "branch": "master",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "8f9d120346b2becf793defdf4d893ac391f5c284",
-        "sha256": "0qn8ipvlikpyyi76i5ydnfa6y4svljhkqs9h62yqm81y9nz4r5yr",
+        "rev": "11ff3539c21665f9ac20cdf165af632312372b45",
+        "sha256": "0bvxjmx341f0ppazcikn9qmdi6nkqgnmw9gj3dkhz9dn6hw838mg",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/8f9d120346b2becf793defdf4d893ac391f5c284.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/11ff3539c21665f9ac20cdf165af632312372b45.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "jormungandr-faucet": {
@@ -65,22 +65,22 @@
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "jormungandr-faucet",
-        "rev": "765931c3f60b8264dc79d1317d5539b0e9b9b6fa",
-        "sha256": "1jygcdxrgr48d84r4di8g0gyx2p7wqwd2qqv30hd2njnf3k04hv8",
+        "rev": "e161948f1078bc50ee52dd5fc02386ac33c9f9c4",
+        "sha256": "11fclr1hs7vlw0z0rdqkx2sayyqjdgv93068gbkrnl92npqvbwnw",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/jormungandr-faucet/archive/765931c3f60b8264dc79d1317d5539b0e9b9b6fa.tar.gz",
+        "url": "https://github.com/input-output-hk/jormungandr-faucet/archive/e161948f1078bc50ee52dd5fc02386ac33c9f9c4.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "jormungandr-nix": {
-        "branch": "listen-address",
+        "branch": "testnet",
         "description": "jormungandr nix scripts",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "jormungandr-nix",
-        "rev": "677fce78803be86ba9fee9fbbf29180eb664841e",
-        "sha256": "1572xdqnwjyzxcb338zwi1knfayazrpdx6kgq14wfyvk4ds0a582",
+        "rev": "8db75580ab130b331e4d54c30d89e14408184a34",
+        "sha256": "1mgg3878987xm4ikyhgzxg724mbq33v4dy9cbaczc3x36wvpghcj",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/jormungandr-nix/archive/677fce78803be86ba9fee9fbbf29180eb664841e.tar.gz",
+        "url": "https://github.com/input-output-hk/jormungandr-nix/archive/8db75580ab130b331e4d54c30d89e14408184a34.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
