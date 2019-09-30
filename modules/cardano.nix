@@ -112,13 +112,15 @@ with import ../lib.nix;
     };
 
     environment.systemPackages = mkIf (config.params.nodeImpl == "rust") [
-      (import (sources.jormungandr-nix + "/lib.nix")).pkgs.jormungandr-cli
+      rust-packages.pkgs.jormungandr-cli
+      pkgs.jq
     ];
 
     services.jormungandr = mkIf (config.params.nodeImpl == "rust") {
       enable = true;
       withBackTraces = true;
-      package = rust-packages.pkgs.jormungandr-master;
+      withValgrind = false;
+      package = rust-packages.pkgs.jormungandr;
       block0 = ../static/block-0.bin;
       secrets-paths = lib.optional config.params.typeIsCore "/var/lib/keys/jormungandr-pool-secret.yaml";
       topicsOfInterest = {
@@ -137,6 +139,7 @@ with import ../lib.nix;
         then config.networking.publicIPv4
         else config.networking.privateIPv4}/tcp/${toString config.params.port}";
       logger = {
+        level = "info";
         output = "gelf";
         backend = "monitoring.stakepool.cardano-testnet.iohkdev.io:12201";
         logs-id = "${config.deployment.name}.${config.params.name}";
@@ -213,7 +216,7 @@ wallet:
           };
         }
       )) // (optionalAttrs (config.params.typeIsFaucet && cfgRust.enable) (
-        let keyfile = "stake_9_key.sk"; in
+        let keyfile = "stake_2_key.sk"; in
         {
           "jormungandr-faucet.sk" = builtins.trace (config.params.name + ": using " + keyfile) {
             keyFile = ./. + "/../static/secrets/${keyfile}";

@@ -23,9 +23,9 @@ in {
 
   services.jormungandr-faucet = mkIf enable {
     enable = true;
-    lovelacesToGive = 250000;
+    lovelacesToGive = 10000000000;
     jormungandrApi = "http://${host}:${apiPort}/api/v0";
-    secondsBetweenRequests = 30;
+    secondsBetweenRequests = 86400;
   };
 
   networking.firewall = mkIf enable {
