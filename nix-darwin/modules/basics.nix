@@ -83,6 +83,9 @@ in {
     mdutil -i off -d / &> /dev/null
     mdutil -E / &> /dev/null
     echo "ok"
+    printf "disabling screensaver..."
+    defaults write /Library/Preferences/com.apple.screensaver loginWindowIdleTime 0
+    echo "ok"
 
     for user in admin nixos buildkite builder; do
         authorized_keys=/etc/per-user/$user/ssh/authorized_keys

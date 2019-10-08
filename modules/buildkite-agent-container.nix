@@ -7,7 +7,10 @@ let
 in with lib;
 {
   imports = [
+    # GC only from the host to avoid duplicating GC in containers
     ./auto-gc.nix
+    # Docker module required in both the host and guest containers
+    ./docker-builder.nix
   ];
 
   options = {
@@ -33,6 +36,7 @@ in with lib;
                                , hostIpo4 ? "1"                          # The fourth octet of the IPv4 host virtual eth nic IP
                                , ipo4 ? "10"                             # The fourth octet of the IPv4 container guest virtual eth nic IP
                                , metadata ? "system=x86_64-linux"        # Agent metadata customization
+                               , prio ? null                             # Agent priority
                               }: {
       name = containerName;
       value = {
@@ -44,6 +48,10 @@ in with lib;
           "/var/lib/buildkite-agent/hooks" = {
             hostPath = "/var/lib/buildkite-agent/hooks";
           };
+          "/cache" = {
+            hostPath = "/cache";
+            isReadOnly = false;
+          };
         };
         privateNetwork = true;
         hostAddress = baseVethIp + "." + hostIpo4;
@@ -51,6 +59,7 @@ in with lib;
         config = {
           imports = [
             ./nix_nsswitch.nix
+            # Docker module required in both the host and guest containers
             ./docker-builder.nix
             ./common.nix
           ];
@@ -89,8 +98,13 @@ in with lib;
               # Clean out the state that gets messed up and makes builds fail.
               rm -rf ~/.cabal
             '';
+            hooks.pre-exit = ''
+              # Clean up the scratch and tmp directories
+              rm -rf /scratch/* /tmp/*
+            '';
             extraConfig = ''
               git-clean-flags="-ffdqx"
+              ${if prio != null then "priority=${prio}" else ""}
             '';
           };
           users.users.buildkite-agent = {
@@ -112,8 +126,8 @@ in with lib;
           systemd.services.buildkite-agent-custom = {
             wantedBy = [ "buildkite-agent.service" ];
             script = ''
-              mkdir -p /build
-              chown -R buildkite-agent:nogroup /build
+              mkdir -p /build /scratch
+              chown -R buildkite-agent:nogroup /build /scratch
             '';
             serviceConfig = {
               Type = "oneshot";
@@ -178,22 +192,34 @@ in with lib;
       };
     };
 
+    system.activationScripts.cacheDir = {
+      text = ''
+        mkdir -p /cache
+        chown -R buildkite-agent:nogroup /cache || true
+      '';
+      deps = [];
+    };
+
     users.users.buildkite-agent = {
       home = "/var/lib/buildkite-agent";
       createHome = true;
       # To ensure buildkite-agent user sharing of keys in guests
       uid = 10000;
     };
+
     environment.systemPackages = [ pkgs.nixos-container ];
     networking.nat.enable = true;
     networking.nat.internalInterfaces = [ "ve-+" ];
     networking.nat.externalInterface = "bond0";
 
+    services.fstrim.enable = true;
+    services.fstrim.interval = "daily";
+
     containers = let
       buildkiteContainerList = [
-        { containerName = "ci${cfg.hostIdSuffix}-1"; ipo4 = "10"; }
-        { containerName = "ci${cfg.hostIdSuffix}-2"; ipo4 = "11"; }
-        { containerName = "ci${cfg.hostIdSuffix}-3"; ipo4 = "12"; }
+        { containerName = "ci${cfg.hostIdSuffix}-1"; ipo4 = "10"; prio = "9"; }
+        { containerName = "ci${cfg.hostIdSuffix}-2"; ipo4 = "11"; prio = "8"; }
+        { containerName = "ci${cfg.hostIdSuffix}-3"; ipo4 = "12"; prio = "7"; }
       ];
     in
       builtins.listToAttrs (map createBuildkiteContainer buildkiteContainerList);

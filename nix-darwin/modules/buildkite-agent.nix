@@ -55,6 +55,10 @@ in with lib; {
         # or any build which expects to have apple tools.
         export PATH="$PATH:/usr/bin:/usr/sbin"
       '';
+      hooks.pre-exit = ''
+        # Clean up the scratch directory
+        rm -rf /scratch/*
+      '';
       extraConfig = ''
         no-pty=true
         # debug=true
@@ -84,6 +88,9 @@ in with lib; {
       mkdir -p ${config.users.users.buildkite-agent.home}
       chown buildkite-agent:admin ${config.users.users.buildkite-agent.home}
       chmod 770 ${config.users.users.buildkite-agent.home}
+
+      mkdir -p /scratch /cache
+      chown buildkite-agent:admin /scratch /cache
     '';
   };
 }
