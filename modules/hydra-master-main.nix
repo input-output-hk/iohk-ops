@@ -7,7 +7,7 @@ let
     speedFactor = 1;
     sshKey = "/etc/nix/id_buildfarm";
     sshUser = "root";
-    system = "x86_64-linux";
+    system = "x86_64-linux,i686-linux";
     supportedFeatures = [ "kvm" "nixos-test" "big-parallel" ];
   };
   mkLinux = hostName: commonBuildMachineOpt // {

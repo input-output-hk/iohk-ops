@@ -117,6 +117,10 @@ in with lib;
               # Clean out the state that gets messed up and makes builds fail.
               rm -rf ~/.cabal
             '';
+            hooks.pre-exit = ''
+              # Clean up the scratch and tmp directories
+              rm -rf /scratch/* /tmp/*
+            '';
             extraConfig = ''
               git-clean-flags="-ffdqx"
               ${if prio != null then "priority=${prio}" else ""}
@@ -141,8 +145,8 @@ in with lib;
           systemd.services.buildkite-agent-custom = {
             wantedBy = [ "buildkite-agent.service" ];
             script = ''
-              mkdir -p /build
-              chown -R buildkite-agent:nogroup /build
+              mkdir -p /build /scratch
+              chown -R buildkite-agent:nogroup /build /scratch
             '';
             serviceConfig = {
               Type = "oneshot";
@@ -206,6 +210,7 @@ in with lib;
         user    = "buildkite-agent";
       };
     };
+
     system.activationScripts.cacheDir = {
       text = ''
         mkdir -p /cache
@@ -224,6 +229,9 @@ in with lib;
     networking.nat.enable = true;
     networking.nat.internalInterfaces = [ "ve-+" ];
     networking.nat.externalInterface = "bond0";
+
+    services.fstrim.enable = true;
+    services.fstrim.interval = "daily";
 
     containers = let
       buildkiteContainerList = if (length cfg.containerList == 0) then ([
