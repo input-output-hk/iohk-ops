@@ -89,8 +89,8 @@ in with lib; {
       chown buildkite-agent:admin ${config.users.users.buildkite-agent.home}
       chmod 770 ${config.users.users.buildkite-agent.home}
 
-      mkdir -p /scratch /cache
-      chown buildkite-agent:admin /scratch /cache
+      mkdir -p /scratch /cache /build
+      chown buildkite-agent:admin /scratch /cache /build
     '';
   };
 }
