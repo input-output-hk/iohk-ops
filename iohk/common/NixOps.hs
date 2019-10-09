@@ -840,12 +840,12 @@ scpFromNode o c (fromNodeName -> node) from to = do
 -- To check logs for commit ID run `journalctl -n 1 --identifier=cardano-node-commit-monitor`
 triggerCommitMonitor :: Options -> NixopsConfig -> NodeName -> IO ()
 triggerCommitMonitor o c m =
-  ssh' o c "bash" ["-c", "\"/proc/$(systemctl show -p MainPID --value cardano-node.service)/exe --version | sed 's/.* git revision \\([a-z0-9]\\)/\\1/' | xargs printf 'https://github.com/input-output-hk/cardano-sl/commit/%s' | systemd-cat -t cardano-node-commit-monitor -p info\""] m
+  ssh' o c "bash" ["-c", "\"/proc/$(systemctl show -p MainPID --value cardano-node-legacy.service)/exe --version | sed 's/.* git revision \\([a-z0-9]\\)/\\1/' | xargs printf 'https://github.com/input-output-hk/cardano-sl/commit/%s' | systemd-cat -t cardano-node-commit-monitor -p info\""] m
   (const $ pure ())
 
 deployedCommit :: Options -> NixopsConfig -> NodeName -> IO ()
 deployedCommit o c m = do
-  ssh' o c "pgrep" ["-fa", "cardano-node"] m $
+  ssh' o c "pgrep" ["-fa", "cardano-node-legacy"] m $
     \r-> do
       case cut space r of
         (_:path:_) -> do
@@ -860,20 +860,20 @@ deployedCommit o c m = do
             when (str == "") $
               errorT $ "Cannot determine commit id for derivation: " <> T.strip drv
             echo $ "The 'cardano-sl' process running on '" <> unsafeTextToLine (fromNodeName m) <> "' has commit id " <> str
-        [""] -> errorT $ "Looks like 'cardano-node' is down on node '" <> fromNodeName m <> "'"
-        _    -> errorT $ "Unexpected output from 'pgrep -fa cardano-node': '" <> r <> "' / " <> showT (cut space r)
+        [""] -> errorT $ "Looks like 'cardano-node-legacy' is down on node '" <> fromNodeName m <> "'"
+        _    -> errorT $ "Unexpected output from 'pgrep -fa cardano-node-legacy': '" <> r <> "' / " <> showT (cut space r)
 
 
 startForeground :: Options -> NixopsConfig -> NodeName -> IO ()
 startForeground o c node =
-  ssh' o c "bash" [ "-c", "'systemctl show cardano-node --property=ExecStart | sed -e \"s/.*path=\\([^ ]*\\) .*/\\1/\" | xargs grep \"^exec \" | cut -d\" \" -f2-'"]
+  ssh' o c "bash" [ "-c", "'systemctl show cardano-node-legacy --property=ExecStart | sed -e \"s/.*path=\\([^ ]*\\) .*/\\1/\" | xargs grep \"^exec \" | cut -d\" \" -f2-'"]
   node $ \unitStartCmd ->
     printf ("Starting Cardano in foreground;  Command line:\n  "%s%"\n") unitStartCmd >>
-    ssh o c "bash" ["-c", Arg $ "'sudo -u cardano-node " <> unitStartCmd <> "'"] node
+    ssh o c "bash" ["-c", Arg $ "'sudo -u cardano-node-legacy " <> unitStartCmd <> "'"] node
 
 stop :: Options -> NixopsConfig -> IO ()
 stop o c = echo (unsafeTextToLine $ "Stopping " <> (fst $ scopeNameDesc o c))
-  >> parallelSSH o c "systemctl" ["stop", "cardano-node"]
+  >> parallelSSH o c "systemctl" ["stop", "cardano-node-legacy"]
 
 defLogs, profLogs :: [(Text, Text -> Text)]
 defLogs =
@@ -894,7 +894,7 @@ start o c =
   parallelSSH o c "bash" ["-c", Arg $ "'" <> rmCmd <> "; " <> startCmd <> "'"]
   where
     rmCmd = foldl (\str (f, _) -> str <> " " <> f) "rm -f" logs
-    startCmd = "systemctl start cardano-node"
+    startCmd = "systemctl start cardano-node-legacy"
     logs = mconcat [ defLogs, profLogs ]
 
 date :: Options -> NixopsConfig -> IO ()
@@ -903,15 +903,21 @@ date o c = parallelIO o c $
   (\out -> TIO.putStrLn $ fromNodeName n <> ": " <> out)
 
 configurationKeys :: Environment -> Arch -> T.Text
-configurationKeys Production Win64   = "mainnet_wallet_win64"
-configurationKeys Production Mac64   = "mainnet_wallet_macos64"
-configurationKeys Production Linux64 = "mainnet_wallet_linux64"
-configurationKeys Staging    Win64   = "mainnet_dryrun_wallet_win64"
-configurationKeys Staging    Mac64   = "mainnet_dryrun_wallet_macos64"
-configurationKeys Staging    Linux64 = "mainnet_dryrun_wallet_linux64"
-configurationKeys Testnet    Win64   = "testnet_wallet_win64"
-configurationKeys Testnet    Mac64   = "testnet_wallet_macos64"
-configurationKeys Testnet    Linux64 = "testnet_wallet_linux64"
+configurationKeys Production          Win64   = "mainnet_wallet_win64"
+configurationKeys Production          Mac64   = "mainnet_wallet_macos64"
+configurationKeys Production          Linux64 = "mainnet_wallet_linux64"
+configurationKeys Staging             Win64   = "mainnet_dryrun_wallet_win64"
+configurationKeys Staging             Mac64   = "mainnet_dryrun_wallet_macos64"
+configurationKeys Staging             Linux64 = "mainnet_dryrun_wallet_linux64"
+configurationKeys Testnet             Win64   = "testnet_wallet_win64"
+configurationKeys Testnet             Mac64   = "testnet_wallet_macos64"
+configurationKeys Testnet             Linux64 = "testnet_wallet_linux64"
+configurationKeys StagingShelley      Win64   = "shelley_staging_wallet_win64"
+configurationKeys StagingShelley      Mac64   = "shelley_staging_wallet_macos64"
+configurationKeys StagingShelley      Linux64 = "shelley_staging_wallet_linux64"
+configurationKeys StagingShelleyShort Win64   = "shelley_staging_short_wallet_win64"
+configurationKeys StagingShelleyShort Mac64   = "shelley_staging_short_wallet_macos64"
+configurationKeys StagingShelleyShort Linux64 = "shelley_staging_short_wallet_linux64"
 configurationKeys env _ = error $ "Application versions not used in '" <> show env <> "' environment"
 
 findInstallers :: NixopsConfig -> T.Text -> Maybe FilePath
@@ -938,7 +944,7 @@ getJournals o c@NixopsConfig{..} timesince mtimeuntil = do
 
   echo $ unsafeTextToLine $ "Dumping journald logs on " <> scName
   parallelSSH o c "bash"
-    ["-c", Arg $ "'rm -f log && journalctl -u cardano-node --since \"" <> fromJournaldTimeSpec timesince <> "\""
+    ["-c", Arg $ "'rm -f log && journalctl -u cardano-node-legacy --since \"" <> fromJournaldTimeSpec timesince <> "\""
       <> fromMaybe "" ((\timeuntil-> " --until \"" <> fromJournaldTimeSpec timeuntil <> "\"") <$> mtimeuntil)
       <> " > log'"]
 

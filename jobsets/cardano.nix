@@ -14,13 +14,9 @@ let
     iohk-ops-integration-test = [ "x86_64-linux" ];
     nixops = [ "x86_64-linux" ];
   });
-  cardanoSrc = pkgs.fetchgit cardano-sl-src;
-  cardano-sl-src = builtins.fromJSON (builtins.readFile ./../cardano-sl-src.json);
+  cardanoSrc = (import ../nix/sources.nix).cardano-sl;
   cardanoRelease = import "${cardanoSrc}/release.nix" {
-    cardano = {
-      outPath = cardanoSrc;
-      rev = cardano-sl-src.rev;
-    };
+    cardano = cardanoSrc;
   };
   tests = import ../tests {
     inherit pkgs;

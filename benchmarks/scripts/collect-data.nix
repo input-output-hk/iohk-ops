@@ -67,7 +67,7 @@ writeScriptBin "collect-data.sh" ''
   rm -r ../experiments
 
   # commit of cardano-sl
-  COMMIT=`grep rev ../cardano-sl-src.json | awk '{print $2}' | cut -c 2- | cut -c -7`
+  COMMIT=${(import ./nix/sources.nix).cardano-sl.rev}
   # cluster topology file
   TOPOLOGY=`grep topology: ../config.yaml | awk '{print $2}'`
 

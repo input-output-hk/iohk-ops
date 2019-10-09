@@ -34,7 +34,7 @@ with import ../lib.nix;
 
   systemd.coredump = {
     enable = hasAttr "cardano-node" config.services &&
-        config.services.cardano-node.saveCoreDumps;
+        config.services.cardano-node-legacy.saveCoreDumps;
     extraConfig = "ExternalSizeMax=${toString (8 * 1024 * 1024 * 1024)}";
   };
 

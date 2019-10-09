@@ -1,0 +1,40 @@
+args:
+  IOHKroute53accessKeyId:
+    tag: NixStr
+    contents: default
+  configurationKey:
+    tag: NixStr
+    contents: testnet_staging_full
+  EmurgoaccessKeyId:
+    tag: NixStr
+    contents: default
+  systemStart:
+    tag: NixInt
+    contents: 1567616210
+  CFaccessKeyId:
+    tag: NixStr
+    contents: default
+  IOHKaccessKeyId:
+    tag: NixStr
+    contents: default
+gen-cmdline: new -e staging --domain jormungandr-testnet.iohkdev.io jormungandr-testnet
+  nodes monitoring
+environment: Staging
+installer-bucket: default-bucket
+installer-url-base: null
+domain: jormungandr-testnet.iohkdev.io
+topology: topology-jormangandr-testnet.yaml
+name: jormungandr-testnet
+files:
+- deployments/security-groups.nix
+- deployments/cardano-nodes-env-staging.nix
+- deployments/keypairs.nix
+- deployments/cardano-nodes.nix
+- deployments/cardano-faucet.nix
+- deployments/monitoring-env-staging.nix
+- deployments/monitoring-aws.nix
+elements:
+- Nodes
+- Monitoring
+- Faucet
+target: AWS

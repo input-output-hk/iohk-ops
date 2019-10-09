@@ -11,6 +11,30 @@
         "url": "https://github.com/input-output-hk/cachecache/archive/37959a2dcce5c93bf424da899d3d5eaf2b3f1768.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "cardano-byron-proxy": {
+        "branch": "master",
+        "description": "A bydirectional proxy between the Shelly and Byron versions of the Cardano network",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "cardano-byron-proxy",
+        "rev": "962ca013c457bc6d3c495cc6e70da77bbbb06483",
+        "sha256": "0npsd50hlysik53vlbi1j4madc2b661xphvpm3snay6dgqcjy77p",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/962ca013c457bc6d3c495cc6e70da77bbbb06483.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-node": {
+        "branch": "master",
+        "description": null,
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "cardano-node",
+        "rev": "5c294eae453c43d5f4322175e96f9fe99f8bbc54",
+        "sha256": "1zaff8p4skjwbzjym24q9l0r8s6wbcamdpb17yhhc14926fxr20p",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-node/archive/5c294eae453c43d5f4322175e96f9fe99f8bbc54.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "cardano-sl": {
         "branch": "develop",
         "description": "Cryptographic currency implementing Ouroboros PoS protocol",
@@ -53,10 +77,34 @@
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "365bac8721a95a41ee874a42e4b4692464f48d94",
-        "sha256": "1jb87h8d9jialgp4mkzic4gnn5p7p0db952a0id7qq2w777g5965",
+        "rev": "dc2a549d7eae3918f7b596288c774296bd910291",
+        "sha256": "1ckxbslimvvk20v3k6v311xw7rn2kz2c9v0n9yw8s9sx97lp34ng",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/365bac8721a95a41ee874a42e4b4692464f48d94.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/dc2a549d7eae3918f7b596288c774296bd910291.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "jormungandr-faucet": {
+        "branch": "master",
+        "description": "faucet for jormungandr",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "jormungandr-faucet",
+        "rev": "e161948f1078bc50ee52dd5fc02386ac33c9f9c4",
+        "sha256": "11fclr1hs7vlw0z0rdqkx2sayyqjdgv93068gbkrnl92npqvbwnw",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/jormungandr-faucet/archive/e161948f1078bc50ee52dd5fc02386ac33c9f9c4.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "jormungandr-nix": {
+        "branch": "master",
+        "description": "jormungandr nix scripts",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "jormungandr-nix",
+        "rev": "946ceeb99152265b8c12fbf5a0480ccc73e46a7b",
+        "sha256": "0x8fnkx24qsdwq2b5fwp2202fgm2aik13wwrdgxw1ajq3nk28603",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/jormungandr-nix/archive/946ceeb99152265b8c12fbf5a0480ccc73e46a7b.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "log-classifier": {
@@ -72,15 +120,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
-        "branch": "master",
+        "branch": "iohk",
         "description": "Easy dependency management for Nix projects",
-        "homepage": "https://github.com/nmattia/niv",
-        "owner": "nmattia",
+        "homepage": "https://github.com/input-output-hk/niv",
+        "owner": "input-output-hk",
         "repo": "niv",
-        "rev": "213315b65807ceae979da902875efaad1c53dc1d",
-        "sha256": "1cczwqnmfs17i00gn8s9l7sf2s3h498gzlv7wrkdin4v31lydv08",
+        "rev": "c25268460b72cea5b7294354ab019997530a6f3d",
+        "sha256": "1fgq1nkycm54f431h6wflh6rr7xsq3q2fq9drbgra2fnrsyn65ll",
         "type": "tarball",
-        "url": "https://github.com/nmattia/niv/archive/213315b65807ceae979da902875efaad1c53dc1d.tar.gz",
+        "url": "https://github.com/input-output-hk/niv/archive/c25268460b72cea5b7294354ab019997530a6f3d.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixops-core": {

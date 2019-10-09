@@ -129,6 +129,34 @@ envSettings env =
                                , (Faucet,         All, "deployments/cardano-faucet-env-testnet.nix")
                                , (Monitoring,     All, "deployments/monitoring-env-testnet.nix")
                                ] <> deplAgnosticFiles}
+    StagingShelley  -> EnvSettings
+      { envDeployerUser      = "testnet"
+      , envDefaultConfigurationKey = "shelley_staging_full"
+      , envDefaultConfig     = "shelley-staging.yaml"
+      , envDefaultTopology   = "topology-shelley-staging.yaml"
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
+                               , (Explorer,       All, "deployments/security-groups.nix")
+                               , (Faucet,         All, "deployments/security-groups.nix")
+                               , (Monitoring,     All, "deployments/security-groups.nix")
+                               , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer-env-staging.nix")
+                               , (Faucet,         All, "deployments/cardano-faucet-env-staging.nix")
+                               , (Monitoring,     All, "deployments/monitoring-env-staging.nix")
+                               ] <> deplAgnosticFiles}
+    StagingShelleyShort  -> EnvSettings
+      { envDeployerUser      = "testnet"
+      , envDefaultConfigurationKey = "shelley_staging_short_full"
+      , envDefaultConfig     = "shelley-staging-short.yaml"
+      , envDefaultTopology   = "topology-shelley-staging-short.yaml"
+      , envDeploymentFiles   = [ (Nodes,          All, "deployments/security-groups.nix")
+                               , (Explorer,       All, "deployments/security-groups.nix")
+                               , (Faucet,         All, "deployments/security-groups.nix")
+                               , (Monitoring,     All, "deployments/security-groups.nix")
+                               , (Nodes,          All, "deployments/cardano-nodes-env-staging.nix")
+                               , (Explorer,       All, "deployments/cardano-explorer-env-staging.nix")
+                               , (Faucet,         All, "deployments/cardano-faucet-env-staging.nix")
+                               , (Monitoring,     All, "deployments/monitoring-env-staging.nix")
+                               ] <> deplAgnosticFiles}
     Development -> EnvSettings
       { envDeployerUser      = "staging"
       , envDefaultConfigurationKey = "devnet"

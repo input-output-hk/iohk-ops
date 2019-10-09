@@ -53,6 +53,7 @@ export HOME="${homestate}"
 mkdir -p cardano-sl/explorer/frontend/dist
 
 touch static/buildkite_token
+touch static/google_oauth_hydra_grafana.secret
 touch static/github_token{,_mantis_hydra}
 touch static/id_buildfarm{,2} static/id_buildfarm{,2}.pub
 echo "127.0.0.1" > static/deployer-ip.txt
@@ -178,7 +179,7 @@ fi
 if [[ ${WITH_INFRA_STAGING} == true ]]; then
   echo '~~~ testing staging-infra'
 CLEANUP_DEPLS="${CLEANUP_DEPLS} test-infra"
-${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment staging   "${COMMON_OPTIONS[@]}" 'test-infra'   Infra Monitoring
+${IOHK_OPS}               new  --config 'test-infra.yaml'  --environment staging   "${COMMON_OPTIONS[@]}" 'test-infra'   Infra
 ${IOHK_OPS} "${GENERAL_OPTIONS[@]}" --config 'test-infra.yaml'  create deploy --dry-run --initial-heap-size 4
 banner 'Staging infra evaluated'
 fi

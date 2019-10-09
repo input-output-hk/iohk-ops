@@ -1,0 +1,50 @@
+{
+    "gitignore": {
+        "branch": "master",
+        "description": "Nix function for filtering local git sources",
+        "homepage": "",
+        "owner": "hercules-ci",
+        "repo": "gitignore",
+        "rev": "ec5dd0536a5e4c3a99c797b86180f7261197c124",
+        "sha256": "0k2r8y21rn4kr5dmddd3906x0733fs3bb8hzfpabkdav3wcy3klv",
+        "type": "tarball",
+        "url": "https://github.com/hercules-ci/gitignore/archive/ec5dd0536a5e4c3a99c797b86180f7261197c124.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "niv": {
+        "branch": "iohk",
+        "description": "Easy dependency management for Nix projects",
+        "homepage": "https://github.com/nmattia/niv",
+        "owner": "input-output-hk",
+        "repo": "niv",
+        "rev": "d3af01b4622e26811f0be76fd87bf99d8d2fef9f",
+        "sha256": "0apicsx5hzkvfpx4dxvljw5fmrzjnbva7aawnb8vlqc4q57bz1ab",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/niv/archive/d3af01b4622e26811f0be76fd87bf99d8d2fef9f.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs": {
+        "branch": "nixos-18.09",
+        "description": "Nixpkgs/NixOS branches that track the Nixpkgs/NixOS channels",
+        "homepage": null,
+        "owner": "NixOS",
+        "repo": "nixpkgs-channels",
+        "rev": "76aafbf4bf4992c82da41ccefd8c6d481744524c",
+        "sha256": "1xz8249i9yag4sxfzd5lkhqsyg7n6h3n2klb1cqqmcsav87f6x65",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/76aafbf4bf4992c82da41ccefd8c6d481744524c.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "iohk-nix": {
+        "branch": "master",
+        "description": "nix scripts shared across projects",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "cf589aeb1e6ee2aa68317711e37c8350e75acc0d",
+        "sha256": "00z2hyd5r9vfrirppczghdpyfk18zb1kss6zwp6l7ydm6b1b2z95",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/cf589aeb1e6ee2aa68317711e37c8350e75acc0d.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    }
+}

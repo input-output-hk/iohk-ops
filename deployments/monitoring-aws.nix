@@ -9,6 +9,7 @@ let
   org = monitoring.org;
 in {
   require = [
+    ./security-groups.nix
     ./security-groups/allow-public-www-https.nix
     ./security-groups/allow-deployer-ssh.nix
     ./security-groups/allow-monitoring-collection.nix

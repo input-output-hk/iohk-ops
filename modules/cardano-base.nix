@@ -25,9 +25,12 @@ with import ../lib.nix;
       let sgNames =
            optionals typeIsExplorer              [ "allow-to-explorer-${config.params.region}" ]
         ++ optionals typeIsFaucet                [ "allow-to-faucet-${config.params.region}" ]
-        ++ optionals typeIsCore                  [ "allow-cardano-static-peers-${config.params.name}-${config.params.region}-${config.params.org}" ]
-        ++ optionals typeIsRelay                 [ "allow-kademlia-public-udp-${config.params.region}"
+        ++ optionals
+           (typeIsCore && (nodeImpl != "rust"))  [ "allow-cardano-static-peers-${config.params.name}-${config.params.region}-${config.params.org}" ]
+        ++ optionals
+           (typeIsRelay && (nodeImpl != "rust")) [ "allow-kademlia-public-udp-${config.params.region}"
                                                    "allow-cardano-public-tcp-${config.params.region}" ]
+        ++ optionals (nodeImpl == "rust")        [ "allow-jormangandr-public-tcp-${config.params.region}" ]
         ++ optionals typeIsMonitoring            [ "allow-monitoring-static-peers-${config.params.region}-${config.params.org}" ]
         ++ optionals config.global.enableEkgWeb  [ "allow-ekg-public-tcp-${config.params.region}-${config.params.org}" ];
       in map (resolveSGName resources)

@@ -2,8 +2,8 @@
 let nodeMap = { inherit (globals.fullMap) faucet; }; in
 
 {
-  faucet = (import ../modules/cardano-testnet.nix) nodeMap.faucet;
-  monitoring = lib.optionalAttrs (nodeMap.faucet.nodeImpl == "haskell") {
+  faucet = (import ../modules/cardano-staging.nix) nodeMap.faucet;
+  monitoring = optionalAttrs (nodeMap.faucet.nodeImpl == "haskell") {
     services.monitoring-services = {
       applicationRules = [
         {
@@ -12,7 +12,7 @@ let nodeMap = { inherit (globals.fullMap) faucet; }; in
           for = "1m";
           labels.severity = "page";
           annotations = {
-            description = "{{$labels.alias}} Testnet faucet wallet balance is low";
+            description = "{{$labels.alias}} Staging faucet wallet balance is low";
           };
         }
       ];

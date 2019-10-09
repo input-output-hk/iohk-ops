@@ -59,7 +59,7 @@ When one wants to redeploy a cluster, it's not necessary to destroy the machines
 
 ## Operating a cluster with directly-specified, non-generated genesis
 
-1. The genesis JSON file must be referred to from the `configuration.yaml` for the `cardano-sl` commit specified in `cardano-sl-src.json`.
+1. The genesis JSON file must be referred to from the `configuration.yaml` for the `cardano-sl` commit specified in `nix/sources.json`.
 1. Secret keys need to be placed at `keys/keyN.sk`, where `N` ranges in `0..k-1`, where k is the number of nodes.
 1. `io new` needs be passed `--dont-generate-keys`
 1. `io deploy` needs _NOT_ be passed `--bump-system-start-held-by`

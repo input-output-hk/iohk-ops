@@ -86,7 +86,7 @@ let
   };
   graalvm8 = (import iohkNixGoguen.nixpkgs javaOverrideNixpkgsConfig).graalvm8;
 in lib // (rec {
-  inherit (iohkNix) nixpkgs cardanoLib;
+  inherit (iohkNix) nixpkgs cardanoLib rust-packages;
   inherit fetchProjectPackages pkgs graalvm8;
   inherit sources iohkNix iohkNixGoguen goguenNixpkgs;
   inherit fetchPinAuto fetchGitWithSubmodules readPin;
@@ -149,7 +149,7 @@ in lib // (rec {
   # Given a list of NixOS configs, generate a list of peers (ip/dht mappings)
   genPeersFromConfig = configs:
     let
-      f = c: "${c.networking.publicIPv4}:${toString c.services.cardano-node.port}";
+      f = c: "${c.networking.publicIPv4}:${toString c.services.cardano-node-legacy.port}";
     in map f configs;
 
   # modulo operator

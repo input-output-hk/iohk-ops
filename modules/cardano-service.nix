@@ -2,7 +2,7 @@ with import ../lib.nix;
 
 { config, pkgs, lib, options, ... }:
 let
-  cfg = config.services.cardano-node;
+  cfg = config.services.cardano-node-legacy;
   name = "cardano-node";
   stateDir = "/var/lib/cardano-node";
   iohkPkgs = import ../default.nix { };
@@ -55,7 +55,7 @@ let
   ];
 in {
   options = {
-    services.cardano-node = {
+    services.cardano-node-legacy = {
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };
       systemStart = mkOption { type = types.int; default = 0; };
@@ -145,11 +145,11 @@ in {
   };
 
   config = mkIf cfg.enable {
-    services.cardano-node.serveEkg = config.global.enableEkgWeb;
+    services.cardano-node-legacy.serveEkg = config.global.enableEkgWeb;
 
     assertions = [
     { assertion = cfg.nodeType != null;
-      message = "services.cardano-node.type must be set to one of: core relay other"; }
+      message = "services.cardano-node-legacy.type must be set to one of: core relay other"; }
     ];
 
     users = {
@@ -175,29 +175,28 @@ in {
     };
 
     # Workaround for CSL-1320
-    systemd.services.cardano-restart = let
-      # how many minutes between nodes restarting
-      nodeMinute = mod (cfg.nodeIndex * 4) 60;
-    in {
-      script = (if (config.deployment.arguments.configurationKey == "bench")
-        then '' echo System not restarted because benchmark is running.''
-        else '' /run/current-system/sw/bin/systemctl restart cardano-node'');
-      # Reboot cardano-node every 36h (except Mon->Tue gap which is 24h)
-      startAt = [
-        "Tue,Fri,Mon 13:${toString nodeMinute}"
-        "Thu,Sun     01:${toString nodeMinute}"
-      ];
-    };
+    #systemd.services.cardano-restart = let
+    #  # how many minutes between nodes restarting
+    #  nodeMinute = mod (cfg.nodeIndex * 4) 60;
+    #in {
+    #  script = (if (config.deployment.arguments.configurationKey == "bench")
+    #    then '' echo System not restarted because benchmark is running.''
+    #    else '' /run/current-system/sw/bin/systemctl restart cardano-node-legacy'');
+    #  # Reboot cardano-node every 36h (except Mon->Tue gap which is 24h)
+    #  startAt = [
+    #    "Tue,Fri,Mon 13:${toString nodeMinute}"
+    #    "Thu,Sun     01:${toString nodeMinute}"
+    #  ];
+    #};
 
-    systemd.services.cardano-node = {
+    systemd.services.cardano-node-legacy = {
       description   = "cardano node service";
       after         = [ "network.target" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       script = let
-        keyId = "key" + toString cfg.nodeIndex;
-        key = keyId + ".sk";
+        key = "key${toString cfg.nodeIndex}.sk";
       in ''
-        [ -f /run/keys/${keyId} ] && cp -f /run/keys/${keyId} ${stateDir}/${key}
+        [ -f /var/lib/keys/cardano-node ] && cp -f /var/lib/keys/cardano-node ${stateDir}/${key}
         ${optionalString (cfg.saveCoreDumps) ''
           # only a process with non-zero coresize can coredump (the default is 0)
           ulimit -c unlimited
@@ -219,9 +218,9 @@ in {
       };
     };
 
-    systemd.services.cardano-node-recorder = mkIf (config.deployment.arguments.configurationKey == "bench") {
+    systemd.services.cardano-node-legacy-recorder = mkIf (config.deployment.arguments.configurationKey == "bench") {
       description   = "recording metrics on cardano node service";
-      after         = [ "systemd.services.cardano-node" ];
+      after         = [ "systemd.services.cardano-node-legacy" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       path = [ pkgs.glibc pkgs.procps ];  # dependencies
       script = ''

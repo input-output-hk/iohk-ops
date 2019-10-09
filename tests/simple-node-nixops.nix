@@ -6,7 +6,7 @@ import <nixpkgs/nixos/tests/make-test.nix> ({ pkgs, ... }: {
   nodes = {
     machine = { config, pkgs, ... }: {
       imports = [ (import ../modules/cardano.nix (nodeMap.machine)) <nixops/nix/options.nix> <nixops/nix/resource.nix> ];
-      services.cardano-node = {
+      services.cardano-node-legacy = {
         autoStart = true;
         neighbours = [];
       };
