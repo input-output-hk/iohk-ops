@@ -1,23 +1,43 @@
-with import ../lib.nix;
-
 { config, pkgs, lib, options, ... }:
+with builtins; with lib;
 let
   cfg = config.services.cardano-node-legacy;
-  name = "cardano-node";
+
+  systemdServiceName = "cardano-node-legacy${optionalString cfg.instanced "@"}";
   stateDir = "/var/lib/cardano-node";
+  stateDirFull
+            = if cfg.instanced
+              then "${stateDir}/$nodeId"
+              else stateDir;
+  privateIP = if cfg.instanced
+              then "10.1.0.$((1 + $1))"
+              else cfg.privateIP;
+  port      = if cfg.instanced
+              then toString cfg.port #"$((${toString cfg.port} + $1))"
+              else toString cfg.port;
+  nodeId    = if cfg.instanced
+              then "$nodeId"
+              else cfg.name;
+  keySrc    = if cfg.instanced
+              then "/var/lib/keys/cardano-node/key$1.sk"
+              else "/var/lib/keys/cardano-node";
+  keyFile   = if cfg.instanced
+              then "${stateDirFull}/key$1.sk"
+              else "${stateDirFull}/key${toString cfg.nodeIndex}.sk";
+
   iohkPkgs = import ../default.nix { };
   cardano = iohkPkgs.nix-tools.cexes.cardano-sl-node.cardano-node-simple;
-  cardano-config = iohkPkgs.cardanoConfig;
+  cardano-config = ../../cardano-sl;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
 
   command = toString [
     cfg.executable
-    (optionalString (cfg.publicIP != null && config.params.name != "explorer")
-     "--address ${cfg.publicIP}:${toString cfg.port}")
-    (optionalString (config.params.name != "explorer")
-     "--listen ${cfg.privateIP}:${toString cfg.port}")
+    (optionalString (cfg.publicIP != null && cfg.name != "explorer")
+     "--address ${cfg.publicIP}:${port}")
+    (optionalString (cfg.name != "explorer")
+     "--listen ${privateIP}:${port}")
     # Profiling
     # NB. can trigger https://ghc.haskell.org/trac/ghc/ticket/7836
     # (it actually happened)
@@ -34,32 +54,39 @@ let
        if cfg.bitcoinOverFlat
        then "--bitcoin-distr \"${distributionParam}\""
        else "--flat-distr \"${distributionParam}\""))
-    (optionalString cfg.jsonLog "--json-log ${stateDir}/jsonLog.json")
+    # (optionalString cfg.jsonLog "--json-log ${stateDirFull}/jsonLog.json")
     (optionalString (cfg.statsdServer != null) "--metrics +RTS -T -RTS --statsd-server ${cfg.statsdServer}")
     (optionalString (cfg.serveEkg)             "--ekg-server ${cfg.privateIP}:8080")
-    (optionalString (cfg.productionMode && config.params.name != "explorer")
-      "--keyfile ${stateDir}/key${toString cfg.nodeIndex}.sk")
-    (optionalString (cfg.productionMode && config.global.systemStart != 0) "--system-start ${toString config.global.systemStart}")
+    (optionalString (cfg.productionMode && cfg.name != "explorer")
+      "--keyfile ${keyFile}")
+    (optionalString (cfg.productionMode && cfg.systemStart != 0) "--system-start ${toString cfg.systemStart}")
     (optionalString cfg.supporter "--supporter")
     "--log-config ${cardano-config}/log-configs/cluster.yaml"
-    "--logs-prefix /var/lib/cardano-node"
-    "--db-path ${stateDir}/node-db"
+    "--logs-prefix ${stateDirFull}"
+    "--db-path ${stateDirFull}/node-db"
     (optionalString (!cfg.enableP2P) "--kademlia-explicit-initial --disable-propagation ${smartGenPeer}")
     "--configuration-file ${cardano-config}/lib/configuration.yaml"
     "--configuration-key ${config.deployment.arguments.configurationKey}"
     "--topology ${cfg.topologyYaml}"
     (optionalString (cfg.assetLockFile != null) "--asset-lock-file ${cfg.assetLockFile}")
-    "--node-id ${config.params.name}"
-    (optionalString cfg.enablePolicies ("--policies " + (if (config.params.typeIsCore) then "${../benchmarks/policy_core.yaml}" else "${../benchmarks/policy_relay.yaml}")))
+    "--node-id ${nodeId}"
+    (optionalString cfg.enablePolicies ("--policies " + (if cfg.nodeType == "core" then "${../benchmarks/policy_core.yaml}" else "${../benchmarks/policy_relay.yaml}")))
     (optionalString cfg.enableProfiling "+RTS -p -RTS")
   ];
 in {
   options = {
     services.cardano-node-legacy = {
-      enable = mkEnableOption name;
+      name = mkOption { type = types.str; };
+
+      instanced = mkOption { type = types.bool; default = false; };
+      names = mkOption { type = types.listOf types.str; default = []; };
+      
+      enable = mkEnableOption "cardano-node-legacy";
       port = mkOption { type = types.int; default = 3000; };
       systemStart = mkOption { type = types.int; default = 0; };
 
+      preseedDB = mkOption { type = types.nullOr types.path; default = null; };
+      
       enableP2P = mkOption { type = types.bool; default = true; };
       supporter = mkOption { type = types.bool; default = false; };
       enableProfiling = mkOption { type = types.bool; default = false; };
@@ -79,7 +106,7 @@ in {
         description = "Executable to run as the daemon.";
         default = "${cardano}/bin/cardano-node-simple";
       };
-      autoStart = mkOption { type = types.bool; default = true; };
+      autoStart = mkOption { type = types.bool; default = ! cfg.instanced; };
 
       topologyYaml = mkOption { type = types.path; };
       assetLockFile = mkOption { type = types.nullOr types.path; default = null; };
@@ -145,8 +172,6 @@ in {
   };
 
   config = mkIf cfg.enable {
-    services.cardano-node-legacy.serveEkg = config.global.enableEkgWeb;
-
     assertions = [
     { assertion = cfg.nodeType != null;
       message = "services.cardano-node-legacy.type must be set to one of: core relay other"; }
@@ -189,14 +214,31 @@ in {
     #  ];
     #};
 
-    systemd.services.cardano-node-legacy = {
+    systemd.services."${systemdServiceName}" = {
       description   = "cardano node service";
       after         = [ "network.target" ];
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
+      scriptArgs = "%i";
       script = let
         key = "key${toString cfg.nodeIndex}.sk";
       in ''
-        [ -f /var/lib/keys/cardano-node ] && cp -f /var/lib/keys/cardano-node ${stateDir}/${key}
+        set -x
+        choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
+        nodeId=$(choice $1 ${concatStringsSep " " cfg.names})
+        if test ! -d ${stateDirFull}/node-db
+        then mkdir -p            ${stateDirFull}
+        '' + optionalString (cfg.preseedDB != null) ''
+             cp ${cfg.preseedDB} ${stateDirFull}/node-db -r
+             chown cardano-node  ${stateDirFull}/node-db -R
+             du --max-depth=1 -h ${stateDirFull}/node-db          | systemd-cat
+             echo "=============================================" | systemd-cat
+             echo "  initialised ${stateDirFull}"                 | systemd-cat
+             echo "=============================================" | systemd-cat
+        '' + ''
+             chmod u+w           ${stateDirFull} -R
+             chmod go-rwx        ${stateDirFull} -R
+        fi
+        [ -f ${keySrc} ] && cp -af ${keySrc} ${keyFile}
         ${optionalString (cfg.saveCoreDumps) ''
           # only a process with non-zero coresize can coredump (the default is 0)
           ulimit -c unlimited
@@ -224,7 +266,7 @@ in {
       wantedBy = optionals cfg.autoStart [ "multi-user.target" ];
       path = [ pkgs.glibc pkgs.procps ];  # dependencies
       script = ''
-        ${../benchmarks/scripts/record-stats.sh} -exec ${cfg.executable} >> "${stateDir}/time-slave.log"
+        ${../benchmarks/scripts/record-stats.sh} -exec ${cfg.executable} >> "${stateDirFull}/time-slave.log"
       '';
       serviceConfig = {
         User = "cardano-node";
