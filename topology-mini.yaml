@@ -1,0 +1,18 @@
+nodes:
+  'c-a-1':
+    type: core
+    host: c-a-1.cardano
+    static-routes: [['r-a-1']]
+    region: eu-central-1
+    zone:   eu-central-1b
+    org: IOHK
+
+  'r-a-1':
+    type: relay
+    host: r-a-1.cardano
+    kademlia: false
+    public: true
+    static-routes: [['c-a-1']]
+    region: eu-central-1
+    zone:   eu-central-1b
+    org: IOHK
