@@ -85,16 +85,16 @@ EOF
     ls -la /private/var/run || true
     ln -s /private/var/run /run || true
     nix-channel --add https://nixos.org/channels/nixos-19.03 nixpkgs
-    nix-channel --add https://github.com/LnL7/nix-darwin/archive/master.tar.gz darwin
+    nix-channel --add https://github.com/input-output-hk/nix-darwin/archive/master.tar.gz darwin
     nix-channel --update
 
     sudo -i -H -u nixos -- nix-channel --add https://nixos.org/channels/nixos-19.03 nixpkgs
-    sudo -i -H -u nixos -- nix-channel --add https://github.com/LnL7/nix-darwin/archive/master.tar.gz darwin
+    sudo -i -H -u nixos -- nix-channel --add https://github.com/input-output-hk/nix-darwin/archive/master.tar.gz darwin
     sudo -i -H -u nixos -- nix-channel --update
 
-    export NIX_PATH=$NIX_PATH:darwin=https://github.com/LnL7/nix-darwin/archive/master.tar.gz
+    export NIX_PATH=$NIX_PATH:darwin=https://github.com/input-output-hk/nix-darwin/archive/master.tar.gz
 
-    installer=$(nix-build https://github.com/LnL7/nix-darwin/archive/master.tar.gz -A installer --no-out-link)
+    installer=$(nix-build https://github.com/input-output-hk/nix-darwin/archive/master.tar.gz -A installer --no-out-link)
     set +e
     yes | sudo -i -H -u nixos -- "$installer/bin/darwin-installer"
     echo $?
@@ -123,4 +123,33 @@ EOF
     cp -vrf /Volumes/CONFIG/iohk-ops ~nixos/.nixpkgs/iohk-ops
     chown -R nixos ~nixos/.nixpkgs
     sudo -i -H -u nixos -- darwin-rebuild switch
+)
+(
+    if [ -f /Volumes/CONFIG/signing-config.json ]; then
+        set +x
+        echo Setting up signing...
+        # shellcheck disable=SC1091
+        source /Volumes/CONFIG/signing.sh
+        security create-keychain -p "$KEYCHAIN" ci-signing.keychain
+        security default-keychain -s ci-signing.keychain
+        security set-keychain-settings ci-signing.keychain
+        security list-keychains -d user -s login.keychain ci-signing.keychain
+        security unlock-keychain -p "$KEYCHAIN"
+        security show-keychain-info ci-signing.keychain
+        security import /Volumes/CONFIG/iohk-sign.p12 -P "$SIGNING" -k "ci-signing.keychain" -T /usr/bin/productsign
+        security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN" "ci-signing.keychain"
+        cp /private/var/root/Library/Keychains/ci-signing.keychain-db /Users/nixos/Library/Keychains/
+        chown nixos:staff /Users/nixos/Library/Keychains/ci-signing.keychain-db
+        mkdir -p /var/lib/buildkite-agent
+        cp /private/var/root/Library/Keychains/ci-signing.keychain-db /var/lib/buildkite-agent/
+        cp /Volumes/CONFIG/signing.sh /var/lib/buildkite-agent/
+        cp /Volumes/CONFIG/signing-config.json /var/lib/buildkite-agent/
+        chown buildkite-agent:admin /var/lib/buildkite-agent/{ci-signing.keychain-db,signing.sh,signing-config.json}
+        chmod 0400 /var/lib/buildkite-agent/signing.sh
+        export KEYCHAIN
+        sudo -Eu nixos -- security unlock-keychain -p "$KEYCHAIN" /Users/nixos/Library/Keychains/ci-signing.keychain-db
+        sudo -Eu buildkite-agent -- security unlock-keychain -p "$KEYCHAIN" /var/lib/buildkite-agent/ci-signing.keychain-db
+        security unlock-keychain -p "$KEYCHAIN"
+        set -x
+    fi
 )
