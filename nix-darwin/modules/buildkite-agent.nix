@@ -64,6 +64,10 @@ in with lib; {
         # debug=true
         # priority=9
       '';
+      preCommands = ''
+        source /var/lib/buildkite-agent/signing.sh
+        security unlock-keychain -p "$SIGNING" /var/lib/buildkite-agent/ci-signing.keychain-db
+      '';
     };
 
     # this is required to actually create the users -- i don't know why
