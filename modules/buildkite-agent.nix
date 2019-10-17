@@ -16,7 +16,7 @@ in
     openssh.privateKeyPath = "/run/keys/buildkite-ssh-private";
     openssh.publicKeyPath  = "/run/keys/buildkite-ssh-public";
     tokenPath              = "/run/keys/buildkite-token";
-    meta-data              = "system=x86_64-linux,env=production";
+    meta-data              = "system=x86_64-linux";
     runtimePackages        = with pkgs; [
        bash gnutar gzip bzip2 xz
        git git-lfs
