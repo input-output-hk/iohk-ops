@@ -2,7 +2,12 @@
 
 After the installers are built in CI, they need to be copied to the
 installer updates S3 bucket, and an update proposal needs to be
-submitted to the cardano-sl network.
+submitted to the cardano-sl network.  The update bucket itself is
+defined in configuration yaml file under the `installer-bucket` key.
+In each of the networks which may use this procedure (mainnet,
+testnet, staging), the configuration yaml file can be found as
+`config.yaml` which is a symlink to the underlying network's yaml
+file.
 
 This is how wallet clients will self-update.
 
@@ -18,6 +23,7 @@ cluster](./Developer-clusters-HOWTO.md).
 
 `ssh` into the deployer get a `nix-shell` in the `iohk-ops` checkout.
 
+    # Change directory into the cluster the proposal will be made on
     cd mainnet
     nix-shell -A withAuxx
 
@@ -55,11 +61,29 @@ The commands are run in order with manual checks between each step.
 
 ## 1. Initialise params
 
-    io -c NETWORK.yaml update-proposal init [DATE] --revision REVISION --block-version VER --voter-index N
+    io -c NETWORK.yaml update-proposal init [DATE] --revision REVISION --block-version VER --voter-index N --release-notes /dev/null
+
+Where `-c NETWORK.yaml` can be omitted from the command if there is
+already a `config.yaml` file symlinked to the proper network
+configuration yaml file in the cluster directory.
 
 Where *DATE* is a string which identifies the update proposal. By
 default it will be today's date in `YYYY-MM-DD` format. The other
 values should be set as required.
+
+Where *REVISION* is the daedalus repo commit from the revision that
+the proposal will be submitted for.  This is also the same revision
+that the `io find-installers -r REVISION` command would have used to
+generate the email for QA.
+
+Where *VER* from --block-version can be obtained from the logs of
+the network the proposal will be made on, such as by examining:
+`journalctl -f -u cardano-node -o cat` for the `block: v$VER` string.
+
+Where *N* from --voter-index is a number from 0 to 6, representing
+voting keys of the core nodes.  Note that once a voter index is
+utilized for a proposal, the same voter index number cannot be
+utilized again for that epoch or the proposal will be rejected.
 
 This command will create a template config file like
 `update-proposals/mainnet-2018-04-03/params.yaml`.
@@ -74,7 +98,6 @@ correct values. The contents will look similar to this:
     voterIndex: 2
     daedalusRevision: 32daff63e1fb1590cd7320e4253e61b2a47b0963
     lastKnownBlockVersion: '0.1.0'
-
 
 ## 2. Download installer files from CI
 
@@ -100,7 +123,7 @@ After it has finished, inspect the following values in `params.yaml`:
 
 3. The `ciResultBuildNumber` for all `ciResults` should be the correct
    build.
-   
+
 4. The `grCardanoCommit` value should match `cardano-sl-src.json` in
    the Daedalus tree.
 
@@ -127,21 +150,58 @@ In this case, `find-installers` will list the builds and then exit
 without downloading anything. You need to re-run the command with
 `--buildkite-build-num` or `--appveyor-build-num` arguments added.
 
+## 3. Sign executables with HSM
 
-## 3. Sign installer files with GPG
+From a local machine, use the release-build.nix file of the
+daedalus repo, at the same commit as the proposal, to sign the Windows
+executables:
+
+`nix-build release-build.nix --argstr buildNum BUILDNUM --allow-unsafe-native-code-during-evaluation`
+
+The build process will utilize ssh to the HSM signing server via server
+`HSM` which can be defined to the current HSM server in an ssh config file.
+
+Once the Windows HSM signed binary has completed building on a local machine,
+remove the symlink on the deployer for the existing non-HSM signed
+binary, found in dir: update-proposal/$CLUSTER-$DATE/installers/
+
+Replace the non-HSM signed symlink with the locally built HSM
+signed binary using scp to push the signed binary to
+the deployer; verify size and expected hash on the deployer.
+
+With HSM signed binary or binaries now in place on the deployer, the
+`installerHashes` and `installerSHA256` hashes for each HSM signed binary
+need to be updated in the params.yaml file found in dir:
+update-proposal/$CLUSTER-$DATE/
+
+The correct hashes to update in the params.yaml file can be generated
+with the following commands:
+
+For `installerHashes` hashes:
+`cardano-auxx cmd --commands 'hash-installer $HSMBINARY'`
+
+For `installerSHA256` hashes:
+`sha256sum $HSMBINARY`
+
+
+## 4. Sign installer files with GPG
 
 This step requires a signing key available on the deployer host.
 
     io -c NETWORK.yaml update-proposal sign-installers -u signing.authority@iohk.io DATE
 
+Where the the `-u` parameter (here shown as signing.authority@iohk.io) can be
+found by running `gpg -K` and obtaining the email address associated
+with the signing key.
+
 If the signing key is protected with a passphrase, you will be prompted to enter it.
 
 This will place detached signatures in `.asc` files within the work
-dir. These will be uploaded to S3 at the same time as the installer
-files.
+dir. There should be one `.asc` file produced for each binary. These will be
+uploaded to S3 at the same time as the installer files.
 
 
-## 4. Upload installer files to the S3 update bucket
+## 5. Upload installer files to the S3 update bucket
 
     io -c NETWORK.yaml update-proposal upload-s3 DATE
 
@@ -155,14 +215,39 @@ work dir with download links and SHA-256 hashes.
 `installer-bucket` value in `NETWORK.yaml`. You can edit this for
 debugging purposes.
 
+
 ### Troubleshooting
 
 If you get an error like this: `AesonException "Error in $['mainnet_staging_short_epoch_wallet_win64']: key \"infra\" not present")`,
 ensure that the `cardano-sl-auxx` that you are using matches that
 cardano-sl version used by Daedalus.
 
+If you get an error like the following, or a different s3 upload related error:
 
-## 5. Update version JSON
+```
+[ServiceError] {
+  service    = S3
+  status     = 403 Forbidden
+  code       = SignatureDoesNotMatch
+  message    = Just The request signature we calculated does not match the signature you provided. Check your key and signing method.
+  request-id = Just $VALUE
+}
+```
+
+The files can be uploaded manually with the aws cli, for example:
+
+First, upload the binaries and their `.asc` files:
+```
+for x in update-proposals/$CLUSTER-$DATE/installers/*; do aws s3 cp $x s3://$INSTALLER_BUCKET/; done
+```
+
+Second, upload each binary again, this time naming the target binary
+as its `installerHashes` value. Example:
+```
+aws s3 cp update-proposals/$CLUSTER-$DATE/installers/$BINARY s3://$INSTALLER_BUCKET/$INSTALLERHASHES_HASH
+```
+
+## 6. Update version JSON
 
     io -c NETWORK.yaml update-proposal set-version-json DATE
 
@@ -171,13 +256,25 @@ into the S3 bucket. If done with the mainnet settings, it will have
 the effect of immediately updating the download links on
 [The Daedalus Wallet download page](https://daedaluswallet.io/#download).
 
-## 6. Propose the update and vote in favor using majority stake
+## 7. Propose the update and vote in favor using majority stake
 
-Find the IP address of a *privileged relay* with `io info`. This is
+Find the private IP address of a *core node*. This is
 normally private info so don't leak it.
 
-    io -c NETWORK.yaml update-proposal submit DATE --relay-ip 1.2.3.4
+On the deployer, but in a different shell than the one planned to
+execute the proposal on, open a tunnel to the core node, port 3000
+from the deployer with the following command:
+
+`nixops ssh -d $CLUSTER $CORENAME -L 3000:$CORE_INTERNAL_IP:3000`
+
+Then, execute the update proposal from the original shell
+
+    io -c NETWORK.yaml update-proposal submit DATE --relay-ip 127.0.0.1
         [--without-linux] [--without-macos] [--without-windows]
+
+Exit the ssh session in the other shell once the proposal update
+has been submitted successfully to end the ssh tunnel to the core
+node.
 
 **Updated 2018-12-17**
 By default, installers will be proposed for Linux, Windows and macOS.
@@ -196,7 +293,7 @@ effect in _k_ slots time, where _k_ is the security parameter. On
 mainnet/staging/testnet with _k=2160_ and 20 second slot duration,
 this will be 12 hours.
 
-## 7. Testing proposal acceptance
+## 8. Testing proposal acceptance
 
 *Useful generic search:* [keywords](https://papertrailapp.com/groups/6487901/events?q=UpdateProposal%20OR%20UpdateVote%20OR%20Processing%20of%20proposal%20OR%20New%20vote%20OR%20Stakes%20of%20proposal%20OR%20Verifying%20stake%20for%20proposal%20OR%20Proposal%20is%20confirmed%20OR%20is%20rejected%2C%20the%20reason%20is)
 
@@ -214,14 +311,14 @@ this will be 12 hours.
 Search papertrail for `Proposal 6e2f23c1 is confirmed` on a core node, using the first 8 characters of the proposal ID from the previous step.
 
 
-## 8. Testing the update
+## 9. Testing the update
 
 Work in progress: [DEVOPS-651](https://iohk.myjetbrains.com/youtrack/issue/DEVOPS-651).
 
 This is also covered in [how-to/test-update-system.md](https://github.com/input-output-hk/cardano-sl/blob/develop/docs/how-to/test-update-system.md#check-update-taken-by-wallet), section *Check update taken by wallet*.
 
 
-## 9. Update the wiki
+## 10. Update the wiki
 
 Copy the contents of `wiki.md` from the work dir and paste into
 [Daedalus Installer History](https://github.com/input-output-hk/internal-documentation/wiki/Daedalus-installer-history).
