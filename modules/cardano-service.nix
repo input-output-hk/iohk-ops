@@ -55,6 +55,10 @@ let
   ];
 in {
   options = {
+    services.cardano-node = {
+      enable = mkEnableOption "cardano-node";
+      default = false;
+    };
     services.cardano-node-legacy = {
       enable = mkEnableOption name;
       port = mkOption { type = types.int; default = 3000; };

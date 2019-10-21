@@ -19,7 +19,7 @@ with import ../lib.nix;
   in {
     imports = [
       ./cardano-service.nix
-      (sources.cardano-node + "/nix/nixos")
+      # (sources.cardano-node + "/nix/nixos")
       (sources.cardano-byron-proxy + "/nix/nixos")
       ./cardano-base.nix
       ./globals.nix
@@ -48,52 +48,11 @@ with import ../lib.nix;
       topologyFile = config.global.topologyYaml;
     };
 
-    services.cardano-node = mkIf (config.params.nodeImpl == "haskell") {
-      enable = true;
-      genesisFile = cardanoSlEnv."${config.global.environment}".genesisFile;
-      genesisHash = cardanoSlEnv."${config.global.environment}".genesisHash;
-      signingKey = if (config.params.typeIsCore)
-        then "/var/lib/keys/cardano-node"
-        else null;
-      # delegation-certificate = TODO;
-      consensusProtocol = "real-pbft";
-      hostAddr = if options.networking.privateIPv4.isDefined then config.networking.privateIPv4 else "0.0.0.0";
-      port = config.params.port;
-      nodeId = config.params.i;
-      topology = pkgs.writeText "topology.json" (builtins.toJSON (lib.mapAttrsToList (name: node: {
-        nodeId = node.i;
-        nodeAddress = {
-          addr = if (node.i == cfg.node-id)
-            then cfg.host-addr
-            else (nodeNameToPublicIP name);
-          port = node.port;
-        };
-        producers = if (node.i == cfg.node-id)
-          then (map (n: {
-            addr = n.ip;
-            port = config.global.nodeMap.${n.name}.port;
-            valency = 1;
-          }) (builtins.filter (n: config.global.nodeMap.${n.name}.typeIsCore) neighbourPairs)
-          ++ [{
-            addr = "127.0.0.1";
-            port = 7777;
-            valency = 1;
-          }])
-          else [];
-      }) config.global.nodeMap));
-      logger.config-file = ./iohk-monitoring-config.yaml;
-    };
-
     networking.firewall = mkIf cfg.enable {
       allowedTCPPorts = [ cfg.port ];
     };
 
-    systemd.services."cardano-node" = mkIf (cfg.enable && config.params.typeIsCore) {
-      after = [ "cardano-node-key.service" ];
-      wants = [ "cardano-node-key.service" ];
-    };
-
-    services.cardano-node-legacy = mkIf (config.params.nodeImpl == "legacy") {
+    services.cardano-node-legacy = {
       enable         = true;
       nodeName       = config.params.name;
       nodeIndex      = config.params.i;
