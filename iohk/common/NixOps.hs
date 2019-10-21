@@ -951,13 +951,16 @@ getJournals o c@NixopsConfig{..} timesince mtimeuntil = do
 
   echo "Obtaining dumped journals.."
   let outfiles  = format ("log-cardano-node-"%s%".journal") . fromNodeName <$> nodes
+      outfilesJ = (<>".json") <$> outfiles
   parallelIO' o c (flip zip outfiles) $
     \(node, outfile) -> scpFromNode o c node "log" outfile
+  parallelIO' o c (flip zip outfilesJ) $
+    \(node, outfile) -> scpFromNode o c node "/var/lib/cardano-node/node.json" outfile
   timeStr <- T.replace ":" "_" . T.pack . timePrint ISO8601_DateAndTime <$> dateCurrent
 
   let archive   = format ("journals-"%s%"-"%s%"-"%s%".tgz") (lowerShowT cEnvironment) scDesc timeStr
   printf ("Packing journals into "%s%"\n") archive
-  cmd o "tar" (["czf", archive] <> outfiles)
+  cmd o "tar" (["czf", archive] <> outfiles <> outfilesJ)
   cmd o "rm" $ "-f" : outfiles
   echo "Done."
 
