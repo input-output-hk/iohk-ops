@@ -41,6 +41,7 @@
 , haskellNixPrsJSON ? ./simple-pr-dummy.json
 , toolsPrsJSON ? ./simple-pr-dummy.json
 , explorerPrsJSON ? ./simple-pr-dummy.json
+, jormungandrPrsJSON ? ./simple-pr-dummy.json
 }:
 
 let pkgs = import nixpkgs {}; in
@@ -78,6 +79,15 @@ let
       input = "cardano-explorer";
       branch = "master";
       prs = explorerPrsJSON;
+      bors = true;
+    };
+
+    jormungandr = {
+      description = "jormungandr";
+      url = "https://github.com/input-output-hk/jormungandr-nix.git";
+      input = "jormungandr";
+      branch = "master";
+      prs = jormungandrPrsJSON;
       bors = true;
     };
 
