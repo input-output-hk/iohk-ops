@@ -85,7 +85,6 @@ EOF
     ls -la /private/var/run || true
     ln -s /private/var/run /run || true
     nix-channel --add https://nixos.org/channels/nixos-19.03 nixpkgs
-    nix-channel --add /Volumes/CONFIG/sources/nix-darwin darwin
     nix-channel --update
 
     sudo -i -H -u nixos -- nix-channel --add https://nixos.org/channels/nixos-19.03 nixpkgs
@@ -95,6 +94,7 @@ EOF
 
     installer=$(nix-build /Volumes/CONFIG/sources/nix-darwin -A installer --no-out-link)
     set +e
+    yes | sudo -i -H -E -u nixos -- "env"
     yes | sudo -i -H -E -u nixos -- "$installer/bin/darwin-installer"
     echo $?
     sudo launchctl kickstart system/org.nixos.nix-daemon
