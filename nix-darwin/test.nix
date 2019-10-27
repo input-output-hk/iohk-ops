@@ -1,13 +1,9 @@
 { role ? "ci", host, port, hostname }:
 
 let
-  pkgs = import (import ../fetch-nixpkgs.nix) {};
-  nix-darwin = pkgs.fetchFromGitHub {
-    owner = "LnL7";
-    repo = "nix-darwin";
-    rev = "8d557721a9511d8e6b26c140363ab44d2c98f76b";
-    sha256 = "0gv4b3yfi4k01gyy6djjmln44q7hg3iqm4lalm9b7kgzmgnpx4fp";
-  };
+  opsLib = import ../lib.nix;
+  pkgs = opsLib.pkgs;
+  nix-darwin = opsLib.sources.nix-darwin;
   system = (import nix-darwin {
     nixpkgs = pkgs.path;
     configuration = "${guestConfDir}/darwin-configuration.nix";
@@ -22,7 +18,8 @@ let
   } ''
     mkdir -pv $out
     cd $out
-    mkdir -pv iohk-ops/nix-darwin
+    mkdir -pv iohk-ops/nix-darwin sources
+    cp -r --no-preserve=mode ${nix-darwin} sources/nix-darwin
     cd iohk-ops
     cp -r --no-preserve=mode ${./roles} nix-darwin/roles
     cp -r --no-preserve=mode ${./modules} nix-darwin/modules

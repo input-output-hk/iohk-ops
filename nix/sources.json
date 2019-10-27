@@ -83,6 +83,18 @@
         "url": "https://github.com/nmattia/niv/archive/213315b65807ceae979da902875efaad1c53dc1d.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "nix-darwin": {
+        "branch": "master-hercules",
+        "description": "nix modules for darwin",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "nix-darwin",
+        "rev": "72f4f138ac381b2b7444eee466e576589f43855c",
+        "sha256": "12y1d7r9rs6hj5g7n6h69kdvkgm51v92jdi3gakkqdkhgbc4x0bg",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/nix-darwin/archive/72f4f138ac381b2b7444eee466e576589f43855c.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "nixops-core": {
         "branch": "nixops-core-pr-int",
         "description": "NixOps, the NixOS-based cloud deployment tool",

@@ -2,7 +2,6 @@
 
 let
   opsLib = import ../../lib.nix;
-  nix-darwin = (import ../test.nix { host = null; port = null; hostname = null; }).nix-darwin;
 in {
   imports = [ ./double-builder-gc.nix ./caffeinate.nix ];
 
@@ -60,7 +59,7 @@ in {
   nix.nixPath = [
     "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixpkgs"
     "darwin-config=/Users/nixos/.nixpkgs/darwin-configuration.nix"
-    "darwin=${nix-darwin}"
+    "darwin=/Volumes/CONFIG/sources/nix-darwin"
   ];
 
   ########################################################################
