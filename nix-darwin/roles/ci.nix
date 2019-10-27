@@ -5,5 +5,6 @@
     ../modules/basics.nix
     ../modules/hydra-slave.nix
     ../modules/buildkite-agent.nix
+    ../modules/hercules-ci.nix
   ];
 }
