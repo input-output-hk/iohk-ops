@@ -94,10 +94,7 @@ EOF
 
     installer=$(nix-build /Volumes/CONFIG/sources/nix-darwin -A installer --no-out-link)
     set +e
-    yes | sudo -i -H -E -u nixos -- "env"
-    yes | sudo -i -H -E -u nixos -- " cat $installer/bin/darwin-installer"
-    exit 1
-    yes | sudo -i -H -E -u nixos -- "$installer/bin/darwin-installer"
+    yes | sudo -E -H -u nixos -- "$installer/bin/darwin-installer"
     echo $?
     sudo launchctl kickstart system/org.nixos.nix-daemon
     set -e
