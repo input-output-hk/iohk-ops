@@ -77,10 +77,10 @@
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "dc2a549d7eae3918f7b596288c774296bd910291",
-        "sha256": "1ckxbslimvvk20v3k6v311xw7rn2kz2c9v0n9yw8s9sx97lp34ng",
+        "rev": "7292b0a958d58aaeea21e3b20b597e947a2151e0",
+        "sha256": "1y6iml1l28b96xsny5fvx308mymrwalsms7dn10lwl56zmf3r3zc",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/dc2a549d7eae3918f7b596288c774296bd910291.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/7292b0a958d58aaeea21e3b20b597e947a2151e0.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "jormungandr-faucet": {
