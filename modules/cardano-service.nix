@@ -70,6 +70,7 @@ let
     "--topology ${cfg.topologyYaml}"
     (optionalString (cfg.assetLockFile != null) "--asset-lock-file ${cfg.assetLockFile}")
     "--node-id ${nodeId}"
+    (optionalString cfg.instanced "--disable-peer-host-check")
     (optionalString cfg.enablePolicies ("--policies " + (if cfg.nodeType == "core" then "${../benchmarks/policy_core.yaml}" else "${../benchmarks/policy_relay.yaml}")))
     (optionalString cfg.enableProfiling "+RTS -p -RTS")
   ];
