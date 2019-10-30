@@ -19,6 +19,12 @@ let
   sources = commonLib.sources;
   nixopsPacketSrc = sources.nixops-packet;
   nixopsSrc = sources.nixops-core; # nixops is an input to iohk-ops on hydra so different name
+  haskellOverlay = hself: hsuper: {
+    amazonka-core = pkgs.haskell.lib.appendPatch hsuper.amazonka-core ./iohk/amazonka-content-length.patch;
+  };
+  haskellPackages = pkgs.haskellPackages.override (old: {
+    overrides = composeExtensions (old.overrides or (_: _: {})) haskellOverlay;
+  });
   log-classifier-web = (import log-classifier-src {}).haskellPackages.log-classifier-web;
   nixops =
     let
@@ -46,7 +52,7 @@ let
   cardano-node-pkgs = import (sources.cardano-node.revOverride cardanoNodeRevOverride) {};
 
   iohk-ops = pkgs.haskell.lib.overrideCabal
-             (compiler.callPackage ./iohk/default.nix {})
+             (haskellPackages.callPackage ./iohk {})
              (drv: {
                 executableToolDepends = [ pkgs.makeWrapper ];
                 libraryHaskellDepends = (drv.libraryHaskellDepends or []) ++ iohk-ops-extra-runtime-deps;
