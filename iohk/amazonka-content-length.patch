@@ -1,0 +1,19 @@
+From 8d1e61900eed6352d5cbf2eb56e649c1f58f41d6 Mon Sep 17 00:00:00 2001
+From: David Turnbull <david@broodax.net>
+Date: Thu, 19 Sep 2019 17:06:20 +1000
+Subject: [PATCH] remove the content-length header when doing V4 streaming
+ signatures
+
+---
+ src/Network/AWS/Sign/V4/Base.hs | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/Network/AWS/Sign/V4/Base.hs b/src/Network/AWS/Sign/V4/Base.hs
+index 8e0714444b..5f5a3507a0 100644
+--- a/src/Network/AWS/Sign/V4/Base.hs
++++ b/src/Network/AWS/Sign/V4/Base.hs
+@@ -267,3 +267,4 @@ normaliseHeaders = Tag
+     . nubBy  ((==)    `on` fst)
+     . sortBy (compare `on` fst)
+     . filter ((/= "authorization") . fst)
++    . filter ((/= "content-length") . fst)

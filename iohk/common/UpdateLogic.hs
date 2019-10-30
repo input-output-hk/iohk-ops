@@ -44,7 +44,7 @@ import           Buildkite.API                    (APIToken (APIToken),
 import qualified Buildkite.API                    as BK
 import           Control.Applicative              ((<|>))
 import           Control.Exception                (try)
-import           Control.Lens                     (to, (^.))
+import           Control.Lens                     (to, (^.), (.~), (&))
 import qualified Control.Lens                     as Lens
 import           Control.Monad                    (forM_, guard, mapM_, when,
                                                    (<=<))
@@ -67,8 +67,8 @@ import           Github                           (Rev, Status, context,
                                                    fetchGithubStatus, statuses,
                                                    targetUrl)
 import           Network.AWS                      (AWS, Credentials (Discover),
-                                                   Region, chunkedFile,
-                                                   defaultChunkSize, newEnv,
+                                                   Region, chunkedFile, envLogger, newLogger,
+                                                   defaultChunkSize, newEnv, LogLevel(Debug),
                                                    runAWS, send, toBody, within)
 import           Network.AWS.S3.CopyObject        (coACL, copyObject)
 import           Network.AWS.S3.GetBucketLocation (gblbrsLocationConstraint,
@@ -102,6 +102,8 @@ import           Types                            (ApplicationVersion,
                                                    formatArch)
 import           Utils                            (fetchCachedUrl,
                                                    fetchCachedUrlWithSHA1)
+
+import System.IO (stdout)
 
 data CIResult = CIResult
   { ciResultSystem      :: CISystem
@@ -377,7 +379,8 @@ bucketRegion = fmap getRegion . send . getBucketLocation
 runAWS' :: MonadIO io => AWS a -> io a
 runAWS' action = liftIO $ do
   env <- newEnv Discover
-  runResourceT . runAWS env $ action
+  lgr <- newLogger Debug stdout
+  runResourceT . runAWS (env & envLogger .~ lgr) $ action
 
 withinBucketRegion :: BucketName -> (Region -> AWS a) -> AWS a
 withinBucketRegion bucketName action = do

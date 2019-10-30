@@ -70,8 +70,8 @@ data Artifact = Artifact
   , artifactFilename     :: Text
   , artifactMimeType     :: Text
   , artifactFileSize     :: Int
-  , artifactGlobPath     :: Text
-  , artifactOriginalPath :: Text
+  , artifactGlobPath     :: Maybe Text
+  , artifactOriginalPath :: Maybe Text
   , artifactSha1sum      :: Text
   } deriving (Generic, Show, Eq)
 
