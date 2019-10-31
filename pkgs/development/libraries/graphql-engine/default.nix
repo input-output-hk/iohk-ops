@@ -8,5 +8,6 @@ haskellPackages.override {
     monad-validate = self.callPackage ./monad-validate.nix {};
     #multi-ghc-travis = self.callPackage ./multi-ghc-travis.nix {};
     pg-client = self.callPackage ./pg-client.nix {};
+    stm-hamt = self.callPackage ./stm-hamt.nix {};
   };
 }
