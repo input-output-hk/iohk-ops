@@ -8360,6 +8360,8 @@ with pkgs;
 
   grail = callPackage ../development/libraries/grail { };
 
+  graphql-engine = callPackage ../development/libraries/graphql-engine { };
+
   gtk-doc = callPackage ../development/tools/documentation/gtk-doc { };
 
   gtkdialog = callPackage ../development/tools/misc/gtkdialog { };
