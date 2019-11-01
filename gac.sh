@@ -53,7 +53,7 @@ EOF
             DEFAULT_NODE=${CLUSTER_KIND}-a-0
             NODE_SERVICE=${CLUSTER_KIND}
             NODE_DB_PATH=/data/${CLUSTER_KIND}
-            TOPOLOGY_FILE=./clusters/${CLUSTER_TYPE}/topology.nix
+            TOPOLOGY_FILE=./clusters/${CLUSTER_TYPE}/topology.json
             ALL_NODES=$(nix-instantiate  --eval -E "let inherit (import ./. {}) pkgs; nodes= pkgs.lib.mapAttrsToList (n: _: n) (import ${TOPOLOGY_FILE}); in builtins.deepSeq nodes nodes" | sed 's/[],",\[]//g')
             TLS_CERT_DIR="$(pwd)/tls-cert"
             TLS_CERT="${TLS_CERT_DIR}/cert.pem"
@@ -161,6 +161,8 @@ nixops_nix_opts=("${nix_opts[@]}"
                  -I "goguen=${gacroot}/goguen"
                  ${OVERLAY_MODE:+-I local-module=./modules}
                  ${OVERLAY_MODE:+-I iops=${gacroot}})
+                 ${OVERLAY_MODE:+-I roles=./roles}
+                 ${OVERLAY_MODE:+-I cluster=./clusters/${CLUSTER_TYPE})
 
 if test ! -f "${nixops}"
 then nix-store --realise "${nixops}"
@@ -171,7 +173,7 @@ export NIX_PATH="nixpkgs=${nixpkgs_out}"
 nixops_subopts=(--deployment "${CLUSTER_NAME}" "${nixops_nix_opts[@]}")
 nixops_subopts_deploy=("${nixops_subopts[@]}" "--max-concurrent-copy=50")
 
-nixops_constituents="$(ls "./clusters/${CLUSTER_TYPE}"/topology.nix)"
+nixops_constituents="$(ls "./clusters/${CLUSTER_TYPE}"/interpreter.nix)"
 # We're using `ls -Q` here to quote; make sure we have the GNU version of `ls`
 # because the Darwin/BSD version does *not* support this option.
 PATH=$(nix-build -E "(import ./. {}).pkgs.coreutils" --no-out-link)/bin:$PATH
@@ -263,7 +265,7 @@ dry | full-new-cluster-create-and-deploy-dry-run ) # Doc:
         ${nixops} set-args "${nixops_subopts[@]}" \
 		  --argstr accessKeyId "${AKID}" \
 		  --argstr deployerIP "${deployerIP}" \
-          --argstr clusterName "${CLUSTER_NAME}" \
+                  --argstr clusterName "${CLUSTER_NAME}" \
 		  --arg config "import ./config.nix { clusterName = \"${CLUSTER_NAME}\"; deployerIP = \"${deployerIP}\"; accessKeyId = \"${AKID}\"; }"
         ${nixops} deploy   "${nixops_subopts_deploy[@]}" --dry-run "$@"
         ;;
@@ -275,7 +277,7 @@ dry | full-new-cluster-create-and-deploy-dry-run ) # Doc:
         ;;
 create | create-cluster-nixops-deployment ) # Doc:
         set +u; AKID="$1"; test -n "$1" && shift; set -u
-        ${nixops}    create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/topology.nix
+        ${nixops}    create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/interpreter.nix
         ;;
 
 components | ls | list-cluster-components ) # Doc:
@@ -338,7 +340,7 @@ deploy | d | update-and-deploy ) # Doc:
         $self     components
         $self     configure-nixops-deployment-arguments
         ${nixops} check    "${nixops_subopts[@]}" || true # <- nixops check returns non-zero status when resources are missing but it still updates the state. so we don't want this to stop us.
-        ${nixops} modify   "${nixops_subopts[@]}" "clusters/${CLUSTER_TYPE}"/topology.nix
+        ${nixops} modify   "${nixops_subopts[@]}" "clusters/${CLUSTER_TYPE}"/interpreter.nix
         ${nixops} deploy   "${nixops_subopts_deploy[@]}" "$@";;
 "" | "" ) # Doc:
         ;;
