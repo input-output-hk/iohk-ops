@@ -7,7 +7,7 @@ let
     speedFactor = 1;
     sshKey = "/etc/nix/id_buildfarm";
     sshUser = "root";
-    system = "x86_64-linux";
+    systems = [ "i686-linux" "x86_64-linux" ];
     supportedFeatures = [ "kvm" "nixos-test" "big-parallel" ];
   };
   mkLinux = hostName: commonBuildMachineOpt // {
@@ -17,9 +17,15 @@ let
   mkMac = hostName: commonBuildMachineOpt // {
     inherit hostName;
     maxJobs = 8;
-    system = "x86_64-darwin";
+    systems = [ "x86_64-darwin" ];
     sshUser = "builder";
     supportedFeatures = [];
+  };
+  localMachine = {
+    hostName = "localhost";
+    mandatoryFeatures = [ "local" ];
+    systems = [ "x86_64-linux" "i686-linux" ];
+    maxJobs = 16;
   };
   mkGithubStatus = { jobset, inputs }: ''
     <githubstatus>
@@ -66,6 +72,7 @@ in {
       #(mkMac "osx-3.aws.iohkdev.io")
       #(mkMac "osx-4.aws.iohkdev.io")
       #(mkMac "osx-5.aws.iohkdev.io")
+      localMachine
     ];
     binaryCaches = mkForce [ "https://cache.nixos.org" ];
   };
