@@ -59,6 +59,9 @@
     amc = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBYfnDuQK1LuxeZjwUGFRlrO8cGex9UcSSixpGcEX/X1 alan.mcnicholas@iohk.io"
     ];
+    awiecz = [
+      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCY/bSEjiddGXjDdsc+h8uPnHkviBtjnjWJ8Nm2sGjOND3qq2ARMgtYzbvkhtZdgZBjhkZzisrVXI/P5Nkmb2MY1hpAZIebo6vmgd1XfYkoGL03xRkikz8Qp72pvlUne2Io91DBEoqnvPgai7ogmDSd2Aoi7+idjQ4KU/6/JGE37r0LovEn//Y0dUKDXwCBzYaoISRkINq0TSigP9RM/if27KkOQqv/9d5HOWLCb+bUyBY29CixFl39Dyz/lRqVE5Ewznod3BpNIaYLpdR4sxiisgybtP8evJ1wA51m1lpLr/MXgA0t4tZcX8BKEv5Wz7wrzb+ZL3MEmMHTsXgEw9DH artur.wieczorek@iohk.io"
+    ];
     anatoli = [
       "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAhU9SXExGrDB16lvnRULjHi6m62TmD71WOPsF/ekQ4Itiab4dUzN3KzDcPCx5MOoJ9yAfZXCriKAmSgp3mQ3xrr5KajO9xm+X1VR7EjXQ65TFR+C/Sl3TmD33TnsO8/Fnv6ZRSunzkjaEMZH1GaAUSjCOlvZB/6h5d2ZUQmSPZjGjKI+4Kc5HGBrrg+ImKf2BzBWKzHiQn7Adq7vZOvCqKjVerjpmB9CLKAgjvOn09mazAMPobIJ2a/zBL6HB68bsULf6K6Eu+Kvk8AL/XPVd26GilUD1h1EcMSI9auHcixUXTaubS6KkL9YU8A7UgHYDpnKA1AWNHAaNKqYcZJys8w=="
     ];
