@@ -104,7 +104,7 @@
         "rev": "eaea333f2e2ab74390228b4b847ecd971aafbaf2",
         "sha256": "0ivsyfy8yky7qk303c5k71n85nkpc3a9zjr4j9iqw6c4ym5yxx6a",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/nixops-packet/archive/ae89fc7791c5f8ae518869800d49cd5eeec3e5e0.tar.gz",
+        "url": "https://github.com/input-output-hk/nixops-packet/archive/eaea333f2e2ab74390228b4b847ecd971aafbaf2.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
