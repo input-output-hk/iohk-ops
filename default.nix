@@ -36,7 +36,7 @@ let
         }).build.${system};
   log-classifier-src = sources.log-classifier;
   iohk-ops-extra-runtime-deps = with pkgs; [
-    gitFull nix-prefetch-scripts compiler.yaml
+    gitFull nix-prefetch-scripts (pkgs.haskell.lib.justStaticExecutables compiler.yaml)
     wget
     file
     nixops
@@ -51,7 +51,8 @@ let
   mantis-pkgs     = commonLib.fetchProjectPackages "mantis"     <mantis>     ./goguen/pins   mantisRevOverride  args;
   cardano-node-pkgs = import (sources.cardano-node.revOverride cardanoNodeRevOverride) {};
 
-  iohk-ops = pkgs.haskell.lib.overrideCabal
+  iohk-ops = pkgs.haskell.lib.justStaticExecutables
+             (pkgs.haskell.lib.overrideCabal
              (haskellPackages.callPackage ./iohk {})
              (drv: {
                 executableToolDepends = [ pkgs.makeWrapper ];
@@ -61,7 +62,7 @@ let
                   wrapProgram $out/bin/iohk-ops \
                   --prefix PATH : "${pkgs.lib.makeBinPath iohk-ops-extra-runtime-deps}"
                 '';
-             });
+             }));
 
   iohk-ops-integration-test = let
     parts = with cardano-sl-pkgs.nix-tools.exes; [ cardano-sl-auxx cardano-sl-tools iohk-ops ];
