@@ -613,14 +613,22 @@ in {
             ] else []);
           };
         };
-        prometheus2 = {
+        prometheus = {
           enable = true;
           webExternalUrl = "https://${cfg.webhost}/prometheus/";
           extraFlags = [
             "--storage.tsdb.retention=8760h"
           ];
 
-          alertmanagerURL = [ "localhost:9093" ];
+          alertmanagers = [{
+            scheme = "https";
+            path_prefix = "/alertmanager";
+            static_configs = [{
+              targets = [
+                "localhost:9093"
+              ];
+            }];
+          }];
           rules = [ (builtins.toJSON {
               groups = [
                 {
