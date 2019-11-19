@@ -570,50 +570,50 @@ in {
             });
           };
         };
-        prometheus.alertmanager = {
-          enable = cfg.pagerDuty.serviceKey != null;
-          configuration = {
-            route = {
-              group_by = [ "alertname" "alias" ];
-              group_wait = "30s";
-              group_interval = "2m";
-              receiver = "team-pager";
-              routes = cfg.alertmanager.extraRoutes ++ [
-                {
-                  match = {
-                    severity = "page";
-                  };
-                  receiver = "team-pager";
-                }
-              ] ++ (if (cfg.deadMansSnitch.pingUrl != null) then [{
-                  match = {
-                    alertname = "DeadMansSnitch";
-                  };
-                  repeat_interval = "5m";
-                  receiver = "deadmanssnitch";
-                }] else []);
-            };
-            receivers = cfg.alertmanager.extraReceivers ++ [
-              {
-                name = "team-pager";
-                pagerduty_configs = [
-                  {
-                    service_key = cfg.pagerDuty.serviceKey;
-                  }
-                ];
-              }
-              ] ++ (if (cfg.deadMansSnitch.pingUrl != null) then [
-              {
-                name = "deadmanssnitch";
-                webhook_configs = [{
-                  send_resolved = false;
-                  url = cfg.deadMansSnitch.pingUrl;
-                }];
-              }
-            ] else []);
-          };
-        };
         prometheus = {
+          alertmanager = {
+            enable = cfg.pagerDuty.serviceKey != null;
+            configuration = {
+              route = {
+                group_by = [ "alertname" "alias" ];
+                group_wait = "30s";
+                group_interval = "2m";
+                receiver = "team-pager";
+                routes = cfg.alertmanager.extraRoutes ++ [
+                  {
+                    match = {
+                      severity = "page";
+                    };
+                    receiver = "team-pager";
+                  }
+                ] ++ (if (cfg.deadMansSnitch.pingUrl != null) then [{
+                    match = {
+                      alertname = "DeadMansSnitch";
+                    };
+                    repeat_interval = "5m";
+                    receiver = "deadmanssnitch";
+                  }] else []);
+              };
+              receivers = cfg.alertmanager.extraReceivers ++ [
+                {
+                  name = "team-pager";
+                  pagerduty_configs = [
+                    {
+                      service_key = cfg.pagerDuty.serviceKey;
+                    }
+                  ];
+                }
+                ] ++ (if (cfg.deadMansSnitch.pingUrl != null) then [
+                {
+                  name = "deadmanssnitch";
+                  webhook_configs = [{
+                    send_resolved = false;
+                    url = cfg.deadMansSnitch.pingUrl;
+                  }];
+                }
+              ] else []);
+            };
+          };
           enable = true;
           webExternalUrl = "https://${cfg.webhost}/prometheus/";
           extraFlags = [
