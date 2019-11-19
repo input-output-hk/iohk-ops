@@ -20,12 +20,4 @@
       Type = "oneshot";
     };
   };
-
-  # DockerHub password/token (base64-encoded in json)
-  deployment.keys = {
-    dockerhub-auth = {
-      keyFile = ./. + "/../static/dockerhub-auth-config.json";
-      user    = "buildkite-agent";
-    };
-  };
 }
