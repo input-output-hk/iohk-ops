@@ -515,62 +515,62 @@ in {
               cfg.grafanaCreds.user;
           };
         };
-        prometheus.exporters = {
-          blackbox = {
-            enable = true;
-            configFile = pkgs.writeText "blackbox-exporter.yaml" (builtins.toJSON {
-              modules = {
-                https_2xx = {
-                  prober = "http";
-                  timeout = "5s";
-                  http = {
-                    fail_if_not_ssl = true;
-                  };
-                };
-                htts_2xx = {
-                  prober = "http";
-                  timeout = "5s";
-                };
-                ssh_banner = {
-                  prober = "tcp";
-                  timeout = "10s";
-                  tcp = {
-                    query_response = [ { expect = "^SSH-2.0-"; } ];
-                  };
-                };
-                tcp_v4 = {
-                  prober = "tcp";
-                  timeout = "5s";
-                  tcp = {
-                    preferred_ip_protocol = "ip4";
-                  };
-                };
-                tcp_v6 = {
-                  prober = "tcp";
-                  timeout = "5s";
-                  tcp = {
-                    preferred_ip_protocol = "ip6";
-                  };
-                };
-                icmp_v4 = {
-                  prober = "icmp";
-                  timeout = "60s";
-                  icmp = {
-                    preferred_ip_protocol = "ip4";
-                  };
-                };
-                icmp_v6 = {
-                  prober = "icmp";
-                  timeout = "5s";
-                  icmp = {
-                    preferred_ip_protocol = "ip6";
-                  };
-                };
-              };
-            });
-          };
-        };
         prometheus = {
+          exporters = {
+            blackbox = {
+              enable = true;
+              configFile = pkgs.writeText "blackbox-exporter.yaml" (builtins.toJSON {
+                modules = {
+                  https_2xx = {
+                    prober = "http";
+                    timeout = "5s";
+                    http = {
+                      fail_if_not_ssl = true;
+                    };
+                  };
+                  htts_2xx = {
+                    prober = "http";
+                    timeout = "5s";
+                  };
+                  ssh_banner = {
+                    prober = "tcp";
+                    timeout = "10s";
+                    tcp = {
+                      query_response = [ { expect = "^SSH-2.0-"; } ];
+                    };
+                  };
+                  tcp_v4 = {
+                    prober = "tcp";
+                    timeout = "5s";
+                    tcp = {
+                      preferred_ip_protocol = "ip4";
+                    };
+                  };
+                  tcp_v6 = {
+                    prober = "tcp";
+                    timeout = "5s";
+                    tcp = {
+                      preferred_ip_protocol = "ip6";
+                    };
+                  };
+                  icmp_v4 = {
+                    prober = "icmp";
+                    timeout = "60s";
+                    icmp = {
+                      preferred_ip_protocol = "ip4";
+                    };
+                  };
+                  icmp_v6 = {
+                    prober = "icmp";
+                    timeout = "5s";
+                    icmp = {
+                      preferred_ip_protocol = "ip6";
+                    };
+                  };
+                };
+              });
+            };
+          };
           alertmanager = {
             enable = cfg.pagerDuty.serviceKey != null;
             configuration = {
