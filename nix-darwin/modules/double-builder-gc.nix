@@ -2,9 +2,9 @@
 
 let
   nixAutoMaxFreedMB = 33000;     # An absolute amount to free
-  nixAutoMinFreeMB = 10000;
+  nixAutoMinFreeMB = 14000;
   maxFreedMB = 25000;            # A relative amount to free
-  minFreeMB = 8000;
+  minFreeMB = 15000;
 
 in {
   imports = [ ../services/builder-gc.nix ];
