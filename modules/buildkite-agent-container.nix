@@ -222,10 +222,16 @@ in with lib;
     services.fstrim.interval = "daily";
 
     containers = let
-      buildkiteContainerList = [
+      buildkiteContainerList = if (name != "packet-buildkite-1") then [
         { containerName = "ci${cfg.hostIdSuffix}-1"; ipo4 = "10"; prio = "9"; }
         { containerName = "ci${cfg.hostIdSuffix}-2"; ipo4 = "11"; prio = "8"; }
         { containerName = "ci${cfg.hostIdSuffix}-3"; ipo4 = "12"; prio = "7"; }
+      ] else [
+        # Temporary modification to packet-buildkite-1 until we migrate to reduce
+        # container count by 1 and priority since this server has half the
+        # capacity of the others and is experiencing storage pressure
+        { containerName = "ci${cfg.hostIdSuffix}-1"; ipo4 = "10"; prio = "7"; }
+        { containerName = "ci${cfg.hostIdSuffix}-2"; ipo4 = "11"; prio = "6"; }
       ];
     in
       builtins.listToAttrs (map createBuildkiteContainer buildkiteContainerList);
