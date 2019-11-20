@@ -190,6 +190,12 @@ in with lib;
         keyFile = ./. + "/../static/buildkite_token";
         user    = "buildkite-agent";
       };
+
+      # DockerHub password/token (base64-encoded in json)
+      dockerhub-auth = {
+        keyFile = ./. + "/../static/dockerhub-auth-config.json";
+        user    = "buildkite-agent";
+      };
     };
 
     system.activationScripts.cacheDir = {
