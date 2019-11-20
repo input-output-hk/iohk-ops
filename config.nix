@@ -4,7 +4,7 @@ with (import <nixpkgs/lib>);
 filterAttrsRecursive (n: _: n != "_module") (evalModules {
   modules = [
     # Take defaults
-    <module/parameters.nix>
+    ./modules/parameters.nix
     # Overlay config values
     <config>
     # ... and route nixops network arguments to where they're expected. I guess some coupling is unavoidable (or is it? 🧐)

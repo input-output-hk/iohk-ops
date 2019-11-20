@@ -2,7 +2,7 @@
   cfg = config.configurator;
 in {
 
-  imports = [ <module/parameters.nix> <module/parameters-ops.nix> ];
+  imports = [ ./parameters.nix ./parameters-ops.nix ];
 
   options.configurator = {
     optionDefaults = mkOption {
