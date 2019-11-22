@@ -199,19 +199,19 @@ in {
     services = {
       exchange-monitor.enable = true;
       prometheus2.scrapeConfigs = [
-        {
-          job_name = "sarov-host";
-          scrape_interval = "10s";
-          metrics_path = "/mac1/host";
-          static_configs = [
-            {
-              targets = [
-                "192.168.20.20:9111"
-              ];
-              labels.role = "mac-host";
-            }
-          ];
-        }
+        #{
+        #  job_name = "sarov-host";
+        #  scrape_interval = "10s";
+        #  metrics_path = "/mac1/host";
+        #  static_configs = [
+        #    {
+        #      targets = [
+        #        "192.168.20.20:9111"
+        #      ];
+        #      labels.role = "mac-host";
+        #    }
+        #  ];
+        #}
         {
           job_name = "mac-mini-1-host";
           scrape_interval = "10s";
@@ -238,19 +238,19 @@ in {
             }
           ];
         }
-        {
-          job_name = "sarov-mac-hydra";
-          scrape_interval = "10s";
-          metrics_path = "/mac1/hydra";
-          static_configs = [
-            {
-              targets = [
-                "192.168.20.20:9111"
-              ];
-              labels.role = "build-slave";
-            }
-          ];
-        }
+        #{
+        #  job_name = "sarov-mac-hydra";
+        #  scrape_interval = "10s";
+        #  metrics_path = "/mac1/hydra";
+        #  static_configs = [
+        #    {
+        #      targets = [
+        #        "192.168.20.20:9111"
+        #      ];
+        #      labels.role = "build-slave";
+        #    }
+        #  ];
+        #}
         {
           job_name = "mac-mini-1-ci";
           scrape_interval = "10s";

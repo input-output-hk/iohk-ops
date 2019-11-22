@@ -64,7 +64,12 @@ in {
       (mkLinux "packet-hydra-slave-3.aws.iohkdev.io")
       (mkLinux "packet-hydra-slave-4.aws.iohkdev.io")
       (mkLinux "packet-hydra-slave-5.aws.iohkdev.io")
-      ((mkMac "sarov") // { speedFactor = 1; })
+
+      # Temporary extra build slave for addnl load
+      #(mkLinux "packet-hydra-slave-6.aws.iohkdev.io")
+      #(mkLinux "packet-hydra-slave-7.aws.iohkdev.io")
+
+      # ((mkMac "sarov") // { speedFactor = 1; })
       ((mkMac "mac-mini-1") // { speedFactor = 2; })
       ((mkMac "mac-mini-2") // { speedFactor = 2; })
       #(mkMac "osx-1.aws.iohkdev.io")
@@ -75,6 +80,12 @@ in {
       localMachine
     ];
     binaryCaches = mkForce [ "https://cache.nixos.org" ];
+  };
+
+  services.auto-gc = {
+    nixAutoMaxFreedGB  = 66;
+    nixAutoMinFreeGB   = 60;
+    nixAbsoluteTimedGB = 64;
   };
 
   services.hydra = {

@@ -92,6 +92,10 @@ let
     "packet-hydra-slave-3"
     "packet-hydra-slave-4"
     "packet-hydra-slave-5"
+
+    # Temporary for extra load
+    #"packet-hydra-slave-6"
+    #"packet-hydra-slave-7"
   ];
   buildkiteAgents = [
     { hostname = "packet-buildkite-1";
@@ -112,6 +116,14 @@ let
         services.buildkite-containers.hostIdSuffix = "3";
       };
     }
+
+    # Temporary for extra load
+    #{ hostname = "packet-buildkite-4";
+    #  ipo4 = "14";
+    #  extraopts = {
+    #    services.buildkite-containers.hostIdSuffix = "4";
+    #  };
+    #}
   ];
   # Legacy systems, to be removed!
   mantisHydraLegacySlaves = [
