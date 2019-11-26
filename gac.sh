@@ -173,14 +173,13 @@ export NIX_PATH="nixpkgs=${nixpkgs_out}"
 nixops_subopts=(--deployment "${CLUSTER_NAME}" "${nixops_nix_opts[@]}")
 nixops_subopts_deploy=("${nixops_subopts[@]}" "--max-concurrent-copy=50")
 
-nixops_constituents="$(ls "./clusters/${CLUSTER_TYPE}"/interpreter.nix)"
+gac_interpreter="./clusters/${CLUSTER_TYPE}/interpreter.nix"
 # We're using `ls -Q` here to quote; make sure we have the GNU version of `ls`
 # because the Darwin/BSD version does *not* support this option.
 PATH=$(nix-build -E "(import ./. {}).pkgs.coreutils" --no-out-link)/bin:$PATH
-nixops_constituents_quoted="$(echo "${nixops_constituents}" | xargs ls -Q)"
 nixops_deplArgs="{ accessKeyId = \"AKID\"; deployerIP = \"127.0.0.1\"; }"
 nixops_network_expr="import <nixops/eval-machine-info.nix> { \
-    networkExprs = [ ${nixops_constituents_quoted} ]; \
+    networkExprs = [ ${gac_interpreter} ]; \
     args = ${nixops_deplArgs}; \
     uuid = \"81976a61-80f6-11e7-9369-06258a1e40fd\"; \
     deploymentName = \"${CLUSTER_NAME}\"; \
@@ -259,7 +258,7 @@ dry | full-new-cluster-create-and-deploy-dry-run ) # Doc:
         if ${nixops} info  "${nixops_subopts[@]}" >/dev/null 2>&1
         then op=modify
         else op=create; generate_node_keys; fi
-        ${nixops} ${op}    "${nixops_subopts[@]}" "${nixops_constituents}"
+        ${nixops} ${op}    "${nixops_subopts[@]}" "${gac_interpreter}"
         deployerIP="127.0.0.1"
         AKID=someBoringAKID # "(pow 2.71828 . (3.1415 *) . sqrt) -1 = -1"
         ${nixops} set-args "${nixops_subopts[@]}" \
@@ -277,12 +276,13 @@ dry | full-new-cluster-create-and-deploy-dry-run ) # Doc:
         ;;
 create | create-cluster-nixops-deployment ) # Doc:
         set +u; AKID="$1"; test -n "$1" && shift; set -u
-        ${nixops}    create   -d "${CLUSTER_NAME}" "clusters/${CLUSTER_TYPE}"/interpreter.nix
+        ${nixops}    create   -d "${CLUSTER_NAME}" "${gac_interpreter}"
         ;;
 
 components | ls | list-cluster-components ) # Doc:
         log "components of cluster ${CLUSTER_NAME}:"
-        echo "${nixops_constituents}" | tr " " '\n' | sort | sed 's,^,   ,';;
+        # TODO: list json file.
+        echo "${gac_interpreter}" | tr " " '\n' | sort | sed 's,^,   ,';;
 configure | config | cfg | conf | configure-nixops-deployment-arguments ) # Doc:
         log "querying own IP.."
         deployerIP="$(curl --connect-timeout 2 --silent http://169.254.169.254/latest/meta-data/public-ipv4)"
@@ -340,7 +340,7 @@ deploy | d | update-and-deploy ) # Doc:
         $self     components
         $self     configure-nixops-deployment-arguments
         ${nixops} check    "${nixops_subopts[@]}" || true # <- nixops check returns non-zero status when resources are missing but it still updates the state. so we don't want this to stop us.
-        ${nixops} modify   "${nixops_subopts[@]}" "clusters/${CLUSTER_TYPE}"/interpreter.nix
+        ${nixops} modify   "${nixops_subopts[@]}" "${gac_interpreter}"
         ${nixops} deploy   "${nixops_subopts_deploy[@]}" "$@";;
 "" | "" ) # Doc:
         ;;
