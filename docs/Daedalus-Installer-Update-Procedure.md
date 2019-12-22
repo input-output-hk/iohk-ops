@@ -276,7 +276,7 @@ Exit the ssh session in the other shell once the proposal update
 has been submitted successfully to end the ssh tunnel to the core
 node.
 
-## Notarization for Mac Catalina
+## 8. Notarization for Mac Catalina
 
 Steps for MacOS notarization (must be done on the MacOS guest signing servers):
 
