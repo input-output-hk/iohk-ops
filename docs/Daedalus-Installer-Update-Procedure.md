@@ -276,7 +276,41 @@ Exit the ssh session in the other shell once the proposal update
 has been submitted successfully to end the ssh tunnel to the core
 node.
 
-**Updated 2018-12-17**
+## Notarization for Mac Catalina
+
+Steps for MacOS notarization (must be done on the MacOS guest signing servers):
+
+1. scp or otherwise push/pull the installer to `mac-mini-<1|2>-signing`
+
+2. ssh to the `mac-mini-<1|2>-signing` guest where the scp pushed the file above
+
+3. Switch to the appropriate user and path of the installer package if not already there (these notarize staple commands will run ok as nixos or root user)
+
+4. Check the sha256 is expected as from the deployer params.yaml update proposal file and/or direct sha256 of the package file on the appropriate deployer
+
+5. Do the notarization (the $USER and $PASSWORD are in lastpass vault under `apple-notary-pass`)
+```
+xcrun altool --notarize-app \
+  --primary-bundle-id "io.iohk.daedalus.pkg" \
+  --username "$USER" \
+  --password "$PASSWORD" \
+  --file "$DAEDALUS_INSTALLER_FILE"
+```
+
+6. Optional: Check status:
+  `xcrun altool --notarization-history 0 -u "$USER" -p "$PASSWORD"`  
+
+7. Optional: Get further information:
+```
+# RequestUUID will have been provided in the initial cmd output
+xcrun altool --notarization-info $REQUESTUUID -u "$USER"
+```
+
+More docs:
+https://developer.apple.com/documentation/xcode/notarizing_your_app_before_distribution/customizing_the_notarization_workflow?language=objc
+
+
+**Note from 2018-12-17**
 By default, installers will be proposed for Linux, Windows and macOS.
 Use the `--without-OS` flag to exclude certain installers from the
 update proposal.
