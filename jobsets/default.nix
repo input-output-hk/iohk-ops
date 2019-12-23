@@ -244,11 +244,14 @@ let
     emailoverride = "";
   };
 
+  # Merges the given attrset of Hydra inputs with a jobset.
+  addInputs = inputs: jobset: jobset // {
+    inputs = (jobset.inputs or { }) // inputs;
+  };
+
   # Adds an arg which disables optimization for cardano-sl builds
-  withFasterBuild = jobset: jobset // {
-    inputs = (jobset.inputs or { }) // {
-      fasterBuild = { type = "boolean"; emailresponsible = false; value = "true"; };
-    };
+  withFasterBuild = addInputs {
+    fasterBuild = { type = "boolean"; emailresponsible = false; value = "true"; };
   };
 
   # Use to put Bors jobs at the front of the build queue.
@@ -303,12 +306,15 @@ let
       (mkJobsetPR { inherit name input modifier; })
       (loadPrsJSON prs);
 
-  # Add two extra jobsets for the bors staging and trying branches
+  # Add two extra jobsets for the bors staging and trying branches.
   mkJobsetBors = { name, ... }@args: let
-    jobset = branch: (mkJobset (args // { inherit branch; })).value;
+    jobset = branch: let
+      js = (mkJobset (args // { branch = "bors/" + branch; })).value;
+      extraInputs = { borsBuild = { type = "string"; value = branch; }; };
+    in addInputs extraInputs js;
   in [
-    (nameValuePair "${name}-bors-staging" (highPrio (jobset "bors/staging")))
-    (nameValuePair "${name}-bors-trying" (jobset "bors/trying"))
+    (nameValuePair "${name}-bors-staging" (highPrio (jobset "staging")))
+    (nameValuePair "${name}-bors-trying" (jobset "trying"))
   ];
 
   # Make all the jobsets for a project repo, according to the "repos" spec above.
