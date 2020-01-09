@@ -139,6 +139,12 @@ in with lib;
   in {
     users.users.root.openssh.authorizedKeys.keys = commonLib.ciInfraKeys;
 
+    services.auto-gc = {
+      nixAutoMaxFreedGB  = 30;
+      nixAutoMinFreeGB   = 11;
+      nixAbsoluteTimedGB = 10;
+    };
+
     # To go on the host -- and get shared to the container(s)
     deployment.keys = {
       aws-creds = {

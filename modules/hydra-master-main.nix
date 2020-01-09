@@ -68,6 +68,9 @@ in {
       # Temporary extra build slave for addnl load
       #(mkLinux "packet-hydra-slave-6.aws.iohkdev.io")
       #(mkLinux "packet-hydra-slave-7.aws.iohkdev.io")
+      #(mkLinux "packet-hydra-slave-8.aws.iohkdev.io")
+      #(mkLinux "packet-hydra-slave-9.aws.iohkdev.io")
+      #(mkLinux "packet-hydra-slave-10.aws.iohkdev.io")
 
       # ((mkMac "sarov") // { speedFactor = 1; })
       ((mkMac "mac-mini-1") // { speedFactor = 2; })
