@@ -6,19 +6,19 @@ in {
     services.auto-gc = {
       nixAutoMaxFreedGB = lib.mkOption {
         type = lib.types.int;
-        default = 20;
+        default = 110;
         description = "An absolute amount to free at";
       };
 
       nixAutoMinFreeGB = lib.mkOption {
         type = lib.types.int;
-        default = 10;
+        default = 30;
         description = "The minimum amount to trigger a GC at";
       };
 
       nixAbsoluteTimedGB = lib.mkOption {
         type = lib.types.int;
-        default = 30;
+        default = 25;
         description = "The max absolute level to free to on the /nix/store mount for the timed GC";
       };
     };

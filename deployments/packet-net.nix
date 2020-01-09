@@ -96,6 +96,9 @@ let
     # Temporary for extra load
     #"packet-hydra-slave-6"
     #"packet-hydra-slave-7"
+    #"packet-hydra-slave-8"
+    #"packet-hydra-slave-9"
+    #"packet-hydra-slave-10"
   ];
   buildkiteAgents = [
     { hostname = "packet-buildkite-1";
