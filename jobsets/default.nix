@@ -311,7 +311,7 @@ let
   mkJobsetBors = { name, ... }@args: let
     jobset = branch: let
       js = (mkJobset (args // { branch = "bors/" + branch; })).value;
-      extraInputs = { borsBuild = { type = "string"; value = branch; }; };
+      extraInputs = { borsBuild = { type = "string"; value = branch; emailresponsible = false; }; };
     in addInputs extraInputs js;
   in [
     (nameValuePair "${name}-bors-staging" (highPrio (jobset "staging")))
