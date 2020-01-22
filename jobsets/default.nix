@@ -296,7 +296,7 @@ let
       nixexprpath = "release.nix";
       inputs = {
         "${input}" = mkFetchGithub "${info.base.repo.clone_url} pull/${num}/head";
-        pr = { type = "string"; value = num; };
+        pr = { type = "string"; value = num; emailresponsible = false; };
       };
     };
   };
