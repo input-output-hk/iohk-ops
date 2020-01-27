@@ -70,6 +70,26 @@ in {
           persistentKeepalive = 30;
           endpoint = "173.61.28.54:51820";
         }
+
+        # TODO: Add preshared key; migrate all to port 17777
+        { # New CI Deployer
+          publicKey = "ZWLewe0yVJ45eW39quTiyvC/kaxy8xNcVpD9QVvxwkk=";
+          allowedIPs = [ "10.90.1.1/32" ];
+          persistentKeepalive = 25;
+          endpoint = "${lib.strings.removeSuffix "\n" (builtins.readFile ../static/new-deployer-ip.txt)}:17777";
+        }
+        { # New CI Monitoring
+          publicKey = "Xfbn71lJWmyj64OKHvjrd33l03I42qe+7v8FA/QM4hc=";
+          allowedIPs = [ "10.90.0.1/32" ];
+          persistentKeepalive = 25;
+          endpoint = "monitoring.ci.iohkdev.io:17777";
+        }
+        { # New CI Hydra
+          publicKey = "kGVeMqf0nrEfTt1goLPRwoRc7Mt61jhoz2QkWXs07yk=";
+          allowedIPs = [ "10.90.0.2/32" ];
+          persistentKeepalive = 25;
+          endpoint = "hydra.ci.iohkdev.io:17777";
+        }
       ];
     };
     monitorama = {
