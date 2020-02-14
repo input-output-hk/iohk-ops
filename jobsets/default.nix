@@ -125,6 +125,7 @@ let
       url = "https://github.com/input-output-hk/cardano-ledger-specs.git";
       branch = "master";
       prs = cardanoLedgerSpecsPrsJSON;
+      bors = true;
     };
 
     ouroboros-network = {
