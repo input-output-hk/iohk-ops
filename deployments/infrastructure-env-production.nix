@@ -366,6 +366,42 @@ in {
               description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
             };
           }
+           {
+            alert = "exchange-down-bkex";
+            expr = "bkex_withdraws == false or bkex_deposits == false";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+           }
+          {
+            alert = "exchange-down-bitrue";
+            expr = "bitrue_active == 0";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+          }
+          {
+            alert = "exchange-down-exx";
+            expr = "exx_active == 0";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+          }
+          {
+            alert = "exchange-down-mxc";
+            expr = "mxc_active == 0";
+            for = "10m";
+            labels.severity = "exchange-down";
+            annotations = {
+              description = "{{$labels.alias}} withdraws/deposits down for >=10mins";
+            };
+          }    
         ];
         alertmanager = {
           extraRoutes = [
